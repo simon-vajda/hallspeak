@@ -13,6 +13,7 @@ Spec A (foundation) is implemented: a pnpm workspace with `packages/contract`, `
 - `apps/server` — Hono + `@hono/zod-openapi`. `app.ts` builds the app without listening; `index.ts` owns the listener. `lib/problem.ts` stays transport-agnostic so the signalling layer can reuse it. `defaultHook` must be passed to *every* `OpenAPIHono` instance that registers routes — it is not inherited by sub-apps.
 - Route paths are declared **without** the `/api` prefix; the prefix lives in the document's `servers` entry and the server's mount point.
 - `packages/contract/openapi.json` and `src/generated/api.d.ts` are generated **and committed**. Run `pnpm gen` after any schema or route change; CI fails on drift.
+- Node **24** (active LTS), pinned in `.nvmrc` and floored by `engines.node`. Deliberately LTS rather than Current: mediasoup is a native addon and those track LTS releases far more reliably.
 - Commands: `pnpm dev`, `pnpm gen`, `pnpm build`, `pnpm typecheck`, `pnpm check`. No test runner is configured yet, so `pnpm test` is a no-op.
 - `@hono/zod-openapi` is pinned to exactly `1.4.0`. Do not float it: 1.5.x has broken type declarations that silently degrade every schema type to `any` under `skipLibCheck`, voiding the handler/contract compile-time guarantee.
 
