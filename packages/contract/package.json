@@ -1,0 +1,30 @@
+{
+  "name": "@linguacast/contract",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schemas": "./src/schemas/index.ts",
+    "./routes": "./src/routes/index.ts",
+    "./openapi": "./src/generated/api.d.ts",
+    "./openapi.json": "./openapi.json"
+  },
+  "scripts": {
+    "gen:spec": "tsx scripts/gen.ts",
+    "gen:types": "openapi-typescript openapi.json -o src/generated/api.d.ts",
+    "gen": "pnpm gen:spec && pnpm gen:types",
+    "dev": "tsx watch --clear-screen=false scripts/gen.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts"
+  },
+  "dependencies": {
+    "@hono/zod-openapi": "1.4.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "26.2.0",
+    "openapi-typescript": "7.13.0",
+    "tsx": "4.23.11",
+    "typescript": "7.0.2"
+  }
+}
