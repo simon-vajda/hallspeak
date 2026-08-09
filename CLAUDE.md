@@ -46,3 +46,5 @@ Only the admin authenticates. Speakers and listeners are authorized purely by po
 ## Working in this repo
 
 Detailed architecture has not been discussed yet — signaling protocol, persistence, room/transport lifecycle, and settings storage are all open. When those are settled, record them here rather than leaving them implicit in code.
+
+`docs/superpowers` is gitignored on purpose — it is local-only scratch material, not part of the repo. Never stage or commit it, and don't "fix" its absence from git.
