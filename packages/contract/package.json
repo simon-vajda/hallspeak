@@ -12,7 +12,7 @@
   },
   "scripts": {
     "gen:spec": "tsx scripts/gen.ts",
-    "gen:types": "pnpm -F @linguacast/codegen exec openapi-typescript ../contract/openapi.json -o ../contract/src/generated/api.d.ts",
+    "gen:types": "openapi-typescript openapi.json -o src/generated/api.d.ts",
     "gen": "pnpm gen:spec && pnpm gen:types",
     "dev": "tsx watch --clear-screen=false scripts/gen.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p scripts"
