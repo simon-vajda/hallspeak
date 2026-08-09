@@ -1,0 +1,11 @@
+{
+  "name": "@linguacast/codegen",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Holds openapi-typescript and the TypeScript 5 it peer-depends on, isolated from the rest of the monorepo. openapi-typescript uses the TS compiler's AST factory API (ts.factory), which the TypeScript 7 package does not expose, so it cannot run in a package that resolves typescript@7. Nothing here typechecks source; @linguacast/contract's gen:types invokes the CLI from this package.",
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}
