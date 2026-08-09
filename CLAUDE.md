@@ -4,7 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Greenfield. The repository is empty — no commits, no code, no tooling. Everything below is intended design, not existing implementation. Do not assume a build system, package layout, or test runner exists; confirm before referencing one, and update this file as decisions are made.
+Spec A (foundation) is implemented: a pnpm workspace with `packages/contract`, `packages/codegen`, and an API-only `apps/server` serving `GET /api/version` plus Scalar docs at `/api/docs`. There is no `apps/web` and no mediasoup yet — the interpretation features themselves are still intended design, not existing implementation. Keep this file current as decisions are made.
+
+## Layout and commands
+
+- `packages/contract` — hand-written Zod schemas and `createRoute()` definitions. **Never built:** every export points at TypeScript source, and consumers compile it. Its tsconfig sets `"types": []` with no DOM on purpose (the React Native seam) — a `node:`/DOM import in `src` must fail to compile there.
+- `packages/codegen` — tool-only package holding `openapi-typescript` and the TypeScript 5 it peer-depends on. TypeScript 7 does not expose the `ts.factory` API that tool needs, so it is isolated here; everything that typechecks source stays on TypeScript 7.
+- `apps/server` — Hono + `@hono/zod-openapi`. `app.ts` builds the app without listening; `index.ts` owns the listener. `lib/problem.ts` stays transport-agnostic so the signalling layer can reuse it. `defaultHook` must be passed to *every* `OpenAPIHono` instance that registers routes — it is not inherited by sub-apps.
+- Route paths are declared **without** the `/api` prefix; the prefix lives in the document's `servers` entry and the server's mount point.
+- `packages/contract/openapi.json` and `src/generated/api.d.ts` are generated **and committed**. Run `pnpm gen` after any schema or route change; CI fails on drift.
+- Commands: `pnpm dev`, `pnpm gen`, `pnpm build`, `pnpm typecheck`, `pnpm check`. No test runner is configured yet, so `pnpm test` is a no-op.
+- `@hono/zod-openapi` is pinned to exactly `1.4.0`. Do not float it: 1.5.x has broken type declarations that silently degrade every schema type to `any` under `skipLibCheck`, voiding the handler/contract compile-time guarantee.
 
 ## What LinguaCast is
 
