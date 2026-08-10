@@ -1,11 +1,15 @@
 import { serve } from '@hono/node-server';
 import { app } from './app';
 import { env } from './env';
+import { attachSignal } from './signal';
 
 const server = serve({ fetch: app.fetch, hostname: env.HOST, port: env.PORT }, (info) => {
   console.log(`LinguaCast API listening on http://${env.HOST}:${info.port}`);
   console.log(`Docs: http://${env.HOST}:${info.port}/api/docs`);
 });
+
+// Must come after serve(): Socket.IO takes over the HTTP server's request listeners.
+const io = attachSignal(server);
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 let shuttingDown = false;
@@ -22,12 +26,16 @@ function shutdown(signal: NodeJS.Signals): void {
   }, SHUTDOWN_TIMEOUT_MS);
   force.unref();
 
-  server.close((err) => {
-    if (err) {
-      console.error('Error during shutdown:', err);
-      process.exit(1);
-    }
-    process.exit(0);
+  // Before server.close(): open sockets are live connections on that server, and
+  // server.close() waits for them. io.close() disconnects them first.
+  io.close(() => {
+    server.close((err) => {
+      if (err) {
+        console.error('Error during shutdown:', err);
+        process.exit(1);
+      }
+      process.exit(0);
+    });
   });
 }
 
