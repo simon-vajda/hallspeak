@@ -67,3 +67,7 @@ temp/
 
 # Project-specific
 docs/superpowers
+
+# SQLite database, WAL and shared-memory sidecars. User data, never committed —
+# every fresh clone self-provisions on first boot.
+data/

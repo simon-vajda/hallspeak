@@ -15,10 +15,13 @@ export default defineConfig({
   // "bundle + a small real node_modules" rather than a full dependency tree.
   noExternal: [/.*/],
 
-  // mediasoup builds a native C++ worker binary that cannot be bundled (ADR §8.5).
-  // It stays a real dependency in package.json. Not installed yet — declared now
-  // because it is the packaging invariant and costs nothing to establish.
-  external: ['mediasoup'],
+  // Native modules cannot be bundled — a .node binary is not JavaScript. Both stay
+  // real dependencies in package.json (ADR §8.5). They are not equivalent costs:
+  // mediasoup compiles a C++ worker on the operator's machine, whereas
+  // better-sqlite3 ships prebuilt N-API binaries in its tarball and asks nothing of
+  // the toolchain. mediasoup is not installed yet — declared now because it is the
+  // packaging invariant and costs nothing to establish.
+  external: ['mediasoup', 'better-sqlite3'],
 
   // Emit dist/index.js, not dist/index.mjs, to match the "start" script.
   outExtensions: () => ({ js: '.js' }),

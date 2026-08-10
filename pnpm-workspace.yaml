@@ -3,8 +3,14 @@ packages:
   - "packages/*"
   - "tools/*"
 # esbuild is tsx's bundler; its install script links the platform binary.
+# better-sqlite3 has no install script, but its binding.gyp makes pnpm infer an
+# implicit `node-gyp rebuild`. Declining it is correct, not a compromise: the npm
+# tarball ships prebuilt N-API binaries for all eight platform/libc targets, and
+# N-API keeps one binary ABI-stable across Node 22/24/26. Listing it as false is
+# what makes `pnpm install` exit 0.
 allowBuilds:
   esbuild: true
+  better-sqlite3: false
 minimumReleaseAgeExclude:
   - '@tanstack/react-router@1.170.25'
   - '@tanstack/router-core@1.171.21'

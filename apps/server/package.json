@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "tsx watch --clear-screen=false src/index.ts",
     "build": "tsdown",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
     "start": "node dist/index.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -15,15 +17,19 @@
     "@hono/zod-openapi": "1.4.0",
     "@linguacast/contract": "workspace:*",
     "@scalar/hono-api-reference": "0.11.13",
+    "better-sqlite3": "13.0.3",
+    "drizzle-orm": "0.45.2",
     "hono": "4.13.1",
     "socket.io": "4.8.3",
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "26.2.0",
+    "drizzle-kit": "0.31.10",
     "tsdown": "0.22.14",
     "tsx": "4.23.11",
     "typescript": "7.0.2",
-    "@types/node": "26.2.0",
     "vitest": "4.1.10"
   }
 }
