@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": [],
+    "jsx": "react-jsx",
+    // No baseUrl: TypeScript 7 removed the option (TS5102). paths resolve relative
+    // to this file, which is what both tsc and the shadcn CLI need.
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["src"]
+}

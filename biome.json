@@ -6,7 +6,8 @@
       "**",
       "!**/dist",
       "!packages/contract/openapi.json",
-      "!packages/contract/src/generated"
+      "!packages/contract/src/generated",
+      "!apps/web/src/routeTree.gen.ts"
     ]
   },
   "formatter": {
