@@ -9,6 +9,7 @@ import {
 } from '../events/queries';
 import { defaultHook } from '../lib/default-hook';
 import { presence } from '../signal/presence';
+import { publicRateLimit } from './rate-limit';
 
 /**
  * One body for every miss. A disabled event, a disabled channel and a nonexistent PIN
@@ -22,7 +23,14 @@ function toPublicChannel(channel: ChannelRow) {
   return { slug: channel.slug, name: channel.name, online: presence.isOnline(channel.id) };
 }
 
-export const publicEventRoutes = new OpenAPIHono({ defaultHook })
+const app = new OpenAPIHono({ defaultHook });
+
+// Before the handlers: registration order is composition order in Hono. Scoped to this
+// sub-app, so admin and /version are untouched. A separate statement rather than a link
+// in the chain below because `.use()` returns a plain Hono, which has no `.openapi()`.
+app.use('/events/*', publicRateLimit);
+
+export const publicEventRoutes = app
   .openapi(routes.getPublicEvent, (c) => {
     const { pin } = c.req.valid('param');
     const event = findEnabledEventByPin(db, pin);
@@ -58,7 +66,9 @@ export const publicEventRoutes = new OpenAPIHono({ defaultHook })
       );
     }
 
-    const role = speakerCode === undefined ? 'listener' : 'speaker';
+    // Annotated: a conditional over two string literals widens to `string` without a
+    // contextual type, and the response schema wants the union.
+    const role: 'listener' | 'speaker' = speakerCode === undefined ? 'listener' : 'speaker';
     return c.json(
       {
         event: { pin: event.pin, name: event.name },
