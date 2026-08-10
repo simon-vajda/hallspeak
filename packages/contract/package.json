@@ -12,7 +12,7 @@
   },
   "scripts": {
     "gen:spec": "tsx scripts/gen.ts",
-    "gen:types": "openapi-typescript openapi.json -o src/generated/api.d.ts",
+    "gen:types": "openapi-codegen openapi.json -o src/generated/api.d.ts",
     "gen": "pnpm gen:spec && pnpm gen:types",
     "dev": "tsx watch --clear-screen=false scripts/gen.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p scripts"
@@ -22,6 +22,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@linguacast/openapi-codegen": "workspace:*",
     "@types/node": "26.2.0",
     "tsx": "4.23.11",
     "typescript": "7.0.2"

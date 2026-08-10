@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "tools/*"
 # esbuild is tsx's bundler; its install script links the platform binary.
 allowBuilds:
   esbuild: true
