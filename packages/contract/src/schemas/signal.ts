@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SEMVER_PATTERN } from './patterns';
+import { PIN_PATTERN, SEMVER_PATTERN, SLUG_PATTERN } from './patterns';
 
 /**
  * Sent as `socket.handshake.auth` and checked by the server's connection gate.
@@ -9,14 +9,29 @@ import { SEMVER_PATTERN } from './patterns';
  * partial hand-rolled parser, because malformed and prerelease versions are rejected
  * at the schema boundary instead of mis-sorted at the comparison.
  *
- * `code` is deliberately absent. Speaker and listener codes do not exist yet, and a
- * field the server ignores is worse than an absent one; it arrives with the spec that
- * introduces the lookup giving it meaning.
+ * Authorization is established here, once, rather than per message — the same reason
+ * version drift is handled here. `pin` scopes the socket to an event; `speakerCode`,
+ * when present, additionally scopes it to one channel to broadcast on.
  */
 export const Handshake = z.object({
   clientVersion: z.string().regex(SEMVER_PATTERN),
+  pin: z.string().regex(PIN_PATTERN),
+  speakerCode: z.string().min(1).optional(),
 });
 
 export const PingPayload = z.object({});
 
 export const PingResponse = z.object({ serverTime: z.int() });
+
+// Zod, not @hono/zod-openapi: this file is reachable from '@linguacast/contract/socket'
+// and must not drag Hono into a browser bundle.
+const SocketSlug = z.string().min(1).max(40).regex(SLUG_PATTERN);
+
+export const ChannelJoinPayload = z.object({ slug: SocketSlug });
+
+/** The channel's liveness at the moment of joining, so a page need not wait for a change. */
+export const ChannelJoinResponse = z.object({ online: z.boolean() });
+
+export const ChannelLeavePayload = z.object({ slug: SocketSlug });
+
+export const ChannelStatus = z.object({ slug: SocketSlug, online: z.boolean() });
