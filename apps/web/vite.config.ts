@@ -14,6 +14,8 @@ export default defineConfig({
   resolve: { alias: { '@': path.resolve(import.meta.dirname, './src') } },
   server: {
     port: 5173,
-    proxy: { '/api': { target: 'http://localhost:3000' } },
+    // One rule covers the API and the socket, because the socket is mounted at a path
+    // under /api rather than at a namespace of its own. ws: true upgrades it.
+    proxy: { '/api': { target: 'http://localhost:3000', ws: true } },
   },
 });
