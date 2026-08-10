@@ -34,9 +34,13 @@ export function handshakeGate(
   next: (err?: Error) => void,
 ): void {
   const parsed = Handshake.safeParse(socket.handshake.auth);
-  if (!parsed.success) return next(new Error('invalid_handshake'));
+  if (!parsed.success) {
+    next(new Error('invalid_handshake'));
+    return;
+  }
   if (semverLt(parsed.data.clientVersion, MIN_CLIENT_VERSION)) {
-    return next(new Error('client_too_old'));
+    next(new Error('client_too_old'));
+    return;
   }
   next();
 }
