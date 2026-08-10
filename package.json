@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "gen": "pnpm -F @linguacast/contract gen",
-    "build": "pnpm gen && pnpm -F @linguacast/server build",
+    "build": "pnpm gen && pnpm -F @linguacast/web build && pnpm -F @linguacast/server build && pnpm build:assets",
+    "build:assets": "node scripts/copy-web-dist.mjs",
     "typecheck": "pnpm gen && pnpm -r typecheck",
     "check": "biome check .",
     "check:fix": "biome check --write .",
