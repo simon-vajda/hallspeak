@@ -1,7 +1,14 @@
 import { serve } from '@hono/node-server';
 import { app } from './app';
+import { closeDb, db } from './db';
+import { runMigrations } from './db/migrate';
 import { env } from './env';
 import { attachSignal } from './signal';
+
+// Before serve(), never after: the process either has a current schema or fails to
+// start, so a running server can never be serving against a stale one. The operator's
+// upgrade procedure stays "pull and restart" with no step to forget.
+runMigrations(db);
 
 const server = serve({ fetch: app.fetch, hostname: env.HOST, port: env.PORT }, (info) => {
   console.log(`LinguaCast API listening on http://${env.HOST}:${info.port}`);
@@ -34,6 +41,7 @@ function shutdown(signal: NodeJS.Signals): void {
         console.error('Error during shutdown:', err);
         process.exit(1);
       }
+      closeDb();
       process.exit(0);
     });
   });

@@ -14,6 +14,10 @@ const EnvSchema = z.object({
     .string()
     .min(1)
     .default(path.join(import.meta.dirname, 'public')),
+  // Resolved against the process working directory, deliberately unlike WEB_ROOT:
+  // that points at a build artifact, whereas the database is user data and would be
+  // destroyed by every redeploy if it lived inside dist/.
+  DATABASE_PATH: z.string().min(1).default('./data/linguacast.db'),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
