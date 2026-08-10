@@ -10,33 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EventsPinIndexRouteImport } from './routes/events.$pin.index'
+import { Route as EventsPinSlugRouteImport } from './routes/events.$pin.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EventsPinIndexRoute = EventsPinIndexRouteImport.update({
+  id: '/events/$pin/',
+  path: '/events/$pin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsPinSlugRoute = EventsPinSlugRouteImport.update({
+  id: '/events/$pin/$slug',
+  path: '/events/$pin/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/events/$pin/$slug': typeof EventsPinSlugRoute
+  '/events/$pin/': typeof EventsPinIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/events/$pin/$slug': typeof EventsPinSlugRoute
+  '/events/$pin': typeof EventsPinIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/events/$pin/$slug': typeof EventsPinSlugRoute
+  '/events/$pin/': typeof EventsPinIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/events/$pin/$slug' | '/events/$pin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/events/$pin/$slug' | '/events/$pin'
+  id: '__root__' | '/' | '/events/$pin/$slug' | '/events/$pin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  EventsPinSlugRoute: typeof EventsPinSlugRoute
+  EventsPinIndexRoute: typeof EventsPinIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +68,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/events/$pin/': {
+      id: '/events/$pin/'
+      path: '/events/$pin'
+      fullPath: '/events/$pin/'
+      preLoaderRoute: typeof EventsPinIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events/$pin/$slug': {
+      id: '/events/$pin/$slug'
+      path: '/events/$pin/$slug'
+      fullPath: '/events/$pin/$slug'
+      preLoaderRoute: typeof EventsPinSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  EventsPinSlugRoute: EventsPinSlugRoute,
+  EventsPinIndexRoute: EventsPinIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
