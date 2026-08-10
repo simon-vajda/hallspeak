@@ -33,8 +33,17 @@ export type Ack<T> =
 
 export type Payload<E> = E extends EventDef<infer P, z.ZodType | undefined> ? z.infer<P> : never;
 
+/**
+ * What an event's ack resolves to.
+ *
+ * The second branch is `undefined` rather than the `void` you might expect: Biome's
+ * noConfusingVoidType rejects `void` outside a return position, and a suppression will
+ * not attach to a type alias body. Nothing observes the difference — that branch is
+ * unreachable, because `ClientToServerEvents` only reaches for `Response` on events
+ * whose `HasAck` is true, i.e. events that declared a response schema.
+ */
 export type Response<E> =
-  E extends EventDef<z.ZodType, infer R> ? (R extends z.ZodType ? z.infer<R> : void) : never;
+  E extends EventDef<z.ZodType, infer R> ? (R extends z.ZodType ? z.infer<R> : undefined) : never;
 
 type HasAck<E> =
   E extends EventDef<z.ZodType, infer R> ? (R extends z.ZodType ? true : false) : false;
