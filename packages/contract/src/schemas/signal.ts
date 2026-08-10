@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SEMVER_PATTERN } from './patterns';
 
 /**
  * Sent as `socket.handshake.auth` and checked by the server's connection gate.
@@ -13,7 +14,7 @@ import { z } from 'zod';
  * introduces the lookup giving it meaning.
  */
 export const Handshake = z.object({
-  clientVersion: z.string().regex(/^\d+\.\d+\.\d+$/),
+  clientVersion: z.string().regex(SEMVER_PATTERN),
 });
 
 export const PingPayload = z.object({});

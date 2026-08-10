@@ -11,6 +11,112 @@
   ],
   "components": {
     "schemas": {
+      "PublicChannelView": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "object",
+            "properties": {
+              "pin": {
+                "type": "string",
+                "pattern": "^\\d{6}$",
+                "example": "834912"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "pin",
+              "name"
+            ]
+          },
+          "channel": {
+            "$ref": "#/components/schemas/PublicChannel"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "listener",
+              "speaker"
+            ]
+          }
+        },
+        "required": [
+          "event",
+          "channel",
+          "role"
+        ]
+      },
+      "PublicChannel": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "example": "english"
+          },
+          "name": {
+            "type": "string"
+          },
+          "online": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "online"
+        ]
+      },
+      "Problem": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "PublicEvent": {
+        "type": "object",
+        "properties": {
+          "pin": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "example": "834912"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicChannel"
+            }
+          }
+        },
+        "required": [
+          "pin",
+          "name",
+          "description",
+          "channels"
+        ]
+      },
       "VersionResponse": {
         "type": "object",
         "properties": {
@@ -34,6 +140,140 @@
     "parameters": {}
   },
   "paths": {
+    "/events/{pin}/{slug}": {
+      "get": {
+        "tags": [
+          "Public"
+        ],
+        "summary": "One channel, and the role of the caller on it",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{6}$",
+              "example": "834912"
+            },
+            "required": true,
+            "name": "pin",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "example": "english"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "speaker_code",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicChannelView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The speaker code does not match this channel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event or channel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many failed lookups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events/{pin}": {
+      "get": {
+        "tags": [
+          "Public"
+        ],
+        "summary": "An event and its enabled channels",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{6}$",
+              "example": "834912"
+            },
+            "required": true,
+            "name": "pin",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicEvent"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many failed lookups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/version": {
       "get": {
         "tags": [
