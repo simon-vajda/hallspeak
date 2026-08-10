@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { $api } from '@/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -27,6 +27,9 @@ function IndexPage() {
               <dd className="font-mono">{data.serverVersion}</dd>
             </dl>
           ) : null}
+          <Link className="text-sm underline" to="/admin/events">
+            Admin
+          </Link>
         </CardContent>
       </Card>
     </main>
