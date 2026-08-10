@@ -4,6 +4,130 @@
  */
 
 export interface paths {
+    "/events/{pin}/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One channel, and the role of the caller on it */
+        get: {
+            parameters: {
+                query?: {
+                    speaker_code?: string;
+                };
+                header?: never;
+                path: {
+                    pin: string;
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicChannelView"];
+                    };
+                };
+                /** @description The speaker code does not match this channel */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
+                /** @description No such event or channel */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
+                /** @description Too many failed lookups */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/events/{pin}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** An event and its enabled channels */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    pin: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicEvent"];
+                    };
+                };
+                /** @description No such event */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
+                /** @description Too many failed lookups */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/version": {
         parameters: {
             query?: never;
@@ -44,6 +168,33 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        PublicChannelView: {
+            event: {
+                /** @example 834912 */
+                pin: string;
+                name: string;
+            };
+            channel: components["schemas"]["PublicChannel"];
+            /** @enum {string} */
+            role: "listener" | "speaker";
+        };
+        PublicChannel: {
+            /** @example english */
+            slug: string;
+            name: string;
+            online: boolean;
+        };
+        Problem: {
+            code: string;
+            message: string;
+        };
+        PublicEvent: {
+            /** @example 834912 */
+            pin: string;
+            name: string;
+            description: string | null;
+            channels: components["schemas"]["PublicChannel"][];
+        };
         VersionResponse: {
             apiVersion: string;
             minClientVersion: string;
