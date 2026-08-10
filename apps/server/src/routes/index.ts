@@ -1,5 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { defaultHook } from '../lib/default-hook';
+import { adminChannelRoutes } from './admin/channels';
 import { adminEventRoutes } from './admin/events';
 import { publicEventRoutes } from './events';
 import { versionRoutes } from './version';
@@ -8,4 +9,5 @@ import { versionRoutes } from './version';
 export const apiRoutes = new OpenAPIHono({ defaultHook })
   .route('/', versionRoutes)
   .route('/', publicEventRoutes)
-  .route('/', adminEventRoutes);
+  .route('/', adminEventRoutes)
+  .route('/', adminChannelRoutes);
