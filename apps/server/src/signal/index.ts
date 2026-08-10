@@ -8,15 +8,23 @@ import {
   type serverToClient,
 } from '@linguacast/contract/socket';
 import { Server, type Socket } from 'socket.io';
+import { db } from '../db';
+import { getChannelById } from '../events/queries';
+import type { SocketAuth } from './authorize';
+import { joinChannel, leaveChannel } from './channels';
 import { handle } from './handle';
 import { handshakeGate } from './handshake';
+import { presence } from './presence';
+import { channelRoom, eventRoom } from './rooms';
 import { validate } from './validate';
 
 type C2S = ClientToServerEvents<typeof clientToServer>;
 type S2C = ServerToClientEvents<typeof serverToClient>;
+type ServerSideEvents = Record<string, never>;
 
-export type SignalServer = Server<C2S, S2C>;
-type SignalSocket = Socket<C2S, S2C>;
+// The fourth generic types socket.data, which the handshake gate fills in.
+export type SignalServer = Server<C2S, S2C, ServerSideEvents, SocketAuth>;
+type SignalSocket = Socket<C2S, S2C, ServerSideEvents, SocketAuth>;
 
 /** One event's handler, as the contract defines it. Both sides are inferred at use. */
 type Handler<K extends keyof typeof clientToServer> = (
@@ -71,10 +79,13 @@ export function attachSignal(httpServer: ServerType): SignalServer {
   const io: SignalServer = new Server(httpServer, {
     path: '/api/socket.io',
     // Engine.IO transport heartbeats — unrelated to the `ping` event below, which is an
-    // application-level probe. Set explicitly rather than inherited so a Socket.IO
-    // default change cannot quietly alter disconnect timing.
-    pingInterval: 25_000,
-    pingTimeout: 20_000,
+    // application-level probe. Deliberately far below the defaults (25s/20s): a dead
+    // speaker socket holds its channel until Socket.IO reaps it, and under the defaults
+    // that is ~45 seconds during which a speaker whose phone slept is refused entry to
+    // their own channel. ~5s bounds that window to about ten (spec E §7). The cost is
+    // more keepalives on a connection that will soon carry audio anyway.
+    pingInterval: 5_000,
+    pingTimeout: 5_000,
     connectTimeout: 10_000,
   });
 
@@ -86,8 +97,45 @@ export function attachSignal(httpServer: ServerType): SignalServer {
     // including ones no handler is registered for.
     socket.use(validate(clientToServer));
 
+    // Re-established here rather than in the gate because Socket.IO replays the auth
+    // payload on reconnect and nothing is sticky across connections.
+    socket.join(eventRoom(socket.data.eventId));
+
+    const speakerChannelId = socket.data.speakerChannelId;
+    if (speakerChannelId !== null) {
+      // The gate already claimed presence — synchronously, so no second speaker can
+      // have slipped in between. This only publishes the fact.
+      socket.join(channelRoom(speakerChannelId));
+      broadcastChannelStatus(io, socket.data.eventId, speakerChannelId, true);
+    }
+
     on(socket, 'ping', () => ({ serverTime: Date.now() }));
+    on(socket, 'channel:join', ({ slug }) => joinChannel(db, presence, socket, socket.data, slug));
+    on(socket, 'channel:leave', ({ slug }) => {
+      leaveChannel(db, socket, socket.data, slug);
+      // Explicit: a fire-and-forget event's Handler returns `undefined`, not `void`
+      // (see the Response note in the contract's ./define), and the two differ here.
+      return undefined;
+    });
+
+    socket.on('disconnect', () => {
+      const released = presence.release(socket.id);
+      if (released !== null) broadcastChannelStatus(io, socket.data.eventId, released, false);
+    });
   });
 
   return io;
+}
+
+/** Liveness goes to the EVENT room so the selector and every channel page agree. */
+function broadcastChannelStatus(
+  io: SignalServer,
+  eventId: number,
+  channelId: number,
+  online: boolean,
+): void {
+  const channel = getChannelById(db, channelId);
+  // The channel can be gone if the admin deleted it while a speaker was connected.
+  if (!channel) return;
+  io.to(eventRoom(eventId)).emit('channel:status', { slug: channel.slug, online });
 }
