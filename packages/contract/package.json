@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./schemas": "./src/schemas/index.ts",
     "./routes": "./src/routes/index.ts",
+    "./socket": "./src/socket/index.ts",
     "./openapi": "./src/generated/api.d.ts",
     "./openapi.json": "./openapi.json"
   },
@@ -15,7 +16,8 @@
     "gen:types": "openapi-codegen openapi.json -o src/generated/api.d.ts",
     "gen": "pnpm gen:spec && pnpm gen:types",
     "dev": "tsx watch --clear-screen=false scripts/gen.ts",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@hono/zod-openapi": "1.4.0",
@@ -25,6 +27,7 @@
     "@linguacast/openapi-codegen": "workspace:*",
     "@types/node": "26.2.0",
     "tsx": "4.23.11",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
   }
 }
