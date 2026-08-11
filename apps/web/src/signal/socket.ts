@@ -11,6 +11,12 @@ export type SignalSocket = Socket<
   ClientToServerEvents<typeof clientToServer>
 >;
 
+/** What the server's handshake gate authorizes on. A listener sends only a pin. */
+export interface SignalAuth {
+  pin: string;
+  speakerCode?: string;
+}
+
 /**
  * `clientVersion` is a parameter rather than a module constant on purpose: this
  * directory is portable, and baking a web build's version into it is exactly what would
@@ -19,7 +25,11 @@ export type SignalSocket = Socket<
  * An omitted `url` becomes '', which socket.io-client resolves to same-origin — correct
  * in production, and in dev Vite proxies /api to the server (with ws: true).
  */
-export function createSignalSocket(opts: { clientVersion: string; url?: string }): SignalSocket {
+export function createSignalSocket(opts: {
+  clientVersion: string;
+  auth: SignalAuth;
+  url?: string;
+}): SignalSocket {
   return io(opts.url ?? '', {
     path: '/api/socket.io',
 
@@ -37,6 +47,9 @@ export function createSignalSocket(opts: { clientVersion: string; url?: string }
     // Connection is an explicit act at a point the app chooses.
     autoConnect: false,
 
-    auth: { clientVersion: opts.clientVersion },
+    // Replayed verbatim by Socket.IO on every reconnect, which is why the server
+    // re-establishes room membership in its connect handler rather than assuming it
+    // sticks.
+    auth: { clientVersion: opts.clientVersion, ...opts.auth },
   }) as SignalSocket;
 }
