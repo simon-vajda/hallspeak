@@ -10,10 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminEventsIndexRouteImport } from './routes/admin.events.index'
-import { Route as AdminEventsIdRouteImport } from './routes/admin.events.$id'
-import { Route as EventsPinIndexRouteImport } from './routes/events.$pin.index'
-import { Route as EventsPinSlugRouteImport } from './routes/events.$pin.$slug'
+import { Route as AdminEventsIndexRouteImport } from './routes/admin/events/index'
+import { Route as AdminEventsIdRouteImport } from './routes/admin/events/$id'
+import { Route as EventsPinIndexRouteImport } from './routes/events/$pin/index'
+import { Route as EventsPinSlugRouteImport } from './routes/events/$pin/$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
