@@ -11,6 +11,7 @@ import {
   DIALOG_TITLE,
   DialogActions,
 } from '@/components/admin/confirm-dialog';
+import { ENABLED_TRACK } from '@/components/admin/enabled-switch';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -29,6 +30,7 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { invalidateAdminEvents } from '@/lib/admin-queries';
 import { type ChannelFormValues, channelFormSchema, slugify } from '@/lib/channel-form';
 import { cn } from '@/lib/utils';
 
@@ -36,10 +38,6 @@ type AdminChannel = components['schemas']['AdminChannel'];
 
 const LABEL = 'text-label text-muted-foreground uppercase';
 const TEXT_INPUT = 'h-11 rounded-full bg-secondary px-4 text-sm';
-
-const listKey = () => $api.queryOptions('get', '/admin/events').queryKey;
-const detailKey = (id: number) =>
-  $api.queryOptions('get', '/admin/events/{id}', { params: { path: { id } } }).queryKey;
 
 /** The API's one expected conflict: the composite unique on (event_id, slug). */
 function isSlugTaken(error: unknown) {
@@ -136,10 +134,7 @@ function ChannelForm({
           body: { slug: values.slug, name: values.name, enabled: values.enabled },
         });
       }
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: detailKey(eventId) }),
-        queryClient.invalidateQueries({ queryKey: listKey() }),
-      ]);
+      await invalidateAdminEvents(queryClient, eventId);
       onSaved();
     } catch (error) {
       // The conflict belongs on the field that caused it; a banner would leave the admin
@@ -246,9 +241,7 @@ function ChannelForm({
                 onCheckedChange={field.onChange}
                 aria-labelledby={switchLabelId}
                 aria-describedby={switchDescriptionId}
-                // Enabled is not the same thing as on air, so the checked track is
-                // `foreground` and never `primary`.
-                className="data-checked:bg-foreground"
+                className={ENABLED_TRACK}
               />
             )}
           />

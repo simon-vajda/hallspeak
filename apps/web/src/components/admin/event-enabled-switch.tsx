@@ -2,8 +2,8 @@ import type { components } from '@linguacast/contract/openapi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { $api } from '@/api/client';
-import { Switch } from '@/components/ui/switch';
-import { cn } from '@/lib/utils';
+import { EnabledSwitch } from '@/components/admin/enabled-switch';
+import { eventDetailKey, eventsListKey, invalidateAdminEvents } from '@/lib/admin-queries';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
@@ -15,12 +15,10 @@ export function EventEnabledSwitch({
   className?: string;
 }) {
   const queryClient = useQueryClient();
-  const listKey = $api.queryOptions('get', '/admin/events').queryKey;
   // The same switch appears on the detail screen, which reads a different query — both are
   // updated and both are invalidated, so the two can never disagree about one event.
-  const detailKey = $api.queryOptions('get', '/admin/events/{id}', {
-    params: { path: { id: event.id } },
-  }).queryKey;
+  const listKey = eventsListKey();
+  const detailKey = eventDetailKey(event.id);
   const [failed, setFailed] = useState(false);
 
   const { mutate, isPending } = $api.useMutation('patch', '/admin/events/{id}', {
@@ -55,32 +53,19 @@ export function EventEnabledSwitch({
       if (context?.detail) queryClient.setQueryData(detailKey, context.detail);
       setFailed(true);
     },
-    onSettled: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: listKey }),
-        queryClient.invalidateQueries({ queryKey: detailKey }),
-      ]),
+    onSettled: () => invalidateAdminEvents(queryClient, event.id),
   });
 
   return (
-    <div className={cn('flex flex-col items-end gap-1', className)}>
-      <Switch
-        size="lg"
-        checked={event.enabled}
-        disabled={isPending}
-        // Enabled is not the same thing as on air, so the checked track is `foreground`
-        // and never `primary`.
-        className="data-checked:bg-foreground"
-        aria-label={`Enable ${event.name}`}
-        onCheckedChange={(enabled) => {
-          mutate({ params: { path: { id: event.id } }, body: { enabled } });
-        }}
-      />
-      {failed && (
-        <p role="status" className="text-right text-meta text-destructive">
-          Could not save
-        </p>
-      )}
-    </div>
+    <EnabledSwitch
+      checked={event.enabled}
+      disabled={isPending}
+      failed={failed}
+      label={`Enable ${event.name}`}
+      className={className}
+      onCheckedChange={(enabled) => {
+        mutate({ params: { path: { id: event.id } }, body: { enabled } });
+      }}
+    />
   );
 }
