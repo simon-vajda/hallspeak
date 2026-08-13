@@ -1,10 +1,13 @@
 import type { components } from '@linguacast/contract/openapi';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
+import { useState } from 'react';
 import { $api } from '@/api/client';
 import { ChannelChips } from '@/components/admin/channel-chips';
+import { EventFormDialog } from '@/components/admin/event-dialogs';
 import { EventEnabledSwitch } from '@/components/admin/event-enabled-switch';
 import { Button } from '@/components/ui/button';
+import { formatPin, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin/events/')({ component: AdminEventsPage });
@@ -18,6 +21,7 @@ const TABLE_COLUMNS = 'grid-cols-[1.8fr_0.85fr_1.9fr_0.95fr_110px]';
 
 function AdminEventsPage() {
   const { data, isPending, isError } = $api.useQuery('get', '/admin/events');
+  const [creating, setCreating] = useState(false);
 
   if (isPending) {
     return <p className="text-sm text-muted-foreground">Loading events…</p>;
@@ -43,6 +47,7 @@ function AdminEventsPage() {
         </div>
         <NewEventButton
           size="default"
+          onClick={() => setCreating(true)}
           className="hidden h-9.5 rounded-full px-4.25 text-sm font-semibold lg:inline-flex"
         />
       </header>
@@ -52,7 +57,7 @@ function AdminEventsPage() {
           <p className="text-sm text-muted-foreground">
             No events yet. An event carries the PIN guests type and the channels they pick from.
           </p>
-          <NewEventButton className="mt-8 w-full lg:w-auto" />
+          <NewEventButton onClick={() => setCreating(true)} className="mt-8 w-full lg:w-auto" />
         </div>
       ) : (
         <>
@@ -62,7 +67,7 @@ function AdminEventsPage() {
             ))}
           </ul>
 
-          <NewEventButton className="mt-8 w-full lg:hidden" />
+          <NewEventButton onClick={() => setCreating(true)} className="mt-8 w-full lg:hidden" />
 
           <div className="mt-6 hidden lg:block">
             <div
@@ -86,6 +91,8 @@ function AdminEventsPage() {
           </div>
         </>
       )}
+
+      <EventFormDialog mode="create" open={creating} onOpenChange={setCreating} />
     </div>
   );
 }
@@ -154,29 +161,21 @@ function EventNameLink({ event, className }: { event: AdminEventDetail; classNam
   );
 }
 
-// The create dialog lands in a later unit; the control is drawn so the screen reads as the
-// design does, and is inert until it exists.
 function NewEventButton({
   className,
   size = 'pill',
+  onClick,
 }: {
   className?: string;
   size?: 'pill' | 'default';
+  onClick: () => void;
 }) {
   return (
-    <Button size={size} disabled className={cn('gap-2', className)}>
+    <Button size={size} onClick={onClick} className={cn('gap-2', className)}>
       <Plus />
       New event
     </Button>
   );
-}
-
-function formatPin(pin: string) {
-  return `${pin.slice(0, 3)} ${pin.slice(3)}`;
-}
-
-function count(n: number, noun: string) {
-  return `${n} ${noun}${n === 1 ? '' : 's'}`;
 }
 
 // Liveness is not modelled yet, so "status" here is enablement — the design's on-air line
@@ -194,5 +193,5 @@ function summarise(events: AdminEventDetail[]) {
 
   const enabled = events.filter((event) => event.enabled).length;
   const channels = events.reduce((total, event) => total + event.channels.length, 0);
-  return `${enabled} of ${count(events.length, 'event')} enabled · ${count(channels, 'channel')}`;
+  return `${enabled} of ${plural(events.length, 'event')} enabled · ${plural(channels, 'channel')}`;
 }
