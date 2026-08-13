@@ -8,6 +8,7 @@
     "./schemas": "./src/schemas/index.ts",
     "./routes": "./src/routes/index.ts",
     "./socket": "./src/socket/index.ts",
+    "./patterns": "./src/schemas/patterns.ts",
     "./openapi": "./src/generated/api.d.ts",
     "./openapi.json": "./openapi.json"
   },
