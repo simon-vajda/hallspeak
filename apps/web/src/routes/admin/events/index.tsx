@@ -1,32 +1,198 @@
+import type { components } from '@linguacast/contract/openapi';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { Plus } from 'lucide-react';
 import { $api } from '@/api/client';
+import { ChannelChips } from '@/components/admin/channel-chips';
+import { EventEnabledSwitch } from '@/components/admin/event-enabled-switch';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin/events/')({ component: AdminEventsPage });
 
-// PLACEHOLDER. Spec E ships the admin REST API; the admin UI is a later spec. This
-// exists so the route and its data path are real, not so it is usable.
-//
-// Unguarded, like the API behind it — /admin and /api/admin share a prefix precisely so
-// authentication lands as one boundary rather than a per-route audit (spec E §4).
+type AdminEventDetail = components['schemas']['AdminEventDetail'];
+
+// The design draws a table at desktop width and cards on a phone (10h, 10j). They are two
+// arrangements of the same rows, so both are rendered and one is hidden — laying the table
+// out from the card markup would mean fighting the card's stacking at every breakpoint.
+const TABLE_COLUMNS = 'grid-cols-[1.8fr_0.85fr_1.9fr_0.95fr_110px]';
+
 function AdminEventsPage() {
   const { data, isPending, isError } = $api.useQuery('get', '/admin/events');
 
-  if (isPending) return <p>Loading…</p>;
-  if (isError || !data) return <p>Could not load events.</p>;
+  if (isPending) {
+    return <p className="text-sm text-muted-foreground">Loading events…</p>;
+  }
+
+  if (isError || !data) {
+    return (
+      <div>
+        <h1 className="text-screen">Events</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Could not load the event list — the request to the server failed. Reload to try again.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <main className="mx-auto max-w-2xl space-y-2 p-8">
-      <h1 className="text-xl">Events</h1>
-      <ul>
-        {data.map((event) => (
-          <li key={event.id}>
-            <Link to="/admin/events/$id" params={{ id: String(event.id) }}>
-              {event.name}
-            </Link>{' '}
-            — pin {event.pin} — {event.enabled ? 'enabled' : 'disabled'}
-          </li>
-        ))}
-      </ul>
-    </main>
+    <div>
+      <header className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-screen">Events</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{summarise(data)}</p>
+        </div>
+        <NewEventButton
+          size="default"
+          className="hidden h-9.5 rounded-full px-4.25 text-sm font-semibold lg:inline-flex"
+        />
+      </header>
+
+      {data.length === 0 ? (
+        <div className="mt-6 rounded-lg border border-border border-dashed px-5 py-10 text-center">
+          <p className="text-sm text-muted-foreground">
+            No events yet. An event carries the PIN guests type and the channels they pick from.
+          </p>
+          <NewEventButton className="mt-8 w-full lg:w-auto" />
+        </div>
+      ) : (
+        <>
+          <ul className="mt-5 flex flex-col gap-3 lg:hidden">
+            {data.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </ul>
+
+          <NewEventButton className="mt-8 w-full lg:hidden" />
+
+          <div className="mt-6 hidden lg:block">
+            <div
+              aria-hidden="true"
+              className={cn(
+                'grid px-5 pb-2.5 text-label text-muted-foreground uppercase',
+                TABLE_COLUMNS,
+              )}
+            >
+              <span>Event</span>
+              <span>PIN</span>
+              <span>Channels</span>
+              <span>Status</span>
+              <span className="text-right">Enabled</span>
+            </div>
+            <ul>
+              {data.map((event) => (
+                <EventRow key={event.id} event={event} />
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+    </div>
   );
+}
+
+function EventRow({ event }: { event: AdminEventDetail }) {
+  // Only the cells dim: CSS opacity composites, so a switch inside a dimmed row could not
+  // paint itself back to full strength, and it stays operable on a disabled event.
+  const dim = event.enabled ? undefined : 'opacity-60';
+
+  return (
+    <li className={cn('grid items-center border-t border-border px-5 py-4.5', TABLE_COLUMNS)}>
+      <div className={dim}>
+        <EventNameLink event={event} className="text-[18px] tracking-[-0.025em]" />
+        {event.description && (
+          <p className="mt-0.5 text-[13px] text-muted-foreground">{event.description}</p>
+        )}
+      </div>
+      <p className={cn('font-semibold text-[16px] tracking-[0.04em]', dim)}>
+        <span className="sr-only">PIN </span>
+        {formatPin(event.pin)}
+      </p>
+      <ChannelChips channels={event.channels} variant="collapse" className={dim} />
+      <p className={cn('text-meta text-muted-foreground', dim)}>{statusLabel(event)}</p>
+      <div className="flex justify-end">
+        <EventEnabledSwitch event={event} />
+      </div>
+    </li>
+  );
+}
+
+function EventCard({ event }: { event: AdminEventDetail }) {
+  const dim = event.enabled ? undefined : 'opacity-60';
+
+  return (
+    <li
+      className={cn(
+        'rounded-lg px-5 py-4.5',
+        event.enabled ? 'bg-secondary' : 'border border-dashed border-border',
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className={dim}>
+          <EventNameLink event={event} className="text-[19px] tracking-[-0.025em]" />
+          <p className="mt-0.5 text-[13px] text-muted-foreground">PIN {formatPin(event.pin)}</p>
+        </div>
+        <EventEnabledSwitch event={event} />
+      </div>
+      <ChannelChips channels={event.channels} variant="wrap" className={cn('mt-3', dim)} />
+      <p className={cn('mt-3 text-meta text-muted-foreground', dim)}>{statusLabel(event)}</p>
+    </li>
+  );
+}
+
+function EventNameLink({ event, className }: { event: AdminEventDetail; className?: string }) {
+  return (
+    <Link
+      to="/admin/events/$id"
+      params={{ id: String(event.id) }}
+      className={cn(
+        'font-semibold hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+        className,
+      )}
+    >
+      {event.name}
+    </Link>
+  );
+}
+
+// The create dialog lands in a later unit; the control is drawn so the screen reads as the
+// design does, and is inert until it exists.
+function NewEventButton({
+  className,
+  size = 'pill',
+}: {
+  className?: string;
+  size?: 'pill' | 'default';
+}) {
+  return (
+    <Button size={size} disabled className={cn('gap-2', className)}>
+      <Plus />
+      New event
+    </Button>
+  );
+}
+
+function formatPin(pin: string) {
+  return `${pin.slice(0, 3)} ${pin.slice(3)}`;
+}
+
+function count(n: number, noun: string) {
+  return `${n} ${noun}${n === 1 ? '' : 's'}`;
+}
+
+// Liveness is not modelled yet, so "status" here is enablement — the design's on-air line
+// is deliberately absent rather than approximated.
+function statusLabel(event: AdminEventDetail) {
+  if (!event.enabled) return 'Disabled';
+  if (event.channels.length === 0) return 'No channels yet';
+
+  const enabled = event.channels.filter((channel) => channel.enabled).length;
+  return `${enabled} of ${event.channels.length} enabled`;
+}
+
+function summarise(events: AdminEventDetail[]) {
+  if (events.length === 0) return 'Nothing here yet';
+
+  const enabled = events.filter((event) => event.enabled).length;
+  const channels = events.reduce((total, event) => total + event.channels.length, 0);
+  return `${enabled} of ${count(events.length, 'event')} enabled · ${count(channels, 'channel')}`;
 }
