@@ -13,6 +13,7 @@ import {
   DIALOG_TITLE,
   DialogActions,
 } from '@/components/admin/confirm-dialog';
+import { ENABLED_TRACK } from '@/components/admin/enabled-switch';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -32,6 +33,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { eventDetailKey, invalidateAdminEvents } from '@/lib/admin-queries';
 import { type EventFormValues, eventFormSchema } from '@/lib/event-form';
 import { formatPin, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -40,10 +42,6 @@ type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
 const LABEL = 'text-label text-muted-foreground uppercase';
 const TEXT_INPUT = 'bg-secondary text-sm';
-
-const listKey = () => $api.queryOptions('get', '/admin/events').queryKey;
-const detailKey = (id: number) =>
-  $api.queryOptions('get', '/admin/events/{id}', { params: { path: { id } } }).queryKey;
 
 /**
  * Create and edit are the same dialog: only the heading, the primary label, the initial
@@ -112,13 +110,10 @@ function EventForm({
     };
 
     try {
-      if (event) {
-        await update.mutateAsync({ params: { path: { id: event.id } }, body });
-        await queryClient.invalidateQueries({ queryKey: detailKey(event.id) });
-      } else {
-        await create.mutateAsync({ body });
-      }
-      await queryClient.invalidateQueries({ queryKey: listKey() });
+      const saved = event
+        ? await update.mutateAsync({ params: { path: { id: event.id } }, body })
+        : await create.mutateAsync({ body });
+      await invalidateAdminEvents(queryClient, saved.id);
       onSaved();
     } catch {
       // Deliberately still open: closing here would throw away what the admin typed.
@@ -147,7 +142,7 @@ function EventForm({
             autoComplete="off"
             placeholder="Sunday Service"
             aria-invalid={errors.name ? true : undefined}
-            className={`h-11 rounded-full px-4 ${TEXT_INPUT}`}
+            className={cn('h-11 rounded-full px-4', TEXT_INPUT)}
             {...register('name')}
           />
           <FieldError errors={[errors.name]} />
@@ -162,7 +157,7 @@ function EventForm({
             rows={3}
             placeholder="Morning gathering, main hall."
             aria-invalid={errors.description ? true : undefined}
-            className={`min-h-19 rounded-md px-4 py-3 leading-normal ${TEXT_INPUT}`}
+            className={cn('min-h-19 rounded-md px-4 py-3 leading-normal', TEXT_INPUT)}
             {...register('description')}
           />
           <FieldError errors={[errors.description]} />
@@ -192,9 +187,7 @@ function EventForm({
                 onCheckedChange={field.onChange}
                 aria-labelledby={switchLabelId}
                 aria-describedby={switchDescriptionId}
-                // Enabled is not the same thing as on air, so the checked track is
-                // `foreground` and never `primary`.
-                className="data-checked:bg-foreground"
+                className={ENABLED_TRACK}
               />
             )}
           />
@@ -239,8 +232,8 @@ export function DeleteEventDialog({
   const { mutate, isPending } = $api.useMutation('delete', '/admin/events/{id}', {
     onMutate: () => setFailed(false),
     onSuccess: async () => {
-      queryClient.removeQueries({ queryKey: detailKey(event.id) });
-      await queryClient.invalidateQueries({ queryKey: listKey() });
+      queryClient.removeQueries({ queryKey: eventDetailKey(event.id) });
+      await invalidateAdminEvents(queryClient, event.id);
       onOpenChange(false);
       onDeleted?.();
     },
@@ -291,10 +284,7 @@ export function RegeneratePinDialog({
   const { mutate, isPending } = $api.useMutation('post', '/admin/events/{id}/regenerate-pin', {
     onMutate: () => setFailed(false),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: detailKey(event.id) }),
-        queryClient.invalidateQueries({ queryKey: listKey() }),
-      ]);
+      await invalidateAdminEvents(queryClient, event.id);
       onOpenChange(false);
     },
     onError: () => setFailed(true),

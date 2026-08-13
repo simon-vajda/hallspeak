@@ -1,4 +1,5 @@
 import type { components } from '@linguacast/contract/openapi';
+import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -8,6 +9,37 @@ const CHIP = 'h-6 rounded-full px-2.5 text-[11.5px] font-semibold';
 
 /** How many channels a `collapse` row shows before the rest become a `+N`. */
 const COLLAPSE_LIMIT = 3;
+
+/**
+ * A channel's state as a chip: filled for enabled, outlined for disabled. The design fills
+ * an active chip with the live tint; enabled is not on air, so the fill is a wash of
+ * `foreground` instead — the same colour the enable switch uses to mean on. It has to read
+ * against `secondary`, which is both the phone card's and the channels panel's own fill.
+ */
+export function ChannelChip({
+  enabled,
+  className,
+  children,
+}: {
+  enabled: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Badge
+      variant={enabled ? 'secondary' : 'outline'}
+      className={cn(
+        CHIP,
+        enabled
+          ? 'bg-foreground/10 text-foreground dark:bg-foreground/15'
+          : 'text-muted-foreground',
+        className,
+      )}
+    >
+      {children}
+    </Badge>
+  );
+}
 
 /**
  * The channel list as chips. `collapse` keeps a table row one line tall by showing three
@@ -49,21 +81,9 @@ export function ChannelChips({
       )}
     >
       {shown.map((channel) => (
-        // The design fills an active chip with the live tint; enabled is not on air, so the
-        // fill is a wash of `foreground` instead — the same colour the enable switch uses to
-        // mean on. It has to read against `secondary`, which is the phone card's own fill.
-        <Badge
-          key={channel.id}
-          variant={channel.enabled ? 'secondary' : 'outline'}
-          className={cn(
-            CHIP,
-            channel.enabled
-              ? 'bg-foreground/10 text-foreground dark:bg-foreground/15'
-              : 'text-muted-foreground',
-          )}
-        >
+        <ChannelChip key={channel.id} enabled={channel.enabled}>
           {channel.name}
-        </Badge>
+        </ChannelChip>
       ))}
       {overflow > 0 && (
         // Not a link: channels are managed on the detail page, and the row's job is only

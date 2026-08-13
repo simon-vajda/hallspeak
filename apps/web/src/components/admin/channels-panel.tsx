@@ -3,12 +3,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { $api } from '@/api/client';
+import { ChannelChip } from '@/components/admin/channel-chips';
 import { ChannelFormDialog } from '@/components/admin/channel-form-dialog';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { CopyButton } from '@/components/admin/copy-button';
-import { Badge } from '@/components/ui/badge';
+import { EnabledSwitch } from '@/components/admin/enabled-switch';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { eventDetailKey, eventsListKey, invalidateAdminEvents } from '@/lib/admin-queries';
 import { plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -22,21 +23,9 @@ type AdminChannel = components['schemas']['AdminChannel'];
 const ROW_ACTION =
   "h-11 gap-1.5 rounded-full px-3.25 text-xs font-semibold [&_svg:not([class*='size-'])]:size-3.5 lg:h-8.25";
 
-/** The enabled/disabled chip, on the same terms as the chips on the events list. */
-const CHIP = 'h-6 rounded-full px-2.5 text-[11.5px] font-semibold';
-
-const listKey = () => $api.queryOptions('get', '/admin/events').queryKey;
-const detailKey = (id: number) =>
-  $api.queryOptions('get', '/admin/events/{id}', { params: { path: { id } } }).queryKey;
-
-/** Every channel mutation moves the chips on the events list too, so both are invalidated. */
 function useChannelInvalidation(eventId: number) {
   const queryClient = useQueryClient();
-  return () =>
-    Promise.all([
-      queryClient.invalidateQueries({ queryKey: detailKey(eventId) }),
-      queryClient.invalidateQueries({ queryKey: listKey() }),
-    ]);
+  return () => invalidateAdminEvents(queryClient, eventId);
 }
 
 export function ChannelsPanel({ event }: { event: AdminEventDetail }) {
@@ -88,17 +77,9 @@ function ChannelRow({ event, channel }: { event: AdminEventDetail; channel: Admi
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2.5">
           <h3 className="font-semibold text-[18px] tracking-[-0.025em]">{channel.name}</h3>
-          <Badge
-            variant={channel.enabled ? 'secondary' : 'outline'}
-            className={cn(
-              CHIP,
-              channel.enabled
-                ? 'bg-foreground/10 text-foreground dark:bg-foreground/15'
-                : 'text-muted-foreground',
-            )}
-          >
+          <ChannelChip enabled={channel.enabled}>
             {channel.enabled ? 'Enabled' : 'Disabled'}
-          </Badge>
+          </ChannelChip>
         </div>
         <p className="mt-1 truncate font-mono text-muted-foreground text-xs">{listenerPath}</p>
       </div>
@@ -176,8 +157,8 @@ function ChannelEnabledSwitch({ channel }: { channel: AdminChannel }) {
   const { mutate, isPending } = $api.useMutation('patch', '/admin/channels/{id}', {
     onMutate: async (variables) => {
       setFailed(false);
-      const detail = detailKey(channel.eventId);
-      const list = listKey();
+      const detail = eventDetailKey(channel.eventId);
+      const list = eventsListKey();
       await Promise.all([
         queryClient.cancelQueries({ queryKey: detail }),
         queryClient.cancelQueries({ queryKey: list }),
@@ -204,33 +185,24 @@ function ChannelEnabledSwitch({ channel }: { channel: AdminChannel }) {
       return previous;
     },
     onError: (_error, _variables, context) => {
-      if (context?.detail) queryClient.setQueryData(detailKey(channel.eventId), context.detail);
-      if (context?.list) queryClient.setQueryData(listKey(), context.list);
+      if (context?.detail)
+        queryClient.setQueryData(eventDetailKey(channel.eventId), context.detail);
+      if (context?.list) queryClient.setQueryData(eventsListKey(), context.list);
       setFailed(true);
     },
     onSettled: invalidate,
   });
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <Switch
-        size="lg"
-        checked={channel.enabled}
-        disabled={isPending}
-        // Enabled is not the same thing as on air, so the checked track is `foreground`
-        // and never `primary`.
-        className="data-checked:bg-foreground"
-        aria-label={`Enable ${channel.name}`}
-        onCheckedChange={(enabled) => {
-          mutate({ params: { path: { id: channel.id } }, body: { enabled } });
-        }}
-      />
-      {failed && (
-        <p role="status" className="text-right text-destructive text-meta">
-          Could not save
-        </p>
-      )}
-    </div>
+    <EnabledSwitch
+      checked={channel.enabled}
+      disabled={isPending}
+      failed={failed}
+      label={`Enable ${channel.name}`}
+      onCheckedChange={(enabled) => {
+        mutate({ params: { path: { id: channel.id } }, body: { enabled } });
+      }}
+    />
   );
 }
 
