@@ -80,7 +80,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Every event, enabled or not */
+        /** Every event, enabled or not, with its channels */
         get: {
             parameters: {
                 query?: never;
@@ -96,7 +96,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["AdminEvent"][];
+                        "application/json": components["schemas"]["AdminEventDetail"][];
                     };
                 };
             };
