@@ -2,11 +2,11 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { $api } from '@/api/client';
+import { ChannelsPanel } from '@/components/admin/channels-panel';
 import { DeleteEventDialog, EventFormDialog } from '@/components/admin/event-dialogs';
 import { EventEnabledSwitch } from '@/components/admin/event-enabled-switch';
 import { PinCard } from '@/components/admin/pin-card';
 import { Button } from '@/components/ui/button';
-import { plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin/events/$id')({ component: AdminEventPage });
@@ -81,15 +81,7 @@ function AdminEventPage() {
           leads and the channels panel follows it. */}
       <div className="mt-6.5 grid items-start gap-5.5 lg:grid-cols-[1fr_330px]">
         <div className="order-2 lg:order-none">
-          {/* PLACEHOLDER — the channels panel lands in the next unit. */}
-          <section className="rounded-lg border border-border border-dashed px-5.5 py-4.5">
-            <h2 className="text-section">Channels</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {data.channels.length === 0
-                ? 'No channels yet.'
-                : `${plural(data.channels.length, 'channel')} on this event.`}
-            </p>
-          </section>
+          <ChannelsPanel event={data} />
         </div>
 
         <div className="order-1 flex flex-col gap-3.5 lg:order-none">
