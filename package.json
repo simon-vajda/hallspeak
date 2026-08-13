@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "pnpm -r --parallel dev",
+    "dev:free-ports": "node scripts/free-ports.mjs",
     "gen": "pnpm -F @linguacast/contract gen",
     "build": "pnpm gen && pnpm -F @linguacast/web build && pnpm -F @linguacast/server build && pnpm build:assets",
     "build:assets": "node scripts/copy-web-dist.mjs",
