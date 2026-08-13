@@ -32,8 +32,8 @@ export const adminListEvents = createRoute({
   method: 'get',
   path: '/admin/events',
   tags: TAGS,
-  summary: 'Every event, enabled or not',
-  responses: { 200: json(z.array(AdminEvent), 'OK') },
+  summary: 'Every event, enabled or not, with its channels',
+  responses: { 200: json(z.array(AdminEventDetail), 'OK') },
 });
 
 export const adminCreateEvent = createRoute({
