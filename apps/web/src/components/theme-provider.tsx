@@ -16,9 +16,17 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+// Storage access *throws* rather than returning null where cookies are blocked, in a
+// sandboxed iframe, and in some in-app webviews. This runs in the provider's useState
+// initializer, above the router — an uncaught throw there blanks the whole app for a
+// guest who just scanned a QR code. The theme is cosmetic; it never fails the app.
 function readStoredTheme(): Theme {
-  const stored = localStorage.getItem(THEME_STORAGE_KEY);
-  return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+  try {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+  } catch {
+    return 'system';
+  }
 }
 
 function systemTheme(): 'light' | 'dark' {
@@ -46,7 +54,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {
-    localStorage.setItem(THEME_STORAGE_KEY, next);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, next);
+    } catch {
+      // Blocked storage: the choice will not survive a reload, but it still applies now.
+    }
     setThemeState(next);
   }, []);
 

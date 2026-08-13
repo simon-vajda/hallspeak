@@ -9,9 +9,12 @@
   --font-heading: var(--font-sans);
   --font-sans: "Space Grotesk Variable", system-ui, sans-serif;
 
-  /* LinguaCast additions — no stock shadcn equivalent. `primary` is the action
-     colour and `live` is the state colour; they are never substituted for each
-     other. See docs/design/README.md. */
+  /* LinguaCast additions — no stock shadcn equivalent. `primary` is the action colour
+     and `live` is the state colour: `primary` marks what you can press, `live` marks
+     that audio is moving. They are never swapped or substituted for each other — an
+     earlier design used one green for both and it read as ambiguous. Because the two
+     are near-identical in greyscale, shape and position carry the distinction: the
+     round target is always the action, the meter and the dot are always the signal. */
   --color-live: var(--live);
   --color-live-foreground: var(--live-foreground);
   --color-live-muted: var(--live-muted);
