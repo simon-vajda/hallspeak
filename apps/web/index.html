@@ -4,6 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LinguaCast</title>
+    <!-- Blocking on purpose: the provider writes this class from an effect, which runs
+         after first paint, so without this a dark-preference visitor sees a white flash
+         on every cold load. The key is duplicated from THEME_STORAGE_KEY in
+         src/components/theme-provider.tsx — this runs before any module loads. -->
+    <script>
+      (() => {
+        var stored = localStorage.getItem('linguacast-theme');
+        var dark =
+          stored === 'dark' ||
+          (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.add(dark ? 'dark' : 'light');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
