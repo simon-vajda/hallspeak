@@ -35,6 +35,13 @@ export function invalidateAdminEvents(queryClient: QueryClient, eventId: number)
 }
 
 /**
+ * Mutation scope for one event. React Query runs mutations sharing a scope serially, so
+ * every write that lands in these two caches queues behind the last one instead of racing
+ * it. Channel writes share their event's scope, because they rewrite the same two entries.
+ */
+export const eventScope = (eventId: number) => `admin-event-${eventId}`;
+
+/**
  * The optimistic half of the same rule: an enable switch appears on both screens, so a
  * write has to land in both caches or the two disagree until the refetch arrives. Callers
  * supply only the change itself — everything around it (cancelling in-flight reads,

@@ -9,7 +9,23 @@ import { PinCard } from '@/components/admin/pin-card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-export const Route = createFileRoute('/admin/events/$id')({ component: AdminEventPage });
+export const Route = createFileRoute('/admin/events/$id')({
+  component: AdminEventPage,
+  // A URL that cannot name an event is the same answer as one that names a deleted event,
+  // so it gets the same page rather than the router's error screen.
+  errorComponent: () => <MissingEvent notFound />,
+  // The id is typed at the route, not coerced in the component: a URL carrying anything
+  // but a positive integer never reaches the query, so it cannot spend three retries on a
+  // 400 before admitting there is no such event.
+  params: {
+    parse: ({ id }) => {
+      const parsed = Number(id);
+      if (!Number.isInteger(parsed) || parsed < 1) throw new Error(`Invalid event id: ${id}`);
+      return { id: parsed };
+    },
+    stringify: ({ id }) => ({ id: String(id) }),
+  },
+});
 
 const ACTION = 'h-9.5 flex-1 gap-2 rounded-full px-4.25 font-semibold text-sm lg:flex-none';
 
@@ -22,7 +38,7 @@ function AdminEventPage() {
   const { data, isPending, error } = $api.useQuery(
     'get',
     '/admin/events/{id}',
-    { params: { path: { id: Number(id) } } },
+    { params: { path: { id } } },
     // A deleted event will not come back, so retrying it only holds the spinner there for
     // seconds before the same answer. Everything else keeps the client's default backoff.
     { retry: (failureCount, err) => err?.code !== 'not_found' && failureCount < 3 },
