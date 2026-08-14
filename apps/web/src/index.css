@@ -142,8 +142,13 @@
   --live: oklch(0.836 0.163 148.7); /* #74E68C */
   --live-foreground: oklch(0.836 0.163 148.7); /* mint type on live-muted */
   --live-muted: oklch(0.339 0.044 188.5); /* #183F3C */
-  --destructive-muted: oklch(0.339 0.044 188.5);
-  --destructive-border: oklch(0.365 0.051 246.4);
+
+  /* The handoff's dark block gives these the mint and the plain border values —
+     visibly a copy from the two lines above, since a destructive fill that reads
+     green is the one thing it cannot be. Rebuilt on the dark `destructive` hue,
+     the same way `live-muted` is built on `live`. */
+  --destructive-muted: oklch(0.34 0.055 28.2);
+  --destructive-border: oklch(0.42 0.075 28.5);
 }
 
 @keyframes pulse-live {
