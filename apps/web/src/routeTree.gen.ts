@@ -10,25 +10,37 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminEventsIndexRouteImport } from './routes/admin.events.index'
-import { Route as AdminEventsIdRouteImport } from './routes/admin.events.$id'
-import { Route as EventsPinIndexRouteImport } from './routes/events.$pin.index'
-import { Route as EventsPinSlugRouteImport } from './routes/events.$pin.$slug'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminEventsIndexRouteImport } from './routes/admin/events/index'
+import { Route as AdminEventsIdRouteImport } from './routes/admin/events/$id'
+import { Route as EventsPinIndexRouteImport } from './routes/events/$pin/index'
+import { Route as EventsPinSlugRouteImport } from './routes/events/$pin/$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminEventsIndexRoute = AdminEventsIndexRouteImport.update({
-  id: '/admin/events/',
-  path: '/admin/events/',
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminEventsIndexRoute = AdminEventsIndexRouteImport.update({
+  id: '/events/',
+  path: '/events/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminEventsIdRoute = AdminEventsIdRouteImport.update({
-  id: '/admin/events/$id',
-  path: '/admin/events/$id',
-  getParentRoute: () => rootRouteImport,
+  id: '/events/$id',
+  path: '/events/$id',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const EventsPinIndexRoute = EventsPinIndexRouteImport.update({
   id: '/events/$pin/',
@@ -43,6 +55,8 @@ const EventsPinSlugRoute = EventsPinSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
+  '/admin/': typeof AdminIndexRoute
   '/admin/events/$id': typeof AdminEventsIdRoute
   '/events/$pin/$slug': typeof EventsPinSlugRoute
   '/admin/events/': typeof AdminEventsIndexRoute
@@ -50,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminIndexRoute
   '/admin/events/$id': typeof AdminEventsIdRoute
   '/events/$pin/$slug': typeof EventsPinSlugRoute
   '/admin/events': typeof AdminEventsIndexRoute
@@ -58,6 +73,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
+  '/admin/': typeof AdminIndexRoute
   '/admin/events/$id': typeof AdminEventsIdRoute
   '/events/$pin/$slug': typeof EventsPinSlugRoute
   '/admin/events/': typeof AdminEventsIndexRoute
@@ -67,6 +84,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
+    | '/admin/'
     | '/admin/events/$id'
     | '/events/$pin/$slug'
     | '/admin/events/'
@@ -74,6 +93,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/admin/events/$id'
     | '/events/$pin/$slug'
     | '/admin/events'
@@ -81,6 +101,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
+    | '/admin/'
     | '/admin/events/$id'
     | '/events/$pin/$slug'
     | '/admin/events/'
@@ -89,9 +111,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminEventsIdRoute: typeof AdminEventsIdRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   EventsPinSlugRoute: typeof EventsPinSlugRoute
-  AdminEventsIndexRoute: typeof AdminEventsIndexRoute
   EventsPinIndexRoute: typeof EventsPinIndexRoute
 }
 
@@ -104,19 +125,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/events/': {
       id: '/admin/events/'
-      path: '/admin/events'
+      path: '/events'
       fullPath: '/admin/events/'
       preLoaderRoute: typeof AdminEventsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/admin/events/$id': {
       id: '/admin/events/$id'
-      path: '/admin/events/$id'
+      path: '/events/$id'
       fullPath: '/admin/events/$id'
       preLoaderRoute: typeof AdminEventsIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/events/$pin/': {
       id: '/events/$pin/'
@@ -135,11 +170,26 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminEventsIdRoute: typeof AdminEventsIdRoute
+  AdminEventsIndexRoute: typeof AdminEventsIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+  AdminEventsIdRoute: AdminEventsIdRoute,
+  AdminEventsIndexRoute: AdminEventsIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminEventsIdRoute: AdminEventsIdRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   EventsPinSlugRoute: EventsPinSlugRoute,
-  AdminEventsIndexRoute: AdminEventsIndexRoute,
   EventsPinIndexRoute: EventsPinIndexRoute,
 }
 export const routeTree = rootRouteImport

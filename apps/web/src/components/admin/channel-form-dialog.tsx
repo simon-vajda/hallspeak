@@ -1,0 +1,274 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { components } from '@linguacast/contract/openapi';
+import { useQueryClient } from '@tanstack/react-query';
+import { useId, useRef, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { $api } from '@/api/client';
+import {
+  DIALOG_ACTION,
+  DIALOG_BODY,
+  DIALOG_PANEL,
+  DIALOG_TITLE,
+  DialogActions,
+} from '@/components/admin/confirm-dialog';
+import { ENABLED_TRACK } from '@/components/admin/enabled-switch';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+  FieldTitle,
+} from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { invalidateAdminEvents } from '@/lib/admin-queries';
+import { type ChannelFormValues, channelFormSchema, slugify } from '@/lib/channel-form';
+import { cn } from '@/lib/utils';
+
+type AdminChannel = components['schemas']['AdminChannel'];
+type Problem = components['schemas']['Problem'];
+
+const LABEL = 'text-label text-muted-foreground uppercase';
+const TEXT_INPUT = 'h-11 rounded-full bg-secondary px-4 text-sm';
+
+/**
+ * The API's one expected conflict: the composite unique on (event_id, slug). A `catch`
+ * binding is `unknown` whatever the mutation's error type says, so the narrowing is
+ * written out — but against the contract's own Problem shape, not an inline cast.
+ */
+function isSlugTaken(error: unknown): error is Problem {
+  return (
+    typeof error === 'object' && error !== null && (error as Partial<Problem>).code === 'slug_taken'
+  );
+}
+
+/**
+ * Add and edit are the same dialog, and differ by more than the event form's two do: a
+ * slug is chosen once and then fixed, so edit shows it read-only and never sends it.
+ */
+export function ChannelFormDialog({
+  open,
+  onOpenChange,
+  eventId,
+  channel,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  eventId: number;
+  channel?: AdminChannel;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent showCloseButton={false} className={cn(DIALOG_PANEL, 'sm:max-w-105')}>
+        {/* A child, so it unmounts with the portal: every open starts from the channel's
+            current values, with no error left over from the last attempt. */}
+        <ChannelForm eventId={eventId} channel={channel} onSaved={() => onOpenChange(false)} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ChannelForm({
+  eventId,
+  channel,
+  onSaved,
+}: {
+  eventId: number;
+  channel?: AdminChannel;
+  onSaved: () => void;
+}) {
+  const creating = !channel;
+  const queryClient = useQueryClient();
+  const [failed, setFailed] = useState(false);
+  const nameId = useId();
+  const slugId = useId();
+  const slugNoteId = useId();
+  const switchLabelId = useId();
+  const switchDescriptionId = useId();
+  // Once the admin has typed a slug themselves, the name stops overwriting it — a proposal
+  // that keeps reasserting itself is worse than no proposal at all.
+  const slugEdited = useRef(false);
+
+  const {
+    register,
+    control,
+    setValue,
+    setError,
+    handleSubmit,
+    // isSubmitting, rather than either mutation's isPending: those go false the moment the
+    // request resolves, reopening the button for a second save during the invalidation that
+    // follows. isSubmitting spans the whole handler, up to the dialog closing.
+    formState: { errors, isSubmitting },
+  } = useForm<ChannelFormValues>({
+    resolver: zodResolver(channelFormSchema),
+    defaultValues: {
+      name: channel?.name ?? '',
+      slug: channel?.slug ?? '',
+      enabled: channel?.enabled ?? false,
+    },
+    mode: 'onSubmit',
+  });
+
+  const nameField = register('name');
+  const slugField = register('slug');
+
+  const create = $api.useMutation('post', '/admin/events/{id}/channels');
+  const update = $api.useMutation('patch', '/admin/channels/{id}');
+
+  const onSubmit = handleSubmit(async (values) => {
+    setFailed(false);
+
+    try {
+      if (channel) {
+        await update.mutateAsync({
+          params: { path: { id: channel.id } },
+          body: { name: values.name, enabled: values.enabled },
+        });
+      } else {
+        await create.mutateAsync({
+          params: { path: { id: eventId } },
+          body: { slug: values.slug, name: values.name, enabled: values.enabled },
+        });
+      }
+      await invalidateAdminEvents(queryClient, eventId);
+      onSaved();
+    } catch (error) {
+      // The conflict belongs on the field that caused it; a banner would leave the admin
+      // guessing which of the two values the server objected to.
+      if (isSlugTaken(error)) {
+        setError('slug', { message: 'That slug is already used on this event.' });
+        return;
+      }
+      // Deliberately still open: closing here would throw away what the admin typed.
+      setFailed(true);
+    }
+  });
+
+  return (
+    <form onSubmit={onSubmit} noValidate>
+      <DialogTitle className={cn('mb-1.5', DIALOG_TITLE)}>
+        {creating ? 'New channel' : 'Edit channel'}
+      </DialogTitle>
+      <DialogDescription className={cn('mb-5', DIALOG_BODY)}>
+        {creating
+          ? 'A speaker code is generated when you save. The channel stays disabled until you switch it on.'
+          : 'The speaker code and the listener link are untouched — only what is below changes.'}
+      </DialogDescription>
+
+      <div className="flex flex-col gap-3.5">
+        <Field className="gap-1.5">
+          <FieldLabel htmlFor={nameId} className={LABEL}>
+            Name
+          </FieldLabel>
+          <Input
+            id={nameId}
+            autoComplete="off"
+            placeholder="Español"
+            aria-invalid={errors.name ? true : undefined}
+            className={TEXT_INPUT}
+            {...nameField}
+            onChange={(event) => {
+              nameField.onChange(event);
+              if (creating && !slugEdited.current) {
+                setValue('slug', slugify(event.target.value));
+              }
+            }}
+          />
+          <FieldError errors={[errors.name]} />
+        </Field>
+
+        <Field className="gap-1.5">
+          <FieldLabel htmlFor={slugId} className={LABEL}>
+            Slug
+          </FieldLabel>
+          {creating ? (
+            <Input
+              id={slugId}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="espanol"
+              aria-invalid={errors.slug ? true : undefined}
+              aria-describedby={slugNoteId}
+              className={cn(TEXT_INPUT, 'font-mono')}
+              {...slugField}
+              onChange={(event) => {
+                slugEdited.current = true;
+                slugField.onChange(event);
+              }}
+            />
+          ) : (
+            <Input
+              id={slugId}
+              readOnly
+              value={channel.slug}
+              aria-describedby={slugNoteId}
+              className={cn(TEXT_INPUT, 'font-mono text-muted-foreground')}
+            />
+          )}
+          <FieldDescription id={slugNoteId} className="text-meta">
+            {creating
+              ? 'This becomes part of the listener link and is permanent once the channel exists.'
+              : 'Fixed once the channel exists — changing it would break every printed QR code.'}
+          </FieldDescription>
+          <FieldError errors={[errors.slug]} />
+        </Field>
+
+        <Field
+          orientation="horizontal"
+          className="rounded-lg border border-border bg-secondary px-4 py-3"
+        >
+          <FieldContent>
+            <FieldTitle id={switchLabelId} className="text-sm font-semibold">
+              {creating ? 'Enable straight away' : 'Enabled'}
+            </FieldTitle>
+            <FieldDescription id={switchDescriptionId} className="text-[12.5px]">
+              {creating
+                ? 'Guests can pick it as soon as it exists'
+                : 'Guests can pick it while this is on'}
+            </FieldDescription>
+          </FieldContent>
+          <Controller
+            control={control}
+            name="enabled"
+            render={({ field }) => (
+              <Switch
+                size="lg"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                aria-labelledby={switchLabelId}
+                aria-describedby={switchDescriptionId}
+                className={ENABLED_TRACK}
+              />
+            )}
+          />
+        </Field>
+      </div>
+
+      {failed && (
+        <p role="alert" className="mt-4 text-sm text-destructive">
+          {creating
+            ? 'Could not create the channel. Nothing was saved — try again.'
+            : 'Could not save your changes. The channel is as it was — try again.'}
+        </p>
+      )}
+
+      <DialogActions>
+        <DialogClose render={<Button variant="outline" className={DIALOG_ACTION} />}>
+          Cancel
+        </DialogClose>
+        <Button type="submit" disabled={isSubmitting} className={DIALOG_ACTION}>
+          {creating ? 'Add channel' : 'Save changes'}
+        </Button>
+      </DialogActions>
+    </form>
+  );
+}

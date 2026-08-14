@@ -50,14 +50,48 @@ describe('POST /admin/events', () => {
 });
 
 describe('GET /admin/events', () => {
+  type ListedEvent = {
+    id: number;
+    name: string;
+    enabled: boolean;
+    channels: { slug: string; enabled: boolean }[];
+  };
+
+  const list = async () => {
+    const res = await api.request('/admin/events');
+    expect(res.status).toBe(200);
+    return (await res.json()) as ListedEvent[];
+  };
+
   it('includes disabled events, unlike the public route', async () => {
     await post('/admin/events', { name: 'Hidden Conference' });
 
-    const res = await api.request('/admin/events');
-    const body = (await res.json()) as { name: string; enabled: boolean }[];
+    expect((await list()).some((e) => e.name === 'Hidden Conference' && !e.enabled)).toBe(true);
+  });
 
-    expect(res.status).toBe(200);
-    expect(body.some((e) => e.name === 'Hidden Conference' && !e.enabled)).toBe(true);
+  it('carries each event with its own channels, disabled ones included', async () => {
+    const withChannels = (await (
+      await post('/admin/events', { name: 'Listed With Channels' })
+    ).json()) as { id: number };
+    const bare = (await (await post('/admin/events', { name: 'Listed Bare' })).json()) as {
+      id: number;
+    };
+
+    await post(`/admin/events/${withChannels.id}/channels`, { slug: 'english', name: 'English' });
+    await post(`/admin/events/${withChannels.id}/channels`, {
+      slug: 'spanish',
+      name: 'Spanish',
+      enabled: true,
+    });
+
+    const body = await list();
+    const listed = body.find((e) => e.id === withChannels.id);
+    const listedBare = body.find((e) => e.id === bare.id);
+
+    expect(listed?.channels.map((c) => c.slug).sort()).toEqual(['english', 'spanish']);
+    expect(listed?.channels.some((c) => !c.enabled)).toBe(true);
+    // An event without channels carries the key regardless — the client maps over it.
+    expect(listedBare?.channels).toEqual([]);
   });
 });
 
