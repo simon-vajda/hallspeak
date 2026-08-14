@@ -52,6 +52,37 @@
   --animate-pulse-live: pulse-live 2s ease-in-out infinite;
 }
 
+/* The handoff's spacing and type ramp, as scale entries rather than call-site literals.
+   Tailwind v4 derives the whole spacing scale from `--spacing`, so the design's off-scale
+   values are already reachable as fractional steps — 26px is `6.5`, 18px is `4.5`, 1120px
+   is `280`. Only the two that are *semantic* — they name a thing, repeat on every screen
+   and change value at `lg` — are worth a name of their own. */
+@theme {
+  --spacing-gutter: 1.625rem; /* 26px screen gutter; 40px (px-10) from lg up */
+  --spacing-shell: 70rem; /* 1120px admin content cap */
+
+  /* The four ramp steps the handoff fixes size, weight and tracking for together.
+     Body (14px/1.5) is Tailwind's own `text-sm`, so it stays that. */
+  --text-screen: 1.875rem; /* screen title */
+  --text-screen--line-height: 1.06;
+  --text-screen--letter-spacing: -0.035em;
+  --text-screen--font-weight: 600;
+
+  --text-section: 1.0625rem; /* section title */
+  --text-section--line-height: 1.4;
+  --text-section--letter-spacing: -0.03em;
+  --text-section--font-weight: 600;
+
+  --text-label: 0.65625rem; /* uppercase label — pair with `uppercase` */
+  --text-label--line-height: 1.2;
+  --text-label--letter-spacing: 0.08em;
+  --text-label--font-weight: 600;
+
+  --text-meta: 0.75rem; /* metadata / status bar */
+  --text-meta--line-height: 1.4;
+  --text-meta--font-weight: 500;
+}
+
 /* Hex values in the comments are the source of truth from the design file. */
 :root {
   --radius: 1.25rem; /* rounded-lg = 20px = the card radius */
@@ -111,8 +142,13 @@
   --live: oklch(0.836 0.163 148.7); /* #74E68C */
   --live-foreground: oklch(0.836 0.163 148.7); /* mint type on live-muted */
   --live-muted: oklch(0.339 0.044 188.5); /* #183F3C */
-  --destructive-muted: oklch(0.339 0.044 188.5);
-  --destructive-border: oklch(0.365 0.051 246.4);
+
+  /* The handoff's dark block gives these the mint and the plain border values —
+     visibly a copy from the two lines above, since a destructive fill that reads
+     green is the one thing it cannot be. Rebuilt on the dark `destructive` hue,
+     the same way `live-muted` is built on `live`. */
+  --destructive-muted: oklch(0.34 0.055 28.2);
+  --destructive-border: oklch(0.42 0.075 28.5);
 }
 
 @keyframes pulse-live {

@@ -442,7 +442,7 @@
         "tags": [
           "Admin"
         ],
-        "summary": "Every event, enabled or not",
+        "summary": "Every event, enabled or not, with its channels",
         "responses": {
           "200": {
             "description": "OK",
@@ -451,7 +451,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/AdminEvent"
+                    "$ref": "#/components/schemas/AdminEventDetail"
                   }
                 }
               }

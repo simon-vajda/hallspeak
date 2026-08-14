@@ -48,7 +48,10 @@ function withChannels(row: EventRow) {
 const eventNotFound = { code: 'not_found', message: 'No such event.' } as const;
 
 export const adminEventRoutes = new OpenAPIHono({ defaultHook })
-  .openapi(routes.adminListEvents, (c) => c.json(listEvents(db).map(toAdminEvent), 200))
+  // A listChannels query per event, deliberately: the list is the only consumer, it needs
+  // every event's channels for its chips, and this deployment shows tens of events on one
+  // process. Simplicity over a join that has to be maintained.
+  .openapi(routes.adminListEvents, (c) => c.json(listEvents(db).map(withChannels), 200))
 
   .openapi(routes.adminCreateEvent, (c) => {
     const input = c.req.valid('json');
