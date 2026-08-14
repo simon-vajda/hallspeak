@@ -101,7 +101,7 @@ function ChannelForm({
     setValue,
     setError,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<ChannelFormValues>({
     resolver: zodResolver(channelFormSchema),
     defaultValues: {
@@ -117,7 +117,10 @@ function ChannelForm({
 
   const create = $api.useMutation('post', '/admin/events/{id}/channels');
   const update = $api.useMutation('patch', '/admin/channels/{id}');
-  const pending = create.isPending || update.isPending;
+  // isSubmitting, not just the mutations' isPending: that goes false the moment the
+  // request resolves, reopening the button for a second save during the invalidation
+  // that follows. isSubmitting covers the whole handler, up to the dialog closing.
+  const pending = isSubmitting || create.isPending || update.isPending;
 
   const onSubmit = handleSubmit(async (values) => {
     setFailed(false);
