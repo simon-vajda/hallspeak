@@ -68,9 +68,18 @@ export function ConfirmDialog({
   const destructive = tone === 'destructive';
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      // Closing is refused while the request is in flight. The error line below is the only
+      // report a failed delete or regenerate gets, and it lives inside this dialog — dismiss
+      // it mid-flight and a destructive action that failed looks exactly like one that
+      // worked. Opening is never blocked, so this can't wedge the dialog shut.
+      onOpenChange={(next) => {
+        if (next || !pending) onOpenChange(next);
+      }}
+    >
       {/* No close cross: the two named buttons are the only ways out, so neither choice can
-          be made by accident. Escape and the backdrop still cancel. */}
+          be made by accident. Escape and the backdrop cancel until the request starts. */}
       <DialogContent
         role="alertdialog"
         showCloseButton={false}
@@ -99,7 +108,9 @@ export function ConfirmDialog({
         )}
 
         <DialogActions>
-          <DialogClose render={<Button variant="outline" className={DIALOG_ACTION} />}>
+          <DialogClose
+            render={<Button variant="outline" disabled={pending} className={DIALOG_ACTION} />}
+          >
             {cancelLabel}
           </DialogClose>
           <Button
