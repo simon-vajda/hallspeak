@@ -155,7 +155,7 @@ function ChannelEnabledSwitch({ channel }: { channel: AdminChannel }) {
   const invalidate = useChannelInvalidation(channel.eventId);
   const [failed, setFailed] = useState(false);
 
-  const { mutate, isPending } = $api.useMutation('patch', '/admin/channels/{id}', {
+  const { mutate } = $api.useMutation('patch', '/admin/channels/{id}', {
     onMutate: async (variables) => {
       setFailed(false);
       const detail = eventDetailKey(channel.eventId);
@@ -197,7 +197,6 @@ function ChannelEnabledSwitch({ channel }: { channel: AdminChannel }) {
   return (
     <EnabledSwitch
       checked={channel.enabled}
-      disabled={isPending}
       failed={failed}
       label={`Enable ${channel.name}`}
       onCheckedChange={(enabled) => {

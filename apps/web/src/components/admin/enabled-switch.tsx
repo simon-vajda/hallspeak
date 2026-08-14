@@ -10,12 +10,17 @@ import { cn } from '@/lib/utils';
  */
 export const ENABLED_TRACK = 'data-checked:bg-foreground';
 
-/** The switch as the design draws it, plus the failure line a save can leave behind. */
+/**
+ * The switch as the design draws it, plus the failure line a save can leave behind.
+ *
+ * It stays live while the request is in flight. Disabling it would flash the disabled
+ * cursor and opacity for the length of a round trip, and there is nothing to protect: the
+ * caller's optimistic update already shows the new state and rolls it back on failure.
+ */
 export function EnabledSwitch({
   checked,
   onCheckedChange,
   label,
-  disabled,
   failed,
   className,
 }: {
@@ -23,7 +28,6 @@ export function EnabledSwitch({
   onCheckedChange: (checked: boolean) => void;
   /** Names what is being enabled — "Enabled" alone tells a screen reader nothing. */
   label: string;
-  disabled?: boolean;
   failed?: boolean;
   className?: string;
 }) {
@@ -32,7 +36,6 @@ export function EnabledSwitch({
       <Switch
         size="lg"
         checked={checked}
-        disabled={disabled}
         className={ENABLED_TRACK}
         aria-label={label}
         onCheckedChange={onCheckedChange}
