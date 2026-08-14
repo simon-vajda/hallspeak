@@ -1,5 +1,14 @@
-import type { QueryClient } from '@tanstack/react-query';
+import type { components } from '@linguacast/contract/openapi';
+import { type QueryClient, useQueryClient } from '@tanstack/react-query';
 import { $api } from '@/api/client';
+
+type AdminEventDetail = components['schemas']['AdminEventDetail'];
+
+/** What both caches held before an optimistic write, and what a failure restores. */
+type AdminEventSnapshot = {
+  list: AdminEventDetail[] | undefined;
+  detail: AdminEventDetail | undefined;
+};
 
 /**
  * The two admin queries every screen and mutation addresses. They live together because a
@@ -20,4 +29,49 @@ export function invalidateAdminEvents(queryClient: QueryClient, eventId: number)
     queryClient.invalidateQueries({ queryKey: eventDetailKey(eventId) }),
     queryClient.invalidateQueries({ queryKey: eventsListKey() }),
   ]);
+}
+
+/**
+ * The optimistic half of the same rule: an enable switch appears on both screens, so a
+ * write has to land in both caches or the two disagree until the refetch arrives. Callers
+ * supply only the change itself — everything around it (cancelling in-flight reads,
+ * snapshotting for rollback, settling) is the same wherever an event is patched in place.
+ *
+ * Pass the three returned functions straight to a mutation's `onMutate`, `onError` and
+ * `onSettled`; `apply` resolves to the snapshot react-query hands back as context.
+ */
+export function useOptimisticEventUpdate(eventId: number) {
+  const queryClient = useQueryClient();
+  const listKey = eventsListKey();
+  const detailKey = eventDetailKey(eventId);
+
+  return {
+    async apply(patch: (event: AdminEventDetail) => AdminEventDetail) {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: listKey }),
+        queryClient.cancelQueries({ queryKey: detailKey }),
+      ]);
+
+      const previous: AdminEventSnapshot = {
+        list: queryClient.getQueryData(listKey),
+        detail: queryClient.getQueryData(detailKey),
+      };
+
+      queryClient.setQueryData<AdminEventDetail[]>(listKey, (events) =>
+        events?.map((event) => (event.id === eventId ? patch(event) : event)),
+      );
+      queryClient.setQueryData<AdminEventDetail>(detailKey, (event) => event && patch(event));
+
+      return previous;
+    },
+
+    rollback(previous: AdminEventSnapshot | undefined) {
+      if (previous?.list) queryClient.setQueryData(listKey, previous.list);
+      if (previous?.detail) queryClient.setQueryData(detailKey, previous.detail);
+    },
+
+    settle() {
+      return invalidateAdminEvents(queryClient, eventId);
+    },
+  };
 }

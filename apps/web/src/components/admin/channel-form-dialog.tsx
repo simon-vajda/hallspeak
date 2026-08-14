@@ -35,16 +35,19 @@ import { type ChannelFormValues, channelFormSchema, slugify } from '@/lib/channe
 import { cn } from '@/lib/utils';
 
 type AdminChannel = components['schemas']['AdminChannel'];
+type Problem = components['schemas']['Problem'];
 
 const LABEL = 'text-label text-muted-foreground uppercase';
 const TEXT_INPUT = 'h-11 rounded-full bg-secondary px-4 text-sm';
 
-/** The API's one expected conflict: the composite unique on (event_id, slug). */
-function isSlugTaken(error: unknown) {
+/**
+ * The API's one expected conflict: the composite unique on (event_id, slug). A `catch`
+ * binding is `unknown` whatever the mutation's error type says, so the narrowing is
+ * written out — but against the contract's own Problem shape, not an inline cast.
+ */
+function isSlugTaken(error: unknown): error is Problem {
   return (
-    typeof error === 'object' &&
-    error !== null &&
-    (error as { code?: unknown }).code === 'slug_taken'
+    typeof error === 'object' && error !== null && (error as Partial<Problem>).code === 'slug_taken'
   );
 }
 
@@ -101,6 +104,9 @@ function ChannelForm({
     setValue,
     setError,
     handleSubmit,
+    // isSubmitting, rather than either mutation's isPending: those go false the moment the
+    // request resolves, reopening the button for a second save during the invalidation that
+    // follows. isSubmitting spans the whole handler, up to the dialog closing.
     formState: { errors, isSubmitting },
   } = useForm<ChannelFormValues>({
     resolver: zodResolver(channelFormSchema),
@@ -117,10 +123,6 @@ function ChannelForm({
 
   const create = $api.useMutation('post', '/admin/events/{id}/channels');
   const update = $api.useMutation('patch', '/admin/channels/{id}');
-  // isSubmitting, not just the mutations' isPending: that goes false the moment the
-  // request resolves, reopening the button for a second save during the invalidation
-  // that follows. isSubmitting covers the whole handler, up to the dialog closing.
-  const pending = isSubmitting || create.isPending || update.isPending;
 
   const onSubmit = handleSubmit(async (values) => {
     setFailed(false);
@@ -263,7 +265,7 @@ function ChannelForm({
         <DialogClose render={<Button variant="outline" className={DIALOG_ACTION} />}>
           Cancel
         </DialogClose>
-        <Button type="submit" disabled={pending} className={DIALOG_ACTION}>
+        <Button type="submit" disabled={isSubmitting} className={DIALOG_ACTION}>
           {creating ? 'Add channel' : 'Save changes'}
         </Button>
       </DialogActions>

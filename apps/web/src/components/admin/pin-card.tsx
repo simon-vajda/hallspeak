@@ -1,7 +1,7 @@
 import type { components } from '@linguacast/contract/openapi';
 import { Download, RefreshCw } from 'lucide-react';
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
-import { useRef, useState } from 'react';
+import { memo, type RefObject, useRef, useState } from 'react';
 import { CopyButton } from '@/components/admin/copy-button';
 import { RegeneratePinDialog } from '@/components/admin/event-dialogs';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,34 @@ const QR_SIZE = 144;
 const QR_DOWNLOAD_SIZE = 1024;
 
 const ACTION = 'h-9.5 w-full rounded-full px-4.25 font-semibold text-sm';
+
+/**
+ * Never displayed — it exists only so the download has a raster to read. The quiet zone is
+ * baked in, since a printed code has no page around it to breathe.
+ *
+ * Memoised on the URL because qrcode.react redraws the canvas from an effect with no
+ * dependency array: without this, every re-render of the detail page — opening a dialog,
+ * toggling any switch, each settled refetch — repaints 1024px of QR nobody is looking at.
+ */
+const DownloadCanvas = memo(function DownloadCanvas({
+  url,
+  canvasRef,
+}: {
+  url: string;
+  canvasRef: RefObject<HTMLCanvasElement | null>;
+}) {
+  return (
+    <QRCodeCanvas
+      ref={canvasRef}
+      value={url}
+      size={QR_DOWNLOAD_SIZE}
+      marginSize={4}
+      bgColor="#ffffff"
+      fgColor="#000000"
+      className="hidden"
+    />
+  );
+});
 
 /**
  * The PIN, its QR code and the share actions. Everything here is derived from `event.pin`,
@@ -64,17 +92,7 @@ export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'>
         />
       </div>
 
-      {/* Never displayed — it exists only so the download has a raster to read. The quiet
-          zone is baked in here, since a printed code has no page around it to breathe. */}
-      <QRCodeCanvas
-        ref={downloadRef}
-        value={listenerUrl}
-        size={QR_DOWNLOAD_SIZE}
-        marginSize={4}
-        bgColor="#ffffff"
-        fgColor="#000000"
-        className="hidden"
-      />
+      <DownloadCanvas url={listenerUrl} canvasRef={downloadRef} />
 
       <div className="mt-4 flex gap-2">
         <CopyButton

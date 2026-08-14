@@ -99,6 +99,9 @@ function EventForm({
     register,
     control,
     handleSubmit,
+    // isSubmitting, rather than either mutation's isPending: those go false the moment the
+    // request resolves, reopening the button for a second save during the invalidation that
+    // follows. isSubmitting spans the whole handler, up to the dialog closing.
     formState: { errors, isSubmitting },
   } = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
@@ -112,10 +115,6 @@ function EventForm({
 
   const create = $api.useMutation('post', '/admin/events');
   const update = $api.useMutation('patch', '/admin/events/{id}');
-  // isSubmitting, not just the mutations' isPending: that goes false the moment the
-  // request resolves, reopening the button for a second save during the invalidation
-  // that follows. isSubmitting covers the whole handler, up to the dialog closing.
-  const pending = isSubmitting || create.isPending || update.isPending;
 
   const onSubmit = handleSubmit(async (values) => {
     setFailed(false);
@@ -222,7 +221,7 @@ function EventForm({
         <DialogClose render={<Button variant="outline" className={DIALOG_ACTION} />}>
           Cancel
         </DialogClose>
-        <Button type="submit" disabled={pending} className={DIALOG_ACTION}>
+        <Button type="submit" disabled={isSubmitting} className={DIALOG_ACTION}>
           {creating ? 'Create event' : 'Save changes'}
         </Button>
       </DialogActions>
