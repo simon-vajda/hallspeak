@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { CopyButton } from '@/components/admin/copy-button';
 import { EnabledSwitch } from '@/components/admin/enabled-switch';
 import { Button } from '@/components/ui/button';
-import { eventDetailKey, eventsListKey, invalidateAdminEvents } from '@/lib/admin-queries';
+import { invalidateAdminEvents, useOptimisticEventUpdate } from '@/lib/admin-queries';
 import { plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -151,47 +151,28 @@ function ChannelRow({ event, channel }: { event: AdminEventDetail; channel: Admi
 }
 
 function ChannelEnabledSwitch({ channel }: { channel: AdminChannel }) {
-  const queryClient = useQueryClient();
-  const invalidate = useChannelInvalidation(channel.eventId);
+  const cache = useOptimisticEventUpdate(channel.eventId);
   const [failed, setFailed] = useState(false);
 
   const { mutate } = $api.useMutation('patch', '/admin/channels/{id}', {
-    onMutate: async (variables) => {
+    onMutate: ({ body }) => {
       setFailed(false);
-      const detail = eventDetailKey(channel.eventId);
-      const list = eventsListKey();
-      await Promise.all([
-        queryClient.cancelQueries({ queryKey: detail }),
-        queryClient.cancelQueries({ queryKey: list }),
-      ]);
-      const previous = {
-        detail: queryClient.getQueryData<AdminEventDetail>(detail),
-        list: queryClient.getQueryData<AdminEventDetail[]>(list),
-      };
-
-      const enabled = variables.body.enabled;
-      const apply = (event: AdminEventDetail) => ({
+      // A channel's own row and its chip on the events list are the same row of data,
+      // reached through the event that owns it.
+      return cache.apply((event) => ({
         ...event,
         channels: event.channels.map((candidate) =>
           candidate.id === channel.id
-            ? { ...candidate, enabled: enabled ?? candidate.enabled }
+            ? { ...candidate, enabled: body.enabled ?? candidate.enabled }
             : candidate,
         ),
-      });
-      queryClient.setQueryData<AdminEventDetail>(detail, (current) => current && apply(current));
-      queryClient.setQueryData<AdminEventDetail[]>(list, (events) =>
-        events?.map((event) => (event.id === channel.eventId ? apply(event) : event)),
-      );
-
-      return previous;
+      }));
     },
-    onError: (_error, _variables, context) => {
-      if (context?.detail)
-        queryClient.setQueryData(eventDetailKey(channel.eventId), context.detail);
-      if (context?.list) queryClient.setQueryData(eventsListKey(), context.list);
+    onError: (_error, _variables, previous) => {
+      cache.rollback(previous);
       setFailed(true);
     },
-    onSettled: invalidate,
+    onSettled: cache.settle,
   });
 
   return (
