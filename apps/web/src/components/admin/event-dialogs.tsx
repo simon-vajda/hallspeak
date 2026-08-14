@@ -33,7 +33,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { eventDetailKey, invalidateAdminEvents } from '@/lib/admin-queries';
+import { eventDetailKey, eventsListKey, invalidateAdminEvents } from '@/lib/admin-queries';
 import { type EventFormValues, eventFormSchema } from '@/lib/event-form';
 import { formatPin, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -86,7 +86,7 @@ function EventForm({
     register,
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
     defaultValues: {
@@ -99,7 +99,10 @@ function EventForm({
 
   const create = $api.useMutation('post', '/admin/events');
   const update = $api.useMutation('patch', '/admin/events/{id}');
-  const pending = create.isPending || update.isPending;
+  // isSubmitting, not just the mutations' isPending: that goes false the moment the
+  // request resolves, reopening the button for a second save during the invalidation
+  // that follows. isSubmitting covers the whole handler, up to the dialog closing.
+  const pending = isSubmitting || create.isPending || update.isPending;
 
   const onSubmit = handleSubmit(async (values) => {
     setFailed(false);
@@ -232,10 +235,13 @@ export function DeleteEventDialog({
   const { mutate, isPending } = $api.useMutation('delete', '/admin/events/{id}', {
     onMutate: () => setFailed(false),
     onSuccess: async () => {
-      queryClient.removeQueries({ queryKey: eventDetailKey(event.id) });
-      await invalidateAdminEvents(queryClient, event.id);
+      // Leave the page before touching the cache: invalidating the detail query while the
+      // detail route is still mounted refetches an event that no longer exists, and the
+      // 404 that comes back flashes the not-found state on the way out.
       onOpenChange(false);
       onDeleted?.();
+      queryClient.removeQueries({ queryKey: eventDetailKey(event.id) });
+      await queryClient.invalidateQueries({ queryKey: eventsListKey() });
     },
     onError: () => setFailed(true),
   });
