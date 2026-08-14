@@ -4,9 +4,12 @@ import { $api } from '@/api/client';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
-/** What both caches held before an optimistic write, and what a failure restores. */
+/**
+ * What both caches held for **one** event before an optimistic write, and what a failure
+ * restores. Deliberately not the whole list — see the comment on `apply`.
+ */
 type AdminEventSnapshot = {
-  list: AdminEventDetail[] | undefined;
+  row: AdminEventDetail | undefined;
   detail: AdminEventDetail | undefined;
 };
 
@@ -52,8 +55,12 @@ export function useOptimisticEventUpdate(eventId: number) {
         queryClient.cancelQueries({ queryKey: detailKey }),
       ]);
 
+      // Only this event's row is snapshotted, never the whole list. Both screens render a
+      // switch per row against these two keys, so restoring an entire array would also
+      // restore every other row as it was before — undoing a second toggle that is still
+      // in flight beside this one.
       const previous: AdminEventSnapshot = {
-        list: queryClient.getQueryData(listKey),
+        row: queryClient.getQueryData<AdminEventDetail[]>(listKey)?.find((e) => e.id === eventId),
         detail: queryClient.getQueryData(detailKey),
       };
 
@@ -66,7 +73,12 @@ export function useOptimisticEventUpdate(eventId: number) {
     },
 
     rollback(previous: AdminEventSnapshot | undefined) {
-      if (previous?.list) queryClient.setQueryData(listKey, previous.list);
+      const row = previous?.row;
+      if (row) {
+        queryClient.setQueryData<AdminEventDetail[]>(listKey, (events) =>
+          events?.map((event) => (event.id === eventId ? row : event)),
+        );
+      }
       if (previous?.detail) queryClient.setQueryData(detailKey, previous.detail);
     },
 

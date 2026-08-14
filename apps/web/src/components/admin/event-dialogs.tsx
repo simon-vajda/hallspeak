@@ -239,7 +239,8 @@ export function DeleteEventDialog({
   event: AdminEventDetail;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onDeleted?: () => void;
+  /** Awaited before the cache is touched, so a navigating caller can unmount first. */
+  onDeleted?: () => void | Promise<void>;
 }) {
   const queryClient = useQueryClient();
   const [failed, setFailed] = useState(false);
@@ -247,11 +248,12 @@ export function DeleteEventDialog({
   const { mutate, isPending } = $api.useMutation('delete', '/admin/events/{id}', {
     onMutate: () => setFailed(false),
     onSuccess: async () => {
-      // Leave the page before touching the cache: invalidating the detail query while the
-      // detail route is still mounted refetches an event that no longer exists, and the
-      // 404 that comes back flashes the not-found state on the way out.
+      // Leave the page before touching the cache: removing or invalidating the detail query
+      // while the detail route is still mounted refetches an event that no longer exists,
+      // and the 404 that comes back flashes the not-found state on the way out. The await
+      // is what makes that ordering real — navigate() resolves once the transition commits.
       onOpenChange(false);
-      onDeleted?.();
+      await onDeleted?.();
       queryClient.removeQueries({ queryKey: eventDetailKey(event.id) });
       await queryClient.invalidateQueries({ queryKey: eventsListKey() });
     },
@@ -302,8 +304,10 @@ export function RegeneratePinDialog({
   const { mutate, isPending } = $api.useMutation('post', '/admin/events/{id}/regenerate-pin', {
     onMutate: () => setFailed(false),
     onSuccess: async () => {
-      await invalidateAdminEvents(queryClient, event.id);
+      // Close first: the refetch swaps in the new PIN, and this dialog's body names the old
+      // one as the one that stops working.
       onOpenChange(false);
+      await invalidateAdminEvents(queryClient, event.id);
     },
     onError: () => setFailed(true),
   });
