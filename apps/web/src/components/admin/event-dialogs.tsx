@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { components } from '@linguacast/contract/openapi';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
 import { KeyRound, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -56,12 +57,24 @@ export function EventFormDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 } & ({ mode: 'create'; event?: never } | { mode: 'edit'; event: AdminEventDetail })) {
+  const navigate = useNavigate();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false} className={cn(DIALOG_PANEL, 'sm:max-w-105')}>
         {/* The form is a child so it unmounts with the portal: every open starts from the
             event's current values, with no error left over from the last attempt. */}
-        <EventForm mode={mode} event={event} onSaved={() => onOpenChange(false)} />
+        <EventForm
+          mode={mode}
+          event={event}
+          onSaved={(saved) => {
+            onOpenChange(false);
+            // A new event has a PIN and nothing else. Adding channels is the next act, so
+            // creating lands on the event rather than back on a list row.
+            if (mode === 'create')
+              navigate({ to: '/admin/events/$id', params: { id: String(saved.id) } });
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -74,7 +87,7 @@ function EventForm({
 }: {
   mode: 'create' | 'edit';
   event?: AdminEventDetail;
-  onSaved: () => void;
+  onSaved: (saved: AdminEventDetail) => void;
 }) {
   const creating = mode === 'create';
   const queryClient = useQueryClient();
@@ -117,7 +130,7 @@ function EventForm({
         ? await update.mutateAsync({ params: { path: { id: event.id } }, body })
         : await create.mutateAsync({ body });
       await invalidateAdminEvents(queryClient, saved.id);
-      onSaved();
+      onSaved(saved);
     } catch {
       // Deliberately still open: closing here would throw away what the admin typed.
       setFailed(true);

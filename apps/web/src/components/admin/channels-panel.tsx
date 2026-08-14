@@ -75,9 +75,11 @@ function ChannelRow({ event, channel }: { event: AdminEventDetail; channel: Admi
   return (
     <li className="flex flex-col gap-3.5 border-t border-border px-5.5 py-4.25 lg:flex-row lg:items-center lg:gap-4">
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2.5">
-          <h3 className="font-semibold text-[18px] tracking-[-0.025em]">{channel.name}</h3>
-          <ChannelChip enabled={channel.enabled}>
+        <div className="flex min-w-0 items-center gap-2.5">
+          {/* The name gives way, not the chip: a truncated channel name is still readable,
+              a chip that has spilled into the controls beside it is not. */}
+          <h3 className="truncate font-semibold text-[18px] tracking-[-0.025em]">{channel.name}</h3>
+          <ChannelChip enabled={channel.enabled} className="shrink-0">
             {channel.enabled ? 'Enabled' : 'Disabled'}
           </ChannelChip>
         </div>
@@ -88,14 +90,13 @@ function ChannelRow({ event, channel }: { event: AdminEventDetail; channel: Admi
           CopyButton names itself from its visible label and takes no label of its own. */}
       <fieldset
         aria-label={`${channel.name} channel`}
-        className="flex min-w-0 flex-wrap items-center gap-2"
+        className="flex shrink-0 flex-wrap items-center gap-2"
       >
         <CopyButton
           value={speakerUrl}
           label="Copy speaker link"
           variant="outline"
-          className={cn(ROW_ACTION, 'w-full lg:w-auto')}
-          wrapperClassName="flex-1 basis-full lg:flex-none lg:basis-auto"
+          className={ROW_ACTION}
         />
         <Button
           variant="outline"

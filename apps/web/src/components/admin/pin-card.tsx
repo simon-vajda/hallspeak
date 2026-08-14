@@ -1,7 +1,7 @@
 import type { components } from '@linguacast/contract/openapi';
-import { RefreshCw } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
-import { useState } from 'react';
+import { Download, RefreshCw } from 'lucide-react';
+import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
+import { useRef, useState } from 'react';
 import { CopyButton } from '@/components/admin/copy-button';
 import { RegeneratePinDialog } from '@/components/admin/event-dialogs';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,11 @@ type AdminEventDetail = components['schemas']['AdminEventDetail'];
 /** 168px box less its 12px quiet-zone padding. */
 const QR_SIZE = 144;
 
+/** What the download writes. Big enough to print a poster from, small enough to email. */
+const QR_DOWNLOAD_SIZE = 1024;
+
+const ACTION = 'h-9.5 w-full rounded-full px-4.25 font-semibold text-sm';
+
 /**
  * The PIN, its QR code and the share actions. Everything here is derived from `event.pin`,
  * so a regenerate that refetches the event redraws the number and the code together.
@@ -21,7 +26,21 @@ const QR_SIZE = 144;
  */
 export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'> }) {
   const [regenerating, setRegenerating] = useState(false);
+  const downloadRef = useRef<HTMLCanvasElement>(null);
   const listenerUrl = `${window.location.origin}/events/${event.pin}`;
+
+  // The visible code is an SVG so it stays sharp at any size; the download comes off a
+  // second, hidden canvas at print resolution, because a PNG is what drops into a slide,
+  // a poster or a print shop's upload form without anyone converting anything.
+  const download = () => {
+    const canvas = downloadRef.current;
+    if (!canvas) return;
+
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = `linguacast-${event.pin}.png`;
+    link.click();
+  };
 
   return (
     <section className="rounded-lg bg-secondary p-5.5 text-center">
@@ -45,12 +64,34 @@ export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'>
         />
       </div>
 
-      <CopyButton
+      {/* Never displayed — it exists only so the download has a raster to read. The quiet
+          zone is baked in here, since a printed code has no page around it to breathe. */}
+      <QRCodeCanvas
+        ref={downloadRef}
         value={listenerUrl}
-        label="Copy link"
-        className="h-9.5 w-full rounded-full px-4.25 font-semibold text-sm"
-        wrapperClassName="mt-4"
+        size={QR_DOWNLOAD_SIZE}
+        marginSize={4}
+        bgColor="#ffffff"
+        fgColor="#000000"
+        className="hidden"
       />
+
+      <div className="mt-4 flex gap-2">
+        <CopyButton
+          value={listenerUrl}
+          label="Copy link"
+          className={ACTION}
+          wrapperClassName="flex-1"
+        />
+        <Button
+          variant="outline"
+          onClick={download}
+          aria-label="Download the QR code as a PNG"
+          className="size-9.5 rounded-full px-0"
+        >
+          <Download />
+        </Button>
+      </div>
 
       <p className="mt-3 text-meta leading-normal text-muted-foreground">
         Regenerating the PIN invalidates every printed card.
@@ -59,7 +100,9 @@ export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'>
       <Button
         variant="ghost"
         onClick={() => setRegenerating(true)}
-        className="mt-2 h-8 gap-1.5 rounded-full px-3 font-semibold text-sm"
+        // The card sits on `secondary`, which is what ghost's hover paints — so it needs a
+        // hover of its own or the control looks inert.
+        className="mt-2 h-8 gap-1.5 rounded-full px-3 font-semibold text-sm hover:bg-foreground/10 dark:hover:bg-foreground/15"
       >
         <RefreshCw />
         Regenerate PIN
