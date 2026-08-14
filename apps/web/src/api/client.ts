@@ -8,28 +8,39 @@ import createQueryClient from 'openapi-react-query';
 export const fetchClient = createFetchClient<paths>({ baseUrl: '/api', credentials: 'include' });
 
 /**
- * Gives a body-less failure a body, so it is still a failure by the time it reaches a hook.
+ * `unavailable` is the code for "the API never answered" — the request did not reach it, or
+ * what came back was not from it. Every other error carries a Problem the server wrote.
+ */
+function unavailable(status: number, message: string) {
+  return new Response(JSON.stringify({ code: 'unavailable', message }), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+/**
+ * Makes a failure that carries no Problem body still arrive as a failure.
  *
  * openapi-fetch returns `{ error: undefined }` for a non-ok response with an empty body, and
  * openapi-react-query only throws `if (error)` — so a 502 or 504 from a reverse proxy, which
- * is what the browser sees whenever the server is down, resolves as a **success** carrying
- * `undefined`. Optimistic writes then keep their optimistic value, no rollback runs and no
- * error is reported: the UI claims a change the server never accepted.
+ * is what the browser sees whenever the server is down, resolved as a **success** carrying
+ * `undefined`. Optimistic writes kept their optimistic value, no rollback ran and nothing was
+ * reported: the UI claimed a change the server never accepted.
  *
- * Our own errors always carry a Problem body and are unaffected.
+ * `onError` covers the other half of the same story — a fetch that rejects outright, with no
+ * response at all, because the browser is offline or the connection was refused. Both end up
+ * as one `unavailable` Problem, so a caller has one shape to handle and one code to check.
  */
 fetchClient.use({
   async onResponse({ response }) {
     if (response.ok || (await response.clone().text()) !== '') return;
 
-    return new Response(
-      JSON.stringify({ code: 'unavailable', message: `The server returned ${response.status}.` }),
-      {
-        status: response.status,
-        statusText: response.statusText,
-        headers: { 'content-type': 'application/json' },
-      },
-    );
+    return unavailable(response.status, `The server returned ${response.status}.`);
+  },
+
+  onError() {
+    // 503 is this client's own word for it: no status ever arrived to report.
+    return unavailable(503, 'The server could not be reached.');
   },
 });
 
