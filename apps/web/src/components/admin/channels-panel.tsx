@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { CopyButton } from '@/components/admin/copy-button';
 import { EnabledSwitch } from '@/components/admin/enabled-switch';
 import { Button } from '@/components/ui/button';
-import { invalidateAdminEvents, useOptimisticEventUpdate } from '@/lib/admin-queries';
+import { eventScope, invalidateAdminEvents, useOptimisticEventUpdate } from '@/lib/admin-queries';
 import { plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -155,6 +155,9 @@ function ChannelEnabledSwitch({ channel }: { channel: AdminChannel }) {
   const [failed, setFailed] = useState(false);
 
   const { mutate } = $api.useMutation('patch', '/admin/channels/{id}', {
+    // Scoped to the owning event, not the channel: both caches are keyed by event, so two
+    // channels of one event racing each other would settle on an intermediate list.
+    scope: { id: eventScope(channel.eventId) },
     onMutate: ({ body }) => {
       setFailed(false);
       // A channel's own row and its chip on the events list are the same row of data,

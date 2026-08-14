@@ -2,7 +2,7 @@ import type { components } from '@linguacast/contract/openapi';
 import { useState } from 'react';
 import { $api } from '@/api/client';
 import { EnabledSwitch } from '@/components/admin/enabled-switch';
-import { useOptimisticEventUpdate } from '@/lib/admin-queries';
+import { eventScope, useOptimisticEventUpdate } from '@/lib/admin-queries';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
@@ -17,6 +17,10 @@ export function EventEnabledSwitch({
   const [failed, setFailed] = useState(false);
 
   const { mutate } = $api.useMutation('patch', '/admin/events/{id}', {
+    // Writes to one event run one at a time. Toggled twice quickly, parallel mutations let
+    // the first one's settle refetch land while the second is still travelling, so the
+    // screen settles on the intermediate value even though the server has the later one.
+    scope: { id: eventScope(event.id) },
     onMutate: ({ body }) => {
       setFailed(false);
       return cache.apply((current) => ({ ...current, enabled: body.enabled ?? current.enabled }));

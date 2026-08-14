@@ -150,7 +150,7 @@ function EventNameLink({ event, className }: { event: AdminEventDetail; classNam
   return (
     <Link
       to="/admin/events/$id"
-      params={{ id: String(event.id) }}
+      params={{ id: event.id }}
       className={cn(
         'font-semibold hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
         className,
