@@ -21,7 +21,7 @@ export function EventEnabledSwitch({
   const detailKey = eventDetailKey(event.id);
   const [failed, setFailed] = useState(false);
 
-  const { mutate, isPending } = $api.useMutation('patch', '/admin/events/{id}', {
+  const { mutate } = $api.useMutation('patch', '/admin/events/{id}', {
     onMutate: async (variables) => {
       setFailed(false);
       await Promise.all([
@@ -59,7 +59,6 @@ export function EventEnabledSwitch({
   return (
     <EnabledSwitch
       checked={event.enabled}
-      disabled={isPending}
       failed={failed}
       label={`Enable ${event.name}`}
       className={className}
