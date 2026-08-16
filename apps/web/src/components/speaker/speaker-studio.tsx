@@ -18,6 +18,7 @@ import { levelStatus, rms } from '@/lib/audio/level';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { formatPin } from '@/lib/format';
 import type { SocketStatus } from '@/lib/use-socket';
+import { cn } from '@/lib/utils';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -246,6 +247,7 @@ function OnAir({
   socketError: string | null;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const connected = status === 'connected';
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -259,9 +261,18 @@ function OnAir({
 
       <main className="flex flex-1 flex-col px-gutter pt-6 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header className="flex items-center justify-between gap-3 lg:justify-start">
-          <Badge className="h-auto gap-1.75 rounded-full bg-live-muted px-3.25 py-1.5 text-label text-live-foreground uppercase">
-            <LiveDot size="sm" />
-            On air
+          {/* Dropped to its muted treatment while the socket is away: the channel is still
+              claimed, but nothing here can confirm it until the connection is back. */}
+          <Badge
+            className={cn(
+              'h-auto gap-1.75 rounded-full px-3.25 py-1.5 text-label uppercase',
+              connected
+                ? 'bg-live-muted text-live-foreground'
+                : 'bg-secondary text-muted-foreground',
+            )}
+          >
+            <LiveDot size="sm" tone={connected ? 'live' : 'offline'} />
+            {connected ? 'On air' : 'Reconnecting…'}
           </Badge>
           <span className="text-meta text-muted-foreground lg:hidden">{eventName}</span>
         </header>
