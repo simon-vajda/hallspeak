@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { SocketAuth } from '../core/access';
-import { createChannel } from '../core/channels.service';
-import { createEvent } from '../core/events.service';
-import { PresenceRegistry } from '../core/presence';
-import type { Db } from '../db/client';
-import { createTestDb } from '../db/testing';
-import { joinChannel, leaveChannel } from './channels';
-import { channelRoom } from './rooms';
+import type { SocketAuth } from '../../core/access';
+import { createChannel } from '../../core/channels.service';
+import { createEvent } from '../../core/events.service';
+import { PresenceRegistry } from '../../core/presence';
+import type { Db } from '../../db/client';
+import { createTestDb } from '../../db/testing';
+import { channelRoom } from '../lib/rooms';
+import { joinChannel, leaveChannel } from './channels.handlers';
 
 function fakeSocket() {
   const rooms = new Set<string>();

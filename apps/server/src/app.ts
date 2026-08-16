@@ -16,7 +16,7 @@ app.onError((err, c) => c.json(toProblem(err), 500));
 // Mount order below is load-bearing. Hono composes matching handlers in
 // registration order, so moving any of these blocks changes behaviour.
 //
-// Invisible from this file: src/signal attaches Socket.IO to the underlying
+// Invisible from this file: src/socket attaches Socket.IO to the underlying
 // http.Server, which intercepts /api/socket.io/* before Hono runs. That path
 // therefore never reaches the /api/* 404 below, and adding a route for it here
 // would have no effect.

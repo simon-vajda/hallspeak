@@ -18,7 +18,7 @@ export interface GateSocket {
  * as `connect_error`'s Error.message, which is how 'channel_busy' and 'client_too_old'
  * become distinct client-side states.
  *
- * Unlike per-packet failures (see ./validate), rejecting with next(err) IS the idiomatic
+ * Unlike per-packet failures (see ./lib/validate), rejecting with next(err) IS the idiomatic
  * move here: there is no ack to strand, and Socket.IO's connection-error path exists
  * precisely for this.
  */
