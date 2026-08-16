@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { describe, expect, it } from 'vitest';
-import { TokenBucketLimiter } from '../lib/rate-limit';
-import { createRateLimit } from './rate-limit';
+import { TokenBucketLimiter } from '../../lib/rate-limit';
+import { createRateLimit } from './rate-limit.middleware';
 
 function build(capacity: number, now: () => number) {
   const app = new Hono();

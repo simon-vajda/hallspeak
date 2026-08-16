@@ -4,9 +4,9 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { buildOpenApiDocument } from '@linguacast/contract';
 import { Scalar } from '@scalar/hono-api-reference';
 import { env } from './env';
-import { defaultHook } from './lib/default-hook';
+import { defaultHook } from './http/default-hook';
+import { apiRoutes } from './http/routes';
 import { toProblem } from './lib/problem';
-import { apiRoutes } from './routes';
 
 export const app = new OpenAPIHono({ defaultHook });
 

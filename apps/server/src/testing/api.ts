@@ -19,7 +19,7 @@ export async function createTestApi() {
   const { closeDb, db } = await import('../db');
   const { runMigrations } = await import('../db/migrate');
   runMigrations(db);
-  const { apiRoutes } = await import('../routes');
+  const { apiRoutes } = await import('../http/routes');
 
   return {
     api: apiRoutes,

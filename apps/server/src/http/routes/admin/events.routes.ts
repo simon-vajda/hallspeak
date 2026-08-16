@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import * as routes from '@linguacast/contract/routes';
-import { createChannel, listChannels } from '../../core/channels.service';
+import { createChannel, listChannels } from '../../../core/channels.service';
 import {
   createEvent,
   deleteEvent,
@@ -8,37 +8,13 @@ import {
   listEvents,
   regeneratePin,
   updateEvent,
-} from '../../core/events.service';
-import { db } from '../../db';
-import { isUniqueViolation } from '../../db/errors';
-import type { ChannelRow, EventRow } from '../../db/schema';
-import { defaultHook } from '../../lib/default-hook';
-
-/** Row → DTO. A row is not a DTO, which is why this mapping is written out. */
-export function toAdminEvent(row: EventRow) {
-  return {
-    id: row.id,
-    pin: row.pin,
-    name: row.name,
-    description: row.description,
-    enabled: row.enabled,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-export function toAdminChannel(row: ChannelRow) {
-  return {
-    id: row.id,
-    eventId: row.eventId,
-    slug: row.slug,
-    name: row.name,
-    speakerCode: row.speakerCode,
-    enabled: row.enabled,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
+} from '../../../core/events.service';
+import { db } from '../../../db';
+import { isUniqueViolation } from '../../../db/errors';
+import type { EventRow } from '../../../db/schema';
+import { defaultHook } from '../../default-hook';
+import { toAdminChannel } from '../../mappers/channels.mapper';
+import { toAdminEvent } from '../../mappers/events.mapper';
 
 function withChannels(row: EventRow) {
   return { ...toAdminEvent(row), channels: listChannels(db, row.id).map(toAdminChannel) };

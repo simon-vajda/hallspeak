@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestApi } from '../../testing/api';
+import { createTestApi } from '../../../testing/api';
 
 let api: Awaited<ReturnType<typeof createTestApi>>['api'];
 let cleanup: () => void;

@@ -1,5 +1,5 @@
 import type { Context, MiddlewareHandler } from 'hono';
-import { TokenBucketLimiter } from '../lib/rate-limit';
+import { TokenBucketLimiter } from '../../lib/rate-limit';
 
 /** The whole server shares one budget behind the per-IP one, so it needs one key. */
 const SHARED_KEY = '*';

@@ -1,12 +1,11 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import * as routes from '@linguacast/contract/routes';
-import { findEnabledChannelBySlug, listEnabledChannels } from '../core/channels.service';
-import { findEnabledEventByPin } from '../core/events.service';
-import { presence } from '../core/presence';
-import { db } from '../db';
-import type { ChannelRow } from '../db/schema';
-import { defaultHook } from '../lib/default-hook';
-import { publicRateLimit } from './rate-limit';
+import { findEnabledChannelBySlug, listEnabledChannels } from '../../core/channels.service';
+import { findEnabledEventByPin } from '../../core/events.service';
+import { db } from '../../db';
+import { defaultHook } from '../default-hook';
+import { toPublicChannel } from '../mappers/channels.mapper';
+import { publicRateLimit } from '../middleware/rate-limit.middleware';
 
 /**
  * One body for every miss. A disabled event, a disabled channel and a nonexistent PIN
@@ -14,11 +13,6 @@ import { publicRateLimit } from './rate-limit';
  * are real for free (spec E §5). Enforced by a test, not by discipline.
  */
 const NOT_FOUND = { code: 'not_found', message: 'Not found.' } as const;
-
-/** `online` comes from the presence registry — see the placeholder note there. */
-function toPublicChannel(channel: ChannelRow) {
-  return { slug: channel.slug, name: channel.name, online: presence.isOnline(channel.id) };
-}
 
 const app = new OpenAPIHono({ defaultHook });
 
