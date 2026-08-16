@@ -3,7 +3,6 @@ import { Mic, MicOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ConnectionLine } from '@/components/guest/connection-line';
 import { GuestHeader } from '@/components/guest/guest-header';
-import { LevelMeter } from '@/components/level-meter';
 import { LiveDot } from '@/components/live-dot';
 import { PlayTarget } from '@/components/play-target';
 import { AudioSettings } from '@/components/speaker/audio-settings';
@@ -162,7 +161,10 @@ export function SpeakerStudio({
           />
 
           <div className="flex flex-1 flex-col gap-4 lg:flex-none lg:gap-4.5">
-            <InputLevelPanel analyser={mic.analyser} />
+            <InputLevelPanel
+              analyser={mic.analyser}
+              note="Speak at your normal volume — aim to sit just under the peak mark. Nobody hears you until you go live."
+            />
 
             {/* Bottom-anchored on a phone, where the action owns the last band of the
                 screen; in the desktop column it simply follows the panel. */}
@@ -299,17 +301,8 @@ function OnAir({
             />
           </div>
 
-          {/* Not `InputLevelPanel`: its pre-flight copy says nobody hears you yet. */}
-          <section className="rounded-lg bg-secondary p-5 lg:col-start-2 lg:row-start-2">
-            <LevelMeter analyser={mic.analyser} />
-            <div
-              aria-hidden
-              className="mt-2.25 flex justify-between text-label text-muted-foreground uppercase"
-            >
-              <span>Quiet</span>
-              <span>Peak</span>
-            </div>
-          </section>
+          {/* No note here: the pre-flight line under the bar says nobody hears you yet. */}
+          <InputLevelPanel analyser={mic.analyser} className="lg:col-start-2 lg:row-start-2" />
 
           <AudioSettings mic={mic} {...preferences} className="lg:col-start-2 lg:row-start-3" />
 
