@@ -44,7 +44,7 @@ function EventPage() {
           </li>
         ))}
       </ul>
-      <p className="text-xs">signal: {status}</p>
+      <p className="text-xs">socket: {status}</p>
     </main>
   );
 }

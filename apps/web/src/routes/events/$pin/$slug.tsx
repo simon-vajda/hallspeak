@@ -15,7 +15,7 @@ export const Route = createFileRoute('/events/$pin/$slug')({
 });
 
 /** Maps the handshake gate's connect_error to a message. Never a 404 — see useSocket. */
-function signalMessage(code: string): string {
+function socketMessage(code: string): string {
   if (code === 'channel_busy') return 'Someone is already speaking on this channel.';
   if (code === 'client_too_old') return 'This page is out of date. Reload it.';
   return `Connection failed: ${code}`;
@@ -34,7 +34,7 @@ function ChannelPage() {
 
   const {
     status,
-    error: signalError,
+    error: socketError,
     online,
     socket,
   } = useSocket(data ? (speakerCode ? { pin, speakerCode } : { pin }) : null);
@@ -63,8 +63,8 @@ function ChannelPage() {
       <p>{data.event.name}</p>
       <p>role: {data.role}</p>
       <p>channel: {isLive ? 'live' : 'offline'}</p>
-      <p className="text-xs">signal: {status}</p>
-      {signalError ? <p>{signalMessage(signalError)}</p> : null}
+      <p className="text-xs">socket: {status}</p>
+      {socketError ? <p>{socketMessage(socketError)}</p> : null}
     </main>
   );
 }
