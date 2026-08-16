@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { z } from 'zod';
 import { $api } from '@/api/client';
-import { useSignal } from '@/lib/use-signal';
+import { useSocket } from '@/lib/use-socket';
 
 // The speaker studio is the SAME route as the listener room, branching on the presence
 // of speaker_code. That keeps the speaker URL degrading into valid public URLs: drop
@@ -14,8 +14,8 @@ export const Route = createFileRoute('/events/$pin/$slug')({
   validateSearch: SearchSchema,
 });
 
-/** Maps the handshake gate's connect_error to a message. Never a 404 — see useSignal. */
-function signalMessage(code: string): string {
+/** Maps the handshake gate's connect_error to a message. Never a 404 — see useSocket. */
+function socketMessage(code: string): string {
   if (code === 'channel_busy') return 'Someone is already speaking on this channel.';
   if (code === 'client_too_old') return 'This page is out of date. Reload it.';
   return `Connection failed: ${code}`;
@@ -34,10 +34,10 @@ function ChannelPage() {
 
   const {
     status,
-    error: signalError,
+    error: socketError,
     online,
     socket,
-  } = useSignal(data ? (speakerCode ? { pin, speakerCode } : { pin }) : null);
+  } = useSocket(data ? (speakerCode ? { pin, speakerCode } : { pin }) : null);
 
   // A speaker is already in its channel room from the handshake; a listener has to ask.
   useEffect(() => {
@@ -63,8 +63,8 @@ function ChannelPage() {
       <p>{data.event.name}</p>
       <p>role: {data.role}</p>
       <p>channel: {isLive ? 'live' : 'offline'}</p>
-      <p className="text-xs">signal: {status}</p>
-      {signalError ? <p>{signalMessage(signalError)}</p> : null}
+      <p className="text-xs">socket: {status}</p>
+      {socketError ? <p>{socketMessage(socketError)}</p> : null}
     </main>
   );
 }
