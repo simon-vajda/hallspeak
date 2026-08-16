@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { SocketAuth } from '../core/access';
 import { createChannel } from '../core/channels.service';
 import { createEvent } from '../core/events.service';
+import { PresenceRegistry } from '../core/presence';
 import type { Db } from '../db/client';
 import { createTestDb } from '../db/testing';
-import type { SocketAuth } from './authorize';
 import { joinChannel, leaveChannel } from './channels';
-import { PresenceRegistry } from './presence';
 import { channelRoom } from './rooms';
 
 function fakeSocket() {

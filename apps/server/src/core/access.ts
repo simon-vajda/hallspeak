@@ -1,10 +1,10 @@
 import { Handshake } from '@linguacast/contract/schemas';
-import { findEnabledChannelBySpeakerCode } from '../core/channels.service';
-import { findEnabledEventByPin } from '../core/events.service';
 import type { Db } from '../db/client';
+import { semverLt } from '../lib/semver';
 import { MIN_CLIENT_VERSION } from '../version';
+import { findEnabledChannelBySpeakerCode } from './channels.service';
+import { findEnabledEventByPin } from './events.service';
 import type { PresenceRegistry } from './presence';
-import { semverLt } from './semver';
 
 /** What a socket is allowed to do, decided once at connection time. */
 export interface SocketAuth {

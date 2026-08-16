@@ -1,6 +1,6 @@
+import { authorizeHandshake, type SocketAuth } from '../core/access';
+import { presence } from '../core/presence';
 import { db } from '../db';
-import { authorizeHandshake, type SocketAuth } from './authorize';
-import { presence } from './presence';
 
 /**
  * The shape this gate needs from a Socket. Structural rather than a real Socket so the

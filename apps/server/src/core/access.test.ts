@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createChannel } from '../core/channels.service';
-import { createEvent } from '../core/events.service';
 import type { Db } from '../db/client';
 import { createTestDb } from '../db/testing';
 import { MIN_CLIENT_VERSION } from '../version';
-import { authorizeHandshake } from './authorize';
+import { authorizeHandshake } from './access';
+import { createChannel } from './channels.service';
+import { createEvent } from './events.service';
 import { PresenceRegistry } from './presence';
 
 let db: Db;

@@ -1,8 +1,8 @@
+import type { SocketAuth } from '../core/access';
 import { findEnabledChannelBySlug } from '../core/channels.service';
+import type { PresenceRegistry } from '../core/presence';
 import type { Db } from '../db/client';
 import { AppError } from '../lib/problem';
-import type { SocketAuth } from './authorize';
-import type { PresenceRegistry } from './presence';
 import { channelRoom } from './rooms';
 
 /** The subset of Socket this module needs. A real Socket satisfies it. */
