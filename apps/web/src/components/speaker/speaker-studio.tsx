@@ -1,9 +1,9 @@
 import type { components } from '@linguacast/contract/openapi';
 import { Mic, MicOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { ConnectionLine } from '@/components/guest/connection-line';
-import { GuestHeader } from '@/components/guest/guest-header';
-import { LiveDot } from '@/components/live-dot';
+import { AppHeader } from '@/components/app-header';
+import { ConnectionLine } from '@/components/connection-line';
+import { LiveBadge } from '@/components/live-badge';
 import { PlayTarget } from '@/components/play-target';
 import { AudioSettings } from '@/components/speaker/audio-settings';
 import { EndBroadcastDialog } from '@/components/speaker/end-broadcast-dialog';
@@ -11,13 +11,11 @@ import { InputLevelPanel } from '@/components/speaker/input-level-panel';
 import { MicPanel } from '@/components/speaker/mic-panel';
 import { OnAirStats } from '@/components/speaker/on-air-stats';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { levelStatus, rms } from '@/lib/audio/level';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { formatPin } from '@/lib/format';
 import type { SocketStatus } from '@/lib/use-socket';
-import { cn } from '@/lib/utils';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -139,7 +137,7 @@ export function SpeakerStudio({
 
       {/* The toggle is absolutely positioned over this bar's right edge, so the meta line
           reserves its width rather than sliding under it. */}
-      <GuestHeader
+      <AppHeader
         right={
           <span className="mr-11 text-meta text-muted-foreground">
             {eventName} · PIN {formatPin(pin)}
@@ -277,7 +275,7 @@ function OnAir({
         <TempThemeToggle />
       </div>
 
-      <GuestHeader
+      <AppHeader
         right={<span className="mr-11 text-meta text-muted-foreground">{eventName}</span>}
       />
 
@@ -285,17 +283,7 @@ function OnAir({
         <header className="flex items-center justify-between gap-3 lg:justify-start">
           {/* Dropped to its muted treatment while the socket is away: the channel is still
               claimed, but nothing here can confirm it until the connection is back. */}
-          <Badge
-            className={cn(
-              'h-auto gap-1.75 rounded-full px-3.25 py-1.5 text-label uppercase',
-              connected
-                ? 'bg-live-muted text-live-foreground'
-                : 'bg-secondary text-muted-foreground',
-            )}
-          >
-            <LiveDot size="sm" tone={connected ? 'live' : 'offline'} />
-            {connected ? 'On air' : 'Reconnecting…'}
-          </Badge>
+          <LiveBadge live={connected} label={connected ? 'On air' : 'Reconnecting…'} />
           <span className="text-meta text-muted-foreground lg:hidden">{eventName}</span>
         </header>
 

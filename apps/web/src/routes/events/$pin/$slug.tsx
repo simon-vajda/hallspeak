@@ -2,10 +2,9 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { type ReactNode, useEffect } from 'react';
 import { z } from 'zod';
 import { $api } from '@/api/client';
-import { GuestMessage } from '@/components/guest/guest-message';
+import { GuestMessage, GuestMessageAction } from '@/components/guest/guest-message';
 import { ListenerRoom } from '@/components/guest/listener-room';
 import { SpeakerStudio } from '@/components/speaker/speaker-studio';
-import { Button } from '@/components/ui/button';
 import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useSocket } from '@/lib/use-socket';
 
@@ -133,16 +132,8 @@ function ChannelPage() {
 /** Both dead ends on this route lead back to the same place: the event's channel list. */
 function ChannelsButton({ pin, children }: { pin: string; children: ReactNode }) {
   return (
-    <Button
-      variant="outline"
-      size="pill"
-      // It navigates, so it renders as an anchor and Base UI has to be told to stop
-      // expecting a native <button>.
-      nativeButton={false}
-      render={<Link to="/events/$pin" params={{ pin }} />}
-      className="mt-8 w-full lg:w-50"
-    >
+    <GuestMessageAction link={<Link to="/events/$pin" params={{ pin }} />}>
       {children}
-    </Button>
+    </GuestMessageAction>
   );
 }

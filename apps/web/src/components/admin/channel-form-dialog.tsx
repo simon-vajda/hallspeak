@@ -4,14 +4,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useId, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { $api } from '@/api/client';
+import { ENABLED_TRACK } from '@/components/admin/enabled-switch';
 import {
   DIALOG_ACTION,
   DIALOG_BODY,
   DIALOG_PANEL,
   DIALOG_TITLE,
   DialogActions,
-} from '@/components/admin/confirm-dialog';
-import { ENABLED_TRACK } from '@/components/admin/enabled-switch';
+} from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

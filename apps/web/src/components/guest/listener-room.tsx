@@ -2,13 +2,12 @@ import type { components } from '@linguacast/contract/openapi';
 import { Link } from '@tanstack/react-router';
 import { ChevronLeft, Pause, Play } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { AppHeader } from '@/components/app-header';
+import { ConnectionLine } from '@/components/connection-line';
 import { ChannelStrip } from '@/components/guest/channel-strip';
-import { ConnectionLine } from '@/components/guest/connection-line';
-import { GuestHeader } from '@/components/guest/guest-header';
-import { LiveDot } from '@/components/live-dot';
+import { LiveBadge } from '@/components/live-badge';
 import { PlayTarget } from '@/components/play-target';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
-import { Badge } from '@/components/ui/badge';
 import { formatPin } from '@/lib/format';
 import type { SocketStatus } from '@/lib/use-socket';
 import { cn } from '@/lib/utils';
@@ -19,8 +18,6 @@ type PublicChannel = components['schemas']['PublicChannel'];
 // channel name is the only thing on the page and the design sets it as the whole view.
 const TITLE =
   'text-[40px] leading-[1.05] font-semibold tracking-[-0.04em] lg:text-[46px] lg:leading-[1.02] lg:tracking-[-0.045em]';
-
-const BADGE = 'h-auto gap-1.75 rounded-full px-3.25 py-1.5 text-label uppercase';
 
 /**
  * The listener's channel screen: the tap gate (`10c`) and the playing state (`10d`/`10e`,
@@ -73,7 +70,7 @@ export function ListenerRoom({
 
       {/* The theme toggle is absolutely positioned over this bar's right edge, so the meta
           line reserves its width rather than sliding under it. */}
-      <GuestHeader right={<span className="mr-11 text-meta text-muted-foreground">{meta}</span>} />
+      <AppHeader right={<span className="mr-11 text-meta text-muted-foreground">{meta}</span>} />
       <ChannelStrip channels={channels} currentSlug={channel.slug} pin={pin} />
 
       {/* The phone's way back to the selector; from `lg` the channel strip is that. */}
@@ -90,21 +87,18 @@ export function ListenerRoom({
       </div>
 
       <main className="flex flex-1 flex-col items-center justify-center px-8 text-center lg:px-10 lg:py-13">
-        <Badge
-          className={cn(
-            BADGE,
-            onAir ? 'bg-live-muted text-live-foreground' : 'bg-secondary text-muted-foreground',
-          )}
-        >
-          <LiveDot size="sm" tone={onAir ? 'live' : 'offline'} />
-          {!live
-            ? 'Waiting for the interpreter'
-            : !connected
-              ? 'Reconnecting…'
-              : isPlaying
-                ? 'Listening'
-                : 'Interpreter on air'}
-        </Badge>
+        <LiveBadge
+          live={onAir}
+          label={
+            !live
+              ? 'Waiting for the interpreter'
+              : !connected
+                ? 'Reconnecting…'
+                : isPlaying
+                  ? 'Listening'
+                  : 'Interpreter on air'
+          }
+        />
 
         <h1 className={cn('mt-4 mb-10 lg:mt-4.5 lg:mb-10', TITLE)}>{channel.name}</h1>
 

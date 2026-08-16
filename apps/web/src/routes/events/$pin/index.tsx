@@ -3,8 +3,7 @@ import { useEffect } from 'react';
 import { $api } from '@/api/client';
 import { ChannelRow } from '@/components/guest/channel-row';
 import { EventHeader } from '@/components/guest/event-header';
-import { GuestMessage, GuestShell } from '@/components/guest/guest-message';
-import { Button } from '@/components/ui/button';
+import { GuestMessage, GuestMessageAction, GuestShell } from '@/components/guest/guest-message';
 import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useSocket } from '@/lib/use-socket';
 
@@ -46,17 +45,7 @@ function EventPage() {
         title="No event with that PIN"
         body="Check the six digits on the card at your seat. If they match, the event may not have started yet."
       >
-        <Button
-          variant="outline"
-          size="pill"
-          // It navigates, so it renders as an anchor and Base UI has to be told to stop
-          // expecting a native <button>.
-          nativeButton={false}
-          render={<Link to="/" />}
-          className="mt-8 w-full lg:w-50"
-        >
-          Try another PIN
-        </Button>
+        <GuestMessageAction link={<Link to="/" />}>Try another PIN</GuestMessageAction>
       </GuestMessage>
     );
   }
