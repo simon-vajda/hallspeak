@@ -1,5 +1,6 @@
 import { Mic } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { GainSlider } from '@/components/speaker/gain-slider';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -8,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import type { MicDevice } from '@/lib/audio/devices';
 import type { MicStatus } from '@/lib/audio/use-mic-capture';
@@ -46,6 +46,7 @@ export function MicPanel({
   onAutoGainChange,
   gain,
   onGainChange,
+  inSettings = false,
   className,
 }: {
   status: MicStatus;
@@ -60,6 +61,8 @@ export function MicPanel({
   /** 0–100, as the design's readout displays it. */
   gain: number;
   onGainChange: (gain: number) => void;
+  /** Rendered inside the audio-settings surface, which supplies the gain slider itself. */
+  inSettings?: boolean;
   className?: string;
 }) {
   // Every terminal case renders copy instead of the picker: an empty `Select` under a
@@ -111,30 +114,27 @@ export function MicPanel({
             description={
               <>
                 Off lets you set the gain by hand
-                {/* the slider below is desktop-only, exactly as drawn; on a phone the
-                    design puts gain in the Audio settings sheet */}
-                <span className="lg:hidden">, in Audio settings</span>.
+                {/* The pointer is only true where the slider is somewhere else. Inside the
+                    settings surface it sits directly below, and on a desktop pre-flight
+                    card it is the next control down. */}
+                {!inSettings && <span className="lg:hidden">, in Audio settings</span>}.
               </>
             }
             checked={autoGain}
             onCheckedChange={onAutoGainChange}
           />
 
-          <div className="mt-3.5 hidden border-t border-border pt-3.5 lg:block">
-            <div className="mb-2.5 flex items-baseline justify-between gap-3">
-              <span className="text-label text-muted-foreground uppercase">Gain</span>
-              <span className="text-note font-semibold">{gain}%</span>
-            </div>
-            <Slider
-              aria-label="Microphone gain"
-              value={gain}
-              // Base UI types every slider's value as number | number[]; this one has a
-              // single thumb, so the array branch is unreachable.
-              onValueChange={(value) => onGainChange(typeof value === 'number' ? value : gain)}
+          {/* On the pre-flight card the slider is desktop-only, exactly as drawn — a phone
+              reaches it through the audio-settings surface, which renders it at every
+              width and therefore renders this panel without one. */}
+          {!inSettings && (
+            <GainSlider
+              gain={gain}
+              onGainChange={onGainChange}
               disabled={autoGain}
-              className="[&_[data-slot=slider-thumb]]:size-5.5 [&_[data-slot=slider-thumb]]:border-2 [&_[data-slot=slider-thumb]]:border-primary [&_[data-slot=slider-thumb]]:bg-background [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:bg-border"
+              className="mt-3.5 hidden border-t border-border pt-3.5 lg:block"
             />
-          </div>
+          )}
         </>
       )}
     </section>
