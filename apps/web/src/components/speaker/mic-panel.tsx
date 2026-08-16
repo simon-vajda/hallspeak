@@ -37,9 +37,11 @@ const ROW = 'mt-3.5 flex items-center gap-3.5 border-t border-border pt-3.5';
 export function MicPanel({
   status,
   error,
+  notice,
   devices,
   deviceId,
   onSelectDevice,
+  onRetry,
   noiseSuppression,
   onNoiseSuppressionChange,
   autoGain,
@@ -51,9 +53,13 @@ export function MicPanel({
 }: {
   status: MicStatus;
   error: string | null;
+  /** A fallback the hook already made — shown under a picker that still works. */
+  notice: string | null;
   devices: MicDevice[];
   deviceId: string | null;
   onSelectDevice: (deviceId: string) => void;
+  /** Re-opens the capture in place, without a reload. */
+  onRetry: () => void;
   noiseSuppression: boolean;
   onNoiseSuppressionChange: (on: boolean) => void;
   autoGain: boolean;
@@ -77,6 +83,8 @@ export function MicPanel({
       {blocked || empty ? (
         <MicUnavailable
           message={error ?? 'No microphone was found. Connect one, then try again.'}
+          inSettings={inSettings}
+          onRetry={onRetry}
         />
       ) : (
         <>
@@ -102,6 +110,10 @@ export function MicPanel({
               ))}
             </SelectContent>
           </Select>
+
+          {/* The picker still works, so this sits under it rather than replacing it —
+              otherwise the interpreter is moved to another mic without being told. */}
+          {notice && <p className="mt-2 text-meta font-normal text-muted-foreground">{notice}</p>}
 
           <SettingRow
             title="Noise suppression"
@@ -172,15 +184,26 @@ function SettingRow({
 /**
  * Permission refused, an insecure origin, or simply no input device. A reload is the only
  * real retry for the first two — a browser that has denied the prompt will not show it
- * again from script — and it costs nothing on this page, which holds no unsaved state.
+ * again from script — and it costs nothing on the pre-flight screen, which holds no unsaved
+ * state. Inside the settings surface it would cost everything: that surface is open
+ * mid-broadcast, and a reload drops the socket, the presence claim and the live state. So
+ * there the retry re-opens the capture in place instead.
  */
-function MicUnavailable({ message }: { message: string }) {
+function MicUnavailable({
+  message,
+  inSettings,
+  onRetry,
+}: {
+  message: string;
+  inSettings: boolean;
+  onRetry: () => void;
+}) {
   return (
     <div className="mt-2.25 lg:mt-2.5">
       <p className="text-sm text-muted-foreground">{message}</p>
       <Button
         variant="outline"
-        onClick={() => window.location.reload()}
+        onClick={inSettings ? onRetry : () => window.location.reload()}
         className="mt-3.5 h-11 rounded-full px-5 font-semibold text-sm"
       >
         Try again

@@ -60,7 +60,10 @@ export function LevelMeter({
 
     return () => {
       cancelAnimationFrame(raf);
+      // the readout and the peaking colour are as stale as the bar once the analyser is gone
       fill.style.width = '0%';
+      rootRef.current?.setAttribute('data-peaking', 'false');
+      setStatus('quiet');
     };
   }, [analyser]);
 
