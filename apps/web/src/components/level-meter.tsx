@@ -1,0 +1,92 @@
+import { useEffect, useRef, useState } from 'react';
+import { type LevelStatus, levelStatus, rms } from '@/lib/audio/level';
+import { cn } from '@/lib/utils';
+
+const STATUS_TEXT: Record<LevelStatus, string> = {
+  quiet: 'Too quiet',
+  good: 'Sounds good',
+  peaking: 'Peaking — lower the gain',
+};
+
+const STATUS_TONE: Record<LevelStatus, string> = {
+  quiet: 'text-muted-foreground',
+  good: 'text-live-foreground',
+  peaking: 'text-destructive',
+};
+
+/**
+ * The input level bar, driven straight from an `AnalyserNode`.
+ *
+ * The fill's width and the peaking colour are written to the DOM every frame and never go
+ * through React — a meter that re-rendered at animation-frame rate would re-render the
+ * screen around it too. Only the status *label* is state, and it changes at most once per
+ * threshold crossing. `analyser` is null until the mic is open; the loop does not run then
+ * and the bar sits empty.
+ */
+export function LevelMeter({
+  analyser,
+  className,
+}: {
+  analyser: AnalyserNode | null;
+  className?: string;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const fillRef = useRef<HTMLDivElement>(null);
+  const [status, setStatus] = useState<LevelStatus>('quiet');
+
+  useEffect(() => {
+    const fill = fillRef.current;
+    if (!analyser || !fill) return;
+
+    const frame = new Uint8Array(analyser.fftSize);
+    let raf = 0;
+    let last: LevelStatus | null = null;
+
+    const read = () => {
+      analyser.getByteTimeDomainData(frame);
+      const level = Math.min(rms(frame), 1);
+      fill.style.width = `${level * 100}%`;
+
+      const next = levelStatus(level);
+      rootRef.current?.setAttribute('data-peaking', String(next === 'peaking'));
+      if (next !== last) {
+        last = next;
+        setStatus(next);
+      }
+
+      raf = requestAnimationFrame(read);
+    };
+    raf = requestAnimationFrame(read);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      // the readout and the peaking colour are as stale as the bar once the analyser is gone
+      fill.style.width = '0%';
+      rootRef.current?.setAttribute('data-peaking', 'false');
+      setStatus('quiet');
+    };
+  }, [analyser]);
+
+  return (
+    <div ref={rootRef} data-peaking="false" className={cn('group flex flex-col', className)}>
+      <div className="mb-3.5 flex items-baseline justify-between gap-3">
+        <span className="text-label text-muted-foreground uppercase">Input level</span>
+        <span role="status" className={cn('text-meta font-semibold', STATUS_TONE[status])}>
+          {STATUS_TEXT[status]}
+        </span>
+      </div>
+
+      <div className="relative h-3.5 lg:h-4.5">
+        <div className="h-full overflow-hidden rounded-full bg-border">
+          <div
+            ref={fillRef}
+            className="h-full w-0 rounded-full bg-live group-data-[peaking=true]:bg-destructive"
+          />
+        </div>
+        {/* the clip threshold, drawn at PEAK_THRESHOLD; -inset-y keeps the 5px overhang
+            correct at both track heights */}
+        <div className="absolute -inset-y-1.25 left-[85%] w-0.5 rounded-[1px] bg-foreground/35" />
+      </div>
+    </div>
+  );
+}
