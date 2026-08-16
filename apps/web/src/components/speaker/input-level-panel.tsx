@@ -1,19 +1,23 @@
+import type { ReactNode } from 'react';
 import { LevelMeter } from '@/components/level-meter';
 import { cn } from '@/lib/utils';
 
 /**
- * The pre-flight input-level card (`10f`, `10s`).
+ * The input-level card, on both speaker screens (`10f`, `10s`, `10g`).
  *
  * The heading row — the `Input level` label and the status word beside it — belongs to
  * `LevelMeter`, which changes the word as the level crosses a threshold. The panel adds
- * only what sits around the bar: the design's `Quiet` / `Peak` end labels and the line that
- * says out loud that nothing is being transmitted yet.
+ * only what sits around the bar: the design's `Quiet` / `Peak` end labels and whatever the
+ * screen wants to say under them. `note` is per-screen because the pre-flight line ("nobody
+ * hears you until you go live") is false once the interpreter has.
  */
 export function InputLevelPanel({
   analyser,
+  note,
   className,
 }: {
   analyser: AnalyserNode | null;
+  note?: ReactNode;
   className?: string;
 }) {
   return (
@@ -28,10 +32,7 @@ export function InputLevelPanel({
         <span>Peak</span>
       </div>
 
-      <p className="mt-3.5 text-note text-muted-foreground">
-        Speak at your normal volume — aim to sit just under the peak mark. Nobody hears you until
-        you go live.
-      </p>
+      {note && <p className="mt-3.5 text-note text-muted-foreground">{note}</p>}
     </section>
   );
 }
