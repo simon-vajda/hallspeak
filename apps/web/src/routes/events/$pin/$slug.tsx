@@ -93,12 +93,15 @@ function ChannelPage() {
   const isLive = online[slug] ?? data.channel.online;
   const message = socketError ? socketMessage(socketError) : null;
 
-  if (data.role === 'speaker') {
+  // The server only answers `speaker` to a request that carried a code, so the second half
+  // narrows the optional search param rather than adding a case: it cannot be false here.
+  if (data.role === 'speaker' && speakerCode !== undefined) {
     return (
       <SpeakerStudio
         eventName={data.event.name}
         pin={data.event.pin}
         channel={data.channel}
+        speakerCode={speakerCode}
         live={isLive}
         status={status}
         socketError={message}
