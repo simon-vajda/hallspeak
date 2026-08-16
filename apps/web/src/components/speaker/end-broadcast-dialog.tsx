@@ -1,5 +1,5 @@
 import { MicOff } from 'lucide-react';
-import { ConfirmDialog } from '@/components/admin/confirm-dialog';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 
 /**
  * `10n`. Ending always confirms — which is the whole reason End broadcast can afford to be

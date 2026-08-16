@@ -1,7 +1,5 @@
-import { LiveDot } from '@/components/live-dot';
-import { Badge } from '@/components/ui/badge';
+import { LiveBadge } from '@/components/live-badge';
 import { formatPin } from '@/lib/format';
-import { cn } from '@/lib/utils';
 
 /**
  * The event's identity block: the live badge, the title, the description and the PIN. It
@@ -26,19 +24,9 @@ export function EventHeader({
 }) {
   return (
     <div className={className}>
-      <Badge
-        className={cn(
-          'h-auto gap-1.75 rounded-full px-3.25 py-1.5 text-label uppercase',
-          live ? 'bg-live-muted text-live-foreground' : 'bg-secondary text-muted-foreground',
-        )}
-      >
-        <LiveDot size="sm" tone={live ? 'live' : 'offline'} />
-        {live ? 'Event live' : 'Connecting'}
-      </Badge>
+      <LiveBadge live={live} label={live ? 'Event live' : 'Connecting'} />
 
-      <h1 className="mt-4 mb-2.5 text-screen lg:mt-5 lg:mb-3.5 lg:text-[52px] lg:leading-[1.03] lg:tracking-[-0.045em]">
-        {name}
-      </h1>
+      <h1 className="mt-4 mb-2.5 text-screen lg:mt-5 lg:mb-3.5 lg:text-screen-lg">{name}</h1>
 
       {description && (
         <p className="mb-2 text-sm leading-normal text-muted-foreground lg:mb-6 lg:text-[17px] lg:leading-[1.6]">

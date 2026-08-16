@@ -68,7 +68,7 @@
   --spacing-gutter: 1.625rem; /* 26px screen gutter; 40px (px-10) from lg up */
   --spacing-shell: 70rem; /* 1120px admin content cap */
 
-  /* The four ramp steps the handoff fixes size, weight and tracking for together.
+  /* The ramp steps the design fixes size, weight and tracking for together.
      Body (14px/1.5) is Tailwind's own `text-sm`, so it stays that. */
   --text-screen: 1.875rem; /* screen title */
   --text-screen--line-height: 1.06;
@@ -95,6 +95,13 @@
   --text-note: 0.8125rem;
   --text-note--line-height: 1.5;
   --text-note--font-weight: 400;
+
+  /* The screen title's desktop step, applied as `lg:text-screen-lg` over `text-screen`.
+     The Home route's title is a hair tighter at 1.02 and stays its own value. */
+  --text-screen-lg: 3.25rem;
+  --text-screen-lg--line-height: 1.03;
+  --text-screen-lg--letter-spacing: -0.045em;
+  --text-screen-lg--font-weight: 600;
 }
 
 /* Hex values in the comments are the source of truth from the design file. */
