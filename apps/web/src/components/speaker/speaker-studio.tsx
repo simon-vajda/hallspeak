@@ -1,11 +1,18 @@
 import type { components } from '@linguacast/contract/openapi';
-import { Mic } from 'lucide-react';
+import { Mic, MicOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ConnectionLine } from '@/components/guest/connection-line';
 import { GuestHeader } from '@/components/guest/guest-header';
+import { LevelMeter } from '@/components/level-meter';
+import { LiveDot } from '@/components/live-dot';
+import { PlayTarget } from '@/components/play-target';
+import { AudioSettings } from '@/components/speaker/audio-settings';
+import { EndBroadcastDialog } from '@/components/speaker/end-broadcast-dialog';
 import { InputLevelPanel } from '@/components/speaker/input-level-panel';
 import { MicPanel } from '@/components/speaker/mic-panel';
+import { OnAirStats } from '@/components/speaker/on-air-stats';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { levelStatus, rms } from '@/lib/audio/level';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
@@ -85,7 +92,7 @@ export function SpeakerStudio({
       <OnAir
         channelName={channel.name}
         eventName={eventName}
-        analyser={mic.analyser}
+        mic={mic}
         startedAt={startedAt}
         isMuted={isMuted}
         onToggleMute={() => setIsMuted((muted) => !muted)}
@@ -94,6 +101,14 @@ export function SpeakerStudio({
           setIsMuted(false);
           setStartedAt(null);
         }}
+        noiseSuppression={noiseSuppression}
+        onNoiseSuppressionChange={setNoiseSuppression}
+        autoGain={autoGain}
+        onAutoGainChange={setAutoGain}
+        gain={gain}
+        onGainChange={setGain}
+        status={status}
+        socketError={socketError}
       />
     );
   }
@@ -193,45 +208,123 @@ export function SpeakerStudio({
 }
 
 /**
- * PLACEHOLDER for `10g`. The props are the on-air view's real contract — every one of them
- * is state the studio already owns — but the body is a stand-in until the unit that draws
- * that screen replaces it.
+ * The on-air view (`10g`, `10u`–`10w`).
+ *
+ * **Nothing here talks to the server.** Going live and ending it both move only the studio's
+ * own state — no socket event is emitted, no presence claim is made or released — so the
+ * badge says `On air`, which is true of the channel from the handshake onwards, and no copy
+ * claims that anyone is hearing this microphone. Ending returns to pre-flight while the
+ * socket stays exactly as it was.
  */
 function OnAir({
   channelName,
   eventName,
-  analyser,
+  mic,
   startedAt,
   isMuted,
   onToggleMute,
   onEnd,
+  status,
+  socketError,
+  ...preferences
 }: {
   channelName: string;
   eventName: string;
-  analyser: AnalyserNode | null;
+  mic: ReturnType<typeof useMicCapture>;
   /** `Date.now()` at the moment Go live was pressed; the elapsed clock counts from it. */
   startedAt: number | null;
   isMuted: boolean;
   onToggleMute: () => void;
   onEnd: () => void;
+  noiseSuppression: boolean;
+  onNoiseSuppressionChange: (on: boolean) => void;
+  autoGain: boolean;
+  onAutoGainChange: (on: boolean) => void;
+  gain: number;
+  onGainChange: (gain: number) => void;
+  status: SocketStatus;
+  socketError: string | null;
 }) {
+  const [confirming, setConfirming] = useState(false);
+
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-gutter text-center">
-      <h1 className="text-screen">{channelName}</h1>
-      <p className="text-sm text-muted-foreground">{eventName}</p>
-      <InputLevelPanel analyser={analyser} />
-      <p className="text-note text-muted-foreground">
-        The on-air screen is not built yet. Started {startedAt === null ? 'just now' : 'at'}{' '}
-        {startedAt === null ? '' : new Date(startedAt).toLocaleTimeString()}.
-      </p>
-      <div className="flex flex-col gap-2.5">
-        <Button size="pill" variant="outline" onClick={onToggleMute}>
-          {isMuted ? 'Unmute' : 'Mute'}
-        </Button>
-        <Button size="pill" variant="destructive" onClick={onEnd}>
-          End broadcast
-        </Button>
+    <div className="relative flex min-h-dvh flex-col">
+      <div className="absolute top-3.5 right-gutter z-10 lg:top-4 lg:right-10">
+        <TempThemeToggle />
       </div>
-    </main>
+
+      <GuestHeader
+        right={<span className="mr-11 text-meta text-muted-foreground">{eventName}</span>}
+      />
+
+      <main className="flex flex-1 flex-col px-gutter pt-6 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
+        <header className="flex items-center justify-between gap-3 lg:justify-start">
+          <Badge className="h-auto gap-1.75 rounded-full bg-live-muted px-3.25 py-1.5 text-label text-live-foreground uppercase">
+            <LiveDot size="sm" />
+            On air
+          </Badge>
+          <span className="text-meta text-muted-foreground lg:hidden">{eventName}</span>
+        </header>
+
+        <h1 className="mt-4 text-screen lg:mt-3.5 lg:mb-7.5 lg:text-[40px] lg:leading-[1.03] lg:tracking-[-0.045em]">
+          {channelName}
+        </h1>
+
+        {/* One tree at both widths: a stack on a phone, and from `lg` the design's two
+            columns, with the circle spanning the right column's three rows and the quiet
+            end-broadcast button under it. */}
+        <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-0 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start lg:gap-x-8.5 lg:gap-y-4">
+          <OnAirStats startedAt={startedAt} className="lg:col-start-2 lg:row-start-1" />
+
+          <div className="flex flex-1 items-center justify-center py-4 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
+            {/* Muting swaps the fill and the label and stops the rings — the meter below is
+                deliberately untouched, so the speaker can still see the mic working. */}
+            <PlayTarget
+              icon={isMuted ? <MicOff /> : <Mic />}
+              label={isMuted ? 'Muted' : 'Mute'}
+              variant={isMuted ? 'danger' : 'live'}
+              rings={!isMuted}
+              onClick={onToggleMute}
+            />
+          </div>
+
+          {/* Not `InputLevelPanel`: its pre-flight copy says nobody hears you yet. */}
+          <section className="rounded-lg bg-secondary p-5 lg:col-start-2 lg:row-start-2">
+            <LevelMeter analyser={mic.analyser} />
+            <div
+              aria-hidden
+              className="mt-2.25 flex justify-between text-label text-muted-foreground uppercase"
+            >
+              <span>Quiet</span>
+              <span>Peak</span>
+            </div>
+          </section>
+
+          <AudioSettings mic={mic} {...preferences} className="lg:col-start-2 lg:row-start-3" />
+
+          <div className="lg:col-start-1 lg:row-start-4">
+            {(socketError || status !== 'connected') && (
+              <ConnectionLine status={status} error={socketError} className="mb-2 text-center" />
+            )}
+            <Button
+              variant="ghost"
+              onClick={() => setConfirming(true)}
+              className="h-10.5 w-full rounded-full text-sm font-semibold text-destructive hover:bg-destructive-muted hover:text-destructive"
+            >
+              End broadcast
+            </Button>
+          </div>
+        </div>
+      </main>
+
+      <EndBroadcastDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        onConfirm={() => {
+          setConfirming(false);
+          onEnd();
+        }}
+      />
+    </div>
   );
 }
