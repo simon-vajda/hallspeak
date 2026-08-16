@@ -114,9 +114,11 @@ function SettingsBody({
       <MicPanel
         status={mic.status}
         error={mic.error}
+        notice={mic.notice}
         devices={mic.devices}
         deviceId={mic.deviceId}
         onSelectDevice={mic.selectDevice}
+        onRetry={mic.retry}
         noiseSuppression={noiseSuppression}
         onNoiseSuppressionChange={onNoiseSuppressionChange}
         autoGain={autoGain}

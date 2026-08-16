@@ -87,6 +87,22 @@ export function SpeakerStudio({
     return () => clearInterval(timer);
   }, [mic.analyser, heardSomething]);
 
+  // A browser that will not resume an AudioContext outside a user gesture reports a flat
+  // line rather than an error, so the meter never moves and `heardSomething` never latches —
+  // which would leave Go live disabled forever, and Go live is the one control that cannot
+  // be the gesture. Any first interaction with the studio is. Removed once it takes.
+  const { suspended, resume } = mic;
+  useEffect(() => {
+    if (!suspended) return;
+
+    window.addEventListener('pointerdown', resume);
+    window.addEventListener('keydown', resume);
+    return () => {
+      window.removeEventListener('pointerdown', resume);
+      window.removeEventListener('keydown', resume);
+    };
+  }, [suspended, resume]);
+
   if (isLive) {
     return (
       <OnAir
@@ -149,9 +165,11 @@ export function SpeakerStudio({
           <MicPanel
             status={mic.status}
             error={mic.error}
+            notice={mic.notice}
             devices={mic.devices}
             deviceId={mic.deviceId}
             onSelectDevice={mic.selectDevice}
+            onRetry={mic.retry}
             noiseSuppression={noiseSuppression}
             onNoiseSuppressionChange={setNoiseSuppression}
             autoGain={autoGain}
@@ -198,7 +216,9 @@ export function SpeakerStudio({
                   ? 'Wear headphones — without them the room’s speakers feed back into your mic.'
                   : mic.deviceId === null
                     ? 'Pick a microphone to go live.'
-                    : 'Say something — the meter has to move before you can go live.'}
+                    : mic.suspended
+                      ? 'This browser starts the meter on your first tap — tap anywhere, then say something.'
+                      : 'Say something — the meter has to move before you can go live.'}
                 <br />
                 Speaker link · code ends {speakerCode.slice(-4)}
               </p>

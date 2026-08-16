@@ -45,9 +45,10 @@ async function openCapture(deviceId: string | null): Promise<Capture> {
   });
 
   const context = new AudioContext();
-  // an AudioContext created outside a user gesture starts suspended, and a suspended
-  // graph reports a flat line rather than an error
-  void context.resume();
+  // an AudioContext created outside a user gesture starts suspended, and a suspended graph
+  // reports a flat line rather than an error. Safari refuses to resume without a gesture,
+  // which is what `suspended` and `resume` below exist for.
+  await context.resume().catch(() => {});
 
   const analyser = context.createAnalyser();
   context.createMediaStreamSource(stream).connect(analyser);
@@ -77,8 +78,8 @@ function failureMessage(error: unknown): string {
 export function useMicCapture() {
   const [status, setStatus] = useState<MicStatus>('idle');
   const [error, setError] = useState<string | null>(null);
-  // kept apart from `error` so re-opening on the default device — which clears `error` —
-  // does not swallow the reason the device changed underneath the user
+  // returned alongside `error`, never merged into it: a fallback notice belongs under the
+  // still-working picker, whereas an error replaces the picker entirely
   const [notice, setNotice] = useState<string | null>(null);
   const [devices, setDevices] = useState<MicDevice[]>([]);
   const [deviceId, setDeviceId] = useState<string | null>(null);
@@ -86,7 +87,12 @@ export function useMicCapture() {
   // opened device back into state cannot re-trigger the open
   const [requested, setRequested] = useState<string | null>(null);
   const [capture, setCapture] = useState<Capture | null>(null);
+  const [suspended, setSuspended] = useState(false);
+  // re-opening the *same* device is a null -> null transition on `requested`, which changes
+  // nothing; this is what makes the capture effect run again for it
+  const [attempt, setAttempt] = useState(0);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: nothing reads `attempt` on purpose — re-running this effect is the whole of what bumping it does
   useEffect(() => {
     if (!isSupported()) {
       setStatus('unsupported');
@@ -141,25 +147,60 @@ export function useMicCapture() {
       if (current) release(current);
       setCapture(null);
     };
-  }, [requested]);
+  }, [requested, attempt]);
+
+  // `suspended` has to track the context rather than the one read taken at open time: a
+  // gesture-driven resume, and an OS interruption, both arrive as a statechange.
+  useEffect(() => {
+    const context = capture?.context;
+    if (!context) {
+      setSuspended(false);
+      return;
+    }
+
+    const sync = () => setSuspended(context.state !== 'running');
+    sync();
+    context.addEventListener('statechange', sync);
+    return () => context.removeEventListener('statechange', sync);
+  }, [capture]);
 
   useEffect(() => {
     if (!isSupported()) return;
 
+    let cancelled = false;
+    // Chrome fires devicechange more than once per hot-plug, so two enumerations can resolve
+    // out of order and let a stale list overwrite a fresh one
+    let latest = 0;
+
     const onDeviceChange = async () => {
-      const shaped = shapeDevices(await navigator.mediaDevices.enumerateDevices());
+      const token = ++latest;
+      let shaped: MicDevice[];
+      try {
+        shaped = shapeDevices(await navigator.mediaDevices.enumerateDevices());
+      } catch {
+        return;
+      }
+      if (cancelled || token !== latest) return;
+
       setDevices(shaped);
       setDeviceId((prev) => resolveSelection(shaped, prev));
 
-      if (requested !== null && !shaped.some((d) => d.deviceId === requested)) {
+      // the device actually *open*, not the one requested: `requested` is null whenever the
+      // hook is on the system default, which is how it opens on mount — testing it there
+      // would leave an unplugged default open as a dead track
+      if (deviceId !== null && !shaped.some((d) => d.deviceId === deviceId)) {
         setNotice('That microphone was disconnected. Switched to the system default.');
         setRequested(null);
+        setAttempt((n) => n + 1);
       }
     };
 
     navigator.mediaDevices.addEventListener('devicechange', onDeviceChange);
-    return () => navigator.mediaDevices.removeEventListener('devicechange', onDeviceChange);
-  }, [requested]);
+    return () => {
+      cancelled = true;
+      navigator.mediaDevices.removeEventListener('devicechange', onDeviceChange);
+    };
+  }, [deviceId]);
 
   const selectDevice = useCallback((next: string) => {
     setNotice(null);
@@ -169,12 +210,28 @@ export function useMicCapture() {
     setRequested(next);
   }, []);
 
+  /** Re-open the current device in place — the retry that does not cost a page reload. */
+  const retry = useCallback(() => {
+    setNotice(null);
+    setAttempt((n) => n + 1);
+  }, []);
+
+  /** Must be called from a real user gesture: it is the only thing Safari resumes on. */
+  const resume = useCallback(() => {
+    if (!capture) return;
+    void capture.context.resume().catch(() => {});
+  }, [capture]);
+
   return {
     status,
-    error: error ?? notice,
+    error,
+    notice,
+    suspended,
     devices,
     deviceId,
     selectDevice,
+    retry,
+    resume,
     analyser: capture?.analyser ?? null,
     stream: capture?.stream ?? null,
   };

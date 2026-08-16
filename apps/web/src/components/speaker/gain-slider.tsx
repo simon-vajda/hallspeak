@@ -30,10 +30,12 @@ export function GainSlider({
       </div>
       <Slider
         aria-label="Microphone gain"
-        value={gain}
-        // Base UI types every slider's value as number | number[]; this one has a single
-        // thumb, so the array branch is unreachable.
-        onValueChange={(value) => onGainChange(typeof value === 'number' ? value : gain)}
+        // An array, not the scalar: the shadcn wrapper derives its thumb count from
+        // Array.isArray(value) and falls back to [min, max] — two stacked thumbs — for a number.
+        value={[gain]}
+        onValueChange={(value) =>
+          onGainChange(typeof value === 'number' ? value : (value[0] ?? gain))
+        }
         disabled={disabled}
         className={cn(
           '[&_[data-slot=slider-thumb]]:size-5.5 [&_[data-slot=slider-thumb]]:border-2',
