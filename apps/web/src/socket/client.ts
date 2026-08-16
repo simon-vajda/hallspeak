@@ -6,13 +6,13 @@ import type {
 } from '@linguacast/contract/socket';
 import { io, type Socket } from 'socket.io-client';
 
-export type SignalSocket = Socket<
+export type SocketClient = Socket<
   ServerToClientEvents<typeof serverToClient>,
   ClientToServerEvents<typeof clientToServer>
 >;
 
 /** What the server's handshake gate authorizes on. A listener sends only a pin. */
-export interface SignalAuth {
+export interface SocketAuth {
   pin: string;
   speakerCode?: string;
 }
@@ -25,11 +25,11 @@ export interface SignalAuth {
  * An omitted `url` becomes '', which socket.io-client resolves to same-origin — correct
  * in production, and in dev Vite proxies /api to the server (with ws: true).
  */
-export function createSignalSocket(opts: {
+export function createSocket(opts: {
   clientVersion: string;
-  auth: SignalAuth;
+  auth: SocketAuth;
   url?: string;
-}): SignalSocket {
+}): SocketClient {
   return io(opts.url ?? '', {
     path: '/api/socket.io',
 
@@ -51,5 +51,5 @@ export function createSignalSocket(opts: {
     // re-establishes room membership in its connect handler rather than assuming it
     // sticks.
     auth: { clientVersion: opts.clientVersion, ...opts.auth },
-  }) as SignalSocket;
+  }) as SocketClient;
 }

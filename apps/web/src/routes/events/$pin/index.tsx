@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { $api } from '@/api/client';
-import { useSignal } from '@/lib/use-signal';
+import { useSocket } from '@/lib/use-socket';
 
 export const Route = createFileRoute('/events/$pin/')({ component: EventPage });
 
@@ -13,7 +13,7 @@ function EventPage() {
   });
 
   // Only after the GET returns 200 — never in parallel with it (spec E §7).
-  const { status, online } = useSignal(data ? { pin } : null);
+  const { status, online } = useSocket(data ? { pin } : null);
 
   // With one option there is nothing to choose, so the selector gets out of the way.
   // `replace` so Back does not bounce the guest between the two.
