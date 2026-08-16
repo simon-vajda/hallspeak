@@ -50,6 +50,13 @@
   /* The handoff specifies the LiveDot animation but not this mapping; without it
      `animate-pulse-live` is not a utility and the keyframes below are unreachable. */
   --animate-pulse-live: pulse-live 2s ease-in-out infinite;
+
+  /* The rings expanding out of the play target. The canvas is the source for all four
+     values — the README's prose (2s, scale 1.35) is an earlier figure it supersedes.
+     The second ring is the same animation with the delay baked in, so a call site adds
+     one class rather than restating the timing. */
+  --animate-ring: ring 2.6s ease-out infinite;
+  --animate-ring-delayed: ring 2.6s ease-out 1.3s infinite;
 }
 
 /* The handoff's spacing and type ramp, as scale entries rather than call-site literals.
@@ -81,6 +88,13 @@
   --text-meta: 0.75rem; /* metadata / status bar */
   --text-meta--line-height: 1.4;
   --text-meta--font-weight: 500;
+
+  /* The half-step between body and meta the guest and speaker screens lean on —
+     channel-row metadata, pre-flight helper copy, dialog body. The design fixes no
+     tracking for it. */
+  --text-note: 0.8125rem;
+  --text-note--line-height: 1.5;
+  --text-note--font-weight: 400;
 }
 
 /* Hex values in the comments are the source of truth from the design file. */
@@ -161,10 +175,31 @@
   }
 }
 
+@keyframes ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* the live dot is a status, not decoration — hold it solid, never hide it */
   .animate-pulse-live {
     animation: none;
+  }
+
+  /* the rings are decoration around a state indicator, so they may simply stop — but
+     stopping mid-flight would leave a half-scaled ghost, so pin them to the resting
+     frame as well */
+  .animate-ring,
+  .animate-ring-delayed {
+    animation: none;
+    transform: scale(1);
+    opacity: 0.45;
   }
 }
 
