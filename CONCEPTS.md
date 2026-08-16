@@ -43,3 +43,6 @@ Speakers and Listeners are deliberately not accounts: they are authorized purely
 The one error shape every failure crosses a boundary in — a machine-readable code plus a human-readable message. It is transport-agnostic: HTTP responses and socket acknowledgements carry the same shape, so a caller has one thing to handle either way.
 
 A failure that produces no Problem is a bug in whatever produced it, not a case for callers to special-case. Clients synthesize a Problem for failures that never reached the server, so that "the API refused" and "the API never answered" arrive through the same path.
+
+### Signalling
+The out-of-band exchange that negotiates a media connection before audio flows — capabilities, transport parameters, producers and consumers. It names a *role* played over the socket, not the socket itself: the transport is a socket, and signalling is one of the things carried on it alongside presence and room membership.
