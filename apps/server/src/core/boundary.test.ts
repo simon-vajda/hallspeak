@@ -16,12 +16,23 @@ const FORBIDDEN = [
   /\.\.\/socket\//,
 ];
 
-// Matches the specifier alone, so prose naming Hono in a comment does not trip it.
+// Comments come out before anything is matched, so prose naming Hono cannot trip the
+// scan and, more importantly, cannot sit between an `export` and a later `from` clause
+// and be read as one statement. The `[^:]` guard keeps a `//` inside a URL literal.
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"])\/\/.*$/gm, '$1');
+}
+
+// Each alternative is anchored to the start of a line because an import statement can
+// only appear at the top level. A bare `import 'hono'` has no `from` clause and needs
+// its own alternative — without it a side-effect import of a transport reads as clean.
 const SPECIFIER =
-  /(?:^|[\s;{(])(?:import|export)[\s\S]*?from\s*['"]([^'"]+)['"]|\brequire\(\s*['"]([^'"]+)['"]\s*\)|\bimport\(\s*['"]([^'"]+)['"]\s*\)/g;
+  /^\s*import\s*['"]([^'"]+)['"]|^\s*(?:import|export)\b[\s\S]*?\bfrom\s*['"]([^'"]+)['"]|\brequire\(\s*['"]([^'"]+)['"]\s*\)|\bimport\(\s*['"]([^'"]+)['"]\s*\)/gm;
 
 function specifiersOf(source: string): string[] {
-  return [...source.matchAll(SPECIFIER)].map((m) => m[1] ?? m[2] ?? m[3] ?? '');
+  return [...stripComments(source).matchAll(SPECIFIER)].map(
+    (m) => m[1] ?? m[2] ?? m[3] ?? m[4] ?? '',
+  );
 }
 
 describe('core/ imports no transport', () => {
