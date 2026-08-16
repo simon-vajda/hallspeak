@@ -60,6 +60,10 @@ export function ListenerRoom({
   }, [live]);
 
   const meta = `${eventName} · PIN ${formatPin(pin)}`;
+  // Liveness is last known, not current, while the socket is away — so the badge stops
+  // claiming it. The channel is still live as far as anyone knows; we just cannot say so.
+  const connected = status === 'connected';
+  const onAir = live && connected;
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -89,11 +93,17 @@ export function ListenerRoom({
         <Badge
           className={cn(
             BADGE,
-            live ? 'bg-live-muted text-live-foreground' : 'bg-secondary text-muted-foreground',
+            onAir ? 'bg-live-muted text-live-foreground' : 'bg-secondary text-muted-foreground',
           )}
         >
-          <LiveDot size="sm" tone={live ? 'live' : 'offline'} />
-          {!live ? 'Waiting for the interpreter' : isPlaying ? 'Listening' : 'Interpreter on air'}
+          <LiveDot size="sm" tone={onAir ? 'live' : 'offline'} />
+          {!live
+            ? 'Waiting for the interpreter'
+            : !connected
+              ? 'Reconnecting…'
+              : isPlaying
+                ? 'Listening'
+                : 'Interpreter on air'}
         </Badge>
 
         <h1 className={cn('mt-4 mb-10 lg:mt-4.5 lg:mb-10', TITLE)}>{channel.name}</h1>

@@ -6,6 +6,7 @@ import { GuestMessage } from '@/components/guest/guest-message';
 import { ListenerRoom } from '@/components/guest/listener-room';
 import { SpeakerStudio } from '@/components/speaker/speaker-studio';
 import { Button } from '@/components/ui/button';
+import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useSocket } from '@/lib/use-socket';
 
 // The speaker studio is the SAME route as the listener room, branching on the presence
@@ -53,6 +54,8 @@ function ChannelPage() {
     online,
     socket,
   } = useSocket(data ? (speakerCode ? { pin, speakerCode } : { pin }) : null);
+
+  useConnectionToast(status);
 
   // A speaker is already in its channel room from the handshake; a listener has to ask.
   useEffect(() => {

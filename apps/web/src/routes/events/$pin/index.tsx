@@ -5,6 +5,7 @@ import { ChannelRow } from '@/components/guest/channel-row';
 import { EventHeader } from '@/components/guest/event-header';
 import { GuestMessage, GuestShell } from '@/components/guest/guest-message';
 import { Button } from '@/components/ui/button';
+import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useSocket } from '@/lib/use-socket';
 
 export const Route = createFileRoute('/events/$pin/')({ component: EventPage });
@@ -18,6 +19,8 @@ function EventPage() {
 
   // Only after the GET returns 200 — never in parallel with it (spec E §7).
   const { status, online } = useSocket(data ? { pin } : null);
+
+  useConnectionToast(status);
 
   // With one option there is nothing to choose, so the selector gets out of the way.
   // `replace` so Back does not bounce the guest between the two.
