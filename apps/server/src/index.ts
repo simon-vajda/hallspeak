@@ -3,7 +3,7 @@ import { app } from './app';
 import { closeDb, db } from './db';
 import { runMigrations } from './db/migrate';
 import { env } from './env';
-import { attachSignal } from './signal';
+import { attachSocket } from './socket';
 
 // Before serve(), never after: the process either has a current schema or fails to
 // start, so a running server can never be serving against a stale one. The operator's
@@ -16,7 +16,7 @@ const server = serve({ fetch: app.fetch, hostname: env.HOST, port: env.PORT }, (
 });
 
 // Must come after serve(): Socket.IO takes over the HTTP server's request listeners.
-const io = attachSignal(server);
+const io = attachSocket(server);
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 let shuttingDown = false;

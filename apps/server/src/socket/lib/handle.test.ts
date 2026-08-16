@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppError } from '../lib/problem';
+import { AppError } from '../../lib/problem';
 import { HANDLER_TIMEOUT_MS, handle } from './handle';
 
 describe('handle', () => {

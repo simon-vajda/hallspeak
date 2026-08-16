@@ -1,65 +1,15 @@
 import type { ServerType } from '@hono/node-server';
-import {
-  type ClientToServerEvents,
-  clientToServer,
-  type Payload,
-  type Response,
-  type ServerToClientEvents,
-  type serverToClient,
-} from '@linguacast/contract/socket';
-import { Server, type Socket } from 'socket.io';
-import type { SocketAuth } from '../core/access';
+import { clientToServer } from '@linguacast/contract/socket';
+import { Server } from 'socket.io';
 import { getChannelById } from '../core/channels.service';
 import { presence } from '../core/presence';
 import { db } from '../db';
-import { joinChannel, leaveChannel } from './channels';
-import { handle } from './handle';
+import { joinChannel, leaveChannel } from './handlers/channels.handlers';
 import { handshakeGate } from './handshake';
-import { channelRoom, eventRoom } from './rooms';
-import { validate } from './validate';
-
-type C2S = ClientToServerEvents<typeof clientToServer>;
-type S2C = ServerToClientEvents<typeof serverToClient>;
-type ServerSideEvents = Record<string, never>;
-
-// The fourth generic types socket.data, which the handshake gate fills in.
-export type SignalServer = Server<C2S, S2C, ServerSideEvents, SocketAuth>;
-type SignalSocket = Socket<C2S, S2C, ServerSideEvents, SocketAuth>;
-
-/** One event's handler, as the contract defines it. Both sides are inferred at use. */
-type Handler<K extends keyof typeof clientToServer> = (
-  payload: Payload<(typeof clientToServer)[K]>,
-) => Promise<Response<(typeof clientToServer)[K]>> | Response<(typeof clientToServer)[K]>;
-
-/**
- * Registers a contract event, naming it exactly once:
- *
- *   on(socket, 'ping', () => ({ serverTime: Date.now() }));
- *
- * `handle` still takes the name separately because it needs it for the watchdog log —
- * a listener cannot recover its own event name from socket.on. That is an argument for
- * `handle`, not a second literal for the caller, so this passes it through.
- *
- * Deliberately NOT a handler registry (events mapped to handlers as data): this is a
- * plain call, so handlers still live wherever their feature does, `socket` is still in
- * scope for rooms and disconnect, and nothing has to be collected up front.
- */
-export function on<K extends keyof typeof clientToServer & string>(
-  socket: SignalSocket,
-  event: K,
-  fn: Handler<K>,
-): void {
-  // The cast is confined to this line and is not a hole in the contract. socket.on types
-  // its listener as a conditional over the event name, which TypeScript cannot reduce
-  // while K is still generic — it can only check the call once K is a literal, which is
-  // exactly what it is at every call site but not here. The signature above is where the
-  // guarantee lives: K must be a contract key, and Handler<K> pins the payload and the
-  // return type to that key's schemas. define.test-d.ts asserts that pinning holds.
-  (socket.on as (event: K, listener: (...args: never[]) => void) => void)(
-    event,
-    handle(event, fn) as (...args: never[]) => void,
-  );
-}
+import { on } from './lib/on';
+import { channelRoom, eventRoom } from './lib/rooms';
+import type { SocketServer } from './lib/types';
+import { validate } from './lib/validate';
 
 /**
  * Attaches Socket.IO to the HTTP server @hono/node-server already created.
@@ -75,8 +25,8 @@ export function on<K extends keyof typeof clientToServer & string>(
  * two — which matters when the operator is a volunteer, not a platform team. Rooms
  * already give per-channel fan-out; namespaces stay available via io.of() if needed.
  */
-export function attachSignal(httpServer: ServerType): SignalServer {
-  const io: SignalServer = new Server(httpServer, {
+export function attachSocket(httpServer: ServerType): SocketServer {
+  const io: SocketServer = new Server(httpServer, {
     path: '/api/socket.io',
     // Engine.IO transport heartbeats — unrelated to the `ping` event below, which is an
     // application-level probe. Deliberately far below the defaults (25s/20s): a dead
@@ -129,7 +79,7 @@ export function attachSignal(httpServer: ServerType): SignalServer {
 
 /** Liveness goes to the EVENT room so the selector and every channel page agree. */
 function broadcastChannelStatus(
-  io: SignalServer,
+  io: SocketServer,
   eventId: number,
   channelId: number,
   online: boolean,

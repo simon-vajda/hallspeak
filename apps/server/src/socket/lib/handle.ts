@@ -1,5 +1,5 @@
 import type { Ack } from '@linguacast/contract/socket';
-import { AppError, toProblem } from '../lib/problem';
+import { AppError, toProblem } from '../../lib/problem';
 
 /**
  * Deliberately below the client's ackTimeout of 10s. A wedged handler then produces a
