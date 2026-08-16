@@ -8,13 +8,13 @@ import {
   type serverToClient,
 } from '@linguacast/contract/socket';
 import { Server, type Socket } from 'socket.io';
+import type { SocketAuth } from '../core/access';
 import { getChannelById } from '../core/channels.service';
+import { presence } from '../core/presence';
 import { db } from '../db';
-import type { SocketAuth } from './authorize';
 import { joinChannel, leaveChannel } from './channels';
 import { handle } from './handle';
 import { handshakeGate } from './handshake';
-import { presence } from './presence';
 import { channelRoom, eventRoom } from './rooms';
 import { validate } from './validate';
 
