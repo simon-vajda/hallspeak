@@ -92,11 +92,15 @@ export function ListenerRoom({
           label={
             !live
               ? 'Waiting for the interpreter'
-              : !connected
-                ? 'Reconnecting…'
-                : isPlaying
-                  ? 'Listening'
-                  : 'Interpreter on air'
+              : // A handshake rejection is terminal — socket.io does not retry it — so the
+                // badge must not promise that anything is coming back.
+                status === 'error'
+                ? 'Disconnected'
+                : !connected
+                  ? 'Reconnecting…'
+                  : isPlaying
+                    ? 'Listening'
+                    : 'Interpreter on air'
           }
         />
 

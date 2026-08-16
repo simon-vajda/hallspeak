@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { SocketStatus } from '@/lib/use-socket';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +11,10 @@ import { cn } from '@/lib/utils';
  * one thing that is real: the socket. The waveform returns with mediasoup.
  *
  * `error` is already resolved to human copy by the route, which owns the code→message map.
+ *
+ * "Reconnecting" is only true of a connection that existed, so the first attempt reads
+ * "Connecting" instead — the two are the same socket state and only the history tells them
+ * apart.
  */
 export function ConnectionLine({
   status,
@@ -20,12 +25,17 @@ export function ConnectionLine({
   error?: string | null;
   className?: string;
 }) {
+  const hasConnected = useRef(false);
+  if (status === 'connected') hasConnected.current = true;
+
   const text =
     status === 'error'
       ? (error ?? 'Connection failed.')
       : status === 'connected'
         ? 'Connected'
-        : 'Reconnecting…';
+        : hasConnected.current
+          ? 'Reconnecting…'
+          : 'Connecting…';
 
   return (
     <p
