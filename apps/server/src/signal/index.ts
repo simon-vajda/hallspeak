@@ -8,8 +8,8 @@ import {
   type serverToClient,
 } from '@linguacast/contract/socket';
 import { Server, type Socket } from 'socket.io';
+import { getChannelById } from '../core/channels.service';
 import { db } from '../db';
-import { getChannelById } from '../events/queries';
 import type { SocketAuth } from './authorize';
 import { joinChannel, leaveChannel } from './channels';
 import { handle } from './handle';

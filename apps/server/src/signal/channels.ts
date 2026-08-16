@@ -1,5 +1,5 @@
+import { findEnabledChannelBySlug } from '../core/channels.service';
 import type { Db } from '../db/client';
-import { findEnabledChannelBySlug } from '../events/queries';
 import { AppError } from '../lib/problem';
 import type { SocketAuth } from './authorize';
 import type { PresenceRegistry } from './presence';

@@ -1,6 +1,7 @@
 import { Handshake } from '@linguacast/contract/schemas';
+import { findEnabledChannelBySpeakerCode } from '../core/channels.service';
+import { findEnabledEventByPin } from '../core/events.service';
 import type { Db } from '../db/client';
-import { findEnabledChannelBySpeakerCode, findEnabledEventByPin } from '../events/queries';
 import { MIN_CLIENT_VERSION } from '../version';
 import type { PresenceRegistry } from './presence';
 import { semverLt } from './semver';

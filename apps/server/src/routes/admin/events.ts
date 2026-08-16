@@ -1,18 +1,17 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import * as routes from '@linguacast/contract/routes';
-import { db } from '../../db';
-import type { ChannelRow, EventRow } from '../../db/schema';
+import { createChannel, listChannels } from '../../core/channels.service';
 import {
-  createChannel,
   createEvent,
   deleteEvent,
   getEventById,
-  isUniqueViolation,
-  listChannels,
   listEvents,
   regeneratePin,
   updateEvent,
-} from '../../events/queries';
+} from '../../core/events.service';
+import { db } from '../../db';
+import { isUniqueViolation } from '../../db/errors';
+import type { ChannelRow, EventRow } from '../../db/schema';
 import { defaultHook } from '../../lib/default-hook';
 
 /** Row → DTO. A row is not a DTO, which is why this mapping is written out. */
