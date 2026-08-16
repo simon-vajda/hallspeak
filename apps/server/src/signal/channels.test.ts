@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createChannel } from '../core/channels.service';
+import { createEvent } from '../core/events.service';
 import type { Db } from '../db/client';
 import { createTestDb } from '../db/testing';
-import { createChannel, createEvent } from '../events/queries';
 import type { SocketAuth } from './authorize';
 import { joinChannel, leaveChannel } from './channels';
 import { PresenceRegistry } from './presence';

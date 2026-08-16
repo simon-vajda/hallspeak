@@ -1,12 +1,9 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import * as routes from '@linguacast/contract/routes';
+import { findEnabledChannelBySlug, listEnabledChannels } from '../core/channels.service';
+import { findEnabledEventByPin } from '../core/events.service';
 import { db } from '../db';
 import type { ChannelRow } from '../db/schema';
-import {
-  findEnabledChannelBySlug,
-  findEnabledEventByPin,
-  listEnabledChannels,
-} from '../events/queries';
 import { defaultHook } from '../lib/default-hook';
 import { presence } from '../signal/presence';
 import { publicRateLimit } from './rate-limit';

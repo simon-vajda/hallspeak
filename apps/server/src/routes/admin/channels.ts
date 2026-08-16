@@ -1,7 +1,7 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import * as routes from '@linguacast/contract/routes';
+import { deleteChannel, regenerateSpeakerCode, updateChannel } from '../../core/channels.service';
 import { db } from '../../db';
-import { deleteChannel, regenerateSpeakerCode, updateChannel } from '../../events/queries';
 import { defaultHook } from '../../lib/default-hook';
 import { toAdminChannel } from './events';
 
