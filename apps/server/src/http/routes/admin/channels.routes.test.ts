@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createChannel } from '../../core/channels.service';
-import { createEvent } from '../../core/events.service';
-import type { Db } from '../../db/client';
-import { createTestApi } from '../../testing/api';
+import { createChannel } from '../../../core/channels.service';
+import { createEvent } from '../../../core/events.service';
+import type { Db } from '../../../db/client';
+import { createTestApi } from '../../../testing/api';
 
 let api: Awaited<ReturnType<typeof createTestApi>>['api'];
 let db: Db;

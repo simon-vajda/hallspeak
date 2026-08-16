@@ -1,9 +1,9 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { defaultHook } from '../lib/default-hook';
-import { adminChannelRoutes } from './admin/channels';
-import { adminEventRoutes } from './admin/events';
-import { publicEventRoutes } from './events';
-import { versionRoutes } from './version';
+import { defaultHook } from '../default-hook';
+import { adminChannelRoutes } from './admin/channels.routes';
+import { adminEventRoutes } from './admin/events.routes';
+import { publicEventRoutes } from './events.routes';
+import { versionRoutes } from './version.routes';
 
 /** Every route in this app is mounted here, without the /api prefix. */
 export const apiRoutes = new OpenAPIHono({ defaultHook })

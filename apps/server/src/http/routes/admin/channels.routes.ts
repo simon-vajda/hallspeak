@@ -1,9 +1,13 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import * as routes from '@linguacast/contract/routes';
-import { deleteChannel, regenerateSpeakerCode, updateChannel } from '../../core/channels.service';
-import { db } from '../../db';
-import { defaultHook } from '../../lib/default-hook';
-import { toAdminChannel } from './events';
+import {
+  deleteChannel,
+  regenerateSpeakerCode,
+  updateChannel,
+} from '../../../core/channels.service';
+import { db } from '../../../db';
+import { defaultHook } from '../../default-hook';
+import { toAdminChannel } from '../../mappers/channels.mapper';
 
 // Channels are addressed directly rather than under their event: the admin edits one
 // from a list where the event is already established, and nesting would buy a
