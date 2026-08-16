@@ -34,7 +34,7 @@ export const channels = sqliteTable(
   (t) => [uniqueIndex('channels_event_id_slug_unique').on(t.eventId, t.slug)],
 );
 
-// Not `Event`: Node has a global of that name and signal/validate.ts imports another
+// Not `Event`: Node has a global of that name and socket/lib/validate.ts imports another
 // from socket.io. `EventRow` also reads correctly — a row is not a DTO.
 export type EventRow = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;

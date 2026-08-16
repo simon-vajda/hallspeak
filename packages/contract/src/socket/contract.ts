@@ -5,7 +5,7 @@ import {
   ChannelStatus,
   PingPayload,
   PingResponse,
-} from '../schemas/signal';
+} from '../schemas/socket';
 import { event } from './define';
 
 /**
