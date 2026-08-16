@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { connectSignal } from '@/lib/signal';
-import type { SignalAuth, SignalSocket } from '@/signal/socket';
+import { connectSocket } from '@/lib/socket';
+import type { SocketAuth, SocketClient } from '@/socket/client';
 
-export type SignalStatus = 'idle' | 'connecting' | 'connected' | 'error';
+export type SocketStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
 /**
  * Opens a socket once `auth` is non-null — which callers pass only after their HTTP
@@ -19,11 +19,11 @@ export type SignalStatus = 'idle' | 'connecting' | 'connected' | 'error';
  * Under StrictMode this effect runs twice in dev, so the socket connects, disconnects
  * and reconnects on mount. That is expected and harmless.
  */
-export function useSignal(auth: SignalAuth | null) {
-  const [status, setStatus] = useState<SignalStatus>('idle');
+export function useSocket(auth: SocketAuth | null) {
+  const [status, setStatus] = useState<SocketStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [online, setOnline] = useState<Record<string, boolean>>({});
-  const [socket, setSocket] = useState<SignalSocket | null>(null);
+  const [socket, setSocket] = useState<SocketClient | null>(null);
 
   // Destructured so the effect depends on the values, not on a fresh object identity
   // every render.
@@ -34,7 +34,7 @@ export function useSignal(auth: SignalAuth | null) {
     if (pin === null) return;
 
     setStatus('connecting');
-    const s = connectSignal(speakerCode === null ? { pin } : { pin, speakerCode });
+    const s = connectSocket(speakerCode === null ? { pin } : { pin, speakerCode });
     setSocket(s);
 
     s.on('connect', () => {

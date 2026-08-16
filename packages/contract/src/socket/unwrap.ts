@@ -1,13 +1,13 @@
 import type { Ack } from './define';
 
 /** An application-level failure carried in an ack envelope, rethrown at the call site. */
-export class SignalError extends Error {
+export class SocketError extends Error {
   constructor(
     readonly code: string,
     message: string,
   ) {
     super(message);
-    this.name = 'SignalError';
+    this.name = 'SocketError';
   }
 }
 
@@ -17,10 +17,10 @@ export class SignalError extends Error {
  *   const { serverTime } = unwrap(await socket.emitWithAck('ping', {}));
  *
  * Timeouts and disconnects reject the promise with Socket.IO's own Error; application
- * failures resolve with `{ ok: false }` and throw SignalError here. Both are throws at
+ * failures resolve with `{ ok: false }` and throw SocketError here. Both are throws at
  * the call site, distinguishable by type when that matters.
  */
 export function unwrap<T>(res: Ack<T>): T {
-  if (!res.ok) throw new SignalError(res.error.code, res.error.message);
+  if (!res.ok) throw new SocketError(res.error.code, res.error.message);
   return res.data;
 }
