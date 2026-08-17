@@ -48,13 +48,19 @@ describe('workerCountFor', () => {
 });
 
 describe('AUDIO_CODECS', () => {
-  it('is exactly one Opus entry, mono, with in-band FEC', () => {
+  it('is exactly one Opus entry with in-band FEC', () => {
     expect(AUDIO_CODECS).toHaveLength(1);
     const [opus] = AUDIO_CODECS;
     expect(opus?.mimeType).toBe('audio/opus');
-    expect(opus?.channels).toBe(1);
     expect(opus?.clockRate).toBe(48000);
     expect(opus?.parameters?.useinbandfec).toBe(1);
+  });
+
+  it('negotiates mono through the stereo parameters, since mediasoup only takes 48000/2', () => {
+    const [opus] = AUDIO_CODECS;
+    expect(opus?.channels).toBe(2);
+    expect(opus?.parameters?.stereo).toBe(0);
+    expect(opus?.parameters?.['sprop-stereo']).toBe(0);
   });
 });
 
