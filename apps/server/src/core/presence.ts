@@ -19,14 +19,6 @@ export class PresenceRegistry {
   private readonly claimByChannel = new Map<number, Claim>();
   private readonly channelBySocket = new Map<string, number>();
 
-  /**
-   * PLACEHOLDER: must be replaced by mediasoup producer state. This currently means "a
-   * socket is connected", not "audio is flowing".
-   */
-  isOnline(channelId: number): boolean {
-    return this.claimByChannel.has(channelId);
-  }
-
   holder(channelId: number): string | undefined {
     return this.claimByChannel.get(channelId)?.socketId;
   }

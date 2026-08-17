@@ -1,6 +1,6 @@
 import type { SocketAuth } from '../../core/access';
 import { findEnabledChannelBySlug } from '../../core/channels.service';
-import type { PresenceRegistry } from '../../core/presence';
+import { isOnline } from '../../core/media';
 import type { Db } from '../../db/client';
 import { AppError } from '../../lib/problem';
 import { channelRoom } from '../lib/rooms';
@@ -17,7 +17,6 @@ export interface RoomSocket {
  */
 export function joinChannel(
   db: Db,
-  presence: PresenceRegistry,
   socket: RoomSocket,
   auth: SocketAuth,
   slug: string,
@@ -26,7 +25,7 @@ export function joinChannel(
   if (!channel) throw new AppError('not_found', `No channel "${slug}" on this event.`);
 
   socket.join(channelRoom(channel.id));
-  return { online: presence.isOnline(channel.id) };
+  return { online: isOnline(auth.eventId, channel.id) };
 }
 
 /** Fire-and-forget: a leave that resolves to nothing has already achieved its goal. */

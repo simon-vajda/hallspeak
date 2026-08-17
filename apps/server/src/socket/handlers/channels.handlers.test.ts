@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { SocketAuth } from '../../core/access';
 import { createChannel } from '../../core/channels.service';
 import { createEvent } from '../../core/events.service';
+import { goLive, startFakeMedia } from '../../core/media/testing';
 import { PresenceRegistry } from '../../core/presence';
 import type { Db } from '../../db/client';
 import { createTestDb } from '../../db/testing';
@@ -45,45 +46,60 @@ describe('joinChannel', () => {
   it('puts the socket in the channel room and reports liveness', () => {
     const socket = fakeSocket();
 
-    expect(joinChannel(db, presence, socket, authA, 'english')).toEqual({ online: false });
+    expect(joinChannel(db, socket, authA, 'english')).toEqual({ online: false });
     expect(socket.rooms.has(channelRoom(englishId))).toBe(true);
   });
 
-  it('reports online when a speaker holds the channel', () => {
+  // Liveness is producer existence, not the claim: an open studio is not audio.
+  it('reports offline when a speaker only holds the claim', () => {
     presence.claim(englishId, 'code-x', 'speaker-socket');
     const socket = fakeSocket();
 
-    expect(joinChannel(db, presence, socket, authA, 'english')).toEqual({ online: true });
+    expect(joinChannel(db, socket, authA, 'english')).toEqual({ online: false });
+  });
+
+  it('reports online once a producer exists on the channel', async () => {
+    const stopMedia = await startFakeMedia();
+    try {
+      await goLive({
+        eventId: authA.eventId,
+        socketId: 'speaker-socket',
+        channelId: englishId,
+        slug: 'english',
+      });
+
+      expect(joinChannel(db, fakeSocket(), authA, 'english')).toEqual({ online: true });
+    } finally {
+      await stopMedia();
+    }
   });
 
   // The slug resolves against the socket's own event, so a foreign channel does not exist.
   it('refuses a channel belonging to another event', () => {
     const socket = fakeSocket();
 
-    expect(() => joinChannel(db, presence, socket, authA, foreignSlug)).toThrow(
-      /not_found|No channel/,
-    );
+    expect(() => joinChannel(db, socket, authA, foreignSlug)).toThrow(/not_found|No channel/);
     expect(socket.rooms.size).toBe(0);
   });
 
   it('refuses a disabled channel', () => {
     const socket = fakeSocket();
 
-    expect(() => joinChannel(db, presence, socket, authA, 'german')).toThrow();
+    expect(() => joinChannel(db, socket, authA, 'german')).toThrow();
     expect(socket.rooms.size).toBe(0);
   });
 
   it('refuses an unknown slug', () => {
     const socket = fakeSocket();
 
-    expect(() => joinChannel(db, presence, socket, authA, 'nonexistent')).toThrow();
+    expect(() => joinChannel(db, socket, authA, 'nonexistent')).toThrow();
   });
 });
 
 describe('leaveChannel', () => {
   it('removes the socket from the channel room', () => {
     const socket = fakeSocket();
-    joinChannel(db, presence, socket, authA, 'english');
+    joinChannel(db, socket, authA, 'english');
 
     leaveChannel(db, socket, authA, 'english');
 
@@ -92,7 +108,7 @@ describe('leaveChannel', () => {
 
   it('is a no-op for a slug the socket cannot address', () => {
     const socket = fakeSocket();
-    joinChannel(db, presence, socket, authA, 'english');
+    joinChannel(db, socket, authA, 'english');
 
     expect(() => leaveChannel(db, socket, authA, foreignSlug)).not.toThrow();
     expect(socket.rooms.has(channelRoom(englishId))).toBe(true);
