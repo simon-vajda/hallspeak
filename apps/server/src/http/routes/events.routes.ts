@@ -8,17 +8,16 @@ import { toPublicChannel } from '../mappers/channels.mapper';
 import { publicRateLimit } from '../middleware/rate-limit.middleware';
 
 /**
- * One body for every miss. A disabled event, a disabled channel and a nonexistent PIN
- * must be indistinguishable in status, body and shape, or a scanner learns which PINs
- * are real for free (spec E §5). Enforced by a test, not by discipline.
+ * One body for every miss: a disabled event, a disabled channel and a nonexistent PIN
+ * must be byte-identical, or a scanner learns which PINs are real. Enforced by a test.
  */
 const NOT_FOUND = { code: 'not_found', message: 'Not found.' } as const;
 
 const app = new OpenAPIHono({ defaultHook });
 
-// Before the handlers: registration order is composition order in Hono. Scoped to this
-// sub-app, so admin and /version are untouched. A separate statement rather than a link
-// in the chain below because `.use()` returns a plain Hono, which has no `.openapi()`.
+// Before the handlers: registration order is composition order in Hono. A separate
+// statement rather than a link in the chain below, because `.use()` returns a plain Hono
+// with no `.openapi()`.
 app.use('/events/*', publicRateLimit);
 
 export const publicEventRoutes = app
@@ -46,8 +45,7 @@ export const publicEventRoutes = app
     if (!event) return c.json(NOT_FOUND, 404);
 
     const channel = findEnabledChannelBySlug(db, event.id, slug);
-    // Checked before the code, so a valid code for a disabled channel still 404s and
-    // never confirms that the code was right.
+    // Before the code, so a valid code on a disabled channel still 404s.
     if (!channel) return c.json(NOT_FOUND, 404);
 
     if (speakerCode !== undefined && speakerCode !== channel.speakerCode) {
@@ -57,8 +55,7 @@ export const publicEventRoutes = app
       );
     }
 
-    // Annotated: a conditional over two string literals widens to `string` without a
-    // contextual type, and the response schema wants the union.
+    // Annotated because a conditional over two string literals widens to `string`.
     const role: 'listener' | 'speaker' = speakerCode === undefined ? 'listener' : 'speaker';
     return c.json(
       {

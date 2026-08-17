@@ -7,16 +7,14 @@ const SHARED_KEY = '*';
 function clientIp(c: Context): string {
   const incoming = (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)
     ?.incoming;
-  // 'unknown' collapses every caller the runtime cannot identify into a single bucket,
-  // which is the conservative direction: it throttles them together rather than
-  // exempting them.
+  // 'unknown' collapses every unidentifiable caller into one bucket, throttling them
+  // together rather than exempting them.
   return incoming?.socket?.remoteAddress ?? 'unknown';
 }
 
 /**
- * Metered on 404 responses only. A successful lookup — the thing a room full of guests
- * does — is never charged, so the limiter is invisible to legitimate use and expensive
- * only to a caller that is guessing.
+ * Charged on 404 responses only, so a room full of guests never feels it and only a
+ * caller that is guessing pays.
  */
 export function createRateLimit(limiters: {
   perIp: TokenBucketLimiter;
@@ -46,11 +44,9 @@ export function createRateLimit(limiters: {
 }
 
 /**
- * Burst 20 refilling at 1/second caps a scanner at one guess per second — turning a
- * sweep of the 6-digit space from minutes into roughly eleven days — while a guest who
- * mistypes twice never notices. The shared budget sits behind it because a botnet
- * sidesteps per-IP limits entirely. In-memory state is correct here precisely because
- * the deployment target is a single process (spec E §6).
+ * Burst 20 refilling at 1/s puts a sweep of the 6-digit space at roughly eleven days,
+ * while a guest who mistypes twice never notices. The shared budget behind it is for
+ * botnets, which sidestep a per-IP limit entirely.
  */
 export const publicRateLimit = createRateLimit({
   perIp: new TokenBucketLimiter({ capacity: 20, refillPerSecond: 1 }),

@@ -1,7 +1,5 @@
-// Event and channel rooms are NESTED, not alternatives. A listener on the selector is
-// in the event room only and still gets liveness updates; a listener in a channel is
-// in both. Aggregate updates fan out to the event room, signalling to the channel
-// room (spec E §7).
+// The two rooms are nested, not alternatives: a listener in a channel is in both.
+// Aggregate updates fan out to the event room, per-channel signalling to the channel room.
 
 export const eventRoom = (eventId: number): string => `event:${eventId}`;
 

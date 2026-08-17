@@ -10,7 +10,7 @@ describe('PresenceRegistry', () => {
     expect(presence.isOnline(1)).toBe(true);
   });
 
-  // First connection wins: the incumbent is never disturbed (spec E §7).
+  // First connection wins: the incumbent is never disturbed.
   it('refuses a second claim on a live channel', () => {
     const presence = new PresenceRegistry();
     presence.claim(1, 'socket-a');

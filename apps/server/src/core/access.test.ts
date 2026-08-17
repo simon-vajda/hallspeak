@@ -65,7 +65,7 @@ describe('authorizeHandshake', () => {
     expect(auth({ pin: hidden.pin })).toEqual({ ok: false, error: 'not_found' });
   });
 
-  // The version gate still fires, and before the database is touched.
+  // The version gate fires before the database is touched.
   it('rejects an old client', () => {
     expect(authorizeHandshake(db, presence, { clientVersion: '0.0.1', pin }, 's')).toEqual({
       ok: false,
@@ -91,8 +91,6 @@ describe('authorizeHandshake', () => {
     expect(result).toMatchObject({ ok: true, data: { speakerChannelId: english.id } });
   });
 
-  // The Spanish interpreter cannot broadcast on the English channel — but the URL
-  // names the event, and a code for ANOTHER event is a mismatch too.
   it('rejects a speaker code belonging to a different event', () => {
     expect(auth({ pin, speakerCode: otherEventChannelCode })).toEqual({
       ok: false,

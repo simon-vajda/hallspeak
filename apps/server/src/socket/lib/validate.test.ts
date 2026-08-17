@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { validate } from './validate';
 
-// A local contract, not the real one: these tests are about the middleware, and
-// coupling them to the shipped event list would make every future event churn them.
+// A local contract, not the real one: coupling these to the shipped event list would
+// make every future event churn them.
 const contract = {
   ping: event({ payload: z.object({}), response: z.object({ serverTime: z.int() }) }),
   join: event({ payload: z.object({ id: z.coerce.number() }) }),

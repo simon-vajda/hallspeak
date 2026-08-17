@@ -5,10 +5,8 @@ import { createDb, type Db } from './client';
 import { runMigrations } from './migrate';
 
 /**
- * A real, migrated, throwaway database in its own temp directory. Call `cleanup()`
- * when done — typically in a `finally` or an `afterEach`.
- *
- * Imports `createDb` from ./client, never from ./index: loading the singleton would
+ * A real, migrated, throwaway database in its own temp directory; call `cleanup()` when
+ * done. Imports `createDb` from ./client, never ./index: loading the singleton would
  * provision ./data/linguacast.db as a side effect of running the tests.
  */
 export function createTestDb(): { db: Db; cleanup: () => void } {

@@ -9,7 +9,7 @@ let api: Awaited<ReturnType<typeof createTestApi>>['api'];
 let db: Db;
 let cleanup: () => void;
 
-// Fixtures shared by every test below. Seeded once: none of these tests mutate rows.
+// Seeded once: none of these tests mutate rows.
 let live: { pin: string; slug: string; speakerCode: string; channelId: number };
 let disabledEvent: { pin: string };
 let disabledChannel: { pin: string; slug: string; speakerCode: string };
@@ -72,7 +72,6 @@ describe('GET /events/{pin}', () => {
   });
 });
 
-// The point of the spec's 404 parity rule: three different reasons, one response.
 describe('404 parity', () => {
   it('answers identically for a missing pin, a disabled event and a disabled channel', async () => {
     const missing = await api.request('/events/000000');
@@ -111,8 +110,6 @@ describe('GET /events/{pin}/{slug}', () => {
     expect(body.role).toBe('speaker');
   });
 
-  // The code identifies a channel on its own, so the URL names the channel twice;
-  // disagreement is an error, not a case where one side wins (spec E §5).
   it('rejects a code belonging to a different channel with 403', async () => {
     const res = await api.request(
       `/events/${live.pin}/${live.slug}?speaker_code=${otherChannelCode}`,
@@ -127,7 +124,7 @@ describe('GET /events/{pin}/{slug}', () => {
     expect(res.status).toBe(403);
   });
 
-  // 404 wins over 403: a disabled channel must not confirm that the code was right.
+  // A disabled channel must not confirm that the code was right.
   it('answers 404, not 403, for a valid code on a disabled channel', async () => {
     const res = await api.request(
       `/events/${disabledChannel.pin}/${disabledChannel.slug}?speaker_code=${disabledChannel.speakerCode}`,

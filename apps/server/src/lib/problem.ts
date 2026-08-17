@@ -1,4 +1,4 @@
-/** The shared error shape. Mirrors the Problem schema in @linguacast/contract/schemas. */
+/** Mirrors the Problem schema in @linguacast/contract/schemas. */
 export interface Problem {
   code: string;
   message: string;
@@ -16,9 +16,8 @@ export class AppError extends Error {
 }
 
 /**
- * Maps any thrown value to the wire error shape. Known errors keep their code;
- * everything else becomes internal_error, with the original logged server-side.
- * Transport-agnostic by design: HTTP responses and socket acks both use this.
+ * Maps any thrown value to the wire error shape: an AppError keeps its code, anything
+ * else becomes internal_error with the original logged. Used by both transports.
  */
 export function toProblem(err: unknown): Problem {
   if (err instanceof AppError) {

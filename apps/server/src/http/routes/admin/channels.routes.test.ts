@@ -42,8 +42,7 @@ describe('PATCH /admin/channels/{id}', () => {
     expect(body).toMatchObject({ name: 'English (simultaneous)', enabled: true, slug: 'english' });
   });
 
-  // A slug change would break every printed QR code, so the wire schema has no slug
-  // field at all and an attempt to send one is a 400, not a silent no-op.
+  // The wire schema has no slug field, so sending one is a 400 rather than a no-op.
   it('rejects an attempt to change the slug', async () => {
     const channel = seedChannel('spanish');
 

@@ -23,9 +23,8 @@ function withChannels(row: EventRow) {
 const eventNotFound = { code: 'not_found', message: 'No such event.' } as const;
 
 export const adminEventRoutes = new OpenAPIHono({ defaultHook })
-  // A listChannels query per event, deliberately: the list is the only consumer, it needs
-  // every event's channels for its chips, and this deployment shows tens of events on one
-  // process. Simplicity over a join that has to be maintained.
+  // A listChannels query per event, deliberately: the one consumer needs every event's
+  // channels, and this deployment shows tens of events. Simplicity over a join.
   .openapi(routes.adminListEvents, (c) => c.json(listEvents(db).map(withChannels), 200))
 
   .openapi(routes.adminCreateEvent, (c) => {
@@ -48,8 +47,7 @@ export const adminEventRoutes = new OpenAPIHono({ defaultHook })
 
   .openapi(routes.adminDeleteEvent, (c) => {
     if (!deleteEvent(db, c.req.valid('param').id)) return c.json(eventNotFound, 404);
-    // Channels go with it, by the FK's ON DELETE cascade — which is inert without the
-    // foreign_keys pragma createDb sets.
+    // Channels go with it by ON DELETE cascade, inert without the foreign_keys pragma.
     return c.body(null, 204);
   })
 
@@ -66,8 +64,7 @@ export const adminEventRoutes = new OpenAPIHono({ defaultHook })
     try {
       return c.json(toAdminChannel(createChannel(db, id, c.req.valid('json'))), 201);
     } catch (err) {
-      // The composite unique on (event_id, slug) is the check; a pre-read would race
-      // it and still have to catch this.
+      // The composite unique on (event_id, slug) is the check: a pre-read would race it.
       if (!isUniqueViolation(err)) throw err;
       return c.json(
         { code: 'slug_taken', message: 'That slug is already used on this event.' },

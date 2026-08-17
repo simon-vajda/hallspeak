@@ -2,13 +2,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// core/ owns the domain and the engines under it; hono and socket.io are how clients
-// reach it, not something it reaches for. Convention alone would not hold once
-// mediasoup lands, so this is a tripwire, the way the foreign_keys pragma is.
-//
-// It catches DIRECT imports only. A core/ module reaching a transport through an
-// intermediate module still passes — proving that needs a module graph, and a module
-// graph needs a dependency this repo does not have.
+// docs/solutions/architecture-patterns/guard-a-layer-boundary-with-a-self-testing-import-scan.md
+// Direct imports only: a transport reached through an intermediate module still passes.
 const FORBIDDEN_PACKAGES = [
   /^hono$/,
   /^hono\//,
@@ -18,27 +13,23 @@ const FORBIDDEN_PACKAGES = [
   /^@socket\.io\//,
 ];
 
-// The sibling layers core/ may not reach into. db/ and lib/ are fine — core/ owns its
-// engines and shares the transport-free helpers.
+// db/ and lib/ are absent deliberately: core/ owns its engines and shares the
+// transport-free helpers.
 const SIBLING_LAYERS = ['http', 'socket'];
 
 const CORE_ROOT = import.meta.dirname;
 const SRC_ROOT = path.dirname(CORE_ROOT);
 
-// Comments come out before anything is matched, so prose naming Hono cannot trip the
-// scan and, more importantly, cannot sit between an `export` and a later `from` clause
-// and be read as one statement. Both strips are anchored to a line start so a `/*` or
-// `//` inside a string literal cannot swallow the import that follows it.
+// Prose must not sit between an `export` and a later `from` clause and be read as one
+// statement. Anchored to a line start so a `//` in a string cannot swallow the next import.
 function stripComments(source: string): string {
   return source.replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, '').replace(/^[ \t]*\/\/.*$/gm, '');
 }
 
-// Each alternative is anchored to the start of a line because an import statement can
-// only appear at the top level. A bare `import 'hono'` has no `from` clause and needs
-// its own alternative — without it a side-effect import of a transport reads as clean.
-// The clause before `from` is bounded to the characters a real one can contain, so it
-// spans a multi-line `import type { … }` but cannot run past the end of a statement
-// and capture a quoted specifier out of unrelated code further down the file.
+// Anchored to a line start: an import statement is top-level only. A bare `import 'hono'`
+// has no `from` clause and needs its own alternative. The clause before `from` is bounded
+// to the characters a real one can contain, so it spans a multi-line import but cannot
+// run past the end of the statement.
 const SPECIFIER =
   /^\s*import\s*['"]([^'"]+)['"]|^\s*(?:import|export)\b[^;'"()=]*?\bfrom\s*['"]([^'"]+)['"]|\brequire\(\s*['"]([^'"]+)['"]\s*\)|\bimport\(\s*['"]([^'"]+)['"]\s*\)/gm;
 
@@ -50,9 +41,8 @@ function specifiersOf(source: string): string[] {
 
 /**
  * Why `specifier` is not allowed in a module under `fromDir`, or undefined when it is.
- * Relative specifiers are resolved rather than matched as text: that is what catches
- * the barrel form `../socket` — this repo's own import idiom — as well as
- * `../socket/lib/rooms` and any depth of `../../`.
+ * Relative specifiers are resolved, not matched as text, so `../socket` and any depth of
+ * `../../` are caught alike.
  */
 function violationOf(fromDir: string, specifier: string): string | undefined {
   if (specifier.startsWith('.')) {
@@ -70,12 +60,8 @@ function violationOf(fromDir: string, specifier: string): string | undefined {
 }
 
 describe('core/ imports no transport', () => {
-  // Resolved against this file rather than the working directory, matching how
-  // db/migrate.ts resolves its own folder.
-  // Every file under core/ is bound by the rule, tests included — except this one,
-  // whose fixtures below are violation snippets held as strings. A scanner cannot tell
-  // `require('hono')` in a fixture from the real thing, and the `the guard itself`
-  // block is what covers this file in exchange.
+  // Every file under core/ is bound by the rule, tests included, except this one: its
+  // fixtures below are violation snippets held as strings.
   const files = readdirSync(CORE_ROOT, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile() && /\.(ts|mts|cts)$/.test(entry.name))
     .map((entry) => path.join(entry.parentPath, entry.name))
@@ -94,9 +80,7 @@ describe('core/ imports no transport', () => {
   });
 });
 
-// Without these the suite proves only that core/ is currently clean — an edit that
-// broke the matcher outright would leave every file passing and the guard silently
-// guarding nothing.
+// Without these, an edit that broke the matcher outright would leave every file passing.
 describe('the guard itself', () => {
   it.each([
     ["import { Hono } from 'hono';", 'hono'],
@@ -115,8 +99,7 @@ describe('the guard itself', () => {
     expect(violationOf(CORE_ROOT, specifier)).toBeDefined();
   });
 
-  // The depth that matters next: core/media/ is where mediasoup lands, and from there
-  // a sideways reach is spelled ../../http/ rather than ../http/.
+  // core/media/ is where mediasoup lands, and from there a sideways reach is ../../http/.
   it('rejects a sideways reach from a nested core/ directory', () => {
     const fromDir = path.join(CORE_ROOT, 'media');
 

@@ -5,9 +5,8 @@ import { runMigrations } from './db/migrate';
 import { env } from './env';
 import { attachSocket } from './socket';
 
-// Before serve(), never after: the process either has a current schema or fails to
-// start, so a running server can never be serving against a stale one. The operator's
-// upgrade procedure stays "pull and restart" with no step to forget.
+// Before serve(): the process either has a current schema or fails to start, so the
+// operator's upgrade procedure stays "pull and restart".
 runMigrations(db);
 
 const server = serve({ fetch: app.fetch, hostname: env.HOST, port: env.PORT }, (info) => {
@@ -37,9 +36,8 @@ function shutdown(signal: NodeJS.Signals): void {
   // server.close() waits for them. io.close() disconnects them first.
   io.close(() => {
     server.close((err) => {
-      // io.close() already closed the HTTP server, so this callback's "not running"
-      // error is the expected path, not a failure — reporting it would make every
-      // clean SIGTERM exit 1 and read as a crash to systemd or Docker.
+      // io.close() already closed the HTTP server, so "not running" is the expected
+      // path; reporting it would make every clean SIGTERM exit 1.
       if (err && !('code' in err && err.code === 'ERR_SERVER_NOT_RUNNING')) {
         console.error('Error during shutdown:', err);
         closeDb();

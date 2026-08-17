@@ -15,8 +15,7 @@ describe('createDb', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  // SQLite creates files, never intermediate directories, and data/ is gitignored —
-  // so without the mkdirSync this fails on every fresh clone and nowhere else.
+  // Without mkdirSync this fails on a fresh clone and nowhere else: data/ is gitignored.
   it('creates a parent directory that does not exist yet', () => {
     const path = join(dir, 'nested', 'app.db');
 
@@ -26,8 +25,7 @@ describe('createDb', () => {
     db.$client.close();
   });
 
-  // Per-connection, off by default, and silently inert when dropped: constraints
-  // stop being enforced with no error anywhere. Hence a tripwire rather than trust.
+  // Per-connection and off by default: dropped, the constraints go inert with no error.
   it('enables foreign key enforcement', () => {
     const db = createDb(join(dir, 'app.db'));
 

@@ -56,8 +56,7 @@ describe('joinChannel', () => {
     expect(joinChannel(db, presence, socket, authA, 'english')).toEqual({ online: true });
   });
 
-  // Room isolation: the slug is resolved against the socket's OWN event, so a channel
-  // of another event simply does not exist from here (spec E §7).
+  // The slug resolves against the socket's own event, so a foreign channel does not exist.
   it('refuses a channel belonging to another event', () => {
     const socket = fakeSocket();
 
