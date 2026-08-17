@@ -71,7 +71,7 @@ export function SpeakerStudio({
   }, [mic.analyser, heardSomething]);
 
   // A suspended AudioContext reports a flat line, so `heardSomething` never latches and Go
-  // live stays disabled — and Go live is the one control that cannot be the resuming gesture.
+  // live stays disabled. Go live is the one control that cannot be the resuming gesture.
   const { suspended, resume } = mic;
   useEffect(() => {
     if (!suspended) return;

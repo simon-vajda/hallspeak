@@ -90,7 +90,7 @@ describe('GET /admin/events', () => {
 
     expect(listed?.channels.map((c) => c.slug).sort()).toEqual(['english', 'spanish']);
     expect(listed?.channels.some((c) => !c.enabled)).toBe(true);
-    // An event without channels carries the key regardless — the client maps over it.
+    // An event without channels carries the key regardless: the client maps over it.
     expect(listedBare?.channels).toEqual([]);
   });
 });

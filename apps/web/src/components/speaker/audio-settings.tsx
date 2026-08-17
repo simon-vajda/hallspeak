@@ -26,7 +26,7 @@ type Props = {
 /**
  * The sheet and the popover are chosen, not rendered together behind `lg:hidden`: two mounted
  * dialogs means two focus traps and two elements claiming the same title. Hence the
- * `matchMedia` read — the only place in this app where a breakpoint exists in JavaScript.
+ * `matchMedia` read, the only place in this app where a breakpoint exists in JavaScript.
  */
 export function AudioSettings({ className, ...props }: Props) {
   const desktop = useIsDesktop();
