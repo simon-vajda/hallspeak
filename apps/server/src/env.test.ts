@@ -1,0 +1,42 @@
+import { describe, expect, it } from 'vitest';
+import { EnvSchema } from './env';
+
+describe('EnvSchema media configuration', () => {
+  it('requires an announced address in production', () => {
+    const result = EnvSchema.safeParse({ NODE_ENV: 'production' });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['MEDIA_ANNOUNCED_IP']);
+  });
+
+  it('accepts the same configuration in development, falling back to loopback', () => {
+    const result = EnvSchema.parse({ NODE_ENV: 'development' });
+    expect(result.MEDIA_ANNOUNCED_IP).toBe('127.0.0.1');
+  });
+
+  it('keeps a configured announced address in production', () => {
+    const result = EnvSchema.parse({
+      NODE_ENV: 'production',
+      MEDIA_ANNOUNCED_IP: '203.0.113.10',
+    });
+    expect(result.MEDIA_ANNOUNCED_IP).toBe('203.0.113.10');
+  });
+
+  it('defaults the port base and worker maximum', () => {
+    const result = EnvSchema.parse({});
+    expect(result.MEDIA_RTC_PORT_BASE).toBe(44400);
+    expect(result.MEDIA_MAX_WORKERS).toBe(4);
+  });
+
+  it('rejects a malformed port base', () => {
+    expect(EnvSchema.safeParse({ MEDIA_RTC_PORT_BASE: 'forty-four-thousand' }).success).toBe(false);
+    expect(EnvSchema.safeParse({ MEDIA_RTC_PORT_BASE: '80' }).success).toBe(false);
+    expect(EnvSchema.safeParse({ MEDIA_RTC_PORT_BASE: '70000' }).success).toBe(false);
+  });
+
+  it('leaves STUN and TURN unset, which is a deployment without coturn', () => {
+    const result = EnvSchema.parse({});
+    expect(result.MEDIA_STUN_URL).toBeUndefined();
+    expect(result.MEDIA_TURN_URL).toBeUndefined();
+    expect(result.MEDIA_TURN_SECRET).toBeUndefined();
+  });
+});
