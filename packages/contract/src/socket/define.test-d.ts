@@ -7,8 +7,25 @@ type Expect<T extends true> = T;
 
 type C2S = ClientToServerEvents<typeof clientToServer>;
 
-/** Fails if `as const` is dropped from the contract. */
-type _Names = Expect<Equal<keyof C2S, 'ping' | 'channel:join' | 'channel:leave'>>;
+/** Fails if `as const` is dropped from the contract, or if an event is added without a handler. */
+type _Names = Expect<
+  Equal<
+    keyof C2S,
+    | 'ping'
+    | 'channel:join'
+    | 'channel:leave'
+    | 'media:capabilities'
+    | 'media:create-transport'
+    | 'media:connect-transport'
+    | 'media:produce'
+    | 'media:pause-producer'
+    | 'media:resume-producer'
+    | 'media:close-producer'
+    | 'media:consume'
+    | 'media:resume-consumer'
+    | 'media:close-consumer'
+  >
+>;
 
 type _Ping = Expect<
   Equal<
