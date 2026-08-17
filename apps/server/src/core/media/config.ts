@@ -5,6 +5,10 @@ import type { types } from 'mediasoup';
  * Opus only, mono, in-band FEC. One speech source needs no stereo, and FEC recovers a
  * lost packet from the next one without adding latency — which is what venue Wi-Fi costs
  * and what the product's latency requirement cannot pay twice.
+ *
+ * `channels` is 2 because mediasoup supports Opus at 48000/2 and nothing else; mono is
+ * negotiated through the stereo parameters instead. Setting `channels: 1` here is
+ * rejected outright at router creation.
  */
 export const AUDIO_CODECS: types.RtpCodecCapability[] = [
   {
@@ -13,8 +17,8 @@ export const AUDIO_CODECS: types.RtpCodecCapability[] = [
     // The static payload type every browser already uses for Opus.
     preferredPayloadType: 111,
     clockRate: 48000,
-    channels: 1,
-    parameters: { useinbandfec: 1 },
+    channels: 2,
+    parameters: { useinbandfec: 1, stereo: 0, 'sprop-stereo': 0 },
   },
 ];
 
