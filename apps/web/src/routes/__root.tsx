@@ -12,7 +12,6 @@ function RootComponent() {
   return (
     <>
       <Outlet />
-      {/* Bottom-centre per the handoff — the default, so it needs no breakpoint. */}
       <Toaster position="bottom-center" />
       <TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools buttonPosition="bottom-right" />

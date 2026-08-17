@@ -4,9 +4,8 @@ import { z } from 'zod';
 /** `Slug` in the contract is `min(1).max(40)` over `SLUG_PATTERN`. */
 const SLUG_MAX = 40;
 
-// Mirrors `CreateChannelBody` so the client rejects exactly what the server would. The
-// pattern itself comes from the contract's Hono-free subpath; the copy below never
-// crosses the wire, which is why the schema is restated rather than imported.
+// Mirrors `CreateChannelBody` so the client rejects exactly what the server would. Restated
+// rather than imported: the error copy below never crosses the wire.
 export const channelFormSchema = z.object({
   name: z
     .string()
@@ -25,10 +24,8 @@ export const channelFormSchema = z.object({
 export type ChannelFormValues = z.infer<typeof channelFormSchema>;
 
 /**
- * Proposes a slug from a channel name: `Español` → `espanol`. Channel names are languages,
- * so stripping diacritics is the whole job — the slug ends up in a URL a guest may have to
- * read off a printed card. The result can be empty (a name of only punctuation), which the
- * schema then reports as a missing slug rather than this silently inventing one.
+ * Proposes a slug from a channel name: `Español` → `espanol`. Can return empty (a name of only
+ * punctuation), which the schema reports as a missing slug rather than this inventing one.
  */
 export function slugify(name: string) {
   return name

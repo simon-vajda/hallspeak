@@ -16,7 +16,7 @@ function EventPage() {
     params: { path: { pin } },
   });
 
-  // Only after the GET returns 200 — never in parallel with it (spec E §7).
+  // Only after the GET returns 200, never in parallel with it.
   const { status, online } = useSocket(data ? { pin } : null);
 
   useConnectionToast(status);
@@ -38,8 +38,8 @@ function EventPage() {
   }
 
   if (error || !data) {
-    // A wrong PIN and an event that has not been opened yet are the same answer by design
-    // (404 parity), so the copy never guesses which one happened.
+    // 404 parity: a wrong PIN and an unopened event are the same answer, so the copy never
+    // guesses which one happened.
     return (
       <GuestMessage
         title="No event with that PIN"
@@ -74,8 +74,7 @@ function EventPage() {
         </div>
       </div>
 
-      {/* Bottomed on a phone, where the design puts it; under the left column from `lg`,
-          which is where 10q's note sat before it was dropped as a playback claim. */}
+      {/* Bottomed on a phone, where the design puts it; under the left column from `lg`. */}
       <p className="mt-auto pt-10 text-note text-muted-foreground lg:max-w-95">
         Channels turn on when their interpreter connects. Leave this page open — it updates on its
         own.

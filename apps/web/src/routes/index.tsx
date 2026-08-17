@@ -14,9 +14,8 @@ export const Route = createFileRoute('/')({ component: IndexPage });
 
 const PIN_LENGTH = 6;
 
-// The design draws separated rounded boxes; shadcn's default slot is one joined group,
-// so most of this is unpicking that. The nested `[&>div>div]` is input-otp's fake caret,
-// which the component renders internally and no prop reaches.
+// The design draws separated boxes; shadcn's default slot is one joined group, so most of this
+// is unpicking that. `[&>div>div]` is input-otp's fake caret, which no prop reaches.
 const SLOT_CLASS = cn(
   'h-14 w-full rounded-[14px] border-2 border-transparent bg-secondary text-[21px]',
   'font-semibold text-foreground transition-colors dark:bg-secondary',
@@ -51,7 +50,6 @@ function IndexPage() {
         <TempThemeToggle />
       </div>
 
-      {/* Desktop carries the lockup in a header bar; mobile carries it in the column. */}
       <header className="hidden border-b border-border px-10 py-4 lg:block">
         <LogoLockup />
       </header>
@@ -101,9 +99,8 @@ function IndexPage() {
             type="submit"
             size="pill"
             disabled={!isComplete}
-            // 10a anchors this to the bottom because the keypad filled the gap. With the
-            // keypad dropped for the native keyboard, the README's rhythm (32px above a
-            // primary action) keeps it with the field instead of behind the keyboard.
+            // Not anchored to the bottom as the canvas draws it: that gap was the custom
+            // keypad, which the native keyboard replaced.
             className="mt-8 w-full lg:mt-6.5 lg:w-50"
           >
             Join event

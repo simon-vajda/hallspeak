@@ -6,20 +6,14 @@ import type { SocketStatus } from '@/lib/use-socket';
 const TOAST_ID = 'socket-connection';
 
 /**
- * How long the socket may be away before it is worth telling anyone. Under StrictMode the
- * socket disconnects and immediately reconnects on mount, and a real network blip is often
- * shorter than this too — a toast for either is noise.
+ * How long the socket may be away before it is worth telling anyone. A StrictMode remount and
+ * a real network blip are both shorter than this, and a toast for either is noise.
  */
 const GRACE_MS = 700;
 
 /**
- * Reports a lost socket as a toast, and clears it on reconnect.
- *
- * It lives with the screens rather than in `useSocket` because that hook is a data source
- * and presentation is not its job — the same reason it returns `status` instead of copy.
- *
- * Silent until the socket has connected once: the gap before the first connection is the
- * page still loading, and every screen already draws that as its own not-yet-live state.
+ * Silent until the socket has connected once: the gap before the first connection is the page
+ * still loading, which every screen already draws as its own not-yet-live state.
  */
 export function useConnectionToast(status: SocketStatus) {
   const hasConnected = useRef(false);

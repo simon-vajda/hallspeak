@@ -39,8 +39,7 @@ describe('levelStatus', () => {
     expect(levelStatus(0.9)).toBe('peaking');
   });
 
-  // the tick is drawn *at* 85%, so the fill reaching it must already read as peaking —
-  // otherwise the colour change and the mark disagree by one frame's worth of level
+  // The tick is drawn at 85%, so the fill reaching it must already read as peaking.
   it('treats the threshold itself as peaking', () => {
     expect(levelStatus(PEAK_THRESHOLD)).toBe('peaking');
     expect(PEAK_THRESHOLD).toBe(0.85);

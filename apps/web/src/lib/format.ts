@@ -4,10 +4,8 @@ export function formatPin(pin: string) {
 }
 
 /**
- * A running duration as `M:SS`, growing an hour field to `H:MM:SS` once it passes an hour —
- * the design's on-air clock. Only the fields to the right of the leading one are padded, so
- * the number never gains a meaningless zero. Negative spans read as zero: the caller's input
- * is `Date.now() - startedAt`, which a clock adjustment can briefly push below it.
+ * A running duration as `M:SS`, growing to `H:MM:SS` past an hour. Negative spans read as zero:
+ * callers pass `Date.now() - startedAt`, which a clock adjustment can briefly push below it.
  */
 export function formatElapsed(ms: number) {
   const total = Math.floor(Math.max(ms, 0) / 1000);

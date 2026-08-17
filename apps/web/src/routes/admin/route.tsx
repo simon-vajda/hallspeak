@@ -4,9 +4,8 @@ import { TempThemeToggle } from '@/components/temp-theme-toggle';
 
 export const Route = createFileRoute('/admin')({ component: AdminLayout });
 
-// The header carries Events and nothing else. 10h also draws a Settings tab and an
-// account avatar; there is no settings surface and no account, and a control that
-// cannot be used is a promise the app can't keep.
+// The design also draws a Settings tab and an account avatar. Neither surface exists, and a
+// control that cannot be used is a promise the app can't keep.
 function AdminLayout() {
   return (
     <div className="min-h-dvh">
