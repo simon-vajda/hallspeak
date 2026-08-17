@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createChannel } from '../../core/channels.service';
 import { createEvent } from '../../core/events.service';
+import { goLive, startFakeMedia } from '../../core/media/testing';
 import { presence } from '../../core/presence';
 import type { Db } from '../../db/client';
 import { createTestApi } from '../../testing/api';
@@ -10,7 +11,7 @@ let db: Db;
 let cleanup: () => void;
 
 // Seeded once: none of these tests mutate rows.
-let live: { pin: string; slug: string; speakerCode: string; channelId: number };
+let live: { pin: string; slug: string; speakerCode: string; channelId: number; eventId: number };
 let disabledEvent: { pin: string };
 let disabledChannel: { pin: string; slug: string; speakerCode: string };
 let otherChannelCode: string;
@@ -27,6 +28,7 @@ beforeAll(async () => {
     slug: 'english',
     speakerCode: english.speakerCode,
     channelId: english.id,
+    eventId: event.id,
   };
   otherChannelCode = spanish.speakerCode;
   disabledChannel = { pin: event.pin, slug: 'german', speakerCode: off.speakerCode };
@@ -55,15 +57,37 @@ describe('GET /events/{pin}', () => {
     });
   });
 
-  it('reports a channel online while a speaker holds it', async () => {
+  // Liveness is producer existence, not the claim: an interpreter with the studio open
+  // and nothing produced must not read as live to a guest.
+  it('reports a channel offline while a speaker only holds the claim', async () => {
     presence.claim(live.channelId, 'code-x', 'socket-x');
     try {
       const res = await api.request(`/events/${live.pin}`);
       const body = (await res.json()) as { channels: { slug: string; online: boolean }[] };
 
-      expect(body.channels.find((c) => c.slug === 'english')?.online).toBe(true);
+      expect(body.channels.find((c) => c.slug === 'english')?.online).toBe(false);
     } finally {
       presence.release('socket-x');
+    }
+  });
+
+  it('reports a channel online once a producer exists on it', async () => {
+    const stopMedia = await startFakeMedia();
+    try {
+      await goLive({
+        eventId: live.eventId,
+        socketId: 'socket-x',
+        channelId: live.channelId,
+        slug: 'english',
+      });
+
+      const res = await api.request(`/events/${live.pin}`);
+      const body = (await res.json()) as { channels: { slug: string; online: boolean }[] };
+
+      expect(body.channels.find((c) => c.slug === 'english')?.online).toBe(true);
+      expect(body.channels.find((c) => c.slug === 'spanish')?.online).toBe(false);
+    } finally {
+      await stopMedia();
     }
   });
 

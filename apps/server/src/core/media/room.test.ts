@@ -115,6 +115,14 @@ describe('Room producers', () => {
     expect(r.isOnline(1)).toBe(false);
   });
 
+  it('finds a producer by id, and returns nothing for an unknown one', () => {
+    const { room: r } = room();
+    r.setProducer(1, as(new FakeProducer('p1')));
+
+    expect(r.producerById('p1')?.id).toBe('p1');
+    expect(r.producerById('p-nope')).toBeUndefined();
+  });
+
   it('closing an absent producer is a no-op', () => {
     const { room: r } = room();
     expect(() => r.closeProducer(99)).not.toThrow();

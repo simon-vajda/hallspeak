@@ -46,7 +46,7 @@ export function attachSocket(httpServer: ServerType): SocketServer {
     }
 
     on(socket, 'ping', () => ({ serverTime: Date.now() }));
-    on(socket, 'channel:join', ({ slug }) => joinChannel(db, presence, socket, socket.data, slug));
+    on(socket, 'channel:join', ({ slug }) => joinChannel(db, socket, socket.data, slug));
     on(socket, 'channel:leave', ({ slug }) => {
       leaveChannel(db, socket, socket.data, slug);
       // A fire-and-forget Handler returns `undefined`, not `void`.

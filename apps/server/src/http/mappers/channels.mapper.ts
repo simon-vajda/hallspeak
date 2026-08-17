@@ -1,4 +1,4 @@
-import { presence } from '../../core/presence';
+import { isOnline } from '../../core/media';
 import type { ChannelRow } from '../../db/schema';
 
 export function toAdminChannel(row: ChannelRow) {
@@ -14,7 +14,11 @@ export function toAdminChannel(row: ChannelRow) {
   };
 }
 
-/** `online` comes from the presence registry — see the placeholder note there. */
+/** `online` means an unclosed producer exists, not that a speaker's page is open. */
 export function toPublicChannel(channel: ChannelRow) {
-  return { slug: channel.slug, name: channel.name, online: presence.isOnline(channel.id) };
+  return {
+    slug: channel.slug,
+    name: channel.name,
+    online: isOnline(channel.eventId, channel.id),
+  };
 }
