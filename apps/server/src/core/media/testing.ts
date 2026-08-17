@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import type { TurnConfig } from './config';
 import { createTransport, produce, startMedia, stopMedia } from './index';
 import type { WorkerFactory } from './workers';
 
@@ -119,6 +120,7 @@ export const fakeWorkerFactory = (async () => new FakeWorker() as any) as Worker
 
 export interface FakeMediaOptions {
   graceMs?: number;
+  turn?: TurnConfig;
 }
 
 /** Starts the media singleton on fake workers; the returned function stops it again. */
@@ -128,7 +130,7 @@ export async function startFakeMedia(options: FakeMediaOptions = {}): Promise<()
   seq.transport = 0;
   await startMedia({
     net: { listenIp: '0.0.0.0', announcedIp: '203.0.113.1', rtcPortBase: 44400, maxWorkers: 1 },
-    turn: {},
+    turn: options.turn ?? {},
     hostCpuCount: 1,
     graceMs: options.graceMs,
     createWorker: fakeWorkerFactory,
