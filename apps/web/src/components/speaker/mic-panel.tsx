@@ -91,9 +91,16 @@ export function MicPanel({
               <Mic className="size-4.25 stroke-[2.25]" />
               <SelectValue placeholder="Opening the microphone…" />
             </SelectTrigger>
-            <SelectContent>
+            {/* Dropped below the trigger rather than overlaying it: the trigger carries a
+                leading icon, so an item can never line up under its own label. The inset
+                and the item padding are the trigger's, minus the popup's own p-1. */}
+            <SelectContent alignItemWithTrigger={false} className="p-1">
               {devices.map((device) => (
-                <SelectItem key={device.deviceId} value={device.deviceId}>
+                <SelectItem
+                  key={device.deviceId}
+                  value={device.deviceId}
+                  className="py-2 pr-9 pl-3 lg:pl-3.5"
+                >
                   {device.label}
                 </SelectItem>
               ))}
