@@ -1,0 +1,130 @@
+import { ROOM_IDLE_GRACE_MS } from './config';
+import { Room } from './room';
+import type { WorkerPool } from './workers';
+
+export type RoomClosedReason = 'idle' | 'worker_died' | 'shutdown' | 'revoked';
+
+export interface RoomRegistryOptions {
+  graceMs?: number;
+  onRoomClosed?: (room: Room, reason: RoomClosedReason) => void;
+}
+
+/**
+ * One room per event, created lazily on the first produce and torn down once idle.
+ *
+ * Router creation spans an `await`, so better-sqlite3's synchrony does not protect this
+ * the way it protects the handshake: a plain check-then-create would build two routers
+ * for one event under two simultaneous Go lives. Every transition into and out of
+ * creating and draining goes through the per-event slot below — the cached creation
+ * promise and the grace timer — so a timer cannot fire between a check and a create.
+ */
+export class RoomRegistry {
+  private readonly rooms = new Map<number, Room>();
+  private readonly creating = new Map<number, Promise<Room>>();
+  private readonly teardowns = new Map<number, NodeJS.Timeout>();
+  private readonly graceMs: number;
+  private readonly onRoomClosed?: (room: Room, reason: RoomClosedReason) => void;
+
+  constructor(
+    private readonly pool: WorkerPool,
+    options: RoomRegistryOptions = {},
+  ) {
+    this.graceMs = options.graceMs ?? ROOM_IDLE_GRACE_MS;
+    this.onRoomClosed = options.onRoomClosed;
+    this.pool.onWorkerDied((index) => this.evictWorker(index));
+  }
+
+  get(eventId: number): Room | undefined {
+    return this.rooms.get(eventId);
+  }
+
+  all(): Room[] {
+    return [...this.rooms.values()];
+  }
+
+  /**
+   * The only path that creates a room, which is what keeps R6 true: nothing an admin or a
+   * guest does brings a router into existence, only a produce.
+   */
+  async getOrCreate(eventId: number): Promise<Room> {
+    this.cancelTeardown(eventId);
+
+    const existing = this.rooms.get(eventId);
+    if (existing) return existing;
+
+    const inFlight = this.creating.get(eventId);
+    if (inFlight) return inFlight;
+
+    const creation = this.create(eventId).finally(() => {
+      // Cleared on both settle paths: a rejection left cached would wedge this event
+      // until the process restarted.
+      this.creating.delete(eventId);
+    });
+    this.creating.set(eventId, creation);
+    return creation;
+  }
+
+  /** Arms the grace timer if the room has nothing left attached; otherwise does nothing. */
+  releaseIfIdle(eventId: number): void {
+    const room = this.rooms.get(eventId);
+    if (!room || !room.isIdle) return;
+    if (this.teardowns.has(eventId)) return;
+
+    const timer = setTimeout(() => {
+      this.teardowns.delete(eventId);
+      const current = this.rooms.get(eventId);
+      // Re-checked, not assumed: anything that arrived during the grace period wins.
+      if (!current || !current.isIdle) return;
+      this.closeRoom(eventId, 'idle');
+    }, this.graceMs);
+    timer.unref?.();
+    this.teardowns.set(eventId, timer);
+  }
+
+  /** A dead worker takes its rooms with it; rooms on other workers are untouched. */
+  evictWorker(index: number): void {
+    for (const [eventId, room] of this.rooms) {
+      if (room.workerIndex === index) this.closeRoom(eventId, 'worker_died');
+    }
+  }
+
+  closeEvent(eventId: number, reason: RoomClosedReason = 'revoked'): void {
+    this.closeRoom(eventId, reason);
+  }
+
+  async closeAll(): Promise<void> {
+    for (const timer of this.teardowns.values()) clearTimeout(timer);
+    this.teardowns.clear();
+    for (const eventId of [...this.rooms.keys()]) this.closeRoom(eventId, 'shutdown');
+  }
+
+  private async create(eventId: number): Promise<Room> {
+    try {
+      const { router, webRtcServer, workerIndex } = await this.pool.createRouter();
+      const room = new Room({ eventId, router, webRtcServer, workerIndex });
+      this.rooms.set(eventId, room);
+      return room;
+    } catch (cause) {
+      // One of the few things that explains a channel which never went live.
+      console.error(`media: could not create a room for event ${eventId}`, cause);
+      throw cause;
+    }
+  }
+
+  private cancelTeardown(eventId: number): void {
+    const timer = this.teardowns.get(eventId);
+    if (!timer) return;
+    clearTimeout(timer);
+    this.teardowns.delete(eventId);
+  }
+
+  private closeRoom(eventId: number, reason: RoomClosedReason): void {
+    const room = this.rooms.get(eventId);
+    if (!room) return;
+    // Deleted before closing, so nothing can be handed a room whose router is going away.
+    this.rooms.delete(eventId);
+    this.cancelTeardown(eventId);
+    room.close();
+    this.onRoomClosed?.(room, reason);
+  }
+}
