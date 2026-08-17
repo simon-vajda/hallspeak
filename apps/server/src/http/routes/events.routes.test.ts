@@ -56,7 +56,7 @@ describe('GET /events/{pin}', () => {
   });
 
   it('reports a channel online while a speaker holds it', async () => {
-    presence.claim(live.channelId, 'socket-x');
+    presence.claim(live.channelId, 'code-x', 'socket-x');
     try {
       const res = await api.request(`/events/${live.pin}`);
       const body = (await res.json()) as { channels: { slug: string; online: boolean }[] };

@@ -20,7 +20,13 @@ export type HandshakeError =
   | 'invalid_speaker_code'
   | 'channel_busy';
 
-export type AuthorizeResult = { ok: true; data: SocketAuth } | { ok: false; error: HandshakeError };
+/**
+ * `displacedSocketId` is a one-shot fact about this connection, not standing state, which
+ * is why it sits beside `data` rather than inside it: it never belongs in `socket.data`.
+ */
+export type AuthorizeResult =
+  | { ok: true; data: SocketAuth; displacedSocketId: string | null }
+  | { ok: false; error: HandshakeError };
 
 /**
  * The entire connection-time decision, in one synchronous pass. Synchronous is
@@ -45,7 +51,11 @@ export function authorizeHandshake(
 
   const { speakerCode } = parsed.data;
   if (speakerCode === undefined) {
-    return { ok: true, data: { eventId: event.id, pin: event.pin, speakerChannelId: null } };
+    return {
+      ok: true,
+      data: { eventId: event.id, pin: event.pin, speakerChannelId: null },
+      displacedSocketId: null,
+    };
   }
 
   const channel = findEnabledChannelBySpeakerCode(db, speakerCode);
@@ -55,8 +65,14 @@ export function authorizeHandshake(
     return { ok: false, error: 'invalid_speaker_code' };
   }
 
-  // First connection wins; the incumbent is never disturbed.
-  if (!presence.claim(channel.id, socketId)) return { ok: false, error: 'channel_busy' };
+  // Another code holds it: busy. The same code takes it over, and the loser is named so
+  // the caller can close its media and its socket.
+  const claim = presence.claim(channel.id, speakerCode, socketId);
+  if (!claim.ok) return { ok: false, error: 'channel_busy' };
 
-  return { ok: true, data: { eventId: event.id, pin: event.pin, speakerChannelId: channel.id } };
+  return {
+    ok: true,
+    data: { eventId: event.id, pin: event.pin, speakerChannelId: channel.id },
+    displacedSocketId: claim.displaced,
+  };
 }
