@@ -1,9 +1,8 @@
 import { z } from 'zod';
 
-// Mirrors `CreateEventBody` in the contract so the client rejects exactly what the server
-// would. It is not imported from there: that schema is a wire shape — `description` is
-// nullish because the API models "clear it", whereas a textarea only ever yields a string —
-// and the error copy below never crosses the wire.
+// Mirrors `CreateEventBody` so the client rejects exactly what the server would. Restated
+// rather than imported: there `description` is nullish, because the API models "clear it",
+// where a textarea only ever yields a string.
 export const eventFormSchema = z.object({
   name: z
     .string()

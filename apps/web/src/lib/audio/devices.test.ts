@@ -6,8 +6,7 @@ function device(partial: Partial<DeviceInfoLike>): DeviceInfoLike {
 }
 
 describe('shapeDevices', () => {
-  // labels are empty strings until getUserMedia has been granted once, so the picker has
-  // to name them itself or render a list of blanks
+  // Labels are empty until getUserMedia has been granted once, so the picker must name them.
   it('names unlabelled devices sequentially in list order', () => {
     const shaped = shapeDevices([
       device({ deviceId: 'a', groupId: 'ga' }),
@@ -71,8 +70,7 @@ describe('shapeDevices', () => {
     expect(shapeDevices([device({ kind: 'audiooutput' })])).toEqual([]);
   });
 
-  // Firefox reports an empty groupId for some devices; grouping on it blindly would fold
-  // every such device into one entry
+  // Firefox reports an empty groupId for some devices, which grouping blindly would fold into one.
   it('does not collapse distinct devices that share an empty groupId', () => {
     const shaped = shapeDevices([
       device({ deviceId: 'a', groupId: '', label: 'Yeti Nano' }),
@@ -93,7 +91,6 @@ describe('resolveSelection', () => {
     expect(resolveSelection(devices, 'b')).toBe('b');
   });
 
-  // the USB mic was unplugged mid-session: fall back rather than hold a dead id
   it('falls back to the first device when the selection is gone', () => {
     expect(resolveSelection(devices, 'gone')).toBe('a');
   });

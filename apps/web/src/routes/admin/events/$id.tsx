@@ -14,9 +14,8 @@ export const Route = createFileRoute('/admin/events/$id')({
   // A URL that cannot name an event is the same answer as one that names a deleted event,
   // so it gets the same page rather than the router's error screen.
   errorComponent: () => <MissingEvent notFound />,
-  // The id is typed at the route, not coerced in the component: a URL carrying anything
-  // but a positive integer never reaches the query, so it cannot spend three retries on a
-  // 400 before admitting there is no such event.
+  // Typed at the route, not coerced in the component: a URL carrying anything but a positive
+  // integer never reaches the query, so it cannot spend three retries on a 400.
   params: {
     parse: ({ id }) => {
       const parsed = Number(id);
@@ -39,8 +38,7 @@ function AdminEventPage() {
     'get',
     '/admin/events/{id}',
     { params: { path: { id } } },
-    // A deleted event will not come back, so retrying it only holds the spinner there for
-    // seconds before the same answer. Everything else keeps the client's default backoff.
+    // A deleted event will not come back, so retrying only holds the spinner for seconds.
     { retry: (failureCount, err) => err?.code !== 'not_found' && failureCount < 3 },
   );
 
@@ -48,8 +46,8 @@ function AdminEventPage() {
     return <p className="text-sm text-muted-foreground">Loading event…</p>;
   }
 
-  // The id comes from the URL, so a stale link after a delete is an ordinary case and not
-  // a failure — it gets the same honest page as an id that never existed.
+  // A stale link after a delete is an ordinary case, so it gets the same page as an id that
+  // never existed.
   if (!data) {
     return <MissingEvent notFound={error?.code === 'not_found'} />;
   }
@@ -93,8 +91,7 @@ function AdminEventPage() {
         </div>
       </header>
 
-      {/* Stacked below `lg`, the PIN is what an admin came for, so the right-hand column
-          leads and the channels panel follows it. */}
+      {/* Stacked below `lg`, the right-hand column leads: the PIN is what an admin came for. */}
       <div className="mt-6.5 grid items-start gap-5.5 lg:grid-cols-[1fr_330px]">
         <div className="order-2 lg:order-none">
           <ChannelsPanel event={data} />
@@ -139,8 +136,7 @@ function MissingEvent({ notFound }: { notFound: boolean }) {
       </p>
       <Button
         variant="outline"
-        // It navigates, so it renders as an anchor and Base UI has to be told to stop
-        // expecting a native <button>.
+        // Renders as an anchor, so Base UI must be told not to expect a native <button>.
         nativeButton={false}
         render={<Link to="/admin/events" />}
         className="mt-8 h-9.5 rounded-full px-4.25 font-semibold text-sm"

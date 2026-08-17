@@ -14,9 +14,8 @@ export const Route = createFileRoute('/admin/events/')({ component: AdminEventsP
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
-// The design draws a table at desktop width and cards on a phone (10h, 10j). They are two
-// arrangements of the same rows, so both are rendered and one is hidden — laying the table
-// out from the card markup would mean fighting the card's stacking at every breakpoint.
+// The design draws a table at desktop width and cards on a phone. Both are rendered and one is
+// hidden: one markup for both would mean fighting the card's stacking at every breakpoint.
 const TABLE_COLUMNS = 'grid-cols-[1.8fr_0.85fr_1.9fr_0.95fr_110px]';
 
 function AdminEventsPage() {
@@ -98,8 +97,8 @@ function AdminEventsPage() {
 }
 
 function EventRow({ event }: { event: AdminEventDetail }) {
-  // Only the cells dim: CSS opacity composites, so a switch inside a dimmed row could not
-  // paint itself back to full strength, and it stays operable on a disabled event.
+  // Only the cells dim: opacity composites, so a switch inside a dimmed row could not paint
+  // itself back to full strength, and it stays operable on a disabled event.
   const dim = event.enabled ? undefined : 'opacity-60';
 
   return (
@@ -178,8 +177,8 @@ function NewEventButton({
   );
 }
 
-// Liveness is not modelled yet, so "status" here is enablement — the design's on-air line
-// is deliberately absent rather than approximated.
+// Liveness is not modelled yet, so "status" here is enablement. The design's on-air line is
+// absent rather than approximated.
 function statusLabel(event: AdminEventDetail) {
   if (!event.enabled) return 'Disabled';
   if (event.channels.length === 0) return 'No channels yet';

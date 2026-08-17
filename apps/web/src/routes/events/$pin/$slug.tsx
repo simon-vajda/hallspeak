@@ -8,9 +8,8 @@ import { SpeakerStudio } from '@/components/speaker/speaker-studio';
 import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useSocket } from '@/lib/use-socket';
 
-// The speaker studio is the SAME route as the listener room, branching on the presence
-// of speaker_code. That keeps the speaker URL degrading into valid public URLs: drop
-// the query param and you are a listener; drop the slug and you are on the selector.
+// One route for both the studio and the listener room, branching on `speaker_code`, so the
+// speaker URL degrades into valid public URLs: drop the param to listen, drop the slug to select.
 const SearchSchema = z.object({ speaker_code: z.string().optional() });
 
 export const Route = createFileRoute('/events/$pin/$slug')({
@@ -36,10 +35,8 @@ function ChannelPage() {
     },
   });
 
-  // The channel view carries only this channel; the desktop switcher needs the event's
-  // whole list, so it comes from the selector's own endpoint. Same React Query key, so a
-  // guest arriving from the selector pays nothing — and it waits for the 200 above rather
-  // than doubling the 404s a guessed PIN costs.
+  // The channel view carries only this channel, so the desktop switcher's list comes from the
+  // selector's endpoint. Enabled behind the 200 above, or a guessed PIN would cost two 404s.
   const { data: event } = $api.useQuery(
     'get',
     '/events/{pin}',
