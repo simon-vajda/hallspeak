@@ -3,8 +3,7 @@ import { events } from './schema';
 import { createTestDb } from './testing';
 
 describe('createTestDb', () => {
-  // Exercises the whole loop: directory creation, the pragmas, migration discovery
-  // from disk, and a write and read back through it.
+  // Covers directory creation, the pragmas and migration discovery from disk.
   it('round-trips a row through the committed migrations', () => {
     const { db, cleanup } = createTestDb();
 

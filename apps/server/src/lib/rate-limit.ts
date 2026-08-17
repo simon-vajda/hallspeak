@@ -4,14 +4,9 @@ interface Bucket {
 }
 
 /**
- * A per-key token bucket. Throttles, never bans (spec E §6): two hundred people in one
- * room share one NAT address and mobile CGNAT shares addresses just as widely, so a
- * hard block punishes the room and the scanner alike. Throttling exploits the
- * asymmetry instead — a real user fails twice, a scanner fails thousands of times —
- * and it self-heals with no admin action.
- *
- * `now` is injectable because otherwise the refill behaviour is only testable by
- * sleeping.
+ * A per-key token bucket. Throttles, never bans: two hundred people in one room share
+ * one NAT address, so a hard block punishes the room and the scanner alike. `now` is
+ * injectable because the refill is otherwise only testable by sleeping.
  */
 export class TokenBucketLimiter {
   private readonly buckets = new Map<string, Bucket>();
@@ -36,7 +31,7 @@ export class TokenBucketLimiter {
     return this.buckets.size;
   }
 
-  /** Whether the key has a token. Does NOT consume one — only `penalize` does. */
+  /** Whether the key has a token; does not consume one, only `penalize` does. */
   allow(key: string): boolean {
     return this.refill(key).tokens >= 1;
   }
@@ -73,10 +68,7 @@ export class TokenBucketLimiter {
     return fresh;
   }
 
-  /**
-   * A full bucket is indistinguishable from an absent one, so dropping it loses
-   * nothing and costs a scanner nothing it did not already have.
-   */
+  /** A full bucket is indistinguishable from an absent one, so dropping it loses nothing. */
   private prune(): void {
     for (const [key, bucket] of this.buckets) {
       if (bucket.tokens >= this.capacity) this.buckets.delete(key);

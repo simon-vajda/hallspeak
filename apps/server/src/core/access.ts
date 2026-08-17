@@ -6,7 +6,6 @@ import { findEnabledChannelBySpeakerCode } from './channels.service';
 import { findEnabledEventByPin } from './events.service';
 import type { PresenceRegistry } from './presence';
 
-/** What a socket is allowed to do, decided once at connection time. */
 export interface SocketAuth {
   eventId: number;
   pin: string;
@@ -24,18 +23,10 @@ export type HandshakeError =
 export type AuthorizeResult = { ok: true; data: SocketAuth } | { ok: false; error: HandshakeError };
 
 /**
- * The entire connection-time decision, in one synchronous pass.
- *
- * Synchronous is load-bearing rather than incidental. better-sqlite3 is synchronous,
- * so the "is this channel busy" check and the claim that follows it cannot interleave
- * with another socket's; making this async would open a window in which two speakers
- * both pass the check and both believe they own the channel. That is also why it has a
- * side effect on the success path — it CLAIMS the channel. `presence.release` on
- * disconnect is the matching half, and the only one.
- *
- * The socket validates independently of HTTP by design: anyone can open a socket
- * directly, so "the client already fetched successfully" is never evidence of anything
- * (spec E §7).
+ * The entire connection-time decision, in one synchronous pass. Synchronous is
+ * load-bearing: better-sqlite3 is, so the busy check and the claim that follows cannot
+ * interleave with another socket's. On success it claims the channel; `presence.release`
+ * on disconnect is the matching half.
  */
 export function authorizeHandshake(
   db: Db,
@@ -58,14 +49,13 @@ export function authorizeHandshake(
   }
 
   const channel = findEnabledChannelBySpeakerCode(db, speakerCode);
-  // The code identifies a channel on its own, so the handshake names the event twice.
-  // Disagreement is an error, not a case where one side wins.
+  // The code identifies a channel on its own, so the handshake names the event twice;
+  // disagreement is an error, not a case where one side wins.
   if (!channel || channel.eventId !== event.id) {
     return { ok: false, error: 'invalid_speaker_code' };
   }
 
-  // First connection wins; the incumbent is never disturbed. The client renders this
-  // as "someone is already speaking on this channel", not as an invalid code.
+  // First connection wins; the incumbent is never disturbed.
   if (!presence.claim(channel.id, socketId)) return { ok: false, error: 'channel_busy' };
 
   return { ok: true, data: { eventId: event.id, pin: event.pin, speakerChannelId: channel.id } };

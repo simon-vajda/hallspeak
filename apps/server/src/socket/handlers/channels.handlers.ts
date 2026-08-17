@@ -5,16 +5,15 @@ import type { Db } from '../../db/client';
 import { AppError } from '../../lib/problem';
 import { channelRoom } from '../lib/rooms';
 
-/** The subset of Socket this module needs. A real Socket satisfies it. */
+/** The subset of Socket this module needs; a real Socket satisfies it. */
 export interface RoomSocket {
   join(room: string): void;
   leave(room: string): void;
 }
 
 /**
- * Resolving the slug against the socket's OWN event is what stops a socket
- * authenticated for event A from joining a channel of event B: a foreign slug does not
- * resolve, so there is no separate ownership check to forget.
+ * The slug resolves against the socket's own event, so a socket authorized for event A
+ * cannot join a channel of event B and there is no ownership check to forget.
  */
 export function joinChannel(
   db: Db,

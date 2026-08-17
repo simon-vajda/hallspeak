@@ -13,9 +13,8 @@ export interface EventInput {
 export type EventPatch = Partial<EventInput>;
 
 // --- public lookups ---------------------------------------------------------
-// Every one of these filters on `enabled`. A disabled row must be indistinguishable
-// from a missing one at the boundary (spec E §5), which is easiest to guarantee when
-// the query itself cannot return it.
+// All filter on `enabled`: a disabled row must be indistinguishable from a missing one at
+// the boundary, which is easiest to guarantee when the query cannot return it.
 
 export function findEnabledEventByPin(db: Db, pin: string): EventRow | undefined {
   return db
@@ -39,10 +38,7 @@ export function getEventById(db: Db, id: number): EventRow | undefined {
 
 const CODE_ATTEMPTS = 10;
 
-/**
- * `generate` is a parameter purely so the collision retry is testable: six digits
- * collide about once in a million and there is no other way to reach that branch.
- */
+/** `generate` is a parameter purely so the collision retry is reachable in a test. */
 export function createEvent(
   db: Db,
   input: EventInput,

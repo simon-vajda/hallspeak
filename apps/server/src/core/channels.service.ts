@@ -14,9 +14,8 @@ export interface ChannelPatch {
 }
 
 // --- public lookups ---------------------------------------------------------
-// Every one of these filters on `enabled`. A disabled row must be indistinguishable
-// from a missing one at the boundary (spec E §5), which is easiest to guarantee when
-// the query itself cannot return it.
+// All filter on `enabled`: a disabled row must be indistinguishable from a missing one at
+// the boundary, which is easiest to guarantee when the query cannot return it.
 
 export function listEnabledChannels(db: Db, eventId: number): ChannelRow[] {
   return db
@@ -86,7 +85,7 @@ export function createChannel(
     .get();
 }
 
-/** `slug` is deliberately absent from ChannelPatch — it is immutable (spec E §2). */
+/** No `slug` in ChannelPatch: it is immutable after creation. */
 export function updateChannel(db: Db, id: number, patch: ChannelPatch): ChannelRow | undefined {
   return db
     .update(channels)
