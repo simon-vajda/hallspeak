@@ -10,6 +10,15 @@ export interface MediaSocket {
   id: string;
 }
 
+/**
+ * The contract validates mediasoup's capability, ICE, DTLS and RTP structures as opaque
+ * objects — it compiles with no DOM and cannot import mediasoup. This layer is where the
+ * wire shape becomes a mediasoup type, so the cast lives here once rather than at every
+ * call site. mediasoup validates the contents itself and rejects a malformed blob.
+ */
+type Wire = Record<string, unknown>;
+const asMediasoup = <T>(value: Wire): T => value as T;
+
 function ctx(socket: MediaSocket, auth: SocketAuth): media.MediaContext {
   return { eventId: auth.eventId, socketId: socket.id };
 }
@@ -49,9 +58,13 @@ export async function openTransport(
 export async function connectTransport(
   socket: MediaSocket,
   auth: SocketAuth,
-  payload: { transportId: string; dtlsParameters: types.DtlsParameters },
+  payload: { transportId: string; dtlsParameters: Wire },
 ) {
-  await media.connectTransport(ctx(socket, auth), payload.transportId, payload.dtlsParameters);
+  await media.connectTransport(
+    ctx(socket, auth),
+    payload.transportId,
+    asMediasoup<types.DtlsParameters>(payload.dtlsParameters),
+  );
   return {};
 }
 
@@ -59,7 +72,7 @@ export async function startProducing(
   db: Db,
   socket: MediaSocket,
   auth: SocketAuth,
-  payload: { slug: string; rtpParameters: types.RtpParameters },
+  payload: { slug: string; rtpParameters: Wire },
 ) {
   const channel = channelOrThrow(db, auth, payload.slug);
   // Holding the claim is the whole authorization to broadcast; the handshake took it.
@@ -69,7 +82,7 @@ export async function startProducing(
   return media.produce(ctx(socket, auth), {
     channelId: channel.id,
     slug: channel.slug,
-    rtpParameters: payload.rtpParameters,
+    rtpParameters: asMediasoup<types.RtpParameters>(payload.rtpParameters),
   });
 }
 
@@ -104,12 +117,12 @@ export async function startConsuming(
   db: Db,
   socket: MediaSocket,
   auth: SocketAuth,
-  payload: { slug: string; rtpCapabilities: types.RtpCapabilities },
+  payload: { slug: string; rtpCapabilities: Wire },
 ) {
   const channel = channelOrThrow(db, auth, payload.slug);
   return media.consume(ctx(socket, auth), {
     channelId: channel.id,
-    rtpCapabilities: payload.rtpCapabilities,
+    rtpCapabilities: asMediasoup<types.RtpCapabilities>(payload.rtpCapabilities),
   });
 }
 

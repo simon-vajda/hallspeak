@@ -1,10 +1,22 @@
 import type { ServerType } from '@hono/node-server';
 import { clientToServer } from '@linguacast/contract/socket';
 import { Server } from 'socket.io';
-import { getChannelById } from '../core/channels.service';
-import { presence } from '../core/presence';
+import { notifications } from '../core/notifications';
 import { db } from '../db';
 import { joinChannel, leaveChannel } from './handlers/channels.handlers';
+import { applyNotification, releaseSocket } from './handlers/lifecycle.handlers';
+import {
+  connectTransport,
+  getCapabilities,
+  openTransport,
+  pauseProducing,
+  resumeConsuming,
+  resumeProducing,
+  startConsuming,
+  startProducing,
+  stopConsuming,
+  stopProducing,
+} from './handlers/media.handlers';
 import { handshakeGate } from './handshake';
 import { on } from './lib/on';
 import { channelRoom, eventRoom } from './lib/rooms';
@@ -30,6 +42,10 @@ export function attachSocket(httpServer: ServerType): SocketServer {
 
   io.use(handshakeGate);
 
+  // The one subscriber, per KTD10: every eviction and every liveness change reaches a
+  // client through here and nowhere else.
+  notifications.subscribe((notification) => applyNotification(io, notification));
+
   io.on('connection', (socket) => {
     // Before any handler, so it also sees packets no handler is registered for.
     socket.use(validate(clientToServer));
@@ -39,11 +55,9 @@ export function attachSocket(httpServer: ServerType): SocketServer {
     socket.join(eventRoom(socket.data.eventId));
 
     const speakerChannelId = socket.data.speakerChannelId;
-    if (speakerChannelId !== null) {
-      // The gate already claimed presence, synchronously; this only publishes it.
-      socket.join(channelRoom(speakerChannelId));
-      broadcastChannelStatus(io, socket.data.eventId, speakerChannelId, true);
-    }
+    // Joining the channel room is all a claim buys. Liveness is the producer's to report,
+    // so nothing is broadcast here — an open studio is not audio.
+    if (speakerChannelId !== null) socket.join(channelRoom(speakerChannelId));
 
     on(socket, 'ping', () => ({ serverTime: Date.now() }));
     on(socket, 'channel:join', ({ slug }) => joinChannel(db, socket, socket.data, slug));
@@ -53,24 +67,21 @@ export function attachSocket(httpServer: ServerType): SocketServer {
       return undefined;
     });
 
-    socket.on('disconnect', () => {
-      const released = presence.release(socket.id);
-      if (released !== null) broadcastChannelStatus(io, socket.data.eventId, released, false);
-    });
+    on(socket, 'media:capabilities', () => getCapabilities(socket, socket.data));
+    on(socket, 'media:create-transport', (payload) => openTransport(socket, socket.data, payload));
+    on(socket, 'media:connect-transport', (payload) =>
+      connectTransport(socket, socket.data, payload),
+    );
+    on(socket, 'media:produce', (payload) => startProducing(db, socket, socket.data, payload));
+    on(socket, 'media:pause-producer', (payload) => pauseProducing(socket, socket.data, payload));
+    on(socket, 'media:resume-producer', (payload) => resumeProducing(socket, socket.data, payload));
+    on(socket, 'media:close-producer', (payload) => stopProducing(socket, socket.data, payload));
+    on(socket, 'media:consume', (payload) => startConsuming(db, socket, socket.data, payload));
+    on(socket, 'media:resume-consumer', (payload) => resumeConsuming(socket, socket.data, payload));
+    on(socket, 'media:close-consumer', (payload) => stopConsuming(socket, socket.data, payload));
+
+    socket.on('disconnect', () => releaseSocket(socket, socket.data));
   });
 
   return io;
-}
-
-/** To the event room, not the channel room, so the selector and every channel page agree. */
-function broadcastChannelStatus(
-  io: SocketServer,
-  eventId: number,
-  channelId: number,
-  online: boolean,
-): void {
-  const channel = getChannelById(db, channelId);
-  // The channel can be gone if the admin deleted it while a speaker was connected.
-  if (!channel) return;
-  io.to(eventRoom(eventId)).emit('channel:status', { slug: channel.slug, online });
 }
