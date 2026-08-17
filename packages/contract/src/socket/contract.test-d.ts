@@ -16,3 +16,30 @@ export const _status: Parameters<S2C['channel:status']>[0] = { slug: 'english', 
 
 // @ts-expect-error — the payload is checked against the event's schema.
 export const _wrongJoinPayload: JoinParams[0] = { channel: 'english' };
+
+type ProduceParams = Parameters<C2S['media:produce']>;
+type ConsumeParams = Parameters<C2S['media:consume']>;
+
+export const _produceTakesAnAck: ProduceParams['length'] = 2;
+export const _closeConsumerTakesAnAck: Parameters<C2S['media:close-consumer']>['length'] = 2;
+
+export const _producePayload: ProduceParams[0] = {
+  slug: 'english',
+  kind: 'audio',
+  rtpParameters: { codecs: [] },
+};
+export const _consumePayload: ConsumeParams[0] = {
+  slug: 'english',
+  rtpCapabilities: { codecs: [] },
+};
+export const _reset: Parameters<S2C['media:reset']>[0] = { reason: 'worker_died' };
+
+// @ts-expect-error — `producerId`, not `id`.
+export const _wrongProducerPayload: Parameters<C2S['media:close-producer']>[0] = { id: 'p1' };
+
+export const _videoProduce: ProduceParams[0] = {
+  slug: 'english',
+  // @ts-expect-error — audio-only; the contract has no video kind.
+  kind: 'video',
+  rtpParameters: {},
+};
