@@ -21,6 +21,21 @@ Whether an Event or a Channel is open to guests. Both default to closed and are 
 
 Enabled carries no direction in time — the same closed state means "not yet" before an Event and "over" afterwards. This is why there is no separate lifecycle or status concept: a project looking for one should use Enabled.
 
+### Live
+Whether audio is actually being broadcast on a Channel. A Channel is Live from the moment its Speaker starts producing — the deliberate "go live" act — until that production ends. Muting does not end it: a muted Speaker is present and still holds the Channel.
+
+Live is distinct from Enabled, which is an admin's decision that a Channel is open at all, and distinct from the Speaker's broadcast claim, which is taken when their page connects and can be held by someone who has not gone Live yet. A Channel can therefore be Enabled, claimed by a Speaker, and still not Live.
+
+### Broadcast claim
+The exclusive right to speak on one Channel, held by whoever presented its Speaker code first. A Channel has one claim at a time; a second interpreter arriving with a different code is refused as busy.
+
+The claim is held against the Speaker code rather than a particular connection, so an interpreter whose device drops and returns reclaims their own Channel instead of colliding with the session they just lost. A second device presenting the same code takes the claim over, and the displaced session is told rather than silently retrying.
+
+A claim is not Live: it is taken when the studio connects, which is before any audio exists and may be long before any is produced.
+
+### Armed
+A Listener who has asked to hear a Channel and is waiting on audio rather than receiving it. Arming is the guest's one deliberate gesture; everything after it is automatic. An Armed Listener whose Speaker disappears stays Armed and resumes on their own when the Speaker returns, so a dropped connection mid-event never asks the guest to do anything.
+
 ### PIN
 The short numeric code that grants listening on one Event. A guest types it or receives it inside a Listener link. It is regenerable, which revokes every link and printed code carrying the old value.
 
