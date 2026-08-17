@@ -67,14 +67,14 @@ export class RoomRegistry {
   /** Arms the grace timer if the room has nothing left attached; otherwise does nothing. */
   releaseIfIdle(eventId: number): void {
     const room = this.rooms.get(eventId);
-    if (!room || !room.isIdle) return;
+    if (!room?.isIdle) return;
     if (this.teardowns.has(eventId)) return;
 
     const timer = setTimeout(() => {
       this.teardowns.delete(eventId);
       const current = this.rooms.get(eventId);
       // Re-checked, not assumed: anything that arrived during the grace period wins.
-      if (!current || !current.isIdle) return;
+      if (!current?.isIdle) return;
       this.closeRoom(eventId, 'idle');
     }, this.graceMs);
     timer.unref?.();
