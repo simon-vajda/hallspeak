@@ -14,25 +14,16 @@ import type { MicDevice } from '@/lib/audio/devices';
 import type { MicStatus } from '@/lib/audio/use-mic-capture';
 import { cn } from '@/lib/utils';
 
-/**
- * These are settings, not liveness, so a checked track is `foreground` — the same rule the
- * admin's enable switches follow. `primary` marks what you can press and `live` marks that
- * audio is moving; neither may stand in for "this preference is on".
- */
+// Settings, not liveness: `primary` marks what you can press and `live` that audio is moving,
+// so neither may stand in for "this preference is on".
 const SETTING_TRACK = 'data-checked:bg-foreground';
 
-/** Every row below the device picker is separated by a hairline, at one indent. */
 const ROW = 'mt-3.5 flex items-center gap-3.5 border-t border-border pt-3.5';
 
 /**
- * The pre-flight microphone card (`10f`, `10s`): the device picker plus the audio-processing
- * preferences.
- *
- * **The preferences are held and applied to nothing.** Noise suppression and auto gain
- * become `MediaTrackConstraints` on the capture track (`applyConstraints`) at the moment
- * that track feeds a mediasoup producer, and the manual gain becomes a `GainNode` spliced
- * into the same graph in that change. Wiring them today would mean re-opening the stream to
- * change a setting that nobody can hear.
+ * The preferences are held and applied to nothing. Noise suppression and auto gain become
+ * `MediaTrackConstraints` on the capture track, and the manual gain a `GainNode`, once that
+ * track feeds a mediasoup producer.
  */
 export function MicPanel({
   status,
@@ -53,26 +44,24 @@ export function MicPanel({
 }: {
   status: MicStatus;
   error: string | null;
-  /** A fallback the hook already made — shown under a picker that still works. */
+  /** A fallback the hook already made, shown under a picker that still works. */
   notice: string | null;
   devices: MicDevice[];
   deviceId: string | null;
   onSelectDevice: (deviceId: string) => void;
-  /** Re-opens the capture in place, without a reload. */
   onRetry: () => void;
   noiseSuppression: boolean;
   onNoiseSuppressionChange: (on: boolean) => void;
   autoGain: boolean;
   onAutoGainChange: (on: boolean) => void;
-  /** 0–100, as the design's readout displays it. */
+  /** 0–100. */
   gain: number;
   onGainChange: (gain: number) => void;
   /** Rendered inside the audio-settings surface, which supplies the gain slider itself. */
   inSettings?: boolean;
   className?: string;
 }) {
-  // Every terminal case renders copy instead of the picker: an empty `Select` under a
-  // heading that says "Microphone" tells the interpreter nothing about why it is empty.
+  // Terminal cases render copy instead of the picker: an empty `Select` says nothing about why.
   const blocked = status === 'denied' || status === 'unsupported';
   const empty = status === 'ready' && devices.length === 0;
 
@@ -96,8 +85,8 @@ export function MicPanel({
             }}
             disabled={devices.length === 0}
           >
-            {/* The trigger's own height is a `data-[size]` variant, so a plain `h-11` loses
-                to it on specificity — the pill row has to be written at the same weight. */}
+            {/* The trigger's height is a `data-[size]` variant, so a plain `h-11` loses on
+                specificity and the override has to be written at the same weight. */}
             <SelectTrigger className="mt-2.25 w-full gap-2.5 rounded-full border-border bg-background px-4 font-semibold text-sm data-[size=default]:h-11 lg:mt-2.5 lg:px-4.5 lg:data-[size=default]:h-11.5">
               <Mic className="size-4.25 stroke-[2.25]" />
               <SelectValue placeholder="Opening the microphone…" />
@@ -111,8 +100,7 @@ export function MicPanel({
             </SelectContent>
           </Select>
 
-          {/* The picker still works, so this sits under it rather than replacing it —
-              otherwise the interpreter is moved to another mic without being told. */}
+          {/* Under the picker, not replacing it: the interpreter was moved to another mic. */}
           {notice && <p className="mt-2 text-meta font-normal text-muted-foreground">{notice}</p>}
 
           <SettingRow
@@ -126,9 +114,7 @@ export function MicPanel({
             description={
               <>
                 Off lets you set the gain by hand
-                {/* The pointer is only true where the slider is somewhere else. Inside the
-                    settings surface it sits directly below, and on a desktop pre-flight
-                    card it is the next control down. */}
+                {/* Only true where the slider is elsewhere; otherwise it sits directly below. */}
                 {!inSettings && <span className="lg:hidden">, in Audio settings</span>}.
               </>
             }
@@ -136,9 +122,7 @@ export function MicPanel({
             onCheckedChange={onAutoGainChange}
           />
 
-          {/* On the pre-flight card the slider is desktop-only, exactly as drawn — a phone
-              reaches it through the audio-settings surface, which renders it at every
-              width and therefore renders this panel without one. */}
+          {/* Desktop-only here: a phone reaches the slider through the audio-settings surface. */}
           {!inSettings && (
             <GainSlider
               gain={gain}
@@ -182,12 +166,9 @@ function SettingRow({
 }
 
 /**
- * Permission refused, an insecure origin, or simply no input device. A reload is the only
- * real retry for the first two — a browser that has denied the prompt will not show it
- * again from script — and it costs nothing on the pre-flight screen, which holds no unsaved
- * state. Inside the settings surface it would cost everything: that surface is open
- * mid-broadcast, and a reload drops the socket, the presence claim and the live state. So
- * there the retry re-opens the capture in place instead.
+ * A reload is the only real retry for a denied prompt, and it is free on pre-flight. Inside
+ * the settings surface it is not: that is open mid-broadcast, where a reload would drop the
+ * socket, the presence claim and the live state, so there the capture re-opens in place.
  */
 function MicUnavailable({
   message,

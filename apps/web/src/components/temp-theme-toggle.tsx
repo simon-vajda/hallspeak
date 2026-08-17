@@ -1,6 +1,4 @@
-// TEMPORARY. Exists only so both themes can be exercised before the permanent home
-// for a theme control is decided. One call site: apps/web/src/routes/index.tsx.
-// Deleting this file and that one line of JSX removes it entirely.
+// TEMPORARY: exists so both themes can be exercised before a permanent theme control is sited.
 
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/components/theme-provider';

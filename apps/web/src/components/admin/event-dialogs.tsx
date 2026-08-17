@@ -44,10 +44,7 @@ type AdminEventDetail = components['schemas']['AdminEventDetail'];
 const LABEL = 'text-label text-muted-foreground uppercase';
 const TEXT_INPUT = 'bg-secondary text-sm';
 
-/**
- * Create and edit are the same dialog: only the heading, the primary label, the initial
- * values and the mutation differ. Pass an `event` to edit it.
- */
+/** Create and edit are the same dialog; pass an `event` to edit it. */
 export function EventFormDialog({
   open,
   onOpenChange,
@@ -62,15 +59,13 @@ export function EventFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false} className={cn(DIALOG_PANEL, 'sm:max-w-105')}>
-        {/* The form is a child so it unmounts with the portal: every open starts from the
-            event's current values, with no error left over from the last attempt. */}
+        {/* A child so it unmounts with the portal: every open starts from current values. */}
         <EventForm
           mode={mode}
           event={event}
           onSaved={(saved) => {
             onOpenChange(false);
-            // A new event has a PIN and nothing else. Adding channels is the next act, so
-            // creating lands on the event rather than back on a list row.
+            // A new event has a PIN and nothing else, so adding channels is the next act.
             if (mode === 'create') navigate({ to: '/admin/events/$id', params: { id: saved.id } });
           }}
         />
@@ -98,9 +93,8 @@ function EventForm({
     register,
     control,
     handleSubmit,
-    // isSubmitting, rather than either mutation's isPending: those go false the moment the
-    // request resolves, reopening the button for a second save during the invalidation that
-    // follows. isSubmitting spans the whole handler, up to the dialog closing.
+    // Not either mutation's isPending: those go false the moment the request resolves,
+    // reopening the button for a second save during the invalidation that follows.
     formState: { errors, isSubmitting },
   } = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
@@ -130,7 +124,7 @@ function EventForm({
       await invalidateAdminEvents(queryClient, saved.id);
       onSaved(saved);
     } catch {
-      // Deliberately still open: closing here would throw away what the admin typed.
+      // Left open: closing here would throw away what the admin typed.
       setFailed(true);
     }
   });
@@ -228,7 +222,6 @@ function EventForm({
   );
 }
 
-/** Deleting an event takes its channels and its PIN with it, so the copy names all three. */
 export function DeleteEventDialog({
   event,
   open,
@@ -247,10 +240,9 @@ export function DeleteEventDialog({
   const { mutate, isPending } = $api.useMutation('delete', '/admin/events/{id}', {
     onMutate: () => setFailed(false),
     onSuccess: async () => {
-      // Leave the page before touching the cache: removing or invalidating the detail query
-      // while the detail route is still mounted refetches an event that no longer exists,
-      // and the 404 that comes back flashes the not-found state on the way out. The await
-      // is what makes that ordering real — navigate() resolves once the transition commits.
+      // Leave the page before touching the cache: invalidating the detail query while its
+      // route is mounted refetches a deleted event and flashes not-found on the way out.
+      // The await is what makes the ordering real; navigate() resolves once it commits.
       onOpenChange(false);
       await onDeleted?.();
       queryClient.removeQueries({ queryKey: eventDetailKey(event.id) });
@@ -283,11 +275,7 @@ export function DeleteEventDialog({
   );
 }
 
-/**
- * Regenerating a PIN destroys nothing, so it takes the neutral tone — but every card and QR
- * code already printed carries the old one, which is the consequence worth spelling out.
- * The control that opens this lives on the event detail screen.
- */
+/** Neutral tone: regenerating destroys nothing, it only invalidates what is already printed. */
 export function RegeneratePinDialog({
   event,
   open,
@@ -303,8 +291,7 @@ export function RegeneratePinDialog({
   const { mutate, isPending } = $api.useMutation('post', '/admin/events/{id}/regenerate-pin', {
     onMutate: () => setFailed(false),
     onSuccess: async () => {
-      // Close first: the refetch swaps in the new PIN, and this dialog's body names the old
-      // one as the one that stops working.
+      // Close first: the refetch swaps in the new PIN, and the body names the old one.
       onOpenChange(false);
       await invalidateAdminEvents(queryClient, event.id);
     },

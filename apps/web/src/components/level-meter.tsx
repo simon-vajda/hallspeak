@@ -15,13 +15,9 @@ const STATUS_TONE: Record<LevelStatus, string> = {
 };
 
 /**
- * The input level bar, driven straight from an `AnalyserNode`.
- *
  * The fill's width and the peaking colour are written to the DOM every frame and never go
- * through React — a meter that re-rendered at animation-frame rate would re-render the
- * screen around it too. Only the status *label* is state, and it changes at most once per
- * threshold crossing. `analyser` is null until the mic is open; the loop does not run then
- * and the bar sits empty.
+ * through React, which would re-render the screen around the meter too. Only the status label
+ * is state. `analyser` is null until the mic is open, and the bar then sits empty.
  */
 export function LevelMeter({
   analyser,
@@ -60,7 +56,7 @@ export function LevelMeter({
 
     return () => {
       cancelAnimationFrame(raf);
-      // the readout and the peaking colour are as stale as the bar once the analyser is gone
+      // The readout and the peaking colour are as stale as the bar once the analyser is gone.
       fill.style.width = '0%';
       rootRef.current?.setAttribute('data-peaking', 'false');
       setStatus('quiet');
@@ -83,8 +79,7 @@ export function LevelMeter({
             className="h-full w-0 rounded-full bg-live group-data-[peaking=true]:bg-destructive"
           />
         </div>
-        {/* the clip threshold, drawn at PEAK_THRESHOLD; -inset-y keeps the 5px overhang
-            correct at both track heights */}
+        {/* The clip threshold, drawn at PEAK_THRESHOLD. */}
         <div className="absolute -inset-y-1.25 left-[85%] w-0.5 rounded-[1px] bg-foreground/35" />
       </div>
     </div>

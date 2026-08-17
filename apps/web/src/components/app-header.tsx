@@ -3,13 +3,8 @@ import { LogoLockup } from '@/components/logo-lockup';
 import { cn } from '@/lib/utils';
 
 /**
- * The app's lockup bar, shared by the guest and speaker screens. It exists from `lg` only:
- * on a phone the design gives the content column the full height and no lockup, so this
- * renders nothing there.
- *
- * `right` is the trailing slot the listener room and the studio fill with the event name
- * and PIN — on a phone that pair sits beside the back button instead, which is why it is a
- * slot here and not a pair of props.
+ * From `lg` only: on a phone the content column gets the full height and no lockup. `right` is
+ * a slot rather than props because on a phone its content sits beside the back button instead.
  */
 export function AppHeader({ right, className }: { right?: ReactNode; className?: string }) {
   return (

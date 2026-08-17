@@ -41,9 +41,8 @@ const LABEL = 'text-label text-muted-foreground uppercase';
 const TEXT_INPUT = 'h-11 rounded-full bg-secondary px-4 text-sm';
 
 /**
- * The API's one expected conflict: the composite unique on (event_id, slug). A `catch`
- * binding is `unknown` whatever the mutation's error type says, so the narrowing is
- * written out — but against the contract's own Problem shape, not an inline cast.
+ * The composite unique on (event_id, slug). A `catch` binding is `unknown` whatever the
+ * mutation's error type says, hence the written-out narrowing.
  */
 function isSlugTaken(error: unknown): error is Problem {
   return (
@@ -51,10 +50,7 @@ function isSlugTaken(error: unknown): error is Problem {
   );
 }
 
-/**
- * Add and edit are the same dialog, and differ by more than the event form's two do: a
- * slug is chosen once and then fixed, so edit shows it read-only and never sends it.
- */
+/** Add and edit are the same dialog. A slug is fixed once chosen, so edit never sends it. */
 export function ChannelFormDialog({
   open,
   onOpenChange,
@@ -69,8 +65,7 @@ export function ChannelFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false} className={cn(DIALOG_PANEL, 'sm:max-w-105')}>
-        {/* A child, so it unmounts with the portal: every open starts from the channel's
-            current values, with no error left over from the last attempt. */}
+        {/* A child so it unmounts with the portal: every open starts from current values. */}
         <ChannelForm eventId={eventId} channel={channel} onSaved={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
@@ -94,8 +89,7 @@ function ChannelForm({
   const slugNoteId = useId();
   const switchLabelId = useId();
   const switchDescriptionId = useId();
-  // Once the admin has typed a slug themselves, the name stops overwriting it — a proposal
-  // that keeps reasserting itself is worse than no proposal at all.
+  // Once the admin has typed a slug themselves, the name stops overwriting it.
   const slugEdited = useRef(false);
 
   const {
@@ -104,9 +98,8 @@ function ChannelForm({
     setValue,
     setError,
     handleSubmit,
-    // isSubmitting, rather than either mutation's isPending: those go false the moment the
-    // request resolves, reopening the button for a second save during the invalidation that
-    // follows. isSubmitting spans the whole handler, up to the dialog closing.
+    // Not either mutation's isPending: those go false the moment the request resolves,
+    // reopening the button for a second save during the invalidation that follows.
     formState: { errors, isSubmitting },
   } = useForm<ChannelFormValues>({
     resolver: zodResolver(channelFormSchema),
@@ -142,13 +135,12 @@ function ChannelForm({
       await invalidateAdminEvents(queryClient, eventId);
       onSaved();
     } catch (error) {
-      // The conflict belongs on the field that caused it; a banner would leave the admin
-      // guessing which of the two values the server objected to.
+      // On the field, not in a banner: otherwise which of the two values was rejected is a guess.
       if (isSlugTaken(error)) {
         setError('slug', { message: 'That slug is already used on this event.' });
         return;
       }
-      // Deliberately still open: closing here would throw away what the admin typed.
+      // Left open: closing here would throw away what the admin typed.
       setFailed(true);
     }
   });

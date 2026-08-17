@@ -2,12 +2,7 @@ import { LiveDot } from '@/components/live-dot';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-/**
- * The pill every screen states its liveness in: the dot, the treatment, and one line of
- * copy. `label` is a prop rather than derived here because each screen's ladder is its
- * own — two states on the selector and the studio, four in the listener room — and only
- * the call site knows which of them is being shown.
- */
+/** `label` is a prop, not derived: each screen's state ladder is its own. */
 export function LiveBadge({
   live,
   label,

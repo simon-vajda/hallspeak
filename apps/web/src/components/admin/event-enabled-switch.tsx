@@ -17,9 +17,8 @@ export function EventEnabledSwitch({
   const [failed, setFailed] = useState(false);
 
   const { mutate } = $api.useMutation('patch', '/admin/events/{id}', {
-    // Writes to one event run one at a time. Toggled twice quickly, parallel mutations let
-    // the first one's settle refetch land while the second is still travelling, so the
-    // screen settles on the intermediate value even though the server has the later one.
+    // Writes to one event run one at a time: toggled twice quickly, the first settle refetch
+    // would land while the second is still travelling and the screen would keep its value.
     scope: { id: eventScope(event.id) },
     onMutate: ({ body }) => {
       setFailed(false);

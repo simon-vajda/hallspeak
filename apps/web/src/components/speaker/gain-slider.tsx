@@ -2,13 +2,8 @@ import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 
 /**
- * The manual gain control and its readout. It appears in two places — beside the
- * preferences on the desktop pre-flight card, and in the audio-settings surface a phone
- * reaches mid-broadcast — so the wrapper that decides *where* it shows belongs to the
- * caller and only the control itself lives here.
- *
- * Like the two switches above it, this applies to nothing yet: it becomes a `GainNode` in
- * the capture graph when that graph feeds a producer.
+ * Two callers place this differently, so the wrapper deciding where it shows is theirs. It
+ * applies to nothing yet: it becomes a `GainNode` once the capture graph feeds a producer.
  */
 export function GainSlider({
   gain,
@@ -16,7 +11,7 @@ export function GainSlider({
   disabled,
   className,
 }: {
-  /** 0–100, as the design's readout displays it. */
+  /** 0–100. */
   gain: number;
   onGainChange: (gain: number) => void;
   disabled?: boolean;
@@ -30,8 +25,8 @@ export function GainSlider({
       </div>
       <Slider
         aria-label="Microphone gain"
-        // An array, not the scalar: the shadcn wrapper derives its thumb count from
-        // Array.isArray(value) and falls back to [min, max] — two stacked thumbs — for a number.
+        // An array, not the scalar: the wrapper derives its thumb count from Array.isArray and
+        // falls back to [min, max], two stacked thumbs, for a number.
         value={[gain]}
         onValueChange={(value) =>
           onGainChange(typeof value === 'number' ? value : (value[0] ?? gain))

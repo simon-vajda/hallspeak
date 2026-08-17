@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 type MicHandle = ReturnType<typeof useMicCapture>;
 
-/** The `lg` breakpoint, as a media query rather than a class — see `useIsDesktop`. */
+/** The `lg` breakpoint, as a media query rather than a class; see `useIsDesktop`. */
 const DESKTOP = '(min-width: 64rem)';
 
 type Props = {
@@ -24,13 +24,9 @@ type Props = {
 };
 
 /**
- * The device row of `10g` and the surface it opens: a bottom sheet on a phone (`10m`), a
- * popover anchored to the row from `lg` (`10t`).
- *
- * The two are **chosen**, not rendered together behind `lg:hidden`: both are real dialogs,
- * and two mounted dialogs means two focus traps and two elements claiming the same title.
- * That is why the width test is a `matchMedia` read rather than a Tailwind variant — the
- * only place in this app where a breakpoint has to exist in JavaScript.
+ * The sheet and the popover are chosen, not rendered together behind `lg:hidden`: two mounted
+ * dialogs means two focus traps and two elements claiming the same title. Hence the
+ * `matchMedia` read — the only place in this app where a breakpoint exists in JavaScript.
  */
 export function AudioSettings({ className, ...props }: Props) {
   const desktop = useIsDesktop();
@@ -58,10 +54,9 @@ export function AudioSettings({ className, ...props }: Props) {
     return (
       <Popover>
         <PopoverTrigger className={trigger}>{row}</PopoverTrigger>
-        {/* 340px is the design's settings column; anchored to the row's trailing edge so it
-            opens inside the content column rather than over the circle. */}
+        {/* Anchored to the row's trailing edge so it opens inside the content column. */}
         <PopoverContent align="end" sideOffset={8} className="w-85 gap-0 p-5">
-          {/* No `Done` here, unlike the sheet: a popover closes on the next click anywhere. */}
+          {/* No `Done`, unlike the sheet: a popover closes on the next click anywhere. */}
           <PopoverTitle className="mb-3.5 text-section">Audio</PopoverTitle>
           <SettingsBody {...props} />
         </PopoverContent>
@@ -72,8 +67,7 @@ export function AudioSettings({ className, ...props }: Props) {
   return (
     <Sheet>
       <SheetTrigger className={trigger}>{row}</SheetTrigger>
-      {/* 28px is the design's sheet radius, between the card radius and a full round; it is
-          this one surface's own. No close cross — `Done` is the way out the design draws. */}
+      {/* 28px is this one surface's own radius, between the card radius and a full round. */}
       <SheetContent
         side="bottom"
         showCloseButton={false}
@@ -82,8 +76,7 @@ export function AudioSettings({ className, ...props }: Props) {
         <span aria-hidden className="mx-auto mb-4.5 h-1 w-9.5 rounded-full bg-border" />
         <div className="mb-4 flex items-baseline justify-between gap-3">
           <SheetTitle className="text-section">Audio</SheetTitle>
-          {/* `primary` because Done is an action. The canvas tints it with the live green,
-              which is this palette's state colour and cannot stand in for one. */}
+          {/* `primary` because Done is an action; the canvas uses `live`, a state colour. */}
           <SheetClose className="cursor-pointer text-note font-semibold text-primary">
             Done
           </SheetClose>
@@ -95,10 +88,8 @@ export function AudioSettings({ className, ...props }: Props) {
 }
 
 /**
- * The same body under both surfaces: the pre-flight microphone card plus the gain slider.
- * The card hides its own slider here (`inSettings`), because on the pre-flight screen that
- * slider is desktop-only — a phone has no room for it and the design routes it through this
- * surface instead. So this is the one copy, not a second one.
+ * The same body under both surfaces. `inSettings` hides the card's own slider, which is
+ * desktop-only there, so the one below is the only copy rather than a second one.
  */
 function SettingsBody({
   mic,
@@ -140,8 +131,8 @@ function SettingsBody({
 }
 
 /**
- * True from the `lg` breakpoint. Initialised from the same read it subscribes to, so the
- * first paint already picks the right surface rather than mounting a sheet and swapping it.
+ * Initialised from the same read it subscribes to, so the first paint picks the right surface
+ * rather than mounting a sheet and swapping it.
  */
 function useIsDesktop() {
   const [desktop, setDesktop] = useState(() => window.matchMedia(DESKTOP).matches);

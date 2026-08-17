@@ -3,13 +3,8 @@ import { LevelMeter } from '@/components/level-meter';
 import { cn } from '@/lib/utils';
 
 /**
- * The input-level card, on both speaker screens (`10f`, `10s`, `10g`).
- *
- * The heading row — the `Input level` label and the status word beside it — belongs to
- * `LevelMeter`, which changes the word as the level crosses a threshold. The panel adds
- * only what sits around the bar: the design's `Quiet` / `Peak` end labels and whatever the
- * screen wants to say under them. `note` is per-screen because the pre-flight line ("nobody
- * hears you until you go live") is false once the interpreter has.
+ * The heading row belongs to `LevelMeter`, which owns the status word. `note` is per-screen
+ * because the pre-flight line ("nobody hears you until you go live") is false once they have.
  */
 export function InputLevelPanel({
   analyser,

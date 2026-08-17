@@ -11,10 +11,8 @@ const CHIP = 'h-6 rounded-full px-2.5 text-[11.5px] font-semibold';
 const COLLAPSE_LIMIT = 3;
 
 /**
- * A channel's state as a chip: filled for enabled, outlined for disabled. The design fills
- * an active chip with the live tint; enabled is not on air, so the fill is a wash of
- * `foreground` instead — the same colour the enable switch uses to mean on. It has to read
- * against `secondary`, which is both the phone card's and the channels panel's own fill.
+ * The design fills an active chip with the live tint; enabled is not on air, so the fill is a
+ * wash of `foreground`, the same colour the enable switch uses. It reads against `secondary`.
  */
 export function ChannelChip({
   enabled,
@@ -42,9 +40,8 @@ export function ChannelChip({
 }
 
 /**
- * The channel list as chips. `collapse` keeps a table row one line tall by showing three
- * channels and a count; `wrap` lets a card grow instead. Enabled channels are ordered
- * first either way, so the ones an admin cares about are never the ones collapsed away.
+ * `collapse` keeps a table row one line tall by showing a count; `wrap` lets a card grow.
+ * Enabled channels sort first either way, so they are never the ones collapsed away.
  */
 export function ChannelChips({
   channels,
@@ -86,8 +83,7 @@ export function ChannelChips({
         </ChannelChip>
       ))}
       {overflow > 0 && (
-        // Not a link: channels are managed on the detail page, and the row's job is only
-        // to say what exists.
+        // Not a link: channels are managed on the detail page.
         <Badge variant="secondary" className={cn(CHIP, 'text-muted-foreground')}>
           +{overflow}
           <span className="sr-only"> more channels</span>

@@ -3,9 +3,8 @@ import { createContext, type ReactNode, use, useCallback, useEffect, useState } 
 export type Theme = 'light' | 'dark' | 'system';
 
 /**
- * Storage key for the persisted theme choice. The pre-paint script in `index.html`
- * hard-codes the same string — it runs before any module loads, so the two cannot
- * import from each other. Change one and you must change the other.
+ * The pre-paint script in `index.html` hard-codes the same string: it runs before any module
+ * loads, so the two cannot import from each other. Change one and you must change the other.
  */
 export const THEME_STORAGE_KEY = 'linguacast-theme';
 
@@ -16,10 +15,8 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-// Storage access *throws* rather than returning null where cookies are blocked, in a
-// sandboxed iframe, and in some in-app webviews. This runs in the provider's useState
-// initializer, above the router — an uncaught throw there blanks the whole app for a
-// guest who just scanned a QR code. The theme is cosmetic; it never fails the app.
+// Storage access throws rather than returning null where cookies are blocked. This runs in a
+// useState initializer above the router, where an uncaught throw blanks the whole app.
 function readStoredTheme(): Theme {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);

@@ -2,11 +2,9 @@ import { Switch as SwitchPrimitive } from '@base-ui/react/switch';
 
 import { cn } from '@/lib/utils';
 
-// CUSTOMISED: `lg` (46×27 with a 21px thumb, the design's admin enable switch) is added
-// to the CLI's two sizes, and `cursor-pointer` to every size — Tailwind v4 dropped the
-// browser default that shadcn used to inherit. The lg padding and checked offset are
-// written out because the generated calc(100%-2px) only centres the thumb at the default
-// size's proportions, which leaves 1px beside it and 2px above. See CLAUDE.md.
+// CUSTOMISED (see CLAUDE.md): an `lg` size, and `cursor-pointer` on every size, which
+// Tailwind v4 dropped. The lg padding and checked offset are written out because the
+// generated calc(100%-2px) only centres the thumb at the default size's proportions.
 function Switch({
   className,
   size = 'default',
