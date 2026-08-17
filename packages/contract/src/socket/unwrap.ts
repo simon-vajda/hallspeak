@@ -1,6 +1,5 @@
 import type { Ack } from './define';
 
-/** An application-level failure carried in an ack envelope, rethrown at the call site. */
 export class SocketError extends Error {
   constructor(
     readonly code: string,
@@ -12,13 +11,8 @@ export class SocketError extends Error {
 }
 
 /**
- * Collapses the ack envelope so call sites read as ordinary async code:
- *
- *   const { serverTime } = unwrap(await socket.emitWithAck('ping', {}));
- *
- * Timeouts and disconnects reject the promise with Socket.IO's own Error; application
- * failures resolve with `{ ok: false }` and throw SocketError here. Both are throws at
- * the call site, distinguishable by type when that matters.
+ * Collapses the ack envelope: `unwrap(await socket.emitWithAck('ping', {}))`.
+ * Application failures throw SocketError; timeouts reject with Socket.IO's own Error.
  */
 export function unwrap<T>(res: Ack<T>): T {
   if (!res.ok) throw new SocketError(res.error.code, res.error.message);

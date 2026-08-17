@@ -4,7 +4,6 @@ import type { ClientToServerEvents, ServerToClientEvents } from './define';
 type C2S = ClientToServerEvents<typeof clientToServer>;
 type S2C = ServerToClientEvents<typeof serverToClient>;
 
-// An acked event carries a trailing ack parameter; a fire-and-forget one does not.
 type JoinParams = Parameters<C2S['channel:join']>;
 type LeaveParams = Parameters<C2S['channel:leave']>;
 

@@ -17,8 +17,7 @@ export const PublicEvent = z
     pin: Pin,
     name: z.string(),
     description: z.string().nullable(),
-    // Enabled channels only. A disabled channel is invisible here, exactly as it is
-    // invisible to a direct fetch (spec E §4).
+    // Enabled channels only, exactly as a disabled channel is invisible to a direct fetch.
     channels: z.array(PublicChannel),
   })
   .openapi('PublicEvent');
@@ -32,9 +31,7 @@ export const PublicChannelView = z
   .openapi('PublicChannelView');
 
 // Admin surfaces key on `id`, never on `pin` or `speakerCode`: those are regenerable,
-// so an admin page keyed on one would move out from under the admin the moment they
-// regenerated it (spec E §2). `id` is safe to expose here because the single admin is
-// the only actor who ever sees one.
+// so a page keyed on one moves out from under the admin the moment they regenerate it.
 export const AdminEvent = z
   .object({
     id: z.int().positive(),
@@ -82,8 +79,8 @@ export const CreateChannelBody = z
   })
   .openapi('CreateChannelBody');
 
-// `slug` is absent on purpose and must stay absent: it is immutable after creation.
-// Strict so a client sending `slug` gets a 400 rather than a silent no-op.
+// No `slug`: it is immutable after creation. Strict, so sending one is a 400 rather
+// than a silent no-op.
 export const UpdateChannelBody = z
   .object({
     name: z.string().min(1).max(120).optional(),

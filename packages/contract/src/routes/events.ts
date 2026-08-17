@@ -15,8 +15,8 @@ export const getPublicEvent = createRoute({
   request: { params: z.object({ pin: Pin }) },
   responses: {
     200: { content: { 'application/json': { schema: PublicEvent } }, description: 'OK' },
-    // A disabled event, a disabled channel and a nonexistent PIN are byte-identical
-    // here on purpose: any difference tells a scanner which PINs are real (spec E §5).
+    // Byte-identical for a disabled event and for a nonexistent PIN: any difference
+    // tells a scanner which PINs are real.
     404: problem('No such event'),
     429: problem('Too many failed lookups'),
   },
@@ -29,9 +29,7 @@ export const getPublicChannel = createRoute({
   summary: 'One channel, and the role of the caller on it',
   request: {
     params: z.object({ pin: Pin, slug: Slug }),
-    // The same query param the SPA route uses, deliberately not a header: the page URL
-    // already carries the code into the server access log, so a header would buy
-    // nothing while costing a second convention and a Vary header (spec E §5).
+    // A query param, not a header: the page URL already carries the code into the access log.
     query: z.object({ speaker_code: z.string().optional() }),
   },
   responses: {
