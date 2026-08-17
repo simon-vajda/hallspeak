@@ -15,6 +15,7 @@ export function createDb(path: string) {
   const sqlite = new Database(path);
   // None of these four is a default. foreign_keys is per-connection: without it the
   // constraints are inert. Without busy_timeout a concurrent write fails on SQLITE_BUSY.
+  // synchronous=NORMAL is safe only alongside WAL, which also keeps readers off the writer.
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('foreign_keys = ON');
   sqlite.pragma('busy_timeout = 5000');
