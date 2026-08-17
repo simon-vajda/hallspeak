@@ -50,7 +50,7 @@ describe('joinChannel', () => {
   });
 
   it('reports online when a speaker holds the channel', () => {
-    presence.claim(englishId, 'speaker-socket');
+    presence.claim(englishId, 'code-x', 'speaker-socket');
     const socket = fakeSocket();
 
     expect(joinChannel(db, presence, socket, authA, 'english')).toEqual({ online: true });

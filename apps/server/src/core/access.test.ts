@@ -52,6 +52,7 @@ describe('authorizeHandshake', () => {
     expect(result).toEqual({
       ok: true,
       data: { eventId: expect.any(Number), pin, speakerChannelId: null },
+      displacedSocketId: null,
     });
   });
 
@@ -118,14 +119,49 @@ describe('authorizeHandshake', () => {
 });
 
 describe('speaker exclusivity', () => {
-  it('rejects a second speaker on a live channel and leaves the incumbent alone', () => {
-    expect(auth({ pin, speakerCode: english.speakerCode }, 'incumbent').ok).toBe(true);
+  /**
+   * Only reachable by claiming the channel behind the handshake's back: a speaker code
+   * identifies exactly one channel, so no second code can route to this one through
+   * `authorizeHandshake`. The guard still has to hold — the claim outlives a
+   * regenerated code, and the old value must not become a key to somebody else's channel.
+   */
+  it('refuses a different code on a held channel as busy, leaving the holder alone', () => {
+    presence.claim(english.id, 'a-superseded-code', 'squatter');
 
     expect(auth({ pin, speakerCode: english.speakerCode }, 'latecomer')).toEqual({
       ok: false,
       error: 'channel_busy',
     });
-    expect(presence.isOnline(english.id)).toBe(true);
+    expect(presence.holder(english.id)).toBe('squatter');
+  });
+
+  /**
+   * The reconnect case, which is why the claim is keyed on the speaker code: the
+   * interpreter's own dying socket lives for up to the ten-second ping window, and keying
+   * on the socket id would refuse them their own channel for that long.
+   */
+  it('grants the same code a takeover and names the socket it displaced', () => {
+    auth({ pin, speakerCode: english.speakerCode }, 'incumbent');
+
+    const result = auth({ pin, speakerCode: english.speakerCode }, 'reconnecting');
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.displacedSocketId).toBe('incumbent');
+    expect(presence.holder(english.id)).toBe('reconnecting');
+  });
+
+  it('names nobody as displaced on an ordinary first claim', () => {
+    const result = auth({ pin, speakerCode: english.speakerCode }, 'first');
+
+    expect(result.ok && result.displacedSocketId).toBe(null);
+  });
+
+  it('does not let the displaced socket evict its successor when it finally disconnects', () => {
+    auth({ pin, speakerCode: english.speakerCode }, 'incumbent');
+    auth({ pin, speakerCode: english.speakerCode }, 'reconnecting');
+
+    expect(presence.release('incumbent')).toBe(null);
+    expect(presence.holder(english.id)).toBe('reconnecting');
   });
 
   it('admits the same code once the incumbent disconnects', () => {
@@ -142,8 +178,9 @@ describe('speaker exclusivity', () => {
   });
 
   it('claims nothing for a listener', () => {
-    auth({ pin }, 'listener');
+    const result = auth({ pin }, 'listener');
 
+    expect(result.ok && result.displacedSocketId).toBe(null);
     expect(presence.release('listener')).toBe(null);
   });
 });
