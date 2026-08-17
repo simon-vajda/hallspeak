@@ -2,8 +2,8 @@ import { LiveBadge } from '@/components/live-badge';
 import { formatPin } from '@/lib/format';
 
 /**
- * `live` is whether the guest's own socket is connected — "this page is receiving updates",
- * not that anyone is speaking. That is a per-channel fact and belongs to the rows.
+ * `live` is whether the guest's own socket is connected, not that anyone is speaking. Who is
+ * speaking is a per-channel fact and belongs to the rows.
  */
 export function EventHeader({
   name,

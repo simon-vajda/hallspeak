@@ -6,7 +6,7 @@ import { join } from 'node:path';
  * The API sub-app, wired to a throwaway migrated database. DATABASE_PATH must be set
  * before the dynamic imports below: env.ts parses process.env at module load and
  * db/index.ts opens a file at module scope, so a static import would provision
- * ./data/linguacast.db. One call per test file — a second returns the same singleton.
+ * ./data/linguacast.db. One call per test file: a second returns the same singleton.
  */
 export async function createTestApi() {
   const dir = mkdtempSync(join(tmpdir(), 'linguacast-api-'));
