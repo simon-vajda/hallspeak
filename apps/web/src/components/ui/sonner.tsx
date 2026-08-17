@@ -6,8 +6,8 @@ import {
   TriangleAlertIcon,
 } from 'lucide-react';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
-// Upstream reads the theme from next-themes; this app has its own provider with the
-// same 'light' | 'dark' | 'system' shape, so the swap removes a dependency outright.
+// CUSTOMISED: upstream reads the theme from next-themes; this app's own provider has the
+// same 'light' | 'dark' | 'system' shape, so the swap removes that dependency.
 import { useTheme } from '@/components/theme-provider';
 
 const Toaster = ({ ...props }: ToasterProps) => {

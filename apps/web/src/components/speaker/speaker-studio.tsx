@@ -19,21 +19,13 @@ import type { SocketStatus } from '@/lib/use-socket';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
-// How often the go-live gate samples the analyser. It is a one-way latch, not a meter, so
-// it runs on an interval rather than per frame — five reads a second is far more than a
-// question answered once per session needs.
+// The go-live gate is a one-way latch, not a meter, so it polls rather than reading per frame.
 const SIGNAL_POLL_MS = 200;
 
 /**
- * The interpreter's screen: pre-flight (`10f`, `10s`) and, once live, the on-air view
- * (`10g`) — one component with two renders, because everything the on-air view shows is
- * this component's state and the microphone it already holds.
- *
- * **Going live is client-local state.** Pressing the button emits nothing and claims
- * nothing: the presence claim happened at the handshake, which is why guests already see
- * this channel as live the moment the studio opens — before anyone has pressed anything.
- * That gap closes when the mediasoup produce call becomes what marks a channel live; until
- * then no copy on this screen may claim that anybody is hearing audio.
+ * Going live is client-local state: the button emits nothing, because the presence claim
+ * already happened at the handshake. Until mediasoup lands, no copy here may claim that
+ * anybody is hearing audio.
  */
 export function SpeakerStudio({
   eventName,
@@ -46,13 +38,8 @@ export function SpeakerStudio({
   eventName: string;
   pin: string;
   channel: PublicChannel;
-  /** The code from the speaker link; only its last four are ever shown. */
   speakerCode: string;
-  /**
-   * Whether guests see this channel as live. Deliberately not read here: it is already
-   * true from the handshake, so it says nothing about whether this interpreter has
-   * started — see the note above.
-   */
+  /** Not read here: true from the handshake onwards, so it says nothing about this interpreter. */
   live: boolean;
   status: SocketStatus;
   socketError: string | null;
@@ -61,15 +48,13 @@ export function SpeakerStudio({
   const [isMuted, setIsMuted] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
 
-  // Audio-processing preferences. Held here and persisted to nothing — see MicPanel for
-  // what each becomes once the capture track feeds a producer.
+  // Held and applied to nothing; see MicPanel for what each becomes once a producer exists.
   const [noiseSuppression, setNoiseSuppression] = useState(true);
   const [autoGain, setAutoGain] = useState(false);
   const [gain, setGain] = useState(68);
 
   const mic = useMicCapture();
-  // Latched, never cleared: the button must not flicker back to disabled while someone
-  // pauses between words.
+  // Never cleared: the button must not flicker back to disabled during a pause between words.
   const [heardSomething, setHeardSomething] = useState(false);
 
   useEffect(() => {
@@ -85,10 +70,8 @@ export function SpeakerStudio({
     return () => clearInterval(timer);
   }, [mic.analyser, heardSomething]);
 
-  // A browser that will not resume an AudioContext outside a user gesture reports a flat
-  // line rather than an error, so the meter never moves and `heardSomething` never latches —
-  // which would leave Go live disabled forever, and Go live is the one control that cannot
-  // be the gesture. Any first interaction with the studio is. Removed once it takes.
+  // A suspended AudioContext reports a flat line, so `heardSomething` never latches and Go
+  // live stays disabled — and Go live is the one control that cannot be the resuming gesture.
   const { suspended, resume } = mic;
   useEffect(() => {
     if (!suspended) return;
@@ -135,8 +118,7 @@ export function SpeakerStudio({
         <TempThemeToggle />
       </div>
 
-      {/* The toggle is absolutely positioned over this bar's right edge, so the meta line
-          reserves its width rather than sliding under it. */}
+      {/* `mr-11` reserves room for the toggle absolutely positioned over this bar's right edge. */}
       <AppHeader
         right={
           <span className="mr-11 text-meta text-muted-foreground">
@@ -147,15 +129,14 @@ export function SpeakerStudio({
 
       <main className="flex flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header>
-          {/* Off air is a claim about audio, and it stays true until mediasoup carries any. */}
+          {/* Off air is a claim about audio, and stays true until mediasoup carries any. */}
           <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
             Interpreter · off air
           </span>
           <h1 className="mt-4 mb-1 text-screen lg:text-[44px] lg:leading-[1.03] lg:tracking-[-0.045em]">
             {channel.name}
           </h1>
-          {/* The design pairs the event name with a waiting-listener count. There is no
-              count to show — nothing reports one — so the line is the event alone. */}
+          {/* The design pairs this with a waiting-listener count; nothing reports one yet. */}
           <p className="text-sm text-muted-foreground lg:mb-8">{eventName}</p>
         </header>
 
@@ -182,8 +163,6 @@ export function SpeakerStudio({
               note="Speak at your normal volume — aim to sit just under the peak mark. Nobody hears you until you go live."
             />
 
-            {/* Bottom-anchored on a phone, where the action owns the last band of the
-                screen; in the desktop column it simply follows the panel. */}
             <div className="mt-auto pt-8 lg:mt-0 lg:pt-0">
               {(socketError || status !== 'connected') && (
                 <ConnectionLine
@@ -200,9 +179,7 @@ export function SpeakerStudio({
                   setIsLive(true);
                   setStartedAt(Date.now());
                 }}
-                // 62px and 18px are this button's own, larger than the pill size the rest
-                // of the app uses: it is the only action on the screen.
-                // The glow is the design's, written on the `primary` role rather than its hex.
+                // Larger than the shared `pill` size: it is the only action on the screen.
                 className="h-15.5 w-full gap-2.5 text-[18px] tracking-[-0.02em] shadow-[0_16px_40px] shadow-primary/35"
               >
                 <Mic className="size-5 stroke-[2.25]" />
@@ -229,13 +206,9 @@ export function SpeakerStudio({
 }
 
 /**
- * The on-air view (`10g`, `10u`–`10w`).
- *
- * **Nothing here talks to the server.** Going live and ending it both move only the studio's
- * own state — no socket event is emitted, no presence claim is made or released — so the
- * badge says `On air`, which is true of the channel from the handshake onwards, and no copy
- * claims that anyone is hearing this microphone. Ending returns to pre-flight while the
- * socket stays exactly as it was.
+ * Nothing here talks to the server: going live and ending it move only local state. `On air`
+ * is true of the channel from the handshake onwards, and no copy claims anyone is hearing
+ * this microphone.
  */
 function OnAir({
   channelName,
@@ -252,7 +225,7 @@ function OnAir({
   channelName: string;
   eventName: string;
   mic: ReturnType<typeof useMicCapture>;
-  /** `Date.now()` at the moment Go live was pressed; the elapsed clock counts from it. */
+  /** `Date.now()` at the moment Go live was pressed. */
   startedAt: number | null;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -281,8 +254,7 @@ function OnAir({
 
       <main className="flex flex-1 flex-col px-gutter pt-6 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header className="flex items-center justify-between gap-3 lg:justify-start">
-          {/* Dropped to its muted treatment while the socket is away: the channel is still
-              claimed, but nothing here can confirm it until the connection is back. */}
+          {/* The channel is still claimed while the socket is away, but unconfirmable. */}
           <LiveBadge live={connected} label={connected ? 'On air' : 'Reconnecting…'} />
           <span className="text-meta text-muted-foreground lg:hidden">{eventName}</span>
         </header>
@@ -291,15 +263,11 @@ function OnAir({
           {channelName}
         </h1>
 
-        {/* One tree at both widths: a stack on a phone, and from `lg` the design's two
-            columns, with the circle spanning the right column's three rows and the quiet
-            end-broadcast button under it. */}
         <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-0 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start lg:gap-x-8.5 lg:gap-y-4">
           <OnAirStats startedAt={startedAt} className="lg:col-start-2 lg:row-start-1" />
 
           <div className="flex flex-1 items-center justify-center py-4 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
-            {/* Muting swaps the fill and the label and stops the rings — the meter below is
-                deliberately untouched, so the speaker can still see the mic working. */}
+            {/* The meter below is untouched, so the speaker still sees the mic work. */}
             <PlayTarget
               icon={isMuted ? <MicOff /> : <Mic />}
               label={isMuted ? 'Muted' : 'Mute'}
@@ -309,7 +277,7 @@ function OnAir({
             />
           </div>
 
-          {/* No note here: the pre-flight line under the bar says nobody hears you yet. */}
+          {/* No note: pre-flight already said nobody hears you. */}
           <InputLevelPanel analyser={mic.analyser} className="lg:col-start-2 lg:row-start-2" />
 
           <AudioSettings mic={mic} {...preferences} className="lg:col-start-2 lg:row-start-3" />

@@ -16,10 +16,7 @@ import { cn } from '@/lib/utils';
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 type AdminChannel = components['schemas']['AdminChannel'];
 
-/**
- * A row control: 33px as drawn, but 44px below `lg`, where the controls sit under the row
- * and have to clear the minimum hit target.
- */
+/** 44px below `lg`, where the controls sit under the row and must clear the hit target. */
 const ROW_ACTION =
   "h-11 gap-1.5 rounded-full px-3.25 text-xs font-semibold [&_svg:not([class*='size-'])]:size-3.5 lg:h-8.25";
 
@@ -68,16 +65,14 @@ function ChannelRow({ event, channel }: { event: AdminEventDetail; channel: Admi
   const [deleting, setDeleting] = useState(false);
 
   const listenerPath = `/events/${event.pin}/${channel.slug}`;
-  // The speaker link is the listener link plus the code, exactly as the channel route reads
-  // it — drop the query and it degrades into a valid listener URL.
+  // The listener link plus the code: drop the query and it degrades into a valid listener URL.
   const speakerUrl = `${window.location.origin}${listenerPath}?speaker_code=${encodeURIComponent(channel.speakerCode)}`;
 
   return (
     <li className="flex flex-col gap-3.5 border-t border-border px-5.5 py-4.25 lg:flex-row lg:items-center lg:gap-4">
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2.5">
-          {/* The name gives way, not the chip: a truncated channel name is still readable,
-              a chip that has spilled into the controls beside it is not. */}
+          {/* The name gives way, not the chip: a truncated name is still readable. */}
           <h3 className="truncate font-semibold text-[18px] tracking-[-0.025em]">{channel.name}</h3>
           <ChannelChip enabled={channel.enabled} className="shrink-0">
             {channel.enabled ? 'Enabled' : 'Disabled'}
@@ -86,8 +81,7 @@ function ChannelRow({ event, channel }: { event: AdminEventDetail; channel: Admi
         <p className="mt-1 truncate font-mono text-muted-foreground text-xs">{listenerPath}</p>
       </div>
 
-      {/* A fieldset, so the cluster carries the channel's name into the accessibility tree:
-          CopyButton names itself from its visible label and takes no label of its own. */}
+      {/* A fieldset so the cluster carries the channel name: CopyButton takes no label. */}
       <fieldset
         aria-label={`${channel.name} channel`}
         className="flex shrink-0 flex-wrap items-center gap-2"
@@ -156,12 +150,12 @@ function ChannelEnabledSwitch({ channel }: { channel: AdminChannel }) {
 
   const { mutate } = $api.useMutation('patch', '/admin/channels/{id}', {
     // Scoped to the owning event, not the channel: both caches are keyed by event, so two
-    // channels of one event racing each other would settle on an intermediate list.
+    // channels racing each other would settle on an intermediate list.
     scope: { id: eventScope(channel.eventId) },
     onMutate: ({ body }) => {
       setFailed(false);
-      // A channel's own row and its chip on the events list are the same row of data,
-      // reached through the event that owns it.
+      // A channel's row and its chip on the events list are the same data, reached through
+      // the event that owns it.
       return cache.apply((event) => ({
         ...event,
         channels: event.channels.map((candidate) =>
@@ -190,10 +184,6 @@ function ChannelEnabledSwitch({ channel }: { channel: AdminChannel }) {
   );
 }
 
-/**
- * A new speaker code is the only answer to a leaked one, so the copy leads with what it
- * costs: whoever holds the old link is cut off the moment this runs.
- */
 function RegenerateSpeakerCodeDialog({
   channel,
   open,
@@ -250,7 +240,7 @@ function DeleteChannelDialog({
   onOpenChange,
 }: {
   channel: AdminChannel;
-  /** Channels the event is left with — deleting the last one is worth saying out loud. */
+  /** Channels the event is left with; the copy calls out deleting the last one. */
   remaining: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;

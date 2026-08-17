@@ -2,13 +2,8 @@ import { MicOff } from 'lucide-react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 
 /**
- * `10n`. Ending always confirms — which is the whole reason End broadcast can afford to be
- * a quiet text button rather than a red one.
- *
- * The canvas opens with "37 people are listening to English". Nothing counts listeners, so
- * the copy states only what is certain: whoever is there loses the channel. `ConfirmDialog`
- * is not admin-specific despite where it is filed — it is the destructive confirmation this
- * app has, disc and stacked buttons included.
+ * Ending always confirms, which is why End broadcast can be a quiet text button. The design
+ * opens with a listener count; nothing counts listeners, so the copy states only what is certain.
  */
 export function EndBroadcastDialog({
   open,

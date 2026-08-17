@@ -9,21 +9,17 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
-/**
- * Call-site sizing for a dialog action button. The design draws them 38px and right-aligned;
- * below `lg` they go full width and stacked, and 44px so they clear the minimum hit target.
- */
+/** Full width and 44px below `lg`, so they clear the minimum hit target. */
 export const DIALOG_ACTION =
   'h-11 w-full rounded-full px-4.25 text-sm font-semibold lg:h-9.5 lg:w-auto';
 
-/** The dialog type ramp, which sits between the screen title and the section title. */
+/** The dialog type ramp, between the screen title and the section title. */
 export const DIALOG_TITLE = 'text-[22px] leading-tight font-semibold tracking-[-0.03em]';
 export const DIALOG_BODY = 'text-[13.5px] leading-[1.55]';
 
-/** Shell for a dialog panel: the design's card radius and the screen gutter as padding. */
 export const DIALOG_PANEL = 'gap-0 rounded-lg p-gutter';
 
-/** The action row every dialog ends with. `flex-col-reverse` puts the primary on top. */
+/** `flex-col-reverse` puts the primary on top. */
 export function DialogActions({ children }: { children: ReactNode }) {
   return (
     <div className="mt-5.5 flex flex-col-reverse gap-2.5 lg:flex-row lg:justify-end">
@@ -33,12 +29,8 @@ export function DialogActions({ children }: { children: ReactNode }) {
 }
 
 /**
- * A confirmation before an action that cannot be taken back. `children` are the consequences
- * — the caller composes them from live data, because "three channels go with it" is the part
- * that makes the admin stop and read.
- *
- * `tone` is `destructive` by default; `default` is for confirmations that are consequential
- * but not a deletion, and swaps the red badge and button for the ordinary primary.
+ * `children` are the consequences, composed by the caller from live data. `tone: 'default'`
+ * is for a confirmation that is consequential but not a deletion.
  */
 export function ConfirmDialog({
   open,
@@ -70,16 +62,14 @@ export function ConfirmDialog({
   return (
     <Dialog
       open={open}
-      // Closing is refused while the request is in flight. The error line below is the only
-      // report a failed delete or regenerate gets, and it lives inside this dialog — dismiss
-      // it mid-flight and a destructive action that failed looks exactly like one that
-      // worked. Opening is never blocked, so this can't wedge the dialog shut.
+      // Closing is refused mid-flight: the error line below is the only report a failure gets,
+      // so dismissing early makes a failed destructive action look like one that worked.
       onOpenChange={(next) => {
         if (next || !pending) onOpenChange(next);
       }}
     >
-      {/* No close cross: the two named buttons are the only ways out, so neither choice can
-          be made by accident. Escape and the backdrop cancel until the request starts. */}
+      {/* No close cross: the two named buttons are the only ways out, so neither choice is
+          made by accident. */}
       <DialogContent
         role="alertdialog"
         showCloseButton={false}

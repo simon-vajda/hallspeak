@@ -1,17 +1,13 @@
 import { cn } from '@/lib/utils';
 
 const SIZES = {
-  sm: 'size-1.75', // 7px — inside a badge or pill
-  md: 'size-2.5', // 10px — standalone, in a channel row
+  sm: 'size-1.75', // inside a badge or pill
+  md: 'size-2.5', // standalone, in a channel row
 } as const;
 
 /**
- * The pulsing signal dot. `offline` is a tone rather than the absence of the element:
- * the dot's *position* is what carries the state, so an offline row still renders one in
- * `border` — dropping it would shift everything beside it as channels go on and off air.
- *
- * The pulse holds solid under `prefers-reduced-motion` (see `index.css`) because it is a
- * status, not decoration.
+ * `offline` is a tone rather than the absence of the element: dropping the dot would shift
+ * everything beside it as channels go on and off air.
  */
 export function LiveDot({
   size = 'md',

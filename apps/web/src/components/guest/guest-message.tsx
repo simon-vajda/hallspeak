@@ -4,10 +4,8 @@ import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 
 /**
- * The frame both guest routes put their non-screen states in — the lockup bar, the theme
- * toggle and the content column. The listener room does not use it: its frame carries a
- * back link, the channel strip and a centred main, so parameterising this one for it would
- * leave a shell in name only.
+ * The frame both guest routes put their non-screen states in. The listener room does not use
+ * it: its own frame carries a back link, the channel strip and a centred main.
  */
 export function GuestShell({ children }: { children: ReactNode }) {
   return (
@@ -25,11 +23,7 @@ export function GuestShell({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * A guest-facing dead end or wait: a title, a line of copy, and whatever way out the
- * caller wants. Both public routes hit these — a mistyped PIN, a stale speaker link, the
- * gap before the first response — so they are drawn rather than left as bare text.
- */
+/** A guest-facing dead end or wait: a mistyped PIN, a stale speaker link, a pending fetch. */
 export function GuestMessage({
   title,
   body,
@@ -51,8 +45,8 @@ export function GuestMessage({
 }
 
 /**
- * The way out of a dead end. `link` is the whole `<Link>` element rather than a route and
- * params, so each route keeps TanStack's typed navigation at its own call site.
+ * `link` is the whole `<Link>` element rather than a route and params, so each caller keeps
+ * TanStack's typed navigation.
  */
 export function GuestMessageAction({
   link,
@@ -65,8 +59,7 @@ export function GuestMessageAction({
     <Button
       variant="outline"
       size="pill"
-      // It navigates, so it renders as an anchor and Base UI has to be told to stop
-      // expecting a native <button>.
+      // It renders as an anchor, so Base UI must stop expecting a native <button>.
       nativeButton={false}
       render={link}
       className="mt-8 w-full lg:w-50"

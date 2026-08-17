@@ -6,18 +6,14 @@ import { cn } from '@/lib/utils';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
-// 19px/22px names and the row's 17px vertical padding are one-offs of this screen; the
-// ramp's section step is 17px and would flatten the row against its own metadata line.
+// One-offs of this screen: the ramp's section step would flatten the row against its own
+// metadata line.
 const ROW = 'flex items-center gap-3.5 rounded-lg px-5 py-4.25 lg:gap-4 lg:px-6 lg:py-5';
 const NAME = 'text-[19px] font-semibold tracking-[-0.025em] lg:text-[22px] lg:tracking-[-0.03em]';
 
 /**
- * One channel in the selector. An offline channel is a plain `div` on purpose — it is not
- * a link, takes no focus and has no trailing control, because there is nothing behind it
- * until its interpreter connects.
- *
- * The trailing play affordance is decorative: the row itself is the link, so a nested
- * button would only add a second tab stop to the same destination.
+ * An offline channel is a plain `div`: there is nothing behind it until its interpreter
+ * connects. The play affordance is decorative, since the row itself is the link.
  */
 export function ChannelRow({
   channel,
@@ -48,8 +44,8 @@ export function ChannelRow({
       params={{ pin, slug: channel.slug }}
       className={cn(
         ROW,
-        // The design draws no hover; a wash of the row's own fill is the one treatment that
-        // reads in both themes without borrowing another role's colour.
+        // The design draws no hover; a wash of the row's own fill reads in both themes without
+        // borrowing another role's colour.
         'bg-card transition-colors hover:bg-card/70',
         'focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
       )}

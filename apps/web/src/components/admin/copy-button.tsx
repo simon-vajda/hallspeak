@@ -6,9 +6,8 @@ import { cn } from '@/lib/utils';
 const CONFIRM_MS = 2000;
 
 /**
- * Copies `value` and confirms in place. `navigator.clipboard` is undefined on an insecure
- * origin — a self-hosted server reached over plain HTTP is exactly that — so the failure
- * path reveals the text and leaves it selectable rather than doing nothing visible.
+ * `navigator.clipboard` is undefined on an insecure origin, which a self-hosted server over
+ * plain HTTP is, so the failure path reveals the text and leaves it selectable.
  */
 export function CopyButton({
   value,

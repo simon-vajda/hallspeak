@@ -5,17 +5,11 @@ import { cn } from '@/lib/utils';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
-// 18px/10px padding and the 9px gap are this pill's own metrics; on the scale they are
-// 4.5 / 2.5 / 2.25.
 const PILL = 'flex items-center gap-2.25 rounded-full px-4.5 py-2.5 text-sm font-semibold';
 
 /**
- * The desktop-only channel switcher under the header (`10r`). It replaces the phone's back
- * button as the way out of a channel, which is why it renders nothing below `lg` — there
- * the listener room has its own back link.
- *
- * An offline channel is inert and takes no focus, matching the selector's rows: there is
- * nothing behind it until its interpreter connects.
+ * Desktop-only: below `lg` the listener room's own back link is the way out of a channel. An
+ * offline channel is inert, matching the selector's rows.
  */
 export function ChannelStrip({
   channels,
@@ -46,9 +40,8 @@ export function ChannelStrip({
               aria-current="page"
               className={cn(PILL, 'bg-primary text-primary-foreground')}
             >
-              {/* Not a LiveDot: on the current pill the design draws the marker in the
-                  pill's own foreground, and `live` is a state colour that must not be
-                  repainted to sit on `primary`. */}
+              {/* Not a LiveDot: `live` is a state colour and must not be repainted to sit
+                  on `primary`. */}
               {channel.online && (
                 <span aria-hidden className="size-2 animate-pulse-live rounded-full bg-current" />
               )}

@@ -12,18 +12,15 @@ type AdminEventDetail = components['schemas']['AdminEventDetail'];
 /** 168px box less its 12px quiet-zone padding. */
 const QR_SIZE = 144;
 
-/** What the download writes. Big enough to print a poster from, small enough to email. */
+/** Big enough to print a poster from, small enough to email. */
 const QR_DOWNLOAD_SIZE = 1024;
 
 const ACTION = 'h-9.5 w-full rounded-full px-4.25 font-semibold text-sm';
 
 /**
- * Never displayed — it exists only so the download has a raster to read. The quiet zone is
- * baked in, since a printed code has no page around it to breathe.
- *
- * Memoised on the URL because qrcode.react redraws the canvas from an effect with no
- * dependency array: without this, every re-render of the detail page — opening a dialog,
- * toggling any switch, each settled refetch — repaints 1024px of QR nobody is looking at.
+ * Never displayed; it exists so the download has a raster to read, with the quiet zone baked
+ * in for print. Memoised because qrcode.react redraws from an effect with no dependency
+ * array, so every re-render of the detail page would repaint 1024px of QR nobody sees.
  */
 const DownloadCanvas = memo(function DownloadCanvas({
   url,
@@ -46,20 +43,16 @@ const DownloadCanvas = memo(function DownloadCanvas({
 });
 
 /**
- * The PIN, its QR code and the share actions. Everything here is derived from `event.pin`,
- * so a regenerate that refetches the event redraws the number and the code together.
- *
- * The design also draws a Print action; printing is out of scope for now and a button that
- * does nothing is worse than one that isn't there.
+ * Everything is derived from `event.pin`, so a regenerate that refetches the event redraws
+ * the number and the code together. The design's Print action is not built.
  */
 export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'> }) {
   const [regenerating, setRegenerating] = useState(false);
   const downloadRef = useRef<HTMLCanvasElement>(null);
   const listenerUrl = `${window.location.origin}/events/${event.pin}`;
 
-  // The visible code is an SVG so it stays sharp at any size; the download comes off a
-  // second, hidden canvas at print resolution, because a PNG is what drops into a slide,
-  // a poster or a print shop's upload form without anyone converting anything.
+  // The visible code is an SVG; the download comes off the hidden canvas because a PNG is what
+  // drops into a slide or a print shop's upload form without anyone converting anything.
   const download = () => {
     const canvas = downloadRef.current;
     if (!canvas) return;
@@ -80,9 +73,8 @@ export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'>
         {formatPin(event.pin)}
       </p>
 
-      {/* The plate inverts in dark mode so the code stays dark-on-light in both: scanners
-          are unreliable on an inverted QR, and this is the one thing here that has to work
-          through a camera. `currentColor` then keeps the modules on the token. */}
+      {/* The plate inverts in dark mode so the code stays dark-on-light in both: scanners are
+          unreliable on an inverted QR. */}
       <div className="mx-auto flex size-42 items-center justify-center rounded-md bg-background p-3 text-foreground dark:bg-foreground dark:text-background">
         <QRCodeSVG
           role="img"
@@ -121,8 +113,7 @@ export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'>
       <Button
         variant="ghost"
         onClick={() => setRegenerating(true)}
-        // The card sits on `secondary`, which is what ghost's hover paints — so it needs a
-        // hover of its own or the control looks inert.
+        // The card already sits on `secondary`, which is what ghost's hover paints.
         className="mt-2 h-8 gap-1.5 rounded-full px-3 font-semibold text-sm hover:bg-foreground/10 dark:hover:bg-foreground/15"
       >
         <RefreshCw />
