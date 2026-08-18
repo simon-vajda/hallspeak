@@ -21,9 +21,9 @@ const SETTING_TRACK = 'data-checked:bg-foreground';
 const ROW = 'mt-3.5 flex items-center gap-3.5 border-t border-border pt-3.5';
 
 /**
- * The preferences are held and applied to nothing. Noise suppression and auto gain become
- * `MediaTrackConstraints` on the capture track, and the manual gain a `GainNode`, once that
- * track feeds a mediasoup producer.
+ * Noise suppression and auto gain are `MediaTrackConstraints` on the capture track; the
+ * manual gain is a `GainNode` on the graph feeding the producer. All three apply to the
+ * live capture rather than re-opening the device, so changing one mid-broadcast is silent.
  */
 export function MicPanel({
   status,

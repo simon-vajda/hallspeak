@@ -1,6 +1,6 @@
 import type { components } from '@linguacast/contract/openapi';
 import { Mic, MicOff } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { LiveBadge } from '@/components/live-badge';
@@ -15,7 +15,10 @@ import { Button } from '@/components/ui/button';
 import { levelStatus, rms } from '@/lib/audio/level';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { formatPin } from '@/lib/format';
+import { useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
+import type { SocketClient } from '@/socket/client';
+import { type BroadcastState, broadcastState, type EndReason, onReconnect } from './live-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -23,15 +26,15 @@ type PublicChannel = components['schemas']['PublicChannel'];
 const SIGNAL_POLL_MS = 200;
 
 /**
- * Going live is client-local state: the button emits nothing, because the presence claim
- * already happened at the handshake. Until mediasoup lands, no copy here may claim that
- * anybody is hearing audio.
+ * On air means a producer exists, never that the button was pressed: the badge must not
+ * claim anyone is hearing this microphone before the server has the audio.
  */
 export function SpeakerStudio({
   eventName,
   pin,
   channel,
   speakerCode,
+  socket,
   status,
   socketError,
 }: {
@@ -39,21 +42,96 @@ export function SpeakerStudio({
   pin: string;
   channel: PublicChannel;
   speakerCode: string;
-  /** Not read here: true from the handshake onwards, so it says nothing about this interpreter. */
-  live: boolean;
+  socket: SocketClient | null;
   status: SocketStatus;
   socketError: string | null;
 }) {
-  const [isLive, setIsLive] = useState(false);
+  const [goLivePressed, setGoLivePressed] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [displaced, setDisplaced] = useState(false);
+  const [lastEnd, setLastEnd] = useState<EndReason | null>(null);
+  const [recoveredSilently, setRecoveredSilently] = useState(false);
 
-  // Held and applied to nothing; see MicPanel for what each becomes once a producer exists.
   const [noiseSuppression, setNoiseSuppression] = useState(true);
   const [autoGain, setAutoGain] = useState(false);
   const [gain, setGain] = useState(68);
 
-  const mic = useMicCapture();
+  const preferences = useMemo(
+    () => ({ noiseSuppression, autoGain, gain }),
+    [noiseSuppression, autoGain, gain],
+  );
+  const mic = useMicCapture(preferences);
+  const media = useMedia(socket);
+
+  const hasProducer = media.state.producerId !== null;
+  const state = broadcastState({
+    goLivePressed,
+    hasProducer,
+    isMuted,
+    displaced,
+    recoveredSilently,
+  });
+
+  const outputTrack = mic.outputTrack;
+  const produce = useCallback(
+    async (paused: boolean) => {
+      if (!outputTrack) return;
+      await media.startProducing(channel.slug, outputTrack, paused);
+    },
+    [media, outputTrack, channel.slug],
+  );
+
+  /**
+   * The server ends a session by disconnecting it, and Socket.IO does not reconnect after
+   * one. Reaching this means the channel is no longer ours — another device took the
+   * speaker link, or the code behind it was regenerated.
+   */
+  useEffect(() => {
+    if (!socket) return;
+    const onDisconnect = (reason: string) => {
+      if (reason === 'io server disconnect') setDisplaced(true);
+    };
+    socket.on('disconnect', onDisconnect);
+    return () => {
+      socket.off('disconnect', onDisconnect);
+    };
+  }, [socket]);
+
+  // Marks the drop, so the reconnect below can tell it from a broadcast we ended on purpose.
+  const wasConnected = useRef(false);
+  useEffect(() => {
+    if (status === 'connected') {
+      wasConnected.current = true;
+      return;
+    }
+    if (status === 'connecting' && wasConnected.current && goLivePressed && lastEnd === null) {
+      setLastEnd('dropped');
+    }
+  }, [status, goLivePressed, lastEnd]);
+
+  /**
+   * The whole of R44: after an involuntary drop the client rebuilds and re-produces on its
+   * own, but paused, so the interpreter's one action is to unmute. After a deliberate end
+   * it does nothing — a broadcast somebody chose to stop must not restart itself because
+   * the Wi-Fi blinked.
+   */
+  useEffect(() => {
+    if (status !== 'connected' || hasProducer || !outputTrack) return;
+    if (onReconnect({ goLivePressed, lastEnd, displaced }).type !== 're-produce') return;
+
+    let cancelled = false;
+    void produce(true).then(() => {
+      if (cancelled) return;
+      setIsMuted(true);
+      // Only a recovery reads as back-from-drop; the first Go live is an ordinary start.
+      if (lastEnd === 'dropped') setRecoveredSilently(true);
+      setLastEnd(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [status, hasProducer, outputTrack, goLivePressed, lastEnd, displaced, produce]);
   // Never cleared: the button must not flicker back to disabled during a pause between words.
   const [heardSomething, setHeardSomething] = useState(false);
 
@@ -84,19 +162,32 @@ export function SpeakerStudio({
     };
   }, [suspended, resume]);
 
-  if (isLive) {
+  if (state === 'displaced') {
+    return <Displaced channelName={channel.name} eventName={eventName} />;
+  }
+
+  if (goLivePressed) {
     return (
       <OnAir
         channelName={channel.name}
         eventName={eventName}
         mic={mic}
         startedAt={startedAt}
-        isMuted={isMuted}
-        onToggleMute={() => setIsMuted((muted) => !muted)}
+        state={state}
+        onToggleMute={() => {
+          const next = !isMuted;
+          setIsMuted(next);
+          setRecoveredSilently(false);
+          void media.setProducerPaused(next);
+        }}
         onEnd={() => {
-          setIsLive(false);
+          // Recorded before the close, so the reconnect effect cannot read it as a drop.
+          setLastEnd('deliberate');
+          setGoLivePressed(false);
           setIsMuted(false);
+          setRecoveredSilently(false);
           setStartedAt(null);
+          void media.stopProducing();
         }}
         noiseSuppression={noiseSuppression}
         onNoiseSuppressionChange={setNoiseSuppression}
@@ -110,7 +201,7 @@ export function SpeakerStudio({
     );
   }
 
-  const canGoLive = mic.deviceId !== null && heardSomething;
+  const canGoLive = mic.deviceId !== null && heardSomething && mic.outputTrack !== null;
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -129,7 +220,6 @@ export function SpeakerStudio({
 
       <main className="flex flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header>
-          {/* Off air is a claim about audio, and stays true until mediasoup carries any. */}
           <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
             Interpreter · off air
           </span>
@@ -176,8 +266,10 @@ export function SpeakerStudio({
                 size="pill"
                 disabled={!canGoLive}
                 onClick={() => {
-                  setIsLive(true);
+                  setGoLivePressed(true);
+                  setLastEnd(null);
                   setStartedAt(Date.now());
+                  void produce(false);
                 }}
                 // Larger than the shared `pill` size: it is the only action on the screen.
                 className="h-15.5 w-full gap-2.5 text-[18px] tracking-[-0.02em] shadow-[0_16px_40px] shadow-primary/35"
@@ -206,16 +298,16 @@ export function SpeakerStudio({
 }
 
 /**
- * Nothing here talks to the server: going live and ending it move only local state. `On air`
- * is true of the channel from the handshake onwards, and no copy claims anyone is hearing
- * this microphone.
+ * Every claim on this screen hangs off `state`. Only `live` means audio is reaching
+ * anyone; `connecting` has no producer yet and `back-from-drop` is silent until the
+ * interpreter unmutes, which is the one thing that screen has to ask for.
  */
 function OnAir({
   channelName,
   eventName,
   mic,
   startedAt,
-  isMuted,
+  state,
   onToggleMute,
   onEnd,
   status,
@@ -227,7 +319,7 @@ function OnAir({
   mic: ReturnType<typeof useMicCapture>;
   /** `Date.now()` at the moment Go live was pressed. */
   startedAt: number | null;
-  isMuted: boolean;
+  state: BroadcastState;
   onToggleMute: () => void;
   onEnd: () => void;
   noiseSuppression: boolean;
@@ -240,7 +332,8 @@ function OnAir({
   socketError: string | null;
 }) {
   const [confirming, setConfirming] = useState(false);
-  const connected = status === 'connected';
+  const isMuted = state === 'muted' || state === 'back-from-drop';
+  const onAir = state === 'live';
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -254,8 +347,8 @@ function OnAir({
 
       <main className="flex flex-1 flex-col px-gutter pt-6 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header className="flex items-center justify-between gap-3 lg:justify-start">
-          {/* The channel is still claimed while the socket is away, but unconfirmable. */}
-          <LiveBadge live={connected} label={connected ? 'On air' : 'Reconnecting…'} />
+          {/* `On air` is a claim about audio, so only a live producer earns it. */}
+          <LiveBadge live={onAir} label={BADGE_LABEL[state]} />
           <span className="text-meta text-muted-foreground lg:hidden">{eventName}</span>
         </header>
 
@@ -266,19 +359,27 @@ function OnAir({
         <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-0 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start lg:gap-x-8.5 lg:gap-y-4">
           <OnAirStats startedAt={startedAt} className="lg:col-start-2 lg:row-start-1" />
 
-          <div className="flex flex-1 items-center justify-center py-4 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 py-4 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
             {/* The meter below is untouched, so the speaker still sees the mic work. */}
             <PlayTarget
               icon={isMuted ? <MicOff /> : <Mic />}
-              label={isMuted ? 'Muted' : 'Mute'}
+              label={TARGET_LABEL[state]}
               variant={isMuted ? 'danger' : 'live'}
-              rings={!isMuted}
+              rings={onAir}
               onClick={onToggleMute}
             />
+            {state === 'back-from-drop' && (
+              <p className="max-w-64 text-center text-meta font-normal text-muted-foreground">
+                Your connection dropped and came back. You are muted — unmute to carry on.
+              </p>
+            )}
           </div>
 
-          {/* No note: pre-flight already said nobody hears you. */}
-          <InputLevelPanel analyser={mic.analyser} className="lg:col-start-2 lg:row-start-2" />
+          <InputLevelPanel
+            analyser={mic.analyser}
+            note={onAir ? undefined : 'Nobody is hearing this yet.'}
+            className="lg:col-start-2 lg:row-start-2"
+          />
 
           <AudioSettings mic={mic} {...preferences} className="lg:col-start-2 lg:row-start-3" />
 
@@ -305,6 +406,54 @@ function OnAir({
           onEnd();
         }}
       />
+    </div>
+  );
+}
+
+const BADGE_LABEL: Record<BroadcastState, string> = {
+  'pre-flight': 'Off air',
+  connecting: 'Connecting…',
+  live: 'On air',
+  muted: 'Muted',
+  'back-from-drop': 'Back — but muted',
+  displaced: 'Off air',
+};
+
+const TARGET_LABEL: Record<BroadcastState, string> = {
+  'pre-flight': 'Mute',
+  connecting: 'Connecting',
+  live: 'Mute',
+  muted: 'Muted',
+  'back-from-drop': 'Unmute',
+  displaced: 'Mute',
+};
+
+/**
+ * A takeover is a dead end by design, not a failure to retry: reclaiming automatically is
+ * exactly the alternation loop that visible displacement exists to prevent. So this offers
+ * the way back rather than taking it — reload once the other device has stopped.
+ */
+function Displaced({ channelName, eventName }: { channelName: string; eventName: string }) {
+  return (
+    <div className="relative flex min-h-dvh flex-col">
+      <div className="absolute top-3.5 right-gutter z-10 lg:top-4 lg:right-10">
+        <TempThemeToggle />
+      </div>
+
+      <AppHeader
+        right={<span className="mr-11 text-meta text-muted-foreground">{eventName}</span>}
+      />
+
+      <main className="flex flex-1 flex-col items-center justify-center px-gutter pb-16 text-center lg:px-10">
+        <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
+          Interpreter · off air
+        </span>
+        <h1 className="mt-4 mb-2 text-screen lg:text-screen-lg">{channelName} was taken over</h1>
+        <p className="max-w-100 text-sm text-muted-foreground">
+          Another device opened this speaker link, so this session stopped. It will not take the
+          channel back on its own — reload this page once the other device has finished.
+        </p>
+      </main>
     </div>
   );
 }

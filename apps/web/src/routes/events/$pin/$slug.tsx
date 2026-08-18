@@ -101,7 +101,7 @@ function ChannelPage() {
         pin={data.event.pin}
         channel={data.channel}
         speakerCode={speakerCode}
-        live={isLive}
+        socket={socket}
         status={status}
         socketError={message}
       />
