@@ -1,10 +1,24 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type AudioPreferences,
+  gainNodeValue,
+  trackConstraints,
+} from '@/components/speaker/live-state';
 import { type MicDevice, resolveSelection, shapeDevices } from './devices';
 
+const DEFAULT_PREFERENCES: AudioPreferences = {
+  noiseSuppression: true,
+  autoGain: false,
+  gain: 50,
+};
+
 /**
- * The microphone is real; the transport is not. When mediasoup lands, the producer takes the
- * `MediaStreamTrack` this hook already owns. Web-only: React Native reaches these APIs
- * through entirely different modules.
+ * Owns the capture graph and the one track a producer broadcasts. Web-only: React Native
+ * reaches these APIs through entirely different modules.
+ *
+ * The graph is source → gain → analyser and source → gain → destination, so the meter
+ * shows what is actually sent and the manual gain reaches the audio rather than only the
+ * display. `outputTrack` comes off that destination, never off the raw stream.
  */
 
 export type MicStatus = 'idle' | 'requesting' | 'ready' | 'denied' | 'unsupported';
@@ -13,6 +27,9 @@ type Capture = {
   stream: MediaStream;
   context: AudioContext;
   analyser: AnalyserNode;
+  gain: GainNode;
+  /** What the producer broadcasts: the processed graph, not the raw microphone. */
+  output: MediaStreamAudioDestinationNode;
 };
 
 const UNSUPPORTED_MESSAGE =
@@ -28,9 +45,13 @@ function release(capture: Capture) {
   void capture.context.close();
 }
 
-async function openCapture(deviceId: string | null): Promise<Capture> {
+async function openCapture(
+  deviceId: string | null,
+  constraints: MediaTrackConstraints,
+): Promise<Capture> {
   const stream = await navigator.mediaDevices.getUserMedia({
-    audio: deviceId === null ? true : { deviceId: { exact: deviceId } },
+    audio:
+      deviceId === null ? { ...constraints } : { ...constraints, deviceId: { exact: deviceId } },
   });
 
   const context = new AudioContext();
@@ -39,10 +60,15 @@ async function openCapture(deviceId: string | null): Promise<Capture> {
   await context.resume().catch(() => {});
 
   const analyser = context.createAnalyser();
-  context.createMediaStreamSource(stream).connect(analyser);
-  // Not connected to context.destination: that would play the mic back into the room.
+  const gain = context.createGain();
+  const output = context.createMediaStreamDestination();
 
-  return { stream, context, analyser };
+  context.createMediaStreamSource(stream).connect(gain);
+  gain.connect(analyser);
+  gain.connect(output);
+  // Never connected to context.destination: that would play the mic back into the room.
+
+  return { stream, context, analyser, gain, output };
 }
 
 function failureMessage(error: unknown): string {
@@ -59,7 +85,7 @@ function failureMessage(error: unknown): string {
  * Labels come back empty until permission has been granted at least once, so the order is
  * fixed: open a stream first, then enumerate. Hence the request on mount, not behind a button.
  */
-export function useMicCapture() {
+export function useMicCapture(preferences: AudioPreferences = DEFAULT_PREFERENCES) {
   const [status, setStatus] = useState<MicStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   // Never merged into `error`: a notice sits under the still-working picker, an error replaces it.
@@ -73,6 +99,11 @@ export function useMicCapture() {
   const [suspended, setSuspended] = useState(false);
   // Re-opening the same device leaves `requested` unchanged; bumping this re-runs the effect.
   const [attempt, setAttempt] = useState(0);
+
+  // Read inside the open, never depended on: a preference change re-applies to the live
+  // graph below rather than re-opening the device and interrupting a live broadcast.
+  const preferencesRef = useRef(preferences);
+  preferencesRef.current = preferences;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: nothing reads `attempt` on purpose — re-running this effect is the whole of what bumping it does
   useEffect(() => {
@@ -89,7 +120,8 @@ export function useMicCapture() {
 
     void (async () => {
       try {
-        const opened = await openCapture(requested);
+        const opened = await openCapture(requested, trackConstraints(preferencesRef.current));
+        opened.gain.gain.value = gainNodeValue(preferencesRef.current.gain);
         // Cleaned up while getUserMedia was resolving: the capture exists but nothing holds it.
         if (cancelled) {
           release(opened);
@@ -180,6 +212,17 @@ export function useMicCapture() {
     };
   }, [deviceId]);
 
+  // Applied to the live graph rather than by re-opening: `applyConstraints` re-negotiates
+  // the browser's processing in place, and the gain is one node's value.
+  useEffect(() => {
+    if (!capture) return;
+    capture.gain.gain.value = gainNodeValue(preferences.gain);
+    void capture.stream
+      .getAudioTracks()[0]
+      ?.applyConstraints(trackConstraints(preferences))
+      .catch(() => {});
+  }, [capture, preferences]);
+
   const selectDevice = useCallback((next: string) => {
     setNotice(null);
     // Set optimistically, so the picker does not snap back to the old device during the re-open.
@@ -210,5 +253,7 @@ export function useMicCapture() {
     resume,
     analyser: capture?.analyser ?? null,
     stream: capture?.stream ?? null,
+    /** The processed track a producer broadcasts, which is not the raw microphone track. */
+    outputTrack: capture?.output.stream.getAudioTracks()[0] ?? null,
   };
 }
