@@ -4,13 +4,12 @@ import {
   beginRebuild,
   consumerClosed,
   consumerOpened,
+  consumerPlan,
   initialMediaState,
   isCurrent,
   type MediaState,
   needsRebuild,
-  onProducerChange,
   producerOpened,
-  switchChannel,
   transportId,
   transportOpened,
 } from './media-state';
@@ -99,71 +98,75 @@ describe('beginRebuild', () => {
   });
 });
 
-describe('switchChannel', () => {
-  it('closes the current consumer then opens one for the new channel', () => {
-    expect(switchChannel(live, 'english', 'spanish')).toEqual({
-      type: 'close-consumer-then-consume',
-      consumerId: 'c1',
-      slug: 'spanish',
-    });
-  });
+describe('consumerPlan', () => {
+  const listening = { english: 'c1' };
 
-  it('never asks for a transport rebuild', () => {
-    const action = switchChannel(live, 'english', 'spanish');
-
-    expect(JSON.stringify(action)).not.toContain('transport');
-  });
-
-  it('just consumes when nothing is open yet', () => {
-    expect(switchChannel(initialMediaState, null, 'english')).toEqual({
-      type: 'consume',
-      slug: 'english',
-    });
-  });
-
-  it('does nothing when the channel is already the one playing', () => {
-    expect(switchChannel(live, 'english', 'english')).toEqual({ type: 'none' });
-  });
-
-  it('consumes when the same channel is asked for but nothing is open', () => {
-    expect(switchChannel(initialMediaState, 'english', 'english')).toEqual({
-      type: 'consume',
-      slug: 'english',
-    });
-  });
-});
-
-describe('onProducerChange', () => {
-  it('does nothing at all while the guest has not armed', () => {
-    expect(onProducerChange(initialMediaState, { armedSlug: null, online: true })).toEqual({
-      type: 'none',
+  it('opens nothing at all while the guest has not armed', () => {
+    expect(consumerPlan({ consumers: {}, armedSlug: null, online: true })).toEqual({
+      close: [],
+      consume: null,
     });
   });
 
   it('consumes when a producer appears on the armed channel', () => {
-    expect(onProducerChange(initialMediaState, { armedSlug: 'english', online: true })).toEqual({
-      type: 'consume',
-      slug: 'english',
+    expect(consumerPlan({ consumers: {}, armedSlug: 'english', online: true })).toEqual({
+      close: [],
+      consume: 'english',
     });
   });
 
   it('does not consume twice when one is already open', () => {
-    expect(onProducerChange(live, { armedSlug: 'english', online: true })).toEqual({
-      type: 'none',
+    expect(consumerPlan({ consumers: listening, armedSlug: 'english', online: true })).toEqual({
+      close: [],
+      consume: null,
     });
   });
 
-  it('closes the consumer when the interpreter goes away, and stays armed', () => {
-    expect(onProducerChange(live, { armedSlug: 'english', online: false })).toEqual({
-      type: 'close-consumer',
-      consumerId: 'c1',
+  it('closes the consumer when the interpreter goes away, and asks for nothing', () => {
+    expect(consumerPlan({ consumers: listening, armedSlug: 'english', online: false })).toEqual({
+      close: ['english'],
+      consume: null,
     });
   });
 
   it('does nothing when the interpreter goes away and nothing was open', () => {
-    expect(onProducerChange(initialMediaState, { armedSlug: 'english', online: false })).toEqual({
-      type: 'none',
+    expect(consumerPlan({ consumers: {}, armedSlug: 'english', online: false })).toEqual({
+      close: [],
+      consume: null,
     });
+  });
+
+  /** The leak R27 exists to prevent: the old channel's audio keeps arriving otherwise. */
+  it('closes the previous channel and opens the new one on a switch', () => {
+    expect(consumerPlan({ consumers: listening, armedSlug: 'spanish', online: true })).toEqual({
+      close: ['english'],
+      consume: 'spanish',
+    });
+  });
+
+  it('never asks for a transport rebuild on a switch', () => {
+    const plan = consumerPlan({ consumers: listening, armedSlug: 'spanish', online: true });
+
+    expect(JSON.stringify(plan)).not.toContain('transport');
+  });
+
+  it('closes a switched-away channel even when the new one is offline', () => {
+    expect(consumerPlan({ consumers: listening, armedSlug: 'spanish', online: false })).toEqual({
+      close: ['english'],
+      consume: null,
+    });
+  });
+
+  it('closes everything left over when the guest un-arms', () => {
+    expect(
+      consumerPlan({ consumers: { english: 'c1', spanish: 'c2' }, armedSlug: null, online: true }),
+    ).toEqual({ close: ['english', 'spanish'], consume: null });
+  });
+
+  it('never lists the armed channel twice when it is also the one to close', () => {
+    const plan = consumerPlan({ consumers: listening, armedSlug: 'english', online: false });
+
+    expect(plan.close).toEqual(['english']);
   });
 });
 

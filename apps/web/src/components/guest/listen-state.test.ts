@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  badgeLabel,
   type ListenInput,
   listenState,
-  onChannelOffline,
-  onChannelSwitch,
   playTargetLabel,
   showsRings,
   statusNote,
@@ -106,16 +105,35 @@ describe('the three rendered states', () => {
   });
 });
 
-describe('armed survives what playing does not', () => {
-  it('keeps armed when the channel goes offline and clears playing', () => {
-    expect(onChannelOffline(true)).toEqual({ armed: true, isPlaying: false });
+describe('badgeLabel', () => {
+  it('reads as terminal for a handshake rejection, which socket.io does not retry', () => {
+    expect(badgeLabel('reconnecting', true)).toBe('Disconnected');
+    expect(badgeLabel('playing', true)).toBe('Disconnected');
   });
 
-  it('leaves an unarmed guest unarmed', () => {
-    expect(onChannelOffline(false)).toEqual({ armed: false, isPlaying: false });
+  it('says the interpreter is on air once armed and waiting for the first samples', () => {
+    expect(badgeLabel('waiting', false)).toBe('Interpreter on air');
+    expect(badgeLabel('playing', false)).toBe('Listening');
   });
 
-  it('keeps armed across a channel switch and clears playing until the new consumer resumes', () => {
-    expect(onChannelSwitch(true)).toEqual({ armed: true, isPlaying: false });
+  it('reads the same before arming and after the interpreter drops', () => {
+    expect(badgeLabel('idle', false)).toBe(badgeLabel('interpreter-away', false));
+  });
+
+  it('keeps media trouble apart from losing the socket', () => {
+    expect(badgeLabel('media-trouble', false)).not.toBe(badgeLabel('reconnecting', false));
+  });
+
+  it('derives from the one state, so it cannot drift from the rest of the screen', () => {
+    for (const state of [
+      'idle',
+      'waiting',
+      'playing',
+      'interpreter-away',
+      'reconnecting',
+      'media-trouble',
+    ] as const) {
+      expect(badgeLabel(state, false)).toBeTruthy();
+    }
   });
 });

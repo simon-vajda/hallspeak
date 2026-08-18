@@ -54,6 +54,28 @@ export function playTargetLabel(state: ListenState): string {
   }
 }
 
+/**
+ * The badge above the channel name. Takes the socket status as well, because a handshake
+ * rejection is terminal — socket.io does not retry it — and that is the one distinction
+ * `listenState` folds away, having no consequence for what the media layer should do.
+ */
+export function badgeLabel(state: ListenState, terminal: boolean): string {
+  if (terminal) return 'Disconnected';
+  switch (state) {
+    case 'reconnecting':
+      return 'Reconnecting…';
+    case 'idle':
+    case 'interpreter-away':
+      return 'Waiting for the interpreter';
+    case 'media-trouble':
+      return 'Reconnecting the audio';
+    case 'waiting':
+      return 'Interpreter on air';
+    case 'playing':
+      return 'Listening';
+  }
+}
+
 /** Rings mean samples are moving, so only one state earns them. */
 export function showsRings(state: ListenState): boolean {
   return state === 'playing';
@@ -79,14 +101,4 @@ export function statusNote(state: ListenState): string | null {
     case 'playing':
       return 'Headphones recommended, so the room stays quiet for everyone else.';
   }
-}
-
-/** Armed survives; playing does not. Losing one must never quietly clear the other. */
-export function onChannelOffline(armed: boolean): { armed: boolean; isPlaying: boolean } {
-  return { armed, isPlaying: false };
-}
-
-/** A switch keeps the guest armed and clears playing until the new consumer resumes. */
-export function onChannelSwitch(armed: boolean): { armed: boolean; isPlaying: boolean } {
-  return { armed, isPlaying: false };
 }
