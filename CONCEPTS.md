@@ -61,3 +61,13 @@ A failure that produces no Problem is a bug in whatever produced it, not a case 
 
 ### Signalling
 The out-of-band exchange that negotiates a media connection before audio flows — capabilities, transport parameters, producers and consumers. It names a *role* played over the socket, not the socket itself: the transport is a socket, and signalling is one of the things carried on it alongside presence and room membership.
+
+### Room
+The media state for one Event: a single mediasoup router holding every producer on that Event's Channels, plus the transports and consumers of everyone connected to it. Distinct from a *socket room*, which is Socket.IO's fan-out group and exists whether or not any audio does.
+
+A Room comes into being on the first go-live within its Event and on nothing else — not when the Event is enabled, and not when a Listener arms — and is destroyed once it has held no producers and no transports for a grace period. Its whole existence is in memory, so a restart simply removes it.
+
+### Eviction
+Ending a session from the server's side, rather than waiting for the client to notice. It is what makes an admin's write true of what is audible and not only of what the API reports: disabling, deleting, or regenerating a code evicts whoever that write took access from.
+
+Eviction is scoped either to one peer, named by its connection, or to a whole Event. The second exists because a Listener who never armed owns no media and so cannot be named individually — and that Listener is exactly who a regenerated PIN has to remove.
