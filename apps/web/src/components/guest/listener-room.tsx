@@ -1,7 +1,7 @@
 import type { components } from '@linguacast/contract/openapi';
 import { Link } from '@tanstack/react-router';
-import { ChevronLeft, Pause, Play } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ChevronLeft, Loader2, Pause, Play } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { ChannelStrip } from '@/components/guest/channel-strip';
@@ -9,8 +9,11 @@ import { LiveBadge } from '@/components/live-badge';
 import { PlayTarget } from '@/components/play-target';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { formatPin } from '@/lib/format';
+import { useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import { cn } from '@/lib/utils';
+import type { SocketClient } from '@/socket/client';
+import { listenState, playTargetLabel, showsRings, statusNote } from './listen-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -19,9 +22,9 @@ const TITLE =
   'text-[40px] leading-[1.05] font-semibold tracking-[-0.04em] lg:text-[46px] lg:leading-[1.02] lg:tracking-[-0.045em]';
 
 /**
- * `isPlaying` is client-local state and nothing else: the gesture that will start an
- * `AudioContext` and a mediasoup consumer has nowhere to go yet. Once it does, `isPlaying`
- * means "samples are arriving", which is what `PlayTarget`'s rings claim.
+ * Armed is the guest's one gesture; everything after it is automatic. `isPlaying` means a
+ * resumed consumer exists — samples are arriving — which is what `PlayTarget`'s rings
+ * claim, so it is derived rather than toggled on the tap.
  */
 export function ListenerRoom({
   eventName,
@@ -29,6 +32,7 @@ export function ListenerRoom({
   channel,
   channels,
   live,
+  socket,
   status,
   socketError,
 }: {
@@ -38,20 +42,60 @@ export function ListenerRoom({
   /** Every channel of the event. Empty until its query lands. */
   channels: PublicChannel[];
   live: boolean;
+  socket: SocketClient | null;
   status: SocketStatus;
   socketError: string | null;
 }) {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [armed, setArmed] = useState(false);
+  const media = useMedia(socket);
+  const audio = useRef<HTMLAudioElement | null>(null);
 
-  // The interpreter dropping off ends playback: the selector already shows this as waiting.
+  const connected = status === 'connected';
+  const isPlaying = media.state.consumers[channel.slug] !== undefined;
+  const state = listenState({
+    armed,
+    isPlaying,
+    live,
+    socketConnected: connected,
+    mediaTrouble: media.health === 'trouble',
+  });
+
+  /**
+   * Arming creates nothing on either side; a producer's arrival is what starts the audio,
+   * whether that is now or an hour from now. The gate is the guest's own gesture and
+   * never a signal that only arrives once audio is already flowing — gating it on one is
+   * the deadlock recorded in docs/solutions/ui-bugs.
+   */
+  const { startConsuming, stopConsuming } = media;
   useEffect(() => {
-    if (!live) setIsPlaying(false);
-  }, [live]);
+    if (!armed || !connected || !live || isPlaying) return;
+
+    let cancelled = false;
+    void startConsuming(channel.slug)
+      .then((track) => {
+        if (cancelled) return;
+        const element = audio.current;
+        if (!element) return;
+        element.srcObject = new MediaStream([track]);
+        // Started under the arming gesture's context, so this resolves rather than
+        // rejecting on autoplay policy.
+        void element.play().catch(() => {});
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [armed, connected, live, isPlaying, channel.slug, startConsuming]);
+
+  // The interpreter dropping closes the consumer. Armed is untouched: it is the guest's
+  // gesture, and re-asking for it is exactly what R26 exists to prevent.
+  useEffect(() => {
+    if (live || !isPlaying) return;
+    void stopConsuming(channel.slug);
+  }, [live, isPlaying, channel.slug, stopConsuming]);
 
   const meta = `${eventName} · PIN ${formatPin(pin)}`;
-  // While the socket is away, liveness is last known rather than current, so the badge stops
-  // claiming it.
-  const connected = status === 'connected';
   const onAir = live && connected;
 
   return (
@@ -81,13 +125,13 @@ export function ListenerRoom({
         <LiveBadge
           live={onAir}
           label={
-            !live
-              ? 'Waiting for the interpreter'
-              : // A handshake rejection is terminal: socket.io does not retry it.
-                status === 'error'
-                ? 'Disconnected'
-                : !connected
-                  ? 'Reconnecting…'
+            // A handshake rejection is terminal: socket.io does not retry it.
+            status === 'error'
+              ? 'Disconnected'
+              : !connected
+                ? 'Reconnecting…'
+                : !live
+                  ? 'Waiting for the interpreter'
                   : isPlaying
                     ? 'Listening'
                     : 'Interpreter on air'
@@ -96,26 +140,37 @@ export function ListenerRoom({
 
         <h1 className={cn('mt-4 mb-10 lg:mt-4.5 lg:mb-10', TITLE)}>{channel.name}</h1>
 
+        {/* Never disabled on `live`: arming before anyone is on air is the whole point. */}
         <PlayTarget
-          icon={isPlaying ? <Pause className="fill-current" /> : <Play className="fill-current" />}
-          label={isPlaying ? 'Pause' : 'Tap to listen'}
-          rings={isPlaying}
-          disabled={!live}
-          onClick={() => setIsPlaying((playing) => !playing)}
+          icon={<PlayIcon state={state} />}
+          label={playTargetLabel(state)}
+          rings={showsRings(state)}
+          // Subdued while armed and waiting, so it does not read as an untapped control.
+          className={cn(state === 'waiting' && 'opacity-70')}
+          onClick={() => {
+            if (!armed) {
+              setArmed(true);
+              return;
+            }
+            setArmed(false);
+            void stopConsuming(channel.slug);
+            audio.current?.pause();
+          }}
         />
 
-        {isPlaying || socketError ? (
+        {socketError ? (
           <ConnectionLine status={status} error={socketError} className="mt-9.5 lg:mt-9" />
         ) : (
           <p className="mt-9.5 max-w-80 text-sm leading-normal text-muted-foreground lg:mt-9">
-            {live
-              ? 'Headphones recommended, so the room stays quiet for everyone else.'
-              : 'This channel starts on its own as soon as its interpreter connects.'}
+            {statusNote(state)}
           </p>
         )}
+
+        {/* The element the consumer's track plays through; it renders nothing itself. */}
+        {/* biome-ignore lint/a11y/useMediaCaption: interpreted speech has no track to caption. */}
+        <audio ref={audio} autoPlay className="hidden" />
       </main>
 
-      {/* The design's output-device card is not built: it needs a playing element. */}
       <div className="mt-auto px-gutter pb-8.5 text-center lg:pb-16.5">
         <Link
           to="/events/$pin"
@@ -127,4 +182,11 @@ export function ListenerRoom({
       </div>
     </div>
   );
+}
+
+/** Waiting gets its own mark, so armed-and-waiting cannot be mistaken for untapped. */
+function PlayIcon({ state }: { state: ReturnType<typeof listenState> }) {
+  if (state === 'playing') return <Pause className="fill-current" />;
+  if (state === 'idle') return <Play className="fill-current" />;
+  return <Loader2 className="animate-spin motion-reduce:animate-none" />;
 }

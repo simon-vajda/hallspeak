@@ -120,6 +120,7 @@ function ChannelPage() {
         })) ?? []
       }
       live={isLive}
+      socket={socket}
       status={status}
       socketError={message}
     />
