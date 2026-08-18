@@ -9,6 +9,7 @@ import { LiveBadge } from '@/components/live-badge';
 import { PlayTarget } from '@/components/play-target';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { formatPin } from '@/lib/format';
+import { connectionState } from '@/lib/media/stats';
 import { useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import { cn } from '@/lib/utils';
@@ -95,6 +96,13 @@ export function ListenerRoom({
     void stopConsuming(channel.slug);
   }, [live, isPlaying, channel.slug, stopConsuming]);
 
+  const connection = connectionState({
+    socketConnected: connected,
+    mediaTrouble: media.health === 'trouble',
+    live,
+    stats: media.stats,
+  });
+
   const meta = `${eventName} · PIN ${formatPin(pin)}`;
   const onAir = live && connected;
 
@@ -158,8 +166,13 @@ export function ListenerRoom({
           }}
         />
 
-        {socketError ? (
-          <ConnectionLine status={status} error={socketError} className="mt-9.5 lg:mt-9" />
+        {armed || socketError ? (
+          <ConnectionLine
+            status={status}
+            error={socketError}
+            connection={connection}
+            className="mt-9.5 lg:mt-9"
+          />
         ) : (
           <p className="mt-9.5 max-w-80 text-sm leading-normal text-muted-foreground lg:mt-9">
             {statusNote(state)}

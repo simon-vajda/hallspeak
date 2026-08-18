@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { levelStatus, rms } from '@/lib/audio/level';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { formatPin } from '@/lib/format';
+import { type ConnectionState, connectionState } from '@/lib/media/stats';
 import { useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import type { SocketClient } from '@/socket/client';
@@ -174,6 +175,12 @@ export function SpeakerStudio({
         mic={mic}
         startedAt={startedAt}
         state={state}
+        connection={connectionState({
+          socketConnected: status === 'connected',
+          mediaTrouble: media.health === 'trouble',
+          live: hasProducer,
+          stats: media.stats,
+        })}
         onToggleMute={() => {
           const next = !isMuted;
           setIsMuted(next);
@@ -308,6 +315,7 @@ function OnAir({
   mic,
   startedAt,
   state,
+  connection,
   onToggleMute,
   onEnd,
   status,
@@ -320,6 +328,7 @@ function OnAir({
   /** `Date.now()` at the moment Go live was pressed. */
   startedAt: number | null;
   state: BroadcastState;
+  connection: ConnectionState;
   onToggleMute: () => void;
   onEnd: () => void;
   noiseSuppression: boolean;
@@ -384,9 +393,12 @@ function OnAir({
           <AudioSettings mic={mic} {...preferences} className="lg:col-start-2 lg:row-start-3" />
 
           <div className="lg:col-start-1 lg:row-start-4">
-            {(socketError || status !== 'connected') && (
-              <ConnectionLine status={status} error={socketError} className="mb-2 text-center" />
-            )}
+            <ConnectionLine
+              status={status}
+              error={socketError}
+              connection={connection}
+              className="mb-2"
+            />
             <Button
               variant="ghost"
               onClick={() => setConfirming(true)}
