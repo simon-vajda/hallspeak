@@ -18,6 +18,7 @@ import {
   transportOpened,
 } from './media-state';
 import { signalling } from './signalling';
+import { type MediaStats, summarise } from './stats';
 import { openTransport } from './transport';
 
 /** Media trouble is its own state: neither the socket being down nor nobody being live. */
@@ -43,6 +44,7 @@ interface Session {
 export function useMedia(socket: SocketClient | null) {
   const [state, setState] = useState<MediaState>(initialMediaState);
   const [health, setHealth] = useState<MediaHealth>('idle');
+  const [stats, setStats] = useState<MediaStats | null>(null);
   const session = useRef<Session | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -76,8 +78,44 @@ export function useMedia(socket: SocketClient | null) {
       releaseSession();
       setState(initialMediaState);
       setHealth('idle');
+      setStats(null);
     };
   }, [socket, releaseSession]);
+
+  /**
+   * Polled rather than pushed: WebRTC has no event for "the line got worse", and the
+   * figures are cumulative anyway, so a sample on an interval is the shape they come in.
+   */
+  useEffect(() => {
+    const anyTransport = state.recvTransportId ?? state.sendTransportId;
+    if (!anyTransport) {
+      setStats(null);
+      return;
+    }
+
+    const sample = async () => {
+      const active = session.current;
+      const transport = active?.transports.recv ?? active?.transports.send;
+      if (!transport || transport.closed) return;
+
+      const report = await transport.getStats().catch(() => null);
+      if (!report) return;
+
+      for (const entry of report.values()) {
+        // Inbound for a listener, remote-inbound for a speaker: only one exists per peer,
+        // and both carry the two figures the grade is made of.
+        if (entry.type === 'inbound-rtp' || entry.type === 'remote-inbound-rtp') {
+          const summary = summarise(entry as Record<string, number>);
+          if (summary) setStats(summary);
+          return;
+        }
+      }
+    };
+
+    void sample();
+    const timer = setInterval(() => void sample(), STATS_POLL_MS);
+    return () => clearInterval(timer);
+  }, [state.recvTransportId, state.sendTransportId]);
 
   const ensureSession = useCallback(async (): Promise<Session> => {
     if (session.current) return session.current;
@@ -212,6 +250,7 @@ export function useMedia(socket: SocketClient | null) {
   return {
     state,
     health,
+    stats,
     startProducing,
     stopProducing,
     setProducerPaused,
@@ -220,6 +259,9 @@ export function useMedia(socket: SocketClient | null) {
     release: releaseSession,
   };
 }
+
+/** Often enough that a line going bad shows up within a sentence, cheap enough to ignore. */
+const STATS_POLL_MS = 2_000;
 
 /**
  * The browser's default 20ms packetization and default receive jitter buffer are both
