@@ -21,6 +21,7 @@
     "clsx": "2.1.1",
     "input-otp": "1.4.2",
     "lucide-react": "1.30.0",
+    "mediasoup-client": "3.22.0",
     "openapi-fetch": "0.17.0",
     "openapi-react-query": "0.5.4",
     "qrcode.react": "4.2.0",
