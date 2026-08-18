@@ -9,12 +9,13 @@ import { LiveBadge } from '@/components/live-badge';
 import { PlayTarget } from '@/components/play-target';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { formatPin } from '@/lib/format';
+import { consumerPlan } from '@/lib/media/media-state';
 import { connectionState } from '@/lib/media/stats';
 import { useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import { cn } from '@/lib/utils';
 import type { SocketClient } from '@/socket/client';
-import { listenState, playTargetLabel, showsRings, statusNote } from './listen-state';
+import { badgeLabel, listenState, playTargetLabel, showsRings, statusNote } from './listen-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -66,13 +67,23 @@ export function ListenerRoom({
    * whether that is now or an hour from now. The gate is the guest's own gesture and
    * never a signal that only arrives once audio is already flowing — gating it on one is
    * the deadlock recorded in docs/solutions/ui-bugs.
+   *
+   * What to open and what to close is `consumerPlan`'s decision, not this effect's: a
+   * switch, an interpreter dropping and arming early overlap, and deciding them
+   * separately here is how the previous channel's consumer gets left open.
    */
   const { startConsuming, stopConsuming } = media;
+  const consumers = media.state.consumers;
+  const armedSlug = armed ? channel.slug : null;
+  const online = live && connected;
+
   useEffect(() => {
-    if (!armed || !connected || !live || isPlaying) return;
+    const plan = consumerPlan({ consumers, armedSlug, online });
+    for (const slug of plan.close) void stopConsuming(slug);
+    if (!plan.consume) return;
 
     let cancelled = false;
-    void startConsuming(channel.slug)
+    void startConsuming(plan.consume)
       .then((track) => {
         if (cancelled) return;
         const element = audio.current;
@@ -87,14 +98,7 @@ export function ListenerRoom({
     return () => {
       cancelled = true;
     };
-  }, [armed, connected, live, isPlaying, channel.slug, startConsuming]);
-
-  // The interpreter dropping closes the consumer. Armed is untouched: it is the guest's
-  // gesture, and re-asking for it is exactly what R26 exists to prevent.
-  useEffect(() => {
-    if (live || !isPlaying) return;
-    void stopConsuming(channel.slug);
-  }, [live, isPlaying, channel.slug, stopConsuming]);
+  }, [consumers, armedSlug, online, startConsuming, stopConsuming]);
 
   const connection = connectionState({
     socketConnected: connected,
@@ -130,21 +134,7 @@ export function ListenerRoom({
       </div>
 
       <main className="flex flex-1 flex-col items-center justify-center px-8 text-center lg:px-10 lg:py-13">
-        <LiveBadge
-          live={onAir}
-          label={
-            // A handshake rejection is terminal: socket.io does not retry it.
-            status === 'error'
-              ? 'Disconnected'
-              : !connected
-                ? 'Reconnecting…'
-                : !live
-                  ? 'Waiting for the interpreter'
-                  : isPlaying
-                    ? 'Listening'
-                    : 'Interpreter on air'
-          }
-        />
+        <LiveBadge live={onAir} label={badgeLabel(state, status === 'error')} />
 
         <h1 className={cn('mt-4 mb-10 lg:mt-4.5 lg:mb-10', TITLE)}>{channel.name}</h1>
 
@@ -155,13 +145,10 @@ export function ListenerRoom({
           rings={showsRings(state)}
           // Subdued while armed and waiting, so it does not read as an untapped control.
           className={cn(state === 'waiting' && 'opacity-70')}
+          // Un-arming is enough to close the consumer: the plan above sees no armed
+          // channel and closes whatever is open.
           onClick={() => {
-            if (!armed) {
-              setArmed(true);
-              return;
-            }
-            setArmed(false);
-            void stopConsuming(channel.slug);
+            setArmed((wasArmed) => !wasArmed);
             audio.current?.pause();
           }}
         />

@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi } from 'vitest';
 import { Peer } from './peer';
 
@@ -6,7 +7,17 @@ function fakeTransport(id = 't1') {
 }
 
 function fakeConsumer(id = 'c1') {
-  return { id, closed: false, close: vi.fn() };
+  const observer = new EventEmitter();
+  const consumer = {
+    id,
+    closed: false,
+    observer,
+    close: vi.fn(() => {
+      consumer.closed = true;
+      observer.emit('close');
+    }),
+  };
+  return consumer;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: the fakes stand in for mediasoup's types.
@@ -86,6 +97,34 @@ describe('Peer consumers', () => {
   it('closing an unknown consumer is a no-op rather than a throw', () => {
     const peer = new Peer('socket-1');
     expect(() => peer.closeConsumer('nope')).not.toThrow();
+  });
+
+  /**
+   * mediasoup closes a consumer on its own when its producer closes, which is what
+   * happens to every listener the moment a speaker ends a broadcast.
+   */
+  it('forgets a consumer that closes on its own, without being told', () => {
+    const peer = new Peer('socket-1');
+    const consumer = fakeConsumer('c1');
+    peer.addConsumer(asTransport(consumer));
+
+    consumer.close();
+
+    expect(peer.consumerById('c1')).toBeUndefined();
+    expect(peer.isEmpty).toBe(true);
+  });
+
+  it('does not let a stale close evict the consumer that replaced it', () => {
+    const peer = new Peer('socket-1');
+    const first = fakeConsumer('c1');
+    peer.addConsumer(asTransport(first));
+    peer.closeConsumer('c1');
+
+    const second = fakeConsumer('c1');
+    peer.addConsumer(asTransport(second));
+    first.observer.emit('close');
+
+    expect(peer.consumerById('c1')).toBeDefined();
   });
 });
 

@@ -54,6 +54,12 @@ export class Peer {
       throw new AppError('peer_closed', 'This session no longer holds media.');
     }
     this.consumers.set(consumer.id, consumer);
+    // mediasoup closes a consumer on its own when its producer closes, so a client that
+    // never calls close would otherwise leave a dead reference here for the whole
+    // connection — and a later resume would reach it and throw an untyped error.
+    consumer.observer.once('close', () => {
+      if (this.consumers.get(consumer.id) === consumer) this.consumers.delete(consumer.id);
+    });
   }
 
   consumerById(id: string): types.Consumer | undefined {

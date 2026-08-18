@@ -107,37 +107,35 @@ export function consumerClosed(state: MediaState, slug: string): MediaState {
   return { ...state, consumers: rest };
 }
 
-export type MediaAction =
-  | { type: 'none' }
-  | { type: 'close-consumer'; consumerId: string }
-  | { type: 'consume'; slug: string }
-  | { type: 'close-consumer-then-consume'; consumerId: string; slug: string };
-
 /**
- * Switching channel closes the current consumer and opens another on the same transport.
- * Never a transport rebuild — that is what one router per event buys, and renegotiating
- * here would put a gap in the audio exactly where a listener notices it.
+ * What the current situation calls for: which consumers to close, and which channel to
+ * open one for. One plan rather than an event-by-event rule, because the cases overlap —
+ * a channel switch is a close plus a consume, an interpreter dropping is a close alone,
+ * and arming before anyone is live is neither.
+ *
+ * Closing the channels the guest is no longer on is what makes a switch a consumer swap
+ * on the one transport. Skipped, the old consumer stays open and its audio keeps
+ * arriving, which is the leak R27 exists to prevent.
  */
-export function switchChannel(state: MediaState, from: string | null, to: string): MediaAction {
-  const current = from === null ? undefined : state.consumers[from];
-  if (from === to && current) return { type: 'none' };
-  if (!current) return { type: 'consume', slug: to };
-  return { type: 'close-consumer-then-consume', consumerId: current, slug: to };
+export interface ConsumerPlan {
+  close: string[];
+  consume: string | null;
 }
 
-/**
- * Arming is the guest's one gesture and survives everything after it. What a producer's
- * arrival should trigger is a consume — or nothing, if one is already open for that slug.
- */
-export function onProducerChange(
-  state: MediaState,
-  input: { armedSlug: string | null; online: boolean },
-): MediaAction {
-  if (input.armedSlug === null) return { type: 'none' };
-  const consumerId = state.consumers[input.armedSlug];
+export function consumerPlan(input: {
+  consumers: Record<string, string>;
+  /** The channel the guest armed, or null while they have not. */
+  armedSlug: string | null;
+  /** A producer exists on the armed channel. */
+  online: boolean;
+}): ConsumerPlan {
+  const close = Object.keys(input.consumers).filter((slug) => slug !== input.armedSlug);
+  if (input.armedSlug === null) return { close, consume: null };
 
-  if (input.online) {
-    return consumerId ? { type: 'none' } : { type: 'consume', slug: input.armedSlug };
+  const open = input.consumers[input.armedSlug] !== undefined;
+  if (!input.online) {
+    // Armed survives; the consumer does not. The guest is never asked to act again.
+    return { close: open ? [...close, input.armedSlug] : close, consume: null };
   }
-  return consumerId ? { type: 'close-consumer', consumerId } : { type: 'none' };
+  return { close, consume: open ? null : input.armedSlug };
 }
