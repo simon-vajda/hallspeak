@@ -100,6 +100,8 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
   const preferencesRef = useRef(preferences);
   preferencesRef.current = preferences;
 
+  const { noiseSuppression, autoGain, echoCancellation } = preferences;
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: nothing reads `attempt` on purpose — re-running this effect is the whole of what bumping it does
   useEffect(() => {
     if (!isSupported()) {
@@ -207,16 +209,22 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
     };
   }, [deviceId]);
 
-  // Applied to the live graph rather than by re-opening: `applyConstraints` re-negotiates
-  // the browser's processing in place, and the gain is one node's value.
+  // Applied to the live graph rather than by re-opening: the gain is one node's value.
   useEffect(() => {
     if (!capture) return;
     capture.gain.gain.value = gainNodeValue(preferences.gain);
+  }, [capture, preferences.gain]);
+
+  // Separate from the gain, and keyed on the processing fields alone: `applyConstraints`
+  // renegotiates the browser's processing on the live track, and the slider reports every
+  // pointer move, so one effect over the whole object would renegotiate it through a drag.
+  useEffect(() => {
+    if (!capture) return;
     void capture.stream
       .getAudioTracks()[0]
-      ?.applyConstraints(trackConstraints(preferences))
+      ?.applyConstraints(trackConstraints({ noiseSuppression, autoGain, echoCancellation }))
       .catch(() => {});
-  }, [capture, preferences]);
+  }, [capture, noiseSuppression, autoGain, echoCancellation]);
 
   const selectDevice = useCallback((next: string) => {
     setNotice(null);

@@ -20,7 +20,9 @@ export interface AudioPreferences {
  * explicit `false` rather than omitted, since omission hands the decision back to the browser,
  * which turns it on.
  */
-export function trackConstraints(preferences: AudioPreferences): MediaTrackConstraints {
+export function trackConstraints(
+  preferences: Omit<AudioPreferences, 'gain'>,
+): MediaTrackConstraints {
   return {
     noiseSuppression: preferences.noiseSuppression,
     autoGainControl: preferences.autoGain,
