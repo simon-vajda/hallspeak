@@ -66,7 +66,7 @@ export function broadcastState(input: BroadcastInput): BroadcastState {
   return input.isMuted ? 'muted' : 'live';
 }
 
-/** Only these two states have audio reaching anyone; every claim in the copy hangs off it. */
+/** Only this state has audio reaching anyone; every claim in the copy hangs off it. */
 export function isBroadcasting(state: BroadcastState): boolean {
   return state === 'live';
 }
@@ -86,10 +86,15 @@ export type ReconnectAction = { type: 'none' } | { type: 're-produce'; paused: t
  * After an involuntary drop the client rebuilds and re-produces on its own, paused, so
  * the interpreter's only action is to unmute. After a deliberate end it does nothing —
  * a broadcast somebody chose to stop must not restart itself because the Wi-Fi blinked.
+ *
+ * A drop must be positively recorded, never inferred from the absence of one. Treating
+ * `lastEnd: null` as "not deliberate, so re-produce" fires on the very first Go live —
+ * before the producer exists there is nothing to tell the two apart — and the interpreter
+ * lands muted on the one path that has to just work.
  */
 export function onReconnect(input: ReconnectInput): ReconnectAction {
   if (input.displaced) return { type: 'none' };
   if (!input.goLivePressed) return { type: 'none' };
-  if (input.lastEnd === 'deliberate') return { type: 'none' };
+  if (input.lastEnd !== 'dropped') return { type: 'none' };
   return { type: 're-produce', paused: true };
 }

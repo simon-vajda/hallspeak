@@ -54,13 +54,13 @@ describe('isOnline', () => {
     const { producerId } = await goLive('speaker-a');
     expect(isOnline(EVENT, ENGLISH)).toBe(true);
 
-    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, producerId);
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
     expect(isOnline(EVENT, ENGLISH)).toBe(false);
   });
 
   it('stays true across a pause, because mute is not the end of a broadcast', async () => {
     const { producerId } = await goLive('speaker-a');
-    await pauseProducer({ eventId: EVENT, socketId: 'speaker-a' }, producerId);
+    await pauseProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
 
     expect(isOnline(EVENT, ENGLISH)).toBe(true);
   });
@@ -87,7 +87,7 @@ describe('produce', () => {
     const { producerId } = await goLive('speaker-a');
     published = [];
 
-    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, producerId);
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
 
     expect(published).toContainEqual({
       type: 'producer-closed',

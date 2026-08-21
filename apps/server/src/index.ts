@@ -53,23 +53,28 @@ function shutdown(signal: NodeJS.Signals): void {
 
   // Rooms and workers first: the worker subprocesses outlive this process if nothing
   // closes them, and there is no later point on this path that could.
-  void stopMedia().then(() => {
-    // Before server.close(): open sockets are live connections on that server, and
-    // server.close() waits for them. io.close() disconnects them first.
-    io.close(() => {
-      server.close((err) => {
-        // io.close() already closed the HTTP server, so "not running" is the expected
-        // path; reporting it would make every clean SIGTERM exit 1.
-        if (err && !('code' in err && err.code === 'ERR_SERVER_NOT_RUNNING')) {
-          console.error('Error during shutdown:', err);
+  void stopMedia()
+    .catch((cause) => {
+      // A failed worker teardown must not strand the socket, HTTP and database close.
+      console.error('Error stopping media:', cause);
+    })
+    .then(() => {
+      // Before server.close(): open sockets are live connections on that server, and
+      // server.close() waits for them. io.close() disconnects them first.
+      io.close(() => {
+        server.close((err) => {
+          // io.close() already closed the HTTP server, so "not running" is the expected
+          // path; reporting it would make every clean SIGTERM exit 1.
+          if (err && !('code' in err && err.code === 'ERR_SERVER_NOT_RUNNING')) {
+            console.error('Error during shutdown:', err);
+            closeDb();
+            process.exit(1);
+          }
           closeDb();
-          process.exit(1);
-        }
-        closeDb();
-        process.exit(0);
+          process.exit(0);
+        });
       });
     });
-  });
 }
 
 process.on('SIGINT', shutdown);

@@ -11,7 +11,7 @@ import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { formatPin } from '@/lib/format';
 import { consumerPlan } from '@/lib/media/media-state';
 import { connectionState } from '@/lib/media/stats';
-import { useMedia } from '@/lib/media/use-media';
+import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import { cn } from '@/lib/utils';
 import type { SocketClient } from '@/socket/client';
@@ -55,6 +55,7 @@ export function ListenerRoom({
   const connected = status === 'connected';
   const isPlaying = media.state.consumers[channel.slug] !== undefined;
   const state = listenState({
+    terminal: status === 'error',
     armed,
     isPlaying,
     live,
@@ -93,7 +94,10 @@ export function ListenerRoom({
         // rejecting on autoplay policy.
         void element.play().catch(() => {});
       })
-      .catch(() => {});
+      .catch((cause) => {
+        // Swallowed silently, a failed consume left the screen claiming it was waiting.
+        if (!cancelled && !isSuperseded(cause)) console.error('media: could not listen', cause);
+      });
 
     return () => {
       cancelled = true;
@@ -134,7 +138,7 @@ export function ListenerRoom({
       </div>
 
       <main className="flex flex-1 flex-col items-center justify-center px-8 text-center lg:px-10 lg:py-13">
-        <LiveBadge live={onAir} label={badgeLabel(state, status === 'error')} />
+        <LiveBadge live={onAir} label={badgeLabel(state)} />
 
         <h1 className={cn('mt-4 mb-10 lg:mt-4.5 lg:mb-10', TITLE)}>{channel.name}</h1>
 
@@ -147,6 +151,7 @@ export function ListenerRoom({
           className={cn(state === 'waiting' && 'opacity-70')}
           // Un-arming is enough to close the consumer: the plan above sees no armed
           // channel and closes whatever is open.
+          disabled={state === 'ended'}
           onClick={() => {
             setArmed((wasArmed) => !wasArmed);
             audio.current?.pause();

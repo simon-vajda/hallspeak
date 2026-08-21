@@ -115,14 +115,6 @@ describe('Room producers', () => {
     expect(r.isOnline(1)).toBe(false);
   });
 
-  it('finds a producer by id, and returns nothing for an unknown one', () => {
-    const { room: r } = room();
-    r.setProducer(1, as(new FakeProducer('p1')));
-
-    expect(r.producerById('p1')?.id).toBe('p1');
-    expect(r.producerById('p-nope')).toBeUndefined();
-  });
-
   it('closing an absent producer is a no-op', () => {
     const { room: r } = room();
     expect(() => r.closeProducer(99)).not.toThrow();
@@ -192,6 +184,29 @@ describe('Room.createTransport', () => {
     await expect(r.createTransport('socket-1', 'send')).rejects.toMatchObject({
       code: 'transport_exists',
     });
+  });
+
+  /**
+   * The pre-check catches a sequential second call, but two that interleave across the
+   * allocation await both pass it. The loser is then a transport nothing will ever name
+   * again, so it has to be closed rather than left to the garbage collector.
+   */
+  it('closes the transport the peer refuses when two creates race', async () => {
+    const { room: r, router } = room();
+
+    const results = await Promise.allSettled([
+      r.createTransport('socket-1', 'send'),
+      r.createTransport('socket-1', 'send'),
+    ]);
+
+    expect(results.filter((x) => x.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((x) => x.status === 'rejected')).toHaveLength(1);
+    expect(router.created).toHaveLength(2);
+
+    const closed = (router.created as Array<{ close: ReturnType<typeof vi.fn> }>).filter(
+      (t) => t.close.mock.calls.length > 0,
+    );
+    expect(closed).toHaveLength(1);
   });
 });
 

@@ -85,6 +85,11 @@ export async function stopMedia(): Promise<void> {
   await pool.close();
 }
 
+/** Cancels an armed teardown for a room that is being reused rather than created. */
+function keepAlive(eventId: number): void {
+  state?.registry.touch(eventId);
+}
+
 function require_(): MediaState {
   if (!state) throw new AppError('media_unavailable', 'Media is not available.');
   return state;
@@ -199,19 +204,31 @@ export async function produce(
   return { producerId: producer.id };
 }
 
-export async function pauseProducer(ctx: MediaContext, producerId: string): Promise<void> {
-  await producerOrThrow(ctx, producerId).pause();
+export async function pauseProducer(
+  ctx: MediaContext,
+  channelId: number,
+  producerId: string,
+): Promise<void> {
+  await producerOrThrow(ctx, channelId, producerId).pause();
 }
 
-export async function resumeProducer(ctx: MediaContext, producerId: string): Promise<void> {
-  await producerOrThrow(ctx, producerId).resume();
+export async function resumeProducer(
+  ctx: MediaContext,
+  channelId: number,
+  producerId: string,
+): Promise<void> {
+  await producerOrThrow(ctx, channelId, producerId).resume();
 }
 
-export async function closeProducer(ctx: MediaContext, producerId: string): Promise<void> {
-  const room = state?.registry.get(ctx.eventId);
-  const producer = room?.producerById(producerId);
-  // A close that finds nothing has already achieved what it asked for.
-  if (!producer) return;
+export async function closeProducer(
+  ctx: MediaContext,
+  channelId: number,
+  producerId: string,
+): Promise<void> {
+  const producer = state?.registry.get(ctx.eventId)?.producer(channelId);
+  // A close that finds nothing has already achieved what it asked for. Scoped to the
+  // caller's own channel, so a wrong id can never reach somebody else's producer.
+  if (!producer || producer.id !== producerId) return;
   producer.close();
 }
 
@@ -234,8 +251,21 @@ export async function consume(
   if (!producer || producer.closed) {
     throw new AppError('not_live', 'Nobody is broadcasting on that channel.');
   }
-  const transport = room.peerFor(ctx.socketId).transport('recv');
+  const peer = room.peerFor(ctx.socketId);
+  const transport = peer.transport('recv');
   if (!transport) throw new AppError('no_transport', 'Create a receive transport first.');
+
+  // A repeated consume of the same channel returns what this peer already holds. Left
+  // uncapped, one PIN holder could fan a channel out as many times as they asked.
+  const existing = peer.consumerForProducer(producer.id);
+  if (existing) {
+    return {
+      consumerId: existing.id,
+      producerId: producer.id,
+      kind: 'audio',
+      rtpParameters: existing.rtpParameters,
+    };
+  }
 
   if (
     !room.router.canConsume({ producerId: producer.id, rtpCapabilities: input.rtpCapabilities })
@@ -250,7 +280,7 @@ export async function consume(
     rtpCapabilities: input.rtpCapabilities,
     paused: true,
   });
-  room.peerFor(ctx.socketId).addConsumer(consumer);
+  peer.addConsumer(consumer);
 
   return {
     consumerId: consumer.id,
@@ -317,7 +347,12 @@ export function activeRooms(): Room[] {
 async function roomFor(eventId: number, create: boolean): Promise<Room> {
   const { registry } = require_();
   const existing = registry.get(eventId);
-  if (existing) return existing;
+  // Reuse cancels the grace timer too. Only getOrCreate used to, so a speaker returning
+  // late in the grace period could be handed capabilities on a router about to close.
+  if (existing) {
+    keepAlive(eventId);
+    return existing;
+  }
   if (!create) throw new AppError('not_live', 'Nobody is broadcasting on this event.');
   return registry.getOrCreate(eventId);
 }
@@ -325,6 +360,7 @@ async function roomFor(eventId: number, create: boolean): Promise<Room> {
 function roomOrThrow(eventId: number): Room {
   const room = require_().registry.get(eventId);
   if (!room) throw new AppError('not_live', 'Nobody is broadcasting on this event.');
+  keepAlive(eventId);
   return room;
 }
 
@@ -334,8 +370,14 @@ function peerOrThrow(ctx: MediaContext) {
   return peer;
 }
 
-function producerOrThrow(ctx: MediaContext, producerId: string): types.Producer {
-  const producer = roomOrThrow(ctx.eventId).producerById(producerId);
-  if (!producer) throw new AppError('no_producer', 'No such producer on this event.');
+/**
+ * Looked up by the caller's own channel and only then matched on id, never by id across
+ * the event: the id is public to every listener the moment they consume.
+ */
+function producerOrThrow(ctx: MediaContext, channelId: number, producerId: string): types.Producer {
+  const producer = roomOrThrow(ctx.eventId).producer(channelId);
+  if (!producer || producer.id !== producerId) {
+    throw new AppError('no_producer', 'No such producer on this channel.');
+  }
   return producer;
 }

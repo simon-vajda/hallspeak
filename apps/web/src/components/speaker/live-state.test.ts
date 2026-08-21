@@ -101,10 +101,13 @@ describe('onReconnect', () => {
     });
   });
 
-  it('re-produces paused when the broadcast never ended at all', () => {
+  /**
+   * The first Go live has no recorded end, and the producer does not exist yet. Reading
+   * that as a drop re-produces paused and mutes the interpreter on the primary path.
+   */
+  it('does nothing when no drop was recorded, which is the first Go live', () => {
     expect(onReconnect({ goLivePressed: true, lastEnd: null, displaced: false })).toEqual({
-      type: 're-produce',
-      paused: true,
+      type: 'none',
     });
   });
 
