@@ -31,3 +31,38 @@ export function levelStatus(level: number): LevelStatus {
   if (level >= PEAK_THRESHOLD) return 'peaking';
   return level < SILENCE_THRESHOLD ? 'quiet' : 'good';
 }
+
+/**
+ * The one-pole time constants the meter's motion is built from. Attack is short enough that a
+ * syllable still reads as an attack; release is long enough that the bar does not strobe in the
+ * gaps between them. Both are time constants, not durations: a step covers ~63% of the distance
+ * in one tau.
+ */
+export const ATTACK_MS = 60;
+export const RELEASE_MS = 280;
+
+/** The clip marker's own fall, slow enough that a plosive is still on screen when read. */
+export const HOLD_DECAY_MS = 900;
+
+/**
+ * One frame of the displayed level. Driven by elapsed time rather than a per-frame fraction, so
+ * a 30Hz display and a coalesced frame decay by the same amount as a 60Hz one. The first frame
+ * has no elapsed time to integrate over and simply adopts the target.
+ */
+export function smoothLevel(previous: number, target: number, elapsedMs: number): number {
+  if (!(elapsedMs > 0)) return target;
+
+  const tau = target > previous ? ATTACK_MS : RELEASE_MS;
+  return previous + (target - previous) * (1 - Math.exp(-elapsedMs / tau));
+}
+
+/**
+ * The clip indicator's peak-hold: it takes a rise instantly and only the fall is smoothed. The
+ * fill cannot drive the indicator, because the attack that makes the bar readable also swallows
+ * the 10–50ms bursts the indicator exists to catch.
+ */
+export function holdPeak(previous: number, level: number, elapsedMs: number): number {
+  if (!(elapsedMs > 0) || level >= previous) return level;
+
+  return level + (previous - level) * Math.exp(-elapsedMs / HOLD_DECAY_MS);
+}
