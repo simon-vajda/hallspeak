@@ -5,12 +5,7 @@ import {
   trackConstraints,
 } from '@/components/speaker/live-state';
 import { type MicDevice, resolveSelection, shapeDevices } from './devices';
-
-const DEFAULT_PREFERENCES: AudioPreferences = {
-  noiseSuppression: true,
-  autoGain: false,
-  gain: 50,
-};
+import { DEFAULT_AUDIO_PREFERENCES } from './preferences';
 
 /**
  * Owns the capture graph and the one track a producer broadcasts. Web-only: React Native
@@ -85,7 +80,7 @@ function failureMessage(error: unknown): string {
  * Labels come back empty until permission has been granted at least once, so the order is
  * fixed: open a stream first, then enumerate. Hence the request on mount, not behind a button.
  */
-export function useMicCapture(preferences: AudioPreferences = DEFAULT_PREFERENCES) {
+export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREFERENCES) {
   const [status, setStatus] = useState<MicStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   // Never merged into `error`: a notice sits under the still-working picker, an error replaces it.

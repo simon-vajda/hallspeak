@@ -1,6 +1,6 @@
 import type { components } from '@linguacast/contract/openapi';
 import { Mic, MicOff } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { LiveBadge } from '@/components/live-badge';
@@ -13,13 +13,20 @@ import { OnAirStats } from '@/components/speaker/on-air-stats';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import { levelStatus, rms } from '@/lib/audio/level';
+import { useAudioPreferences } from '@/lib/audio/use-audio-preferences';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { formatPin } from '@/lib/format';
 import { type ConnectionState, connectionState } from '@/lib/media/stats';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import type { SocketClient } from '@/socket/client';
-import { type BroadcastState, broadcastState, type EndReason, onReconnect } from './live-state';
+import {
+  type AudioPreferences,
+  type BroadcastState,
+  broadcastState,
+  type EndReason,
+  onReconnect,
+} from './live-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -54,14 +61,7 @@ export function SpeakerStudio({
   const [lastEnd, setLastEnd] = useState<EndReason | null>(null);
   const [recoveredSilently, setRecoveredSilently] = useState(false);
 
-  const [noiseSuppression, setNoiseSuppression] = useState(true);
-  const [autoGain, setAutoGain] = useState(false);
-  const [gain, setGain] = useState(68);
-
-  const preferences = useMemo(
-    () => ({ noiseSuppression, autoGain, gain }),
-    [noiseSuppression, autoGain, gain],
-  );
+  const { preferences, setPreferences } = useAudioPreferences();
   const mic = useMicCapture(preferences);
   const media = useMedia(socket);
 
@@ -227,12 +227,8 @@ export function SpeakerStudio({
           setStartedAt(null);
           void media.stopProducing();
         }}
-        noiseSuppression={noiseSuppression}
-        onNoiseSuppressionChange={setNoiseSuppression}
-        autoGain={autoGain}
-        onAutoGainChange={setAutoGain}
-        gain={gain}
-        onGainChange={setGain}
+        preferences={preferences}
+        onPreferencesChange={setPreferences}
         status={status}
         socketError={socketError}
       />
@@ -277,12 +273,8 @@ export function SpeakerStudio({
             deviceId={mic.deviceId}
             onSelectDevice={mic.selectDevice}
             onRetry={mic.retry}
-            noiseSuppression={noiseSuppression}
-            onNoiseSuppressionChange={setNoiseSuppression}
-            autoGain={autoGain}
-            onAutoGainChange={setAutoGain}
-            gain={gain}
-            onGainChange={setGain}
+            preferences={preferences}
+            onPreferencesChange={setPreferences}
           />
 
           <div className="flex flex-1 flex-col gap-4 lg:flex-none lg:gap-4.5">
@@ -349,9 +341,10 @@ function OnAir({
   connection,
   onToggleMute,
   onEnd,
+  preferences,
+  onPreferencesChange,
   status,
   socketError,
-  ...preferences
 }: {
   channelName: string;
   eventName: string;
@@ -362,12 +355,8 @@ function OnAir({
   connection: ConnectionState;
   onToggleMute: () => void;
   onEnd: () => void;
-  noiseSuppression: boolean;
-  onNoiseSuppressionChange: (on: boolean) => void;
-  autoGain: boolean;
-  onAutoGainChange: (on: boolean) => void;
-  gain: number;
-  onGainChange: (gain: number) => void;
+  preferences: AudioPreferences;
+  onPreferencesChange: (patch: Partial<AudioPreferences>) => void;
   status: SocketStatus;
   socketError: string | null;
 }) {
@@ -421,7 +410,12 @@ function OnAir({
             className="lg:col-start-2 lg:row-start-2"
           />
 
-          <AudioSettings mic={mic} {...preferences} className="lg:col-start-2 lg:row-start-3" />
+          <AudioSettings
+            mic={mic}
+            preferences={preferences}
+            onPreferencesChange={onPreferencesChange}
+            className="lg:col-start-2 lg:row-start-3"
+          />
 
           <div className="lg:col-start-1 lg:row-start-4">
             <ConnectionLine
