@@ -262,6 +262,19 @@ export function useMedia(socket: SocketClient | null) {
     await signalling(socket).closeProducer(producer.id);
   }, [socket]);
 
+  /**
+   * Swaps what the producer transmits without renegotiating. Needed because the capture
+   * graph is rebuilt whenever the microphone changes: the old track belongs to an
+   * AudioContext that is about to close, and a producer left holding it stays open and
+   * transmits nothing — the channel reads live and is silent.
+   */
+  const replaceProducerTrack = useCallback(async (track: MediaStreamTrack) => {
+    const producer = session.current?.producer;
+    if (!producer || producer.closed) return;
+    // Keeps the producer's paused state, so this cannot unmute anyone behind their back.
+    await producer.replaceTrack({ track });
+  }, []);
+
   const setProducerPaused = useCallback(
     async (paused: boolean) => {
       const producer = session.current?.producer;
@@ -346,6 +359,7 @@ export function useMedia(socket: SocketClient | null) {
     stats,
     startProducing,
     stopProducing,
+    replaceProducerTrack,
     setProducerPaused,
     startConsuming,
     stopConsuming,
