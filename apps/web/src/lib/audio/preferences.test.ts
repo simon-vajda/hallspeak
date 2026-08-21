@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_AUDIO_PREFERENCES,
   parseStoredPreferences,
+  samePreferences,
   serializePreferences,
 } from './preferences';
 
@@ -66,5 +67,24 @@ describe('parseStoredPreferences', () => {
 
   it('ignores a key it does not know', () => {
     expect(parseStoredPreferences('{"reverb": true, "gain": 20}')).not.toHaveProperty('reverb');
+  });
+});
+
+describe('samePreferences', () => {
+  it('holds for equal values held in different objects', () => {
+    expect(samePreferences(DEFAULT_AUDIO_PREFERENCES, { ...DEFAULT_AUDIO_PREFERENCES })).toBe(true);
+  });
+
+  it('fails on any one field, so no change can be mistaken for none', () => {
+    for (const patch of [
+      { noiseSuppression: !DEFAULT_AUDIO_PREFERENCES.noiseSuppression },
+      { autoGain: !DEFAULT_AUDIO_PREFERENCES.autoGain },
+      { echoCancellation: !DEFAULT_AUDIO_PREFERENCES.echoCancellation },
+      { gain: DEFAULT_AUDIO_PREFERENCES.gain + 1 },
+    ]) {
+      expect(
+        samePreferences(DEFAULT_AUDIO_PREFERENCES, { ...DEFAULT_AUDIO_PREFERENCES, ...patch }),
+      ).toBe(false);
+    }
   });
 });
