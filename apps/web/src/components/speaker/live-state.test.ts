@@ -19,19 +19,51 @@ const base: BroadcastInput = {
 
 describe('trackConstraints', () => {
   it('maps each toggle onto the constraint it controls', () => {
-    expect(trackConstraints({ noiseSuppression: true, autoGain: false, gain: 50 })).toEqual({
+    expect(
+      trackConstraints({
+        noiseSuppression: true,
+        autoGain: false,
+        echoCancellation: true,
+        gain: 50,
+      }),
+    ).toEqual({
       noiseSuppression: true,
       autoGainControl: false,
+      echoCancellation: true,
     });
-    expect(trackConstraints({ noiseSuppression: false, autoGain: true, gain: 50 })).toEqual({
+    expect(
+      trackConstraints({
+        noiseSuppression: false,
+        autoGain: true,
+        echoCancellation: false,
+        gain: 50,
+      }),
+    ).toEqual({
       noiseSuppression: false,
       autoGainControl: true,
+      echoCancellation: false,
     });
+  });
+
+  it('states echo cancellation off rather than omitting it, which would hand the browser the choice', () => {
+    expect(
+      trackConstraints({
+        noiseSuppression: true,
+        autoGain: false,
+        echoCancellation: false,
+        gain: 50,
+      }),
+    ).toHaveProperty('echoCancellation', false);
   });
 
   it('carries no gain: that is a node on the graph, not a track constraint', () => {
     expect(
-      trackConstraints({ noiseSuppression: true, autoGain: true, gain: 90 }),
+      trackConstraints({
+        noiseSuppression: true,
+        autoGain: true,
+        echoCancellation: false,
+        gain: 90,
+      }),
     ).not.toHaveProperty('gain');
   });
 });
