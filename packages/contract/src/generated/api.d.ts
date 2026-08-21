@@ -351,6 +351,42 @@ export interface paths {
         };
         trace?: never;
     };
+    "/admin/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Live channels across every event, with their listener counts */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminLiveEvent"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/events/{id}/regenerate-pin": {
         parameters: {
             query?: never;
@@ -647,6 +683,17 @@ export interface components {
             name: string;
             description?: string | null;
             enabled?: boolean;
+        };
+        AdminLiveEvent: {
+            eventId: number;
+            channels: components["schemas"]["AdminLiveChannel"][];
+        };
+        AdminLiveChannel: {
+            channelId: number;
+            /** @example english */
+            slug: string;
+            online: boolean;
+            listeners: number;
         };
         UpdateChannelBody: {
             name?: string;

@@ -180,6 +180,54 @@
           "name"
         ]
       },
+      "AdminLiveEvent": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminLiveChannel"
+            }
+          }
+        },
+        "required": [
+          "eventId",
+          "channels"
+        ]
+      },
+      "AdminLiveChannel": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "example": "english"
+          },
+          "online": {
+            "type": "boolean"
+          },
+          "listeners": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "channelId",
+          "slug",
+          "online",
+          "listeners"
+        ]
+      },
       "UpdateChannelBody": {
         "type": "object",
         "properties": {
@@ -678,6 +726,29 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/live": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Live channels across every event, with their listener counts",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminLiveEvent"
+                  }
                 }
               }
             }

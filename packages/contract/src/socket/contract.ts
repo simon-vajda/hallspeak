@@ -2,6 +2,7 @@ import {
   ChannelJoinPayload,
   ChannelJoinResponse,
   ChannelLeavePayload,
+  ChannelListeners,
   ChannelStatus,
   MediaCapabilitiesPayload,
   MediaCapabilitiesResponse,
@@ -84,6 +85,12 @@ export const serverToClient = {
    * so a guest arms on it and consumes when it turns true.
    */
   'channel:status': event({ payload: ChannelStatus }),
+
+  /**
+   * To the speaker's socket alone, on consumer lifecycle: nobody else has a use for the
+   * number and a listener churning does not concern the event room.
+   */
+  'channel:listeners': event({ payload: ChannelListeners }),
 
   /** Discard every held media identifier and renegotiate; the socket itself survives. */
   'media:reset': event({ payload: MediaReset }),
