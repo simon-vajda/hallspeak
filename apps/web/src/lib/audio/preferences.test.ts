@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_AUDIO_PREFERENCES,
+  mergeStoredPreferences,
   parseStoredPreferences,
   samePreferences,
   serializePreferences,
@@ -47,9 +48,15 @@ describe('parseStoredPreferences', () => {
     });
   });
 
-  it('clamps a gain from outside the slider’s range', () => {
-    expect(parseStoredPreferences('{"gain": -5}').gain).toBe(0);
+  it('clamps a gain from above the slider’s range', () => {
     expect(parseStoredPreferences('{"gain": 150}').gain).toBe(100);
+  });
+
+  it('refuses to restore a silent gain, which is what a reload is trying to escape', () => {
+    for (const raw of ['{"gain": 0}', '{"gain": 4}', '{"gain": -5}']) {
+      expect(parseStoredPreferences(raw).gain).toBe(DEFAULT_AUDIO_PREFERENCES.gain);
+    }
+    expect(parseStoredPreferences('{"gain": 5}').gain).toBe(5);
   });
 
   it('falls back rather than clamping a gain that is not a finite number', () => {
@@ -86,5 +93,31 @@ describe('samePreferences', () => {
         samePreferences(DEFAULT_AUDIO_PREFERENCES, { ...DEFAULT_AUDIO_PREFERENCES, ...patch }),
       ).toBe(false);
     }
+  });
+});
+
+describe('mergeStoredPreferences', () => {
+  const baseline = DEFAULT_AUDIO_PREFERENCES;
+
+  it('keeps a field this tab did not touch at whatever another tab stored', () => {
+    const stored = { ...baseline, gain: 40 };
+    const next = { ...baseline, noiseSuppression: !baseline.noiseSuppression };
+
+    const merged = mergeStoredPreferences(stored, baseline, next);
+    expect(merged.gain).toBe(40);
+    expect(merged.noiseSuppression).toBe(next.noiseSuppression);
+  });
+
+  it('writes a field this tab did change even when another tab stored something else', () => {
+    const stored = { ...baseline, gain: 40 };
+    const next = { ...baseline, gain: 90 };
+
+    expect(mergeStoredPreferences(stored, baseline, next).gain).toBe(90);
+  });
+
+  it('is the stored object when this tab changed nothing', () => {
+    const stored = { ...baseline, gain: 40, autoGain: !baseline.autoGain };
+
+    expect(mergeStoredPreferences(stored, baseline, baseline)).toEqual(stored);
   });
 });

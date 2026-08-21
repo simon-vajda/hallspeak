@@ -21,13 +21,21 @@ export const DEFAULT_AUDIO_PREFERENCES: AudioPreferences = {
   gain: 68,
 };
 
+/**
+ * A stored gain below this is indistinguishable from a broken microphone, and reloading is
+ * exactly how an interpreter tries to recover from one — restoring the silence they reloaded
+ * to escape. Zero stays reachable on the slider; it is only never restored into.
+ */
+const MIN_RESTORED_GAIN = 5;
+
 function boolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
 function gain(value: unknown, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
-  return Math.min(Math.max(value, 0), 100);
+  const clamped = Math.min(Math.max(value, 0), 100);
+  return clamped < MIN_RESTORED_GAIN ? fallback : clamped;
 }
 
 /**
@@ -58,6 +66,34 @@ export function parseStoredPreferences(raw: string | null): AudioPreferences {
 
 export function serializePreferences(preferences: AudioPreferences): string {
   return JSON.stringify(preferences);
+}
+
+/**
+ * What this tab should write: its own edits over whatever is in storage now, field by field.
+ *
+ * Two studio tabs each hold a whole preference object, so writing that object wholesale lets
+ * the second tab revert a field it never touched — its snapshot of that field is simply older.
+ * `baseline` is what this tab last read or wrote, so a field equal to it was not edited here
+ * and keeps the stored value. Deliberately not a live sync: a tab still never adopts another
+ * tab's change while it is open, because doing so would re-apply constraints mid-broadcast.
+ */
+export function mergeStoredPreferences(
+  stored: AudioPreferences,
+  baseline: AudioPreferences,
+  next: AudioPreferences,
+): AudioPreferences {
+  return {
+    noiseSuppression:
+      next.noiseSuppression === baseline.noiseSuppression
+        ? stored.noiseSuppression
+        : next.noiseSuppression,
+    autoGain: next.autoGain === baseline.autoGain ? stored.autoGain : next.autoGain,
+    echoCancellation:
+      next.echoCancellation === baseline.echoCancellation
+        ? stored.echoCancellation
+        : next.echoCancellation,
+    gain: next.gain === baseline.gain ? stored.gain : next.gain,
+  };
 }
 
 /**

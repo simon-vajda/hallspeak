@@ -3,6 +3,7 @@ import type { AudioPreferences } from '@/components/speaker/live-state';
 import {
   AUDIO_PREFERENCES_STORAGE_KEY,
   DEFAULT_AUDIO_PREFERENCES,
+  mergeStoredPreferences,
   parseStoredPreferences,
   samePreferences,
   serializePreferences,
@@ -23,9 +24,15 @@ function readStoredPreferences(): AudioPreferences {
   }
 }
 
-function writeStoredPreferences(preferences: AudioPreferences) {
+// Re-read inside the write so a second tab's edits to other fields survive this one's. The
+// read costs a parse, which the debounce already keeps off the drag path.
+function writeStoredPreferences(next: AudioPreferences, baseline: AudioPreferences) {
   try {
-    localStorage.setItem(AUDIO_PREFERENCES_STORAGE_KEY, serializePreferences(preferences));
+    const stored = parseStoredPreferences(localStorage.getItem(AUDIO_PREFERENCES_STORAGE_KEY));
+    localStorage.setItem(
+      AUDIO_PREFERENCES_STORAGE_KEY,
+      serializePreferences(mergeStoredPreferences(stored, baseline, next)),
+    );
   } catch {
     // Blocked storage: the settings will not survive a reload, but they still apply now.
   }
@@ -67,8 +74,8 @@ export function useAudioPreferences() {
     pending.current = true;
     const timer = setTimeout(() => {
       pending.current = false;
+      writeStoredPreferences(preferences, persisted.current);
       persisted.current = preferences;
-      writeStoredPreferences(preferences);
     }, WRITE_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
@@ -82,8 +89,8 @@ export function useAudioPreferences() {
     const flush = () => {
       if (!pending.current) return;
       pending.current = false;
+      writeStoredPreferences(latest.current, persisted.current);
       persisted.current = latest.current;
-      writeStoredPreferences(latest.current);
     };
 
     window.addEventListener('pagehide', flush);
