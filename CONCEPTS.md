@@ -33,6 +33,20 @@ The claim is held against the Speaker code rather than a particular connection, 
 
 A claim is not Live: it is taken when the studio connects, which is before any audio exists and may be long before any is produced.
 
+### Listening
+Actually receiving a Channel's audio: holding an open Consumer on its Producer that the guest's
+own side has not paused. This is what the listener counts on the Speaker studio and the admin
+Event detail report.
+
+Listening is narrower than Armed, which is the request, and narrower than having the page open,
+which allocates nothing at all. It is also downstream of Live: no Producer means no Consumers,
+so a Channel that is not Live has nobody Listening, and the count is structurally zero before an
+interpreter goes live rather than merely unknown. Muting does not change it — the Speaker's
+Producer pauses while every Consumer stays open, so a muted interpreter still has an audience.
+
+Nothing here learns who is Listening. The count is a number, and Listener identity is outside
+this product.
+
 ### Armed
 A Listener who has asked to hear a Channel and is waiting on audio rather than receiving it. Arming is the guest's one deliberate gesture; everything after it is automatic. An Armed Listener whose Speaker disappears stays Armed and resumes on their own when the Speaker returns, so a dropped connection mid-event never asks the guest to do anything.
 
