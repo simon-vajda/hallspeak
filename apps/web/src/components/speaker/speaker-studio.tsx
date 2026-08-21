@@ -78,12 +78,16 @@ export function SpeakerStudio({
   // Destructured, not the whole hook result: `media` is a fresh object every render, so
   // closing over it would churn this callback's identity and re-fire the effect below on
   // every render rather than when its guards actually change.
-  const { startProducing } = media;
+  const { startProducing, replaceProducerTrack } = media;
+  // What the producer is currently transmitting, so a capture rebuild is detectable.
+  const producedTrack = useRef<MediaStreamTrack | null>(null);
+
   const produce = useCallback(
     async (paused: boolean) => {
       if (!outputTrack) return;
       try {
         await startProducing(channel.slug, outputTrack, paused);
+        producedTrack.current = outputTrack;
       } catch (cause) {
         // A reset landed mid-negotiation; its own renegotiation takes over from here.
         if (!isSuperseded(cause)) console.error('media: could not go live', cause);
@@ -91,6 +95,23 @@ export function SpeakerStudio({
     },
     [startProducing, outputTrack, channel.slug],
   );
+
+  /**
+   * Changing microphone rebuilds the capture graph, which closes the AudioContext the
+   * previous track belonged to. Left alone, the producer keeps that dead track and the
+   * channel stays live while transmitting silence — so the new track is swapped in.
+   * Covers an unplugged microphone falling back to the default, not just a deliberate
+   * change.
+   */
+  useEffect(() => {
+    if (!hasProducer || !outputTrack) return;
+    if (producedTrack.current === outputTrack) return;
+
+    producedTrack.current = outputTrack;
+    void replaceProducerTrack(outputTrack).catch((cause) => {
+      console.error('media: could not switch microphone', cause);
+    });
+  }, [hasProducer, outputTrack, replaceProducerTrack]);
 
   /**
    * The server ends a session by disconnecting it, and Socket.IO does not reconnect after
