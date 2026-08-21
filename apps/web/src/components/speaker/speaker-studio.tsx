@@ -43,6 +43,7 @@ export function SpeakerStudio({
   pin,
   channel,
   speakerCode,
+  listeners,
   socket,
   status,
   socketError,
@@ -51,6 +52,8 @@ export function SpeakerStudio({
   pin: string;
   channel: PublicChannel;
   speakerCode: string;
+  /** Guests currently receiving this channel's audio. */
+  listeners: number;
   socket: SocketClient | null;
   status: SocketStatus;
   socketError: string | null;
@@ -205,6 +208,7 @@ export function SpeakerStudio({
         eventName={eventName}
         mic={mic}
         startedAt={startedAt}
+        listeners={listeners}
         state={state}
         connection={connectionState({
           socketConnected: status === 'connected',
@@ -261,7 +265,6 @@ export function SpeakerStudio({
           <h1 className="mt-4 mb-1 text-screen lg:text-[44px] lg:leading-[1.03] lg:tracking-[-0.045em]">
             {channel.name}
           </h1>
-          {/* The design pairs this with a waiting-listener count; nothing reports one yet. */}
           <p className="text-sm text-muted-foreground lg:mb-8">{eventName}</p>
         </header>
 
@@ -338,6 +341,7 @@ function OnAir({
   eventName,
   mic,
   startedAt,
+  listeners,
   state,
   connection,
   onToggleMute,
@@ -352,6 +356,7 @@ function OnAir({
   mic: ReturnType<typeof useMicCapture>;
   /** `Date.now()` at the moment Go live was pressed. */
   startedAt: number | null;
+  listeners: number;
   state: BroadcastState;
   connection: ConnectionState;
   onToggleMute: () => void;
@@ -387,7 +392,11 @@ function OnAir({
         </h1>
 
         <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-0 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start lg:gap-x-8.5 lg:gap-y-4">
-          <OnAirStats startedAt={startedAt} className="lg:col-start-2 lg:row-start-1" />
+          <OnAirStats
+            startedAt={startedAt}
+            listeners={listeners}
+            className="lg:col-start-2 lg:row-start-1"
+          />
 
           <div className="flex flex-1 flex-col items-center justify-center gap-4 py-4 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
             {/* The meter below is untouched, so the speaker still sees the mic work. */}
