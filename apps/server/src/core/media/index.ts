@@ -10,6 +10,7 @@ import {
   mintTurnCredential,
   type TurnConfig,
 } from './config';
+import { ListenerCountPublisher } from './listeners';
 import type { TransportDirection } from './peer';
 import { RoomRegistry } from './registry';
 import type { Room } from './room';
@@ -35,6 +36,7 @@ interface MediaState {
   pool: WorkerPool;
   registry: RoomRegistry;
   turn: TurnConfig;
+  listeners: ListenerCountPublisher;
 }
 
 // A module singleton, like `db`: handlers and admin routes reach it by import rather than
@@ -57,9 +59,18 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
   });
   await pool.start();
 
+  const listeners = new ListenerCountPublisher({
+    // A recount rather than a delta, and a room that has gone answers zero: the window is
+    // trailing, so it routinely fires after the room it names was torn down.
+    count: (eventId, channelId) => listenerCount(eventId, channelId),
+  });
+
   const registry = new RoomRegistry(pool, {
     graceMs: options.graceMs,
     onRoomClosed: (room, reason) => {
+      // The remembered counts must not outlive the room: kept, they would suppress the
+      // first real count of the next broadcast on the same channel.
+      listeners.forgetEvent(room.eventId);
       // Idle and shutdown take nobody's access away, so nothing is evicted for them.
       if (reason === 'worker_died') {
         notifications.publish({ type: 'room-evicted', eventId: room.eventId, reason });
@@ -67,7 +78,7 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
     },
   });
 
-  state = { pool, registry, turn: options.turn };
+  state = { pool, registry, turn: options.turn, listeners };
 
   if (isUnroutableAnnouncedAddress(options.net.announcedIp)) {
     console.warn(
@@ -79,9 +90,12 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
 
 export async function stopMedia(): Promise<void> {
   if (!state) return;
-  const { pool, registry } = state;
+  const { pool, registry, listeners } = state;
+  // Nulled first, so every consumer closed inside closeAll() finds `scheduleRecount` inert
+  // rather than arming a fresh window behind a drain that already ran.
   state = null;
   await registry.closeAll();
+  listeners.close();
   await pool.close();
 }
 
@@ -104,6 +118,47 @@ function require_(): MediaState {
  */
 export function isOnline(eventId: number, channelId: number): boolean {
   return state?.registry.get(eventId)?.isOnline(channelId) ?? false;
+}
+
+/**
+ * A listener is a guest holding an open, locally unpaused consumer on the channel's
+ * producer — somebody receiving audio, not somebody with a page open. Structurally zero
+ * until the interpreter goes live, which is the intended reading.
+ */
+export function listenerCount(eventId: number, channelId: number): number {
+  return state?.registry.get(eventId)?.listenerCount(channelId) ?? 0;
+}
+
+/** `core/`'s own shape. The contract's DTO is the HTTP mapper's business, not this layer's. */
+export interface ChannelListenerCount {
+  channelId: number;
+  slug: string;
+  count: number;
+}
+
+export interface EventListenerCounts {
+  eventId: number;
+  channels: ChannelListenerCount[];
+}
+
+/** Every live channel of every active room with its count, for the admin read. */
+export function listenerCounts(): EventListenerCounts[] {
+  return (state?.registry.all() ?? []).map((room) => ({
+    eventId: room.eventId,
+    channels: room.liveChannels().map(({ channelId, slug }) => ({
+      channelId,
+      slug,
+      count: room.listenerCount(channelId),
+    })),
+  }));
+}
+
+/**
+ * The one poke every change goes through. Inert once the media layer has stopped, which is
+ * what keeps the shutdown path from arming a window nothing will ever clear.
+ */
+function scheduleRecount(eventId: number, channelId: number, slug: string): void {
+  state?.listeners.schedule(eventId, channelId, slug);
 }
 
 // --- signalling ---------------------------------------------------------------
@@ -275,12 +330,21 @@ export async function consume(
 
   // Paused, per KTD13: unpaused races RTP against the client's decoder setup, which is
   // the most commonly reported cause of artefacts at join.
+  const slug = room.producerSlug(input.channelId) ?? '';
   const consumer = await transport.consume({
     producerId: producer.id,
     rtpCapabilities: input.rtpCapabilities,
     paused: true,
+    // The consumer carries its own channel, so a resume or a close can name the affected
+    // channel without a reverse lookup through the room's producers.
+    appData: { channelId: input.channelId, slug },
   });
   peer.addConsumer(consumer);
+  // One hook covers un-arming, a language switch, a disconnect, a peer eviction, a dead
+  // worker and the producer closing alike: mediasoup closes the consumer for all of them.
+  // Registered here and not on the early-return path above, which hands back a consumer
+  // that already has one.
+  consumer.observer.once('close', () => scheduleRecount(ctx.eventId, input.channelId, slug));
 
   return {
     consumerId: consumer.id,
@@ -294,6 +358,17 @@ export async function resumeConsumer(ctx: MediaContext, consumerId: string): Pro
   const consumer = peerOrThrow(ctx).consumerById(consumerId);
   if (!consumer) throw new AppError('no_consumer', 'No such consumer on this session.');
   await consumer.resume();
+  // The other half of the count: a resume is the moment a guest starts hearing anything.
+  const { channelId, slug } = consumerChannel(consumer);
+  if (channelId !== undefined) scheduleRecount(ctx.eventId, channelId, slug);
+}
+
+function consumerChannel(consumer: types.Consumer): { channelId?: number; slug: string } {
+  const appData = consumer.appData as { channelId?: unknown; slug?: unknown };
+  return {
+    channelId: typeof appData.channelId === 'number' ? appData.channelId : undefined,
+    slug: typeof appData.slug === 'string' ? appData.slug : '',
+  };
 }
 
 export async function closeConsumer(ctx: MediaContext, consumerId: string): Promise<void> {

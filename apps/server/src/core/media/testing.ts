@@ -23,7 +23,10 @@ class FakeProducer extends EventEmitter {
   closed = false;
   paused = false;
   readonly observer = new EventEmitter();
-  constructor(readonly id: string) {
+  constructor(
+    readonly id: string,
+    readonly appData: Record<string, unknown> = {},
+  ) {
     super();
   }
   close = () => {
@@ -48,6 +51,7 @@ class FakeConsumer extends EventEmitter {
   constructor(
     readonly id: string,
     readonly producerId: string,
+    readonly appData: Record<string, unknown> = {},
   ) {
     super();
   }
@@ -83,15 +87,23 @@ class FakeTransport {
     for (const child of this.children) child.close();
   };
 
-  produce = async () => {
-    const producer = new FakeProducer(nextId('producer'));
+  // mediasoup stores whatever appData it is handed on the producer, and `Room` reads the
+  // slug back off it, so a fake that dropped the option would make that read untestable.
+  produce = async ({ appData }: { appData?: Record<string, unknown> } = {}) => {
+    const producer = new FakeProducer(nextId('producer'), appData ?? {});
     this.children.push(producer);
     this.router.registerProducer(producer);
     return producer;
   };
 
-  consume = async ({ producerId }: { producerId: string }) => {
-    const consumer = new FakeConsumer(nextId('consumer'), producerId);
+  consume = async ({
+    producerId,
+    appData,
+  }: {
+    producerId: string;
+    appData?: Record<string, unknown>;
+  }) => {
+    const consumer = new FakeConsumer(nextId('consumer'), producerId, appData ?? {});
     this.children.push(consumer);
     this.router.registerConsumer(consumer);
     return consumer;
