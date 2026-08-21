@@ -4,7 +4,11 @@ import { Server } from 'socket.io';
 import { notifications } from '../core/notifications';
 import { db } from '../db';
 import { joinChannel, leaveChannel } from './handlers/channels.handlers';
-import { applyNotification, releaseSocket } from './handlers/lifecycle.handlers';
+import {
+  applyNotification,
+  releaseSocket,
+  sendInitialListenerCount,
+} from './handlers/lifecycle.handlers';
 import {
   connectTransport,
   getCapabilities,
@@ -57,7 +61,12 @@ export function attachSocket(httpServer: ServerType): SocketServer {
     const speakerChannelId = socket.data.speakerChannelId;
     // Joining the channel room is all a claim buys. Liveness is the producer's to report,
     // so nothing is broadcast here — an open studio is not audio.
-    if (speakerChannelId !== null) socket.join(channelRoom(speakerChannelId));
+    if (speakerChannelId !== null) {
+      socket.join(channelRoom(speakerChannelId));
+      // Addressed to this socket alone, so a studio joining a channel already being
+      // listened to shows a number rather than a blank.
+      sendInitialListenerCount(db, socket, socket.data);
+    }
 
     on(socket, 'ping', () => ({ serverTime: Date.now() }));
     on(socket, 'channel:join', ({ slug }) => joinChannel(db, socket, socket.data, slug));
