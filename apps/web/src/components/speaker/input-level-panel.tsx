@@ -27,7 +27,13 @@ export function InputLevelPanel({
         <span>Peak</span>
       </div>
 
-      {note && <p className="mt-3.5 text-note text-muted-foreground">{note}</p>}
+      {/* Always rendered, hidden when empty: unmounting it makes the panel's height
+          state-dependent, and muting would shift the mute target out from under a finger.
+          One line's worth is reserved — the pre-flight note is longer and grows the panel,
+          but that screen never toggles into this one. */}
+      <p aria-hidden={!note} className="mt-3.5 text-note text-muted-foreground">
+        {note ?? <span className="invisible">&nbsp;</span>}
+      </p>
     </section>
   );
 }

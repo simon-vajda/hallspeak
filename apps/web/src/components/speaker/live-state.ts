@@ -104,3 +104,23 @@ export function onReconnect(input: ReconnectInput): ReconnectAction {
   if (input.lastEnd !== 'dropped') return { type: 'none' };
   return { type: 're-produce', paused: true };
 }
+
+/**
+ * The note under the on-air level meter. `muted` and `back-from-drop` explain the silence
+ * rather than denying the audience: a listener count sits beside this panel, so "nobody is
+ * hearing this yet" under a tile reading 3 would be a contradiction. Only `connecting` can
+ * honestly claim nobody, because no producer exists yet. `pre-flight` and `displaced` never
+ * render this panel — the pre-flight screen carries its own note and displaced has no meter.
+ */
+const ON_AIR_NOTE: Record<BroadcastState, string | undefined> = {
+  'pre-flight': undefined,
+  connecting: 'Nobody is hearing this yet.',
+  live: undefined,
+  muted: 'You are muted — listeners hear silence.',
+  'back-from-drop': 'You are muted — listeners hear silence.',
+  displaced: undefined,
+};
+
+export function onAirNote(state: BroadcastState): string | undefined {
+  return ON_AIR_NOTE[state];
+}
