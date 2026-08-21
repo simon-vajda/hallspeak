@@ -7,6 +7,7 @@
 export interface AudioPreferences {
   noiseSuppression: boolean;
   autoGain: boolean;
+  echoCancellation: boolean;
   /** 0–100 on the slider, which is not what a GainNode takes. */
   gain: number;
 }
@@ -14,13 +15,16 @@ export interface AudioPreferences {
 /**
  * Applied to the capture track rather than to the producer: the browser's own processing
  * runs before anything is encoded, so turning it off after the fact would achieve nothing.
- * Echo cancellation is not offered — the interpreter is told to wear headphones, and
- * cancelling against a PA the browser cannot hear does more harm than good.
+ * Echo cancellation is offered but defaults off — the interpreter is told to wear headphones,
+ * and cancelling against a PA the browser cannot hear does more harm than good. Stated as an
+ * explicit `false` rather than omitted, since omission hands the decision back to the browser,
+ * which turns it on.
  */
 export function trackConstraints(preferences: AudioPreferences): MediaTrackConstraints {
   return {
     noiseSuppression: preferences.noiseSuppression,
     autoGainControl: preferences.autoGain,
+    echoCancellation: preferences.echoCancellation,
   };
 }
 
