@@ -6,6 +6,7 @@ import {
   gainNodeValue,
   isBroadcasting,
   MAX_GAIN,
+  onAirNote,
   onReconnect,
   trackConstraints,
 } from './live-state';
@@ -157,5 +158,29 @@ describe('onReconnect', () => {
     expect(onReconnect({ goLivePressed: true, lastEnd: 'dropped', displaced: true })).toEqual({
       type: 'none',
     });
+  });
+});
+
+describe('onAirNote', () => {
+  it('says nobody is hearing it while connecting, where zero listeners is the truth', () => {
+    expect(onAirNote('connecting')).toBe('Nobody is hearing this yet.');
+  });
+
+  it('explains the silence while muted rather than denying the audience', () => {
+    expect(onAirNote('muted')).toBe('You are muted — listeners hear silence.');
+  });
+
+  it('says the same thing back from a drop, which is also a mute', () => {
+    expect(onAirNote('back-from-drop')).toBe(onAirNote('muted'));
+  });
+
+  it('adds nothing while live: the badge and the meter already say it', () => {
+    expect(onAirNote('live')).toBeUndefined();
+  });
+
+  /** Neither state reaches the on-air panel: pre-flight carries its own note, displaced has none. */
+  it('has no note for the states the on-air panel never renders', () => {
+    expect(onAirNote('pre-flight')).toBeUndefined();
+    expect(onAirNote('displaced')).toBeUndefined();
   });
 });

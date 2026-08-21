@@ -25,6 +25,7 @@ import {
   type BroadcastState,
   broadcastState,
   type EndReason,
+  onAirNote,
   onReconnect,
 } from './live-state';
 
@@ -406,7 +407,7 @@ function OnAir({
 
           <InputLevelPanel
             analyser={mic.analyser}
-            note={onAir ? undefined : 'Nobody is hearing this yet.'}
+            note={onAirNote(state)}
             className="lg:col-start-2 lg:row-start-2"
           />
 
