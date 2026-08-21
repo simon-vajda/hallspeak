@@ -7,7 +7,8 @@ import { ChannelChips } from '@/components/admin/channel-chips';
 import { EventFormDialog } from '@/components/admin/event-dialogs';
 import { EventEnabledSwitch } from '@/components/admin/event-enabled-switch';
 import { Button } from '@/components/ui/button';
-import { formatPin, plural } from '@/lib/format';
+import { useAdminLive } from '@/lib/admin-queries';
+import { eventStatusLabel, formatPin, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin/events/')({ component: AdminEventsPage });
@@ -20,6 +21,7 @@ const TABLE_COLUMNS = 'grid-cols-[1.8fr_0.85fr_1.9fr_0.95fr_110px]';
 
 function AdminEventsPage() {
   const { data, isPending, isError } = $api.useQuery('get', '/admin/events');
+  const live = useAdminLive();
   const [creating, setCreating] = useState(false);
 
   if (isPending) {
@@ -62,7 +64,7 @@ function AdminEventsPage() {
         <>
           <ul className="mt-5 flex flex-col gap-3 lg:hidden">
             {data.map((event) => (
-              <EventCard key={event.id} event={event} />
+              <EventCard key={event.id} event={event} onAir={live.onAir.get(event.id) ?? 0} />
             ))}
           </ul>
 
@@ -84,7 +86,7 @@ function AdminEventsPage() {
             </div>
             <ul>
               {data.map((event) => (
-                <EventRow key={event.id} event={event} />
+                <EventRow key={event.id} event={event} onAir={live.onAir.get(event.id) ?? 0} />
               ))}
             </ul>
           </div>
@@ -96,7 +98,7 @@ function AdminEventsPage() {
   );
 }
 
-function EventRow({ event }: { event: AdminEventDetail }) {
+function EventRow({ event, onAir }: { event: AdminEventDetail; onAir: number }) {
   // Only the cells dim: opacity composites, so a switch inside a dimmed row could not paint
   // itself back to full strength, and it stays operable on a disabled event.
   const dim = event.enabled ? undefined : 'opacity-60';
@@ -114,7 +116,7 @@ function EventRow({ event }: { event: AdminEventDetail }) {
         {formatPin(event.pin)}
       </p>
       <ChannelChips channels={event.channels} variant="collapse" className={dim} />
-      <p className={cn('text-meta text-muted-foreground', dim)}>{statusLabel(event)}</p>
+      <p className={cn('text-meta text-muted-foreground', dim)}>{statusLabel(event, onAir)}</p>
       <div className="flex justify-end">
         <EventEnabledSwitch event={event} />
       </div>
@@ -122,7 +124,7 @@ function EventRow({ event }: { event: AdminEventDetail }) {
   );
 }
 
-function EventCard({ event }: { event: AdminEventDetail }) {
+function EventCard({ event, onAir }: { event: AdminEventDetail; onAir: number }) {
   const dim = event.enabled ? undefined : 'opacity-60';
 
   return (
@@ -140,7 +142,7 @@ function EventCard({ event }: { event: AdminEventDetail }) {
         <EventEnabledSwitch event={event} />
       </div>
       <ChannelChips channels={event.channels} variant="wrap" className={cn('mt-3', dim)} />
-      <p className={cn('mt-3 text-meta text-muted-foreground', dim)}>{statusLabel(event)}</p>
+      <p className={cn('mt-3 text-meta text-muted-foreground', dim)}>{statusLabel(event, onAir)}</p>
     </li>
   );
 }
@@ -177,14 +179,11 @@ function NewEventButton({
   );
 }
 
-// Liveness is not modelled yet, so "status" here is enablement. The design's on-air line is
-// absent rather than approximated.
-function statusLabel(event: AdminEventDetail) {
-  if (!event.enabled) return 'Disabled';
-  if (event.channels.length === 0) return 'No channels yet';
-
-  const enabled = event.channels.filter((channel) => channel.enabled).length;
-  return `${enabled} of ${event.channels.length} enabled`;
+// "Status" is enablement until there is something to be live about, then liveness. No listener
+// number appears at either width: a sum across an event's channels answers a question nobody
+// asks at the list level.
+function statusLabel(event: AdminEventDetail, onAir: number) {
+  return eventStatusLabel({ enabled: event.enabled, channels: event.channels.length, onAir });
 }
 
 function summarise(events: AdminEventDetail[]) {
