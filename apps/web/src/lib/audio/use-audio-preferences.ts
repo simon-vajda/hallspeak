@@ -4,6 +4,7 @@ import {
   AUDIO_PREFERENCES_STORAGE_KEY,
   DEFAULT_AUDIO_PREFERENCES,
   parseStoredPreferences,
+  samePreferences,
   serializePreferences,
 } from './preferences';
 
@@ -42,24 +43,31 @@ export function useAudioPreferences() {
   const [preferences, setPreferencesState] = useState<AudioPreferences>(readStoredPreferences);
 
   const setPreferences = useCallback((patch: Partial<AudioPreferences>) => {
-    setPreferencesState((previous) => ({ ...previous, ...patch }));
+    setPreferencesState((previous) => {
+      const next = { ...previous, ...patch };
+      // A patch that settles on the values already held must keep the object it already has:
+      // a new identity would re-apply constraints to a live track for no reason.
+      return samePreferences(next, previous) ? previous : next;
+    });
   }, []);
 
   const latest = useRef(preferences);
   latest.current = preferences;
+  // What storage is known to hold, so the write is skipped by comparing values rather than by
+  // counting renders — an effect that mounts twice in development must not write either.
+  const persisted = useRef(preferences);
   const pending = useRef(false);
-  const mounted = useRef(false);
 
   useEffect(() => {
-    // Mounting is not a change: the first pass would only write back what was just read.
-    if (!mounted.current) {
-      mounted.current = true;
+    if (samePreferences(preferences, persisted.current)) {
+      pending.current = false;
       return;
     }
 
     pending.current = true;
     const timer = setTimeout(() => {
       pending.current = false;
+      persisted.current = preferences;
       writeStoredPreferences(preferences);
     }, WRITE_DEBOUNCE_MS);
 

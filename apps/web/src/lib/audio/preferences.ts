@@ -59,3 +59,17 @@ export function parseStoredPreferences(raw: string | null): AudioPreferences {
 export function serializePreferences(preferences: AudioPreferences): string {
   return JSON.stringify(preferences);
 }
+
+/**
+ * Compared by value because identity is load-bearing downstream: `useMicCapture` re-applies
+ * constraints to the live capture track whenever the preferences object changes identity, so
+ * a change that changes nothing must not look like a change.
+ */
+export function samePreferences(a: AudioPreferences, b: AudioPreferences): boolean {
+  return (
+    a.noiseSuppression === b.noiseSuppression &&
+    a.autoGain === b.autoGain &&
+    a.echoCancellation === b.echoCancellation &&
+    a.gain === b.gain
+  );
+}
