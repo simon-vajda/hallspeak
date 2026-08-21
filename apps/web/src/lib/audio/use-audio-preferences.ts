@@ -74,14 +74,24 @@ export function useAudioPreferences() {
     return () => clearTimeout(timer);
   }, [preferences]);
 
-  // Unmount only, so a change made just before navigating away is not dropped. Cleaning up
-  // the effect above would flush on every change instead, which is the debounce undone.
-  useEffect(
-    () => () => {
-      if (pending.current) writeStoredPreferences(latest.current);
-    },
-    [],
-  );
+  // Cleaning up the effect above would flush on every change instead, which is the debounce
+  // undone — so the pending write is flushed here, once, on the two ways the studio ends.
+  // Leaving the page runs no cleanup at all, and `pagehide` is what fires there where
+  // `beforeunload` does not on iOS Safari.
+  useEffect(() => {
+    const flush = () => {
+      if (!pending.current) return;
+      pending.current = false;
+      persisted.current = latest.current;
+      writeStoredPreferences(latest.current);
+    };
+
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, []);
 
   return { preferences, setPreferences };
 }

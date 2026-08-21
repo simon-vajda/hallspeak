@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type AudioPreferences,
   type BroadcastInput,
   broadcastState,
   gainNodeValue,
@@ -24,7 +25,6 @@ describe('trackConstraints', () => {
         noiseSuppression: true,
         autoGain: false,
         echoCancellation: true,
-        gain: 50,
       }),
     ).toEqual({
       noiseSuppression: true,
@@ -36,7 +36,6 @@ describe('trackConstraints', () => {
         noiseSuppression: false,
         autoGain: true,
         echoCancellation: false,
-        gain: 50,
       }),
     ).toEqual({
       noiseSuppression: false,
@@ -51,20 +50,18 @@ describe('trackConstraints', () => {
         noiseSuppression: true,
         autoGain: false,
         echoCancellation: false,
-        gain: 50,
       }),
     ).toHaveProperty('echoCancellation', false);
   });
 
   it('carries no gain: that is a node on the graph, not a track constraint', () => {
-    expect(
-      trackConstraints({
-        noiseSuppression: true,
-        autoGain: true,
-        echoCancellation: false,
-        gain: 90,
-      }),
-    ).not.toHaveProperty('gain');
+    const preferences: AudioPreferences = {
+      noiseSuppression: true,
+      autoGain: true,
+      echoCancellation: false,
+      gain: 90,
+    };
+    expect(trackConstraints(preferences)).not.toHaveProperty('gain');
   });
 });
 
