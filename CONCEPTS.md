@@ -22,7 +22,7 @@ Whether an Event or a Channel is open to guests. Both default to closed and are 
 Enabled carries no direction in time — the same closed state means "not yet" before an Event and "over" afterwards. This is why there is no separate lifecycle or status concept: a project looking for one should use Enabled.
 
 ### Live
-Whether audio is actually being broadcast on a Channel. A Channel is Live from the moment its Speaker starts producing — the deliberate "go live" act — until that production ends. Muting does not end it: a muted Speaker is present and still holds the Channel.
+Whether audio is actually being broadcast on a Channel. A Channel is Live for exactly as long as a Producer exists on it — from the deliberate "go live" act until that production ends. Muting does not end it: a muted Speaker is present and still holds the Channel.
 
 Live is distinct from Enabled, which is an admin's decision that a Channel is open at all, and distinct from the Speaker's broadcast claim, which is taken when their page connects and can be held by someone who has not gone Live yet. A Channel can therefore be Enabled, claimed by a Speaker, and still not Live.
 
@@ -66,6 +66,16 @@ The out-of-band exchange that negotiates a media connection before audio flows �
 The media state for one Event: a single mediasoup router holding every producer on that Event's Channels, plus the transports and consumers of everyone connected to it. Distinct from a *socket room*, which is Socket.IO's fan-out group and exists whether or not any audio does.
 
 A Room comes into being on the first go-live within its Event and on nothing else — not when the Event is enabled, and not when a Listener arms — and is destroyed once it has held no producers and no transports for a grace period. Its whole existence is in memory, so a restart simply removes it.
+
+### Producer
+The server-side carrier of one Speaker's audio into a Room, brought into being by the deliberate go-live act and ending when that Speaker stops. A Channel has at most one Producer, and its existence is exactly what makes that Channel Live.
+
+Pausing a Producer is what muting does: the audio stops without the broadcast ending, so the Channel stays Live throughout. Producing again on a Channel that already has one replaces it rather than adding a second. A Producer's identifier is not a secret — every Listener who consumes that Channel is told it — so holding one grants nothing on its own.
+
+### Consumer
+The server-side carrier of a Room's audio out to one Listener. A Listener holds at most one Consumer per Channel, which is why switching language swaps a Consumer rather than rebuilding the connection underneath it.
+
+A Consumer is created paused and begins only once the Listener confirms it is ready to play, so audio never arrives before there is anything to play it. It closes on its own when its Producer closes, which is how every Listener's audio stops the instant a Speaker does, without anyone being told to stop.
 
 ### Eviction
 Ending a session from the server's side, rather than waiting for the client to notice. It is what makes an admin's write true of what is audible and not only of what the API reports: disabling, deleting, or regenerating a code evicts whoever that write took access from.
