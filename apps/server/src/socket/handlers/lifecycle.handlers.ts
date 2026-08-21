@@ -8,7 +8,7 @@ import { eventRoom } from '../lib/rooms';
 export interface LifecycleServer {
   to(room: string): {
     emit(event: 'channel:status', payload: { slug: string; online: boolean }): unknown;
-    emit(event: 'media:reset', payload: { reason: 'worker_died' | 'room_closed' }): unknown;
+    emit(event: 'media:reset', payload: { reason: 'worker_died' }): unknown;
   };
   in(room: string): { disconnectSockets(close: boolean): unknown };
   sockets: { sockets: Map<string, { disconnect(close: boolean): unknown }> };

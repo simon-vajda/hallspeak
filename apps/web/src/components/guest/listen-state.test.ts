@@ -8,6 +8,16 @@ import {
   statusNote,
 } from './listen-state';
 
+const ALL_STATES = [
+  'idle',
+  'waiting',
+  'playing',
+  'interpreter-away',
+  'reconnecting',
+  'media-trouble',
+  'ended',
+] as const;
+
 const playing: ListenInput = {
   armed: true,
   isPlaying: true,
@@ -99,6 +109,7 @@ describe('the three rendered states', () => {
       'interpreter-away',
       'reconnecting',
       'media-trouble',
+      'ended',
     ] as const) {
       expect(statusNote(state)).toBeTruthy();
     }
@@ -106,34 +117,48 @@ describe('the three rendered states', () => {
 });
 
 describe('badgeLabel', () => {
-  it('reads as terminal for a handshake rejection, which socket.io does not retry', () => {
-    expect(badgeLabel('reconnecting', true)).toBe('Disconnected');
-    expect(badgeLabel('playing', true)).toBe('Disconnected');
+  it('reads as terminal for a session the server ended', () => {
+    expect(badgeLabel('ended')).toBe('Disconnected');
   });
 
   it('says the interpreter is on air once armed and waiting for the first samples', () => {
-    expect(badgeLabel('waiting', false)).toBe('Interpreter on air');
-    expect(badgeLabel('playing', false)).toBe('Listening');
+    expect(badgeLabel('waiting')).toBe('Interpreter on air');
+    expect(badgeLabel('playing')).toBe('Listening');
   });
 
   it('reads the same before arming and after the interpreter drops', () => {
-    expect(badgeLabel('idle', false)).toBe(badgeLabel('interpreter-away', false));
+    expect(badgeLabel('idle')).toBe(badgeLabel('interpreter-away'));
   });
 
   it('keeps media trouble apart from losing the socket', () => {
-    expect(badgeLabel('media-trouble', false)).not.toBe(badgeLabel('reconnecting', false));
+    expect(badgeLabel('media-trouble')).not.toBe(badgeLabel('reconnecting'));
   });
 
   it('derives from the one state, so it cannot drift from the rest of the screen', () => {
-    for (const state of [
-      'idle',
-      'waiting',
-      'playing',
-      'interpreter-away',
-      'reconnecting',
-      'media-trouble',
-    ] as const) {
-      expect(badgeLabel(state, false)).toBeTruthy();
+    for (const state of ALL_STATES) {
+      expect(badgeLabel(state)).toBeTruthy();
     }
+  });
+});
+
+/**
+ * A revoked or ended session is disconnected by the server and Socket.IO does not retry
+ * it. Read as an ordinary blip, the screen promised a recovery that never came.
+ */
+describe('a session the server ended', () => {
+  it('is terminal whether or not the guest ever armed', () => {
+    expect(listenState({ ...playing, terminal: true })).toBe('ended');
+    expect(listenState({ ...playing, terminal: true, armed: false })).toBe('ended');
+  });
+
+  it('outranks every other state, including media trouble', () => {
+    expect(listenState({ ...playing, terminal: true, mediaTrouble: true })).toBe('ended');
+  });
+
+  it('does not tell the guest it picks itself back up', () => {
+    const note = statusNote('ended') ?? '';
+
+    expect(note).not.toMatch(/picks itself|by itself|resumes/i);
+    expect(note).toMatch(/organiser/i);
   });
 });

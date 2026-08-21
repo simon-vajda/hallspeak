@@ -31,7 +31,17 @@ export function useSocket(auth: SocketAuth | null) {
       setStatus('connected');
       setError(null);
     });
-    s.on('disconnect', () => setStatus('connecting'));
+    s.on('disconnect', (reason: string) => {
+      // The server ends a session by disconnecting it and Socket.IO does not retry that,
+      // so it is terminal, not a blip. Reported as such or the screen promises a recovery
+      // that will never come.
+      if (reason === 'io server disconnect') {
+        setStatus('error');
+        setError('session_ended');
+        return;
+      }
+      setStatus('connecting');
+    });
     s.on('connect_error', (err: Error) => {
       setStatus('error');
       setError(err.message);

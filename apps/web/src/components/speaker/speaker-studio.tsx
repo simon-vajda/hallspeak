@@ -16,7 +16,7 @@ import { levelStatus, rms } from '@/lib/audio/level';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { formatPin } from '@/lib/format';
 import { type ConnectionState, connectionState } from '@/lib/media/stats';
-import { useMedia } from '@/lib/media/use-media';
+import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import type { SocketClient } from '@/socket/client';
 import { type BroadcastState, broadcastState, type EndReason, onReconnect } from './live-state';
@@ -75,12 +75,21 @@ export function SpeakerStudio({
   });
 
   const outputTrack = mic.outputTrack;
+  // Destructured, not the whole hook result: `media` is a fresh object every render, so
+  // closing over it would churn this callback's identity and re-fire the effect below on
+  // every render rather than when its guards actually change.
+  const { startProducing } = media;
   const produce = useCallback(
     async (paused: boolean) => {
       if (!outputTrack) return;
-      await media.startProducing(channel.slug, outputTrack, paused);
+      try {
+        await startProducing(channel.slug, outputTrack, paused);
+      } catch (cause) {
+        // A reset landed mid-negotiation; its own renegotiation takes over from here.
+        if (!isSuperseded(cause)) console.error('media: could not go live', cause);
+      }
     },
-    [media, outputTrack, channel.slug],
+    [startProducing, outputTrack, channel.slug],
   );
 
   /**
@@ -460,10 +469,13 @@ function Displaced({ channelName, eventName }: { channelName: string; eventName:
         <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
           Interpreter · off air
         </span>
-        <h1 className="mt-4 mb-2 text-screen lg:text-screen-lg">{channelName} was taken over</h1>
+        {/* The wire carries no reason with the disconnect, so the copy names both causes
+            rather than asserting the one it cannot tell apart. */}
+        <h1 className="mt-4 mb-2 text-screen lg:text-screen-lg">{channelName} was handed over</h1>
         <p className="max-w-100 text-sm text-muted-foreground">
-          Another device opened this speaker link, so this session stopped. It will not take the
-          channel back on its own — reload this page once the other device has finished.
+          This session stopped — either another device opened the same speaker link, or the
+          organiser changed it. It will not take the channel back on its own. Reload this page to
+          try again, and ask the organiser if the link no longer works.
         </p>
       </main>
     </div>

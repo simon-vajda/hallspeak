@@ -11,9 +11,12 @@ export type ListenState =
   | 'playing'
   | 'interpreter-away'
   | 'reconnecting'
-  | 'media-trouble';
+  | 'media-trouble'
+  | 'ended';
 
 export interface ListenInput {
+  /** The server ended this session; Socket.IO will not retry it. */
+  terminal?: boolean;
   armed: boolean;
   /** A resumed consumer exists, not that the button was tapped. */
   isPlaying: boolean;
@@ -29,6 +32,8 @@ export interface ListenInput {
  * only one of them is about a person, and none of them asks the guest to do anything.
  */
 export function listenState(input: ListenInput): ListenState {
+  // Above `armed`: a session the server ended is over whether or not the guest armed.
+  if (input.terminal) return 'ended';
   if (!input.armed) return 'idle';
   if (!input.socketConnected) return 'reconnecting';
   if (input.mediaTrouble) return 'media-trouble';
@@ -49,6 +54,8 @@ export function playTargetLabel(state: ListenState): string {
       return 'Pause';
     case 'media-trouble':
       return 'Reconnecting';
+    case 'ended':
+      return 'Ended';
     default:
       return 'Waiting…';
   }
@@ -59,9 +66,10 @@ export function playTargetLabel(state: ListenState): string {
  * rejection is terminal — socket.io does not retry it — and that is the one distinction
  * `listenState` folds away, having no consequence for what the media layer should do.
  */
-export function badgeLabel(state: ListenState, terminal: boolean): string {
-  if (terminal) return 'Disconnected';
+export function badgeLabel(state: ListenState): string {
   switch (state) {
+    case 'ended':
+      return 'Disconnected';
     case 'reconnecting':
       return 'Reconnecting…';
     case 'idle':
@@ -100,5 +108,7 @@ export function statusNote(state: ListenState): string | null {
       return 'Reconnecting. Nothing to do — this picks itself back up.';
     case 'playing':
       return 'Headphones recommended, so the room stays quiet for everyone else.';
+    case 'ended':
+      return 'This session has ended. The event may be over, or its PIN may have changed — ask the organiser for the current link.';
   }
 }

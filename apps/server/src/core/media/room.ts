@@ -42,14 +42,6 @@ export class Room {
     return this.producers.get(channelId);
   }
 
-  /** The reverse lookup pause, resume and close need: a client names an id, not a channel. */
-  producerById(id: string): types.Producer | undefined {
-    for (const producer of this.producers.values()) {
-      if (producer.id === id) return producer;
-    }
-    return undefined;
-  }
-
   /** A channel is live while an unclosed producer exists. Mute pauses; it does not close. */
   isOnline(channelId: number): boolean {
     const producer = this.producers.get(channelId);
@@ -134,8 +126,15 @@ export class Room {
       throw new AppError('media_unavailable', 'Could not allocate a media transport.');
     }
 
-    // Registering after the await, so a failure leaves nothing half-attached to the peer.
-    peer.addTransport(direction, transport);
+    // Registering after the await, so an allocation failure leaves nothing half-attached.
+    // The peer can still refuse it — it raced another create — and an unregistered
+    // transport is one nothing will ever name again, so it closes here or it leaks.
+    try {
+      peer.addTransport(direction, transport);
+    } catch (cause) {
+      transport.close();
+      throw cause;
+    }
     return transport;
   }
 

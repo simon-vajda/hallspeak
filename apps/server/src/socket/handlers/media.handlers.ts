@@ -86,12 +86,24 @@ export async function startProducing(
   });
 }
 
+/**
+ * The channel this session may act on a producer for. Every producer verb goes through
+ * here: the consume ack hands a producer id to every listener on the event, so resolving
+ * one by id alone would let anybody with the PIN silence any channel.
+ */
+function claimedChannel(auth: SocketAuth): number {
+  if (auth.speakerChannelId === null) {
+    throw new AppError('not_speaker', 'This session may not broadcast.');
+  }
+  return auth.speakerChannelId;
+}
+
 export async function pauseProducing(
   socket: MediaSocket,
   auth: SocketAuth,
   payload: { producerId: string },
 ) {
-  await media.pauseProducer(ctx(socket, auth), payload.producerId);
+  await media.pauseProducer(ctx(socket, auth), claimedChannel(auth), payload.producerId);
   return {};
 }
 
@@ -100,7 +112,7 @@ export async function resumeProducing(
   auth: SocketAuth,
   payload: { producerId: string },
 ) {
-  await media.resumeProducer(ctx(socket, auth), payload.producerId);
+  await media.resumeProducer(ctx(socket, auth), claimedChannel(auth), payload.producerId);
   return {};
 }
 
@@ -109,7 +121,7 @@ export async function stopProducing(
   auth: SocketAuth,
   payload: { producerId: string },
 ) {
-  await media.closeProducer(ctx(socket, auth), payload.producerId);
+  await media.closeProducer(ctx(socket, auth), claimedChannel(auth), payload.producerId);
   return {};
 }
 

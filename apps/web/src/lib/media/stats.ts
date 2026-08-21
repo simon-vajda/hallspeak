@@ -91,19 +91,37 @@ export function connectionLabel(state: ConnectionState): string {
   }
 }
 
-/**
- * Reduces the raw report to the two figures that matter. Loss is cumulative in WebRTC, so
- * it is turned into a rate against the packets received; a sample with nothing received
- * yet has no rate to give.
- */
-export function summarise(report: {
+export interface StatsSample {
+  /** Cumulative since the connection began, which is why a delta is needed. */
   packetsLost?: number;
+  /** Present on a listener's `inbound-rtp` and absent on a speaker's `remote-inbound-rtp`. */
   packetsReceived?: number;
   jitter?: number;
-}): MediaStats | null {
-  const received = report.packetsReceived ?? 0;
-  const lost = report.packetsLost ?? 0;
+  /** What the remote report gives instead of a count: loss over the last interval. */
+  fractionLost?: number;
+}
+
+/**
+ * Reduces a report to the two figures the grade is made of, against the previous sample.
+ *
+ * Both counts are cumulative, so dividing them outright yields a since-join average that
+ * never recovers from a bad minute — the opposite of what a connection line is for. The
+ * speaker's report is the sharper case: it carries no `packetsReceived` at all, so the
+ * ratio would be loss divided by itself and read as total loss forever. `fractionLost` is
+ * the figure that report actually provides, so it wins where present.
+ */
+export function summarise(report: StatsSample, previous?: StatsSample): MediaStats | null {
+  const jitter = report.jitter ?? 0;
+
+  if (report.fractionLost !== undefined) {
+    return { packetLoss: report.fractionLost, jitter };
+  }
+  if (report.packetsReceived === undefined) return null;
+
+  const received = report.packetsReceived - (previous?.packetsReceived ?? 0);
+  const lost = (report.packetsLost ?? 0) - (previous?.packetsLost ?? 0);
   const total = received + lost;
-  if (total === 0) return null;
-  return { packetLoss: lost / total, jitter: report.jitter ?? 0 };
+  // Nothing moved since the last sample: no rate to give, rather than a fabricated zero.
+  if (total <= 0) return null;
+  return { packetLoss: Math.max(0, lost) / total, jitter };
 }

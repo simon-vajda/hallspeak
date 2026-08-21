@@ -11,6 +11,8 @@ export type TransportDirection = 'send' | 'recv';
 export class Peer {
   private readonly transports = new Map<TransportDirection, types.WebRtcTransport>();
   private readonly consumers = new Map<string, types.Consumer>();
+  /** One consumer per producer, so a repeated consume cannot fan a channel out twice. */
+  private readonly consumerByProducer = new Map<string, string>();
   private closed = false;
 
   constructor(readonly socketId: string) {}
@@ -49,16 +51,22 @@ export class Peer {
     this.transports.set(direction, transport);
   }
 
+  consumerForProducer(producerId: string): types.Consumer | undefined {
+    const id = this.consumerByProducer.get(producerId);
+    return id === undefined ? undefined : this.consumers.get(id);
+  }
+
   addConsumer(consumer: types.Consumer): void {
     if (this.closed) {
       throw new AppError('peer_closed', 'This session no longer holds media.');
     }
     this.consumers.set(consumer.id, consumer);
+    this.consumerByProducer.set(consumer.producerId, consumer.id);
     // mediasoup closes a consumer on its own when its producer closes, so a client that
     // never calls close would otherwise leave a dead reference here for the whole
     // connection — and a later resume would reach it and throw an untyped error.
     consumer.observer.once('close', () => {
-      if (this.consumers.get(consumer.id) === consumer) this.consumers.delete(consumer.id);
+      if (this.consumers.get(consumer.id) === consumer) this.forget(consumer);
     });
   }
 
@@ -70,8 +78,15 @@ export class Peer {
   closeConsumer(id: string): void {
     const consumer = this.consumers.get(id);
     if (!consumer) return;
-    this.consumers.delete(id);
+    this.forget(consumer);
     consumer.close();
+  }
+
+  private forget(consumer: types.Consumer): void {
+    this.consumers.delete(consumer.id);
+    if (this.consumerByProducer.get(consumer.producerId) === consumer.id) {
+      this.consumerByProducer.delete(consumer.producerId);
+    }
   }
 
   close(): void {
@@ -79,6 +94,7 @@ export class Peer {
     this.closed = true;
     for (const consumer of this.consumers.values()) consumer.close();
     this.consumers.clear();
+    this.consumerByProducer.clear();
     // Closing a transport closes its consumers too; both are cleared anyway so a later
     // lookup cannot reach a dead object.
     for (const transport of this.transports.values()) transport.close();

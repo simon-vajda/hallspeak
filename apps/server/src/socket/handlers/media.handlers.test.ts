@@ -3,7 +3,7 @@ import type { SocketAuth } from '../../core/access';
 import { createChannel } from '../../core/channels.service';
 import { createEvent } from '../../core/events.service';
 import { isOnline } from '../../core/media';
-import { startFakeMedia } from '../../core/media/testing';
+import { fakeMediaControls, startFakeMedia } from '../../core/media/testing';
 import type { Db } from '../../db/client';
 import { createTestDb } from '../../db/testing';
 import {
@@ -256,6 +256,57 @@ describe('pause and resume producing', () => {
   });
 });
 
+/**
+ * The consume ack hands a producer id to every listener on the event, so a producer verb
+ * that resolved one by id alone would let anybody holding the PIN silence any channel.
+ * These are the tests whose absence let that ship.
+ */
+describe('producer control is scoped to the claim', () => {
+  it('refuses a listener trying to pause a producer, even with the real id', async () => {
+    const { producerId } = await goLive();
+    await armListener();
+
+    await expect(pauseProducing(socket('guest-a'), listener, { producerId })).rejects.toMatchObject(
+      { code: 'not_speaker' },
+    );
+    expect(isOnline(eventId, englishId)).toBe(true);
+  });
+
+  it('refuses a listener trying to close a producer', async () => {
+    const { producerId } = await goLive();
+
+    await expect(stopProducing(socket('guest-a'), listener, { producerId })).rejects.toMatchObject({
+      code: 'not_speaker',
+    });
+    expect(isOnline(eventId, englishId)).toBe(true);
+  });
+
+  it('refuses a listener trying to resume a producer', async () => {
+    const { producerId } = await goLive();
+
+    await expect(
+      resumeProducing(socket('guest-a'), listener, { producerId }),
+    ).rejects.toMatchObject({ code: 'not_speaker' });
+  });
+
+  it('refuses a speaker acting on another channel’s producer', async () => {
+    const spanishSpeaker = { eventId, pin: speaker.pin, speakerChannelId: spanishId };
+    const { producerId } = await goLive();
+    await openTransport(socket('speaker-b'), spanishSpeaker, { direction: 'send' });
+
+    await expect(
+      pauseProducing(socket('speaker-b'), spanishSpeaker, { producerId }),
+    ).rejects.toMatchObject({ code: 'no_producer' });
+    expect(isOnline(eventId, englishId)).toBe(true);
+  });
+
+  it('lets the claim holder pause their own producer', async () => {
+    const { producerId } = await goLive();
+
+    await expect(pauseProducing(socket('speaker-a'), speaker, { producerId })).resolves.toEqual({});
+  });
+});
+
 describe('startConsuming', () => {
   it('returns a consumer for a live channel', async () => {
     await goLive();
@@ -306,6 +357,36 @@ describe('startConsuming', () => {
     await expect(
       resumeConsuming(socket('guest-a'), listener, { consumerId: 'nope' }),
     ).rejects.toMatchObject({ code: 'no_consumer' });
+  });
+
+  /** Uncapped, one PIN holder could fan a channel out as many times as they asked. */
+  it('returns the same consumer rather than allocating another for one channel', async () => {
+    await goLive();
+    await armListener();
+
+    const first = await startConsuming(db, socket('guest-a'), listener, {
+      slug: 'english',
+      rtpCapabilities: { codecs: [] },
+    });
+    const second = await startConsuming(db, socket('guest-a'), listener, {
+      slug: 'english',
+      rtpCapabilities: { codecs: [] },
+    });
+
+    expect(second.consumerId).toBe(first.consumerId);
+  });
+
+  it('refuses a device that cannot play the codec, with its own code', async () => {
+    fakeMediaControls.refuseConsume = true;
+    await goLive();
+    await armListener();
+
+    await expect(
+      startConsuming(db, socket('guest-a'), listener, {
+        slug: 'english',
+        rtpCapabilities: { codecs: [] },
+      }),
+    ).rejects.toMatchObject({ code: 'incompatible_client' });
   });
 
   it('closing a consumer that does not exist acks rather than throwing', async () => {

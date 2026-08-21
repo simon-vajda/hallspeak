@@ -18,11 +18,22 @@ import {
   transportOpened,
 } from './media-state';
 import { signalling } from './signalling';
-import { type MediaStats, summarise } from './stats';
+import { type MediaStats, type StatsSample, summarise } from './stats';
 import { openTransport } from './transport';
 
 /** Media trouble is its own state: neither the socket being down nor nobody being live. */
 export type MediaHealth = 'idle' | 'connecting' | 'connected' | 'trouble';
+
+/**
+ * A reset landed while this call was in flight, so its answer is stale. An expected
+ * outcome of a reconnect race, not a failure — callers swallow it and let the reset's own
+ * renegotiation take over.
+ */
+export const SUPERSEDED = 'superseded';
+
+export function isSuperseded(error: unknown): boolean {
+  return error instanceof Error && error.message === SUPERSEDED;
+}
 
 interface Session {
   device: types.Device;
@@ -30,6 +41,14 @@ interface Session {
   transports: Partial<Record<TransportDirection, types.Transport>>;
   producer?: types.Producer;
   consumers: Map<string, types.Consumer>;
+  /**
+   * Everything below is an in-flight guard. Each of these spans a round trip, and an
+   * effect can re-enter during it — so without them two callers both see "nothing yet"
+   * and both allocate, and the loser is a resource nothing can name again.
+   */
+  pendingTransports: Partial<Record<TransportDirection, Promise<types.Transport>>>;
+  pendingConsumers: Map<string, Promise<MediaStreamTrack>>;
+  pendingProducer?: Promise<types.Producer>;
 }
 
 /**
@@ -45,13 +64,17 @@ export function useMedia(socket: SocketClient | null) {
   const [state, setState] = useState<MediaState>(initialMediaState);
   const [health, setHealth] = useState<MediaHealth>('idle');
   const [stats, setStats] = useState<MediaStats | null>(null);
+  // The counters are cumulative, so the grade is a delta against the previous sample.
+  const previousSample = useRef<StatsSample | null>(null);
   const session = useRef<Session | null>(null);
+  const pendingSession = useRef<Promise<Session> | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
 
   const releaseSession = useCallback(() => {
     const current = session.current;
     session.current = null;
+    pendingSession.current = null;
     if (!current) return;
     // One release path, as on the capture side: a partial teardown leaks a transport
     // nothing will ever name again.
@@ -67,6 +90,7 @@ export function useMedia(socket: SocketClient | null) {
       releaseSession();
       setState(afterConnect);
       setHealth('connecting');
+      previousSample.current = null;
     };
 
     socket.on('connect', reset);
@@ -90,6 +114,7 @@ export function useMedia(socket: SocketClient | null) {
     const anyTransport = state.recvTransportId ?? state.sendTransportId;
     if (!anyTransport) {
       setStats(null);
+      previousSample.current = null;
       return;
     }
 
@@ -102,10 +127,12 @@ export function useMedia(socket: SocketClient | null) {
       if (!report) return;
 
       for (const entry of report.values()) {
-        // Inbound for a listener, remote-inbound for a speaker: only one exists per peer,
-        // and both carry the two figures the grade is made of.
+        // Inbound for a listener, remote-inbound for a speaker. They do NOT carry the same
+        // fields: the remote report has no packet count and gives `fractionLost` instead.
         if (entry.type === 'inbound-rtp' || entry.type === 'remote-inbound-rtp') {
-          const summary = summarise(entry as Record<string, number>);
+          const current = entry as StatsSample;
+          const summary = summarise(current, previousSample.current ?? undefined);
+          previousSample.current = current;
           if (summary) setStats(summary);
           return;
         }
@@ -119,12 +146,29 @@ export function useMedia(socket: SocketClient | null) {
 
   const ensureSession = useCallback(async (): Promise<Session> => {
     if (session.current) return session.current;
+    if (pendingSession.current) return pendingSession.current;
     if (!socket) throw new Error('No socket.');
-    const { device, iceServers } = await loadDevice(signalling(socket));
-    const created: Session = { device, iceServers, transports: {}, consumers: new Map() };
-    session.current = created;
-    setState((prev) => ({ ...prev, deviceLoaded: true }));
-    return created;
+
+    const loading = loadDevice(signalling(socket))
+      .then(({ device, iceServers }) => {
+        const created: Session = {
+          device,
+          iceServers,
+          transports: {},
+          consumers: new Map(),
+          pendingTransports: {},
+          pendingConsumers: new Map(),
+        };
+        session.current = created;
+        setState((prev) => ({ ...prev, deviceLoaded: true }));
+        return created;
+      })
+      .finally(() => {
+        pendingSession.current = null;
+      });
+
+    pendingSession.current = loading;
+    return loading;
   }, [socket]);
 
   const ensureTransport = useCallback(
@@ -133,21 +177,28 @@ export function useMedia(socket: SocketClient | null) {
       const existing = active.transports[direction];
       if (existing && !existing.closed) return existing;
 
+      const inFlight = active.pendingTransports[direction];
+      if (inFlight) return inFlight;
+
       if (!socket) throw new Error('No socket.');
       const generation = stateRef.current.generation;
-      const transport = await openTransport({
+      const opening = openTransport({
         api: signalling(socket),
         device: active.device,
         direction,
         iceServers: active.iceServers,
         slug,
+      }).finally(() => {
+        delete active.pendingTransports[direction];
       });
+      active.pendingTransports[direction] = opening;
+      const transport = await opening;
 
       // A connect that landed while this was in flight already voided it. Adopting the
       // answer now would hand back a transport the server no longer knows about.
       if (!isCurrent(stateRef.current, generation) || session.current !== active) {
         transport.close();
-        throw new Error('superseded');
+        throw new Error(SUPERSEDED);
       }
 
       transport.on('connectionstatechange', (next: TransportConnectionState) => {
@@ -169,16 +220,34 @@ export function useMedia(socket: SocketClient | null) {
 
   const startProducing = useCallback(
     async (slug: string, track: MediaStreamTrack, paused: boolean) => {
-      const transport = await ensureTransport('send', slug);
-      const active = session.current;
-      if (!active) throw new Error('superseded');
+      const started = session.current?.pendingProducer;
+      // Re-entering while the first produce is still in flight would close it and start
+      // another, which the server broadcasts as the channel going offline and back on.
+      if (started) return started;
 
-      active.producer?.close();
-      const producer = await transport.produce({ track, ...producerOptions });
-      if (paused) await producer.pause();
-      active.producer = producer;
-      setState((prev) => producerOpened(prev, producer.id));
-      return producer;
+      const produce = (async () => {
+        const transport = await ensureTransport('send', slug);
+        const active = session.current;
+        if (!active) throw new Error(SUPERSEDED);
+
+        active.producer?.close();
+        const producer = await transport.produce({ track, ...producerOptions });
+        if (paused) await producer.pause();
+        active.producer = producer;
+        setState((prev) => producerOpened(prev, producer.id));
+        return producer;
+      })();
+
+      const active = session.current;
+      if (active) {
+        active.pendingProducer = produce;
+        void produce
+          .catch(() => {})
+          .finally(() => {
+            if (session.current === active) active.pendingProducer = undefined;
+          });
+      }
+      return produce;
     },
     [ensureTransport],
   );
@@ -211,25 +280,43 @@ export function useMedia(socket: SocketClient | null) {
 
   const startConsuming = useCallback(
     async (slug: string): Promise<MediaStreamTrack> => {
-      const transport = await ensureTransport('recv');
+      const started = session.current?.pendingConsumers.get(slug);
+      // The effect that drives this depends on the consumers map, which a close mutates
+      // synchronously — so it re-enters while the first consume is still awaiting.
+      if (started) return started;
+
+      const consume = (async () => {
+        const transport = await ensureTransport('recv');
+        const active = session.current;
+        if (!socket || !active) throw new Error(SUPERSEDED);
+
+        const api = signalling(socket);
+        const params = await api.consume(slug, active.device.rtpCapabilities);
+        const consumer = await transport.consume({
+          id: params.consumerId,
+          producerId: params.producerId,
+          kind: params.kind,
+          rtpParameters: params.rtpParameters,
+        });
+        active.consumers.set(slug, consumer);
+        setState((prev) => consumerOpened(prev, slug, consumer.id));
+
+        // Resumed only once the track is in hand, per the server creating it paused: RTP
+        // arriving before the decoder is ready is the usual cause of artefacts at join.
+        await api.resumeConsumer(consumer.id);
+        return consumer.track;
+      })();
+
       const active = session.current;
-      if (!socket || !active) throw new Error('superseded');
-
-      const api = signalling(socket);
-      const params = await api.consume(slug, active.device.rtpCapabilities);
-      const consumer = await transport.consume({
-        id: params.consumerId,
-        producerId: params.producerId,
-        kind: params.kind,
-        rtpParameters: params.rtpParameters,
-      });
-      active.consumers.set(slug, consumer);
-      setState((prev) => consumerOpened(prev, slug, consumer.id));
-
-      // Resumed only once the track is in hand, per the server creating it paused: RTP
-      // arriving before the decoder is ready is the usual cause of artefacts at join.
-      await api.resumeConsumer(consumer.id);
-      return consumer.track;
+      if (active) {
+        active.pendingConsumers.set(slug, consume);
+        void consume
+          .catch(() => {})
+          .finally(() => {
+            if (session.current === active) active.pendingConsumers.delete(slug);
+          });
+      }
+      return consume;
     },
     [ensureTransport, socket],
   );

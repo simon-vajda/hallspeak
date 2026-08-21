@@ -52,7 +52,12 @@ class FakeConsumer extends EventEmitter {
     super();
   }
   close = () => {
+    if (this.closed) return;
     this.closed = true;
+    // mediasoup emits this when the consumer closes for any reason, including its
+    // producer going away. Peer's cleanup hangs off it, so a fake that stays silent
+    // makes that cleanup untestable.
+    this.observer.emit('close');
   };
   resume = async () => {
     this.paused = false;
@@ -61,6 +66,8 @@ class FakeConsumer extends EventEmitter {
 
 class FakeTransport {
   closed = false;
+  /** Closing a transport closes what was produced on it, which closes their consumers. */
+  readonly consumersByProducer = new Map<string, FakeConsumer[]>();
   readonly iceParameters = { usernameFragment: 'u' };
   readonly iceCandidates = [{ foundation: 'udp' }];
   readonly dtlsParameters = { role: 'auto' };
@@ -84,15 +91,21 @@ class FakeTransport {
   consume = async ({ producerId }: { producerId: string }) => {
     const consumer = new FakeConsumer(nextId('consumer'), producerId);
     this.children.push(consumer);
+    const forProducer = this.consumersByProducer.get(producerId) ?? [];
+    forProducer.push(consumer);
+    this.consumersByProducer.set(producerId, forProducer);
     return consumer;
   };
 }
+
+/** Set to make the next canConsume refuse, so the incompatible-client path is reachable. */
+export const fakeMediaControls = { refuseConsume: false };
 
 class FakeRouter {
   closed = false;
   readonly rtpCapabilities = { codecs: [{ mimeType: 'audio/opus' }] };
   readonly observer = new EventEmitter();
-  canConsume = () => true;
+  canConsume = () => !fakeMediaControls.refuseConsume;
   close = () => {
     this.closed = true;
     this.observer.emit('close');
@@ -128,6 +141,7 @@ export async function startFakeMedia(options: FakeMediaOptions = {}): Promise<()
   seq.producer = 0;
   seq.consumer = 0;
   seq.transport = 0;
+  fakeMediaControls.refuseConsume = false;
   await startMedia({
     net: { listenIp: '0.0.0.0', announcedIp: '203.0.113.1', rtcPortBase: 44400, maxWorkers: 1 },
     turn: options.turn ?? {},

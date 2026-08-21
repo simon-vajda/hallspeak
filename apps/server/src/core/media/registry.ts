@@ -42,6 +42,11 @@ export class RoomRegistry {
     return [...this.rooms.values()];
   }
 
+  /** Any use of an existing room cancels its pending teardown, not only a creation. */
+  touch(eventId: number): void {
+    this.cancelTeardown(eventId);
+  }
+
   /**
    * The only path that creates a room, which is what keeps R6 true: nothing an admin or a
    * guest does brings a router into existence, only a produce.
@@ -120,7 +125,13 @@ export class RoomRegistry {
 
   private closeRoom(eventId: number, reason: RoomClosedReason): void {
     const room = this.rooms.get(eventId);
-    if (!room) return;
+    if (!room) {
+      // A creation in flight is invisible in `rooms`, so closing now would miss it and
+      // the router would surface moments later with nothing left to close it.
+      const inFlight = this.creating.get(eventId);
+      if (inFlight) void inFlight.then(() => this.closeRoom(eventId, reason)).catch(() => {});
+      return;
+    }
     // Deleted before closing, so nothing can be handed a room whose router is going away.
     this.rooms.delete(eventId);
     this.cancelTeardown(eventId);
