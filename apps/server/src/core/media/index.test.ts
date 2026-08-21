@@ -3,6 +3,7 @@ import type { Notification } from '../notifications';
 import { notifications } from '../notifications';
 import { presence } from '../presence';
 import {
+  activeRooms,
   closeConsumer,
   closeProducer,
   consume,
@@ -44,6 +45,9 @@ afterEach(async () => {
 
 const goLive = (socketId: string, channelId = ENGLISH, slug = 'english') =>
   goLiveOn({ eventId: EVENT, socketId, channelId, slug });
+
+const peerConsumer = (socketId: string, consumerId: string) =>
+  activeRooms()[0]?.peer(socketId)?.consumerById(consumerId);
 
 describe('isOnline', () => {
   it('is false with no room at all', () => {
@@ -163,6 +167,50 @@ describe('createTransport', () => {
     await expect(
       createTransport({ eventId: EVENT, socketId: 'speaker-a' }, 'send', { create: true }),
     ).rejects.toMatchObject({ code: 'transport_exists' });
+  });
+});
+
+/**
+ * What every listener experiences the moment a speaker stops: mediasoup closes their
+ * consumer for them, and nothing on either side is told to. Only reachable now that the
+ * fake emits the observer close mediasoup emits.
+ */
+describe('a listener whose speaker stops', () => {
+  it('has its consumer closed and forgotten without anyone calling close', async () => {
+    const { producerId } = await goLive('speaker-a');
+    await createTransport({ eventId: EVENT, socketId: 'guest-a' }, 'recv', { create: false });
+    const { consumerId } = await consume(
+      { eventId: EVENT, socketId: 'guest-a' },
+      { channelId: ENGLISH, rtpCapabilities: { codecs: [] } },
+    );
+    expect(peerConsumer('guest-a', consumerId)).toBeDefined();
+
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+
+    expect(peerConsumer('guest-a', consumerId)).toBeUndefined();
+    expect(isOnline(EVENT, ENGLISH)).toBe(false);
+  });
+
+  it('can consume again once the speaker returns', async () => {
+    const { producerId } = await goLive('speaker-a');
+    await createTransport({ eventId: EVENT, socketId: 'guest-a' }, 'recv', { create: false });
+    await consume(
+      { eventId: EVENT, socketId: 'guest-a' },
+      { channelId: ENGLISH, rtpCapabilities: { codecs: [] } },
+    );
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+
+    // The speaker keeps their send transport across this and only produces again.
+    await produce(
+      { eventId: EVENT, socketId: 'speaker-a' },
+      { channelId: ENGLISH, slug: 'english', rtpParameters: { codecs: [] } },
+    );
+    const again = await consume(
+      { eventId: EVENT, socketId: 'guest-a' },
+      { channelId: ENGLISH, rtpCapabilities: { codecs: [] } },
+    );
+
+    expect(again.consumerId).toBeDefined();
   });
 });
 

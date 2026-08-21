@@ -66,14 +66,15 @@ class FakeConsumer extends EventEmitter {
 
 class FakeTransport {
   closed = false;
-  /** Closing a transport closes what was produced on it, which closes their consumers. */
-  readonly consumersByProducer = new Map<string, FakeConsumer[]>();
   readonly iceParameters = { usernameFragment: 'u' };
   readonly iceCandidates = [{ foundation: 'udp' }];
   readonly dtlsParameters = { role: 'auto' };
   private readonly children: Array<{ close: () => void }> = [];
 
-  constructor(readonly id: string) {}
+  constructor(
+    readonly id: string,
+    private readonly router: FakeRouter,
+  ) {}
 
   connect = async () => {};
 
@@ -85,15 +86,14 @@ class FakeTransport {
   produce = async () => {
     const producer = new FakeProducer(nextId('producer'));
     this.children.push(producer);
+    this.router.registerProducer(producer);
     return producer;
   };
 
   consume = async ({ producerId }: { producerId: string }) => {
     const consumer = new FakeConsumer(nextId('consumer'), producerId);
     this.children.push(consumer);
-    const forProducer = this.consumersByProducer.get(producerId) ?? [];
-    forProducer.push(consumer);
-    this.consumersByProducer.set(producerId, forProducer);
+    this.router.registerConsumer(consumer);
     return consumer;
   };
 }
@@ -105,13 +105,36 @@ class FakeRouter {
   closed = false;
   readonly rtpCapabilities = { codecs: [{ mimeType: 'audio/opus' }] };
   readonly observer = new EventEmitter();
+  private readonly consumersByProducer = new Map<string, FakeConsumer[]>();
+
   canConsume = () => !fakeMediaControls.refuseConsume;
+
   close = () => {
     this.closed = true;
     this.observer.emit('close');
   };
+
   async createWebRtcTransport() {
-    return new FakeTransport(nextId('transport'));
+    return new FakeTransport(nextId('transport'), this);
+  }
+
+  /**
+   * mediasoup closes every consumer of a producer when that producer closes, wherever
+   * those consumers live. It is the cascade that stops a listener's audio the instant a
+   * speaker does, so a fake that omits it makes the whole path untestable — and the two
+   * sides sit on different transports, so the link belongs here, on the shared router.
+   */
+  registerProducer(producer: FakeProducer): void {
+    producer.observer.once('close', () => {
+      for (const consumer of this.consumersByProducer.get(producer.id) ?? []) consumer.close();
+      this.consumersByProducer.delete(producer.id);
+    });
+  }
+
+  registerConsumer(consumer: FakeConsumer): void {
+    const existing = this.consumersByProducer.get(consumer.producerId) ?? [];
+    existing.push(consumer);
+    this.consumersByProducer.set(consumer.producerId, existing);
   }
 }
 
