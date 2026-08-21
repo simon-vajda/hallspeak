@@ -287,6 +287,7 @@ describe('producer control is scoped to the claim', () => {
     await expect(
       resumeProducing(socket('guest-a'), listener, { producerId }),
     ).rejects.toMatchObject({ code: 'not_speaker' });
+    expect(isOnline(eventId, englishId)).toBe(true);
   });
 
   it('refuses a speaker acting on another channel’s producer', async () => {
