@@ -1,7 +1,9 @@
 import type { SocketAuth } from '../../core/access';
+import { getChannelById } from '../../core/channels.service';
 import * as media from '../../core/media';
 import type { Notification } from '../../core/notifications';
 import { presence } from '../../core/presence';
+import type { Db } from '../../db/client';
 import { eventRoom } from '../lib/rooms';
 
 /** The subset of Server this module needs; a real Server satisfies it. */
@@ -9,9 +11,15 @@ export interface LifecycleServer {
   to(room: string): {
     emit(event: 'channel:status', payload: { slug: string; online: boolean }): unknown;
     emit(event: 'media:reset', payload: { reason: 'worker_died' }): unknown;
+    emit(event: 'channel:listeners', payload: { slug: string; count: number }): unknown;
   };
   in(room: string): { disconnectSockets(close: boolean): unknown };
   sockets: { sockets: Map<string, { disconnect(close: boolean): unknown }> };
+}
+
+/** The subset of Socket the connect-time count needs; a real Socket satisfies it. */
+export interface LifecycleSocket {
+  emit(event: 'channel:listeners', payload: { slug: string; count: number }): unknown;
 }
 
 /**
@@ -44,6 +52,23 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
       });
       return;
 
+    /**
+     * Addressed to the claim holder, never to `channelRoom(channelId)`: every listening
+     * guest is in that room, so a room-scoped emit would hand all n of them a number that
+     * is the speaker's alone. `io.to(socketId)` reaches one socket because Socket.IO puts
+     * every socket in a room named after its own id. A channel nobody is speaking on has
+     * nobody to tell.
+     */
+    case 'listeners-changed': {
+      const holder = presence.holder(notification.channelId);
+      if (holder === undefined) return;
+      io.to(holder).emit('channel:listeners', {
+        slug: notification.slug,
+        count: notification.count,
+      });
+      return;
+    }
+
     case 'peer-evicted': {
       // Already gone is the common case on a takeover; there is nothing to do about it.
       io.sockets.sockets.get(notification.socketId)?.disconnect(true);
@@ -62,4 +87,26 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
       return;
     }
   }
+}
+
+/**
+ * A studio connecting to a channel that is already being listened to must not sit blank
+ * until the next change, so it is told the current count on connect. Zero is a number the
+ * studio can render; sending nothing is not.
+ *
+ * It lives here rather than in `socket/index.ts` because that module is only reachable
+ * through `attachSocket(httpServer)` and could not be tested without binding a real server.
+ */
+export function sendInitialListenerCount(db: Db, socket: LifecycleSocket, auth: SocketAuth): void {
+  const channelId = auth.speakerChannelId;
+  if (channelId === null) return;
+
+  // `socket.data` carries no slug, so the wire's identifier is read back off the row.
+  const channel = getChannelById(db, channelId);
+  if (!channel) return;
+
+  socket.emit('channel:listeners', {
+    slug: channel.slug,
+    count: media.listenerCount(auth.eventId, channelId),
+  });
 }

@@ -1,10 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SocketAuth } from '../../core/access';
-import { isOnline } from '../../core/media';
+import { createChannel } from '../../core/channels.service';
+import { createEvent } from '../../core/events.service';
+import { consume, createTransport, isOnline, resumeConsumer } from '../../core/media';
 import { goLive, startFakeMedia } from '../../core/media/testing';
 import { presence } from '../../core/presence';
-import { eventRoom } from '../lib/rooms';
-import { applyNotification, type LifecycleServer, releaseSocket } from './lifecycle.handlers';
+import type { Db } from '../../db/client';
+import { createTestDb } from '../../db/testing';
+import { channelRoom, eventRoom } from '../lib/rooms';
+import {
+  applyNotification,
+  type LifecycleServer,
+  releaseSocket,
+  sendInitialListenerCount,
+} from './lifecycle.handlers';
 
 const EVENT = 1;
 const ENGLISH = 10;
@@ -198,6 +207,153 @@ describe('applyNotification room eviction', () => {
     expect(disconnectedRooms).toEqual([]);
     expect(emitted).toEqual([
       { room: eventRoom(EVENT), event: 'media:reset', payload: { reason: 'worker_died' } },
+    ]);
+  });
+});
+
+describe('applyNotification listener counts', () => {
+  /**
+   * KTD11: every listening guest is in the channel room, so a room-scoped emit would hand
+   * n guests a number meant for the one speaker. The claim holder is addressed directly.
+   */
+  it('emits to the claim holder’s socket and to no room at all', () => {
+    const { io, emitted } = fakeIo();
+    presence.claim(ENGLISH, 'code-english', 'speaker-a');
+
+    applyNotification(io, {
+      type: 'listeners-changed',
+      eventId: EVENT,
+      channelId: ENGLISH,
+      slug: 'english',
+      count: 3,
+    });
+
+    expect(emitted).toEqual([
+      { room: 'speaker-a', event: 'channel:listeners', payload: { slug: 'english', count: 3 } },
+    ]);
+    expect(emitted.map((e) => e.room)).not.toContain(channelRoom(ENGLISH));
+    expect(emitted.map((e) => e.room)).not.toContain(eventRoom(EVENT));
+  });
+
+  it('passes the slug and count through unchanged', () => {
+    const { io, emitted } = fakeIo();
+    presence.claim(ENGLISH, 'code-english', 'speaker-a');
+
+    applyNotification(io, {
+      type: 'listeners-changed',
+      eventId: EVENT,
+      channelId: ENGLISH,
+      slug: 'deutsch',
+      count: 0,
+    });
+
+    expect(emitted[0]?.payload).toEqual({ slug: 'deutsch', count: 0 });
+  });
+
+  it('emits nothing for a channel nobody is speaking on', () => {
+    const { io, emitted } = fakeIo();
+
+    expect(() =>
+      applyNotification(io, {
+        type: 'listeners-changed',
+        eventId: EVENT,
+        channelId: ENGLISH,
+        slug: 'english',
+        count: 2,
+      }),
+    ).not.toThrow();
+    expect(emitted).toEqual([]);
+  });
+
+  it('leaves the producer lifecycle emit untouched', () => {
+    const { io, emitted } = fakeIo();
+    presence.claim(ENGLISH, 'code-english', 'speaker-a');
+
+    applyNotification(io, {
+      type: 'producer-opened',
+      eventId: EVENT,
+      channelId: ENGLISH,
+      slug: 'english',
+    });
+
+    expect(emitted).toEqual([
+      {
+        room: eventRoom(EVENT),
+        event: 'channel:status',
+        payload: { slug: 'english', online: true },
+      },
+    ]);
+  });
+});
+
+describe('sendInitialListenerCount', () => {
+  let db: Db;
+  let cleanup: () => void;
+  let eventId: number;
+  let channelId: number;
+
+  beforeEach(() => {
+    ({ db, cleanup } = createTestDb());
+    const event = createEvent(db, { name: 'A', enabled: true });
+    eventId = event.id;
+    channelId = createChannel(db, eventId, {
+      slug: 'english',
+      name: 'English',
+      enabled: true,
+    }).id;
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  function fakeSpeakerSocket() {
+    const emitted: Array<{ event: string; payload: unknown }> = [];
+    return {
+      emitted,
+      socket: {
+        emit: (event: string, payload: unknown) => {
+          emitted.push({ event, payload });
+        },
+      },
+    };
+  }
+
+  it('sends the count a channel already has when the studio connects', async () => {
+    await goLive({ eventId, socketId: 'speaker-a', channelId, slug: 'english' });
+    const ctx = { eventId, socketId: 'guest-a' };
+    await createTransport(ctx, 'recv', { create: false });
+    const { consumerId } = await consume(ctx, {
+      channelId,
+      // biome-ignore lint/suspicious/noExplicitAny: the fakes stand in for mediasoup's types.
+      rtpCapabilities: {} as any,
+    });
+    await resumeConsumer(ctx, consumerId);
+
+    const { socket, emitted } = fakeSpeakerSocket();
+    sendInitialListenerCount(db, socket, {
+      eventId,
+      pin: '111111',
+      speakerChannelId: channelId,
+    });
+
+    expect(emitted).toEqual([
+      { event: 'channel:listeners', payload: { slug: 'english', count: 1 } },
+    ]);
+  });
+
+  // A blank is not a number: the studio must be able to render zero.
+  it('sends zero rather than nothing when nobody is listening', () => {
+    const { socket, emitted } = fakeSpeakerSocket();
+
+    sendInitialListenerCount(db, socket, {
+      eventId,
+      pin: '111111',
+      speakerChannelId: channelId,
+    });
+
+    expect(emitted).toEqual([
+      { event: 'channel:listeners', payload: { slug: 'english', count: 0 } },
     ]);
   });
 });
