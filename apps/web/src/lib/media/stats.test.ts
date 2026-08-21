@@ -70,6 +70,38 @@ describe('connectionState', () => {
     expect(offline.kind).not.toBe('trouble');
   });
 
+  /**
+   * Muting stops the sending, so the report covering that moment reads the stopped tail
+   * as loss — and no fresher report can arrive while nothing is sent, so the reading
+   * freezes. Graded, it blames the network for the speaker's own mute.
+   */
+  it('does not grade a deliberately paused producer', () => {
+    const lossy = { packetLoss: POOR_LOSS, jitter: POOR_JITTER };
+
+    expect(connectionState({ ...flowing, paused: true, stats: lossy })).toEqual({
+      kind: 'paused',
+    });
+  });
+
+  it('reports trouble over a pause, because a failed transport still matters', () => {
+    expect(connectionState({ ...flowing, paused: true, mediaTrouble: true })).toEqual({
+      kind: 'trouble',
+    });
+  });
+
+  it('reports a lost socket over a pause too', () => {
+    expect(connectionState({ ...flowing, paused: true, socketConnected: false })).toEqual({
+      kind: 'reconnecting',
+    });
+  });
+
+  it('grades again once the speaker unmutes', () => {
+    expect(connectionState({ ...flowing, paused: false })).toEqual({
+      kind: 'flowing',
+      grade: 'good',
+    });
+  });
+
   it('is idle when live but no samples have arrived yet', () => {
     expect(connectionState({ ...flowing, stats: null })).toEqual({ kind: 'idle' });
   });
@@ -92,15 +124,28 @@ describe('the rendered line', () => {
     expect(poor).toBeGreaterThan(0);
   });
 
-  it('gives every state a text equivalent, and keeps the three apart', () => {
+  it('gives every state a text equivalent, and keeps them apart', () => {
     const labels = [
       connectionLabel({ kind: 'reconnecting' }),
       connectionLabel({ kind: 'trouble' }),
       connectionLabel({ kind: 'offline' }),
+      connectionLabel({ kind: 'paused' }),
+      connectionLabel({ kind: 'idle' }),
     ];
 
-    expect(new Set(labels).size).toBe(3);
+    expect(new Set(labels).size).toBe(5);
     for (const label of labels) expect(label.length).toBeGreaterThan(0);
+  });
+
+  it('blames the mute rather than the connection while paused', () => {
+    const label = connectionLabel({ kind: 'paused' });
+
+    expect(label).toMatch(/muted/i);
+    expect(label).not.toMatch(/unsteady|poor|connection/i);
+  });
+
+  it('fills no bars while paused, since nothing is flowing', () => {
+    expect(filledBars({ kind: 'paused' })).toBe(0);
   });
 
   it('keeps the media-trouble line about the audio, not about the interpreter', () => {

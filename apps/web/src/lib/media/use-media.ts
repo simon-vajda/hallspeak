@@ -266,6 +266,12 @@ export function useMedia(socket: SocketClient | null) {
     async (paused: boolean) => {
       const producer = session.current?.producer;
       if (!producer || !socket) return;
+      // Both directions discard the sample history. The readings either side of a mute
+      // describe different situations, and differencing across the gap would charge the
+      // silence to the line the moment audio came back.
+      setStats(null);
+      previousSample.current = null;
+
       const api = signalling(socket);
       if (paused) {
         producer.pause();

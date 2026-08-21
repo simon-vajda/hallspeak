@@ -188,6 +188,7 @@ export function SpeakerStudio({
           socketConnected: status === 'connected',
           mediaTrouble: media.health === 'trouble',
           live: hasProducer,
+          paused: state === 'muted' || state === 'back-from-drop',
           stats: media.stats,
         })}
         onToggleMute={() => {
