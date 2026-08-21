@@ -9,8 +9,13 @@ import { CopyButton } from '@/components/admin/copy-button';
 import { EnabledSwitch } from '@/components/admin/enabled-switch';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import { eventScope, invalidateAdminEvents, useOptimisticEventUpdate } from '@/lib/admin-queries';
-import { plural } from '@/lib/format';
+import {
+  eventScope,
+  invalidateAdminEvents,
+  useAdminLive,
+  useOptimisticEventUpdate,
+} from '@/lib/admin-queries';
+import { channelLiveLabel, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
@@ -26,6 +31,7 @@ function useChannelInvalidation(eventId: number) {
 }
 
 export function ChannelsPanel({ event }: { event: AdminEventDetail }) {
+  const live = useAdminLive();
   const [adding, setAdding] = useState(false);
 
   return (
@@ -49,7 +55,12 @@ export function ChannelsPanel({ event }: { event: AdminEventDetail }) {
       ) : (
         <ul>
           {event.channels.map((channel) => (
-            <ChannelRow key={channel.id} event={event} channel={channel} />
+            <ChannelRow
+              key={channel.id}
+              event={event}
+              channel={channel}
+              live={channelLiveLabel(live.channels.get(channel.id))}
+            />
           ))}
         </ul>
       )}
@@ -59,7 +70,16 @@ export function ChannelsPanel({ event }: { event: AdminEventDetail }) {
   );
 }
 
-function ChannelRow({ event, channel }: { event: AdminEventDetail; channel: AdminChannel }) {
+function ChannelRow({
+  event,
+  channel,
+  live,
+}: {
+  event: AdminEventDetail;
+  channel: AdminChannel;
+  /** Always rendered, idle included: a channel going live must not change the row's height. */
+  live: string;
+}) {
   const [editing, setEditing] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -79,6 +99,7 @@ function ChannelRow({ event, channel }: { event: AdminEventDetail; channel: Admi
           </ChannelChip>
         </div>
         <p className="mt-1 truncate font-mono text-muted-foreground text-xs">{listenerPath}</p>
+        <p className="mt-1 text-meta text-muted-foreground">{live}</p>
       </div>
 
       {/* A fieldset so the cluster carries the channel name: CopyButton takes no label. */}
