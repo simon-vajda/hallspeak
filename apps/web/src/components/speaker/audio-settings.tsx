@@ -3,7 +3,13 @@ import { useEffect, useState } from 'react';
 import { GainSlider } from '@/components/speaker/gain-slider';
 import type { AudioPreferences } from '@/components/speaker/live-state';
 import { MicPanel } from '@/components/speaker/mic-panel';
-import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { cn } from '@/lib/utils';
@@ -21,7 +27,7 @@ type Props = {
 };
 
 /**
- * The sheet and the popover are chosen, not rendered together behind `lg:hidden`: two mounted
+ * The sheet and the dialog are chosen, not rendered together behind `lg:hidden`: two mounted
  * dialogs means two focus traps and two elements claiming the same title. Hence the
  * `matchMedia` read, the only place in this app where a breakpoint exists in JavaScript.
  */
@@ -49,15 +55,20 @@ export function AudioSettings({ className, ...props }: Props) {
 
   if (desktop) {
     return (
-      <Popover>
-        <PopoverTrigger className={trigger}>{row}</PopoverTrigger>
-        {/* Anchored to the row's trailing edge so it opens inside the content column. */}
-        <PopoverContent align="end" sideOffset={8} className="w-85 gap-0 p-5">
-          {/* No `Done`, unlike the sheet: a popover closes on the next click anywhere. */}
-          <PopoverTitle className="mb-3.5 text-section">Audio</PopoverTitle>
+      <Dialog>
+        <DialogTrigger className={trigger}>{row}</DialogTrigger>
+        {/* Centred rather than anchored, and held to the width the settings body was drawn at. */}
+        <DialogContent showCloseButton={false} className="w-85 gap-0 rounded-lg p-5 sm:max-w-85">
+          <div className="mb-3.5 flex items-baseline justify-between gap-3">
+            <DialogTitle className="text-section">Audio</DialogTitle>
+            {/* `Done` as on the sheet: a modal dialog needs a way out that is not the backdrop. */}
+            <DialogClose className="cursor-pointer text-note font-semibold text-primary">
+              Done
+            </DialogClose>
+          </div>
           <SettingsBody {...props} />
-        </PopoverContent>
-      </Popover>
+        </DialogContent>
+      </Dialog>
     );
   }
 
