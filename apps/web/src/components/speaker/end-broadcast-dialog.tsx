@@ -3,7 +3,8 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 
 /**
  * Ending always confirms, which is why End broadcast can be a quiet text button. The design
- * opens with a listener count; nothing counts listeners, so the copy states only what is certain.
+ * opens with a listener count; the studio's own tile already carries it, so the copy here
+ * states the consequence rather than repeating the number.
  */
 export function EndBroadcastDialog({
   open,
