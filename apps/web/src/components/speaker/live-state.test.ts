@@ -162,8 +162,17 @@ describe('onReconnect', () => {
 });
 
 describe('onAirNote', () => {
-  it('says nobody is hearing it while connecting, where zero listeners is the truth', () => {
-    expect(onAirNote('connecting')).toBe('Nobody is hearing this yet.');
+  // A reconnect after a drop lands here with the previous count still on the tile, so this
+  // copy states the connection rather than denying an audience it cannot know about.
+  it('states the connection while connecting rather than denying an audience', () => {
+    expect(onAirNote('connecting')).toBe('Your audio is not on air yet.');
+  });
+
+  it('never denies an audience in any state that renders beside the count', () => {
+    const denies = (note: string | undefined) => note?.toLowerCase().includes('nobody') ?? false;
+    expect(denies(onAirNote('connecting'))).toBe(false);
+    expect(denies(onAirNote('muted'))).toBe(false);
+    expect(denies(onAirNote('back-from-drop'))).toBe(false);
   });
 
   it('explains the silence while muted rather than denying the audience', () => {

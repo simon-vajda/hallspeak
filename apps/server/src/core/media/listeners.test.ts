@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Notification } from '../notifications';
 import { notifications } from '../notifications';
 import {
+  closeConsumer,
   consume,
   createTransport,
   listenerCount,
   listenerCounts,
+  releasePeer,
   resumeConsumer,
   stopMedia,
 } from './index';
@@ -235,6 +237,51 @@ describe('listener counts through the media facade', () => {
     expect(changes()).toEqual([
       { type: 'listeners-changed', eventId: EVENT, channelId: ENGLISH, slug: 'english', count: 2 },
     ]);
+  });
+
+  it('drops the count when a guest leaves while the broadcast carries on', async () => {
+    await goLiveOn({ eventId: EVENT, socketId: 'speaker', channelId: ENGLISH, slug: 'english' });
+    vi.useFakeTimers();
+
+    const leaving = await listen('guest-a');
+    await listen('guest-b');
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+    expect(listenerCount(EVENT, ENGLISH)).toBe(2);
+
+    // The path `media:close-consumer` takes: the guest un-arms or switches channel while
+    // the producer and every other listener stay exactly where they were.
+    await closeConsumer({ eventId: EVENT, socketId: 'guest-a' }, leaving);
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+
+    expect(listenerCount(EVENT, ENGLISH)).toBe(1);
+    expect(changes().at(-1)).toEqual({
+      type: 'listeners-changed',
+      eventId: EVENT,
+      channelId: ENGLISH,
+      slug: 'english',
+      count: 1,
+    });
+  });
+
+  it('drops the count when a listening guest disconnects outright', async () => {
+    await goLiveOn({ eventId: EVENT, socketId: 'speaker', channelId: ENGLISH, slug: 'english' });
+    vi.useFakeTimers();
+
+    await listen('guest-a');
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+    expect(listenerCount(EVENT, ENGLISH)).toBe(1);
+
+    releasePeer(EVENT, 'guest-a');
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+
+    expect(listenerCount(EVENT, ENGLISH)).toBe(0);
+    expect(changes().at(-1)).toEqual({
+      type: 'listeners-changed',
+      eventId: EVENT,
+      channelId: ENGLISH,
+      slug: 'english',
+      count: 0,
+    });
   });
 
   it('reports every active room and channel with its count', async () => {

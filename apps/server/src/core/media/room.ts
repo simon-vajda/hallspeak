@@ -69,10 +69,6 @@ export class Room {
     producer.close();
   }
 
-  liveChannelIds(): number[] {
-    return [...this.producers.keys()];
-  }
-
   /** Each live channel with the slug its producer was stamped with at produce time. */
   liveChannels(): Array<{ channelId: number; slug: string }> {
     return [...this.producers.entries()].map(([channelId, producer]) => ({

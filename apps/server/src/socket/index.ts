@@ -61,12 +61,7 @@ export function attachSocket(httpServer: ServerType): SocketServer {
     const speakerChannelId = socket.data.speakerChannelId;
     // Joining the channel room is all a claim buys. Liveness is the producer's to report,
     // so nothing is broadcast here — an open studio is not audio.
-    if (speakerChannelId !== null) {
-      socket.join(channelRoom(speakerChannelId));
-      // Addressed to this socket alone, so a studio joining a channel already being
-      // listened to shows a number rather than a blank.
-      sendInitialListenerCount(db, socket, socket.data);
-    }
+    if (speakerChannelId !== null) socket.join(channelRoom(speakerChannelId));
 
     on(socket, 'ping', () => ({ serverTime: Date.now() }));
     on(socket, 'channel:join', ({ slug }) => joinChannel(db, socket, socket.data, slug));
@@ -90,6 +85,20 @@ export function attachSocket(httpServer: ServerType): SocketServer {
     on(socket, 'media:close-consumer', (payload) => stopConsuming(socket, socket.data, payload));
 
     socket.on('disconnect', () => releaseSocket(socket, socket.data));
+
+    // Last, and guarded. It reads the database synchronously, and this runs in the raw
+    // connection listener rather than behind `handle`'s try/catch — so a throw here would
+    // escape an EventEmitter and take the whole single-process server down with it. Failing
+    // it costs one studio a number until the next change; failing loudly costs every event.
+    if (speakerChannelId !== null) {
+      try {
+        // Addressed to this socket alone, so a studio joining a channel already being
+        // listened to shows a number rather than a blank.
+        sendInitialListenerCount(db, socket, socket.data);
+      } catch (cause) {
+        console.error(`socket: could not send the initial listener count to ${socket.id}`, cause);
+      }
+    }
   });
 
   return io;
