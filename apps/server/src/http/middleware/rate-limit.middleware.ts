@@ -1,44 +1,72 @@
 import type { Context, MiddlewareHandler } from 'hono';
+import { env } from '../../env';
 import { TokenBucketLimiter } from '../../lib/rate-limit';
 
 /** The whole server shares one budget behind the per-IP one, so it needs one key. */
 const SHARED_KEY = '*';
 
-function clientIp(c: Context): string {
-  const incoming = (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)
-    ?.incoming;
-  // 'unknown' collapses every unidentifiable caller into one bucket, throttling them
-  // together rather than exempting them.
-  return incoming?.socket?.remoteAddress ?? 'unknown';
+/** So a configured `127.0.0.1` still matches a connection arriving as `::ffff:127.0.0.1`. */
+function normalizeAddress(address: string): string {
+  return address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address;
 }
 
 /**
- * Charged on 404 responses only, so a room full of guests never feels it and only a
- * caller that is guessing pays.
+ * The rightmost X-Forwarded-For entry, and only from an address the operator listed: that
+ * entry is the one the trusted proxy appended, so a client-supplied header cannot displace
+ * it. Without this every request behind nginx shares the proxy's bucket.
  */
-export function createRateLimit(limiters: {
-  perIp: TokenBucketLimiter;
-  shared: TokenBucketLimiter;
-}): MiddlewareHandler {
-  return async (c, next) => {
-    const ip = clientIp(c);
+export function clientIp(
+  c: Context,
+  trustedProxies: readonly string[] = env.TRUSTED_PROXY_IPS,
+): string {
+  const incoming = (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)
+    ?.incoming;
+  const remote = incoming?.socket?.remoteAddress;
 
-    const wait = !limiters.perIp.allow(ip)
-      ? limiters.perIp.retryAfter(ip)
-      : !limiters.shared.allow(SHARED_KEY)
-        ? limiters.shared.retryAfter(SHARED_KEY)
+  if (remote && trustedProxies.includes(normalizeAddress(remote))) {
+    const appended = c.req.header('x-forwarded-for')?.split(',').at(-1)?.trim();
+    if (appended) return normalizeAddress(appended);
+  }
+
+  // 'unknown' collapses every unidentifiable caller into one bucket, throttling them
+  // together rather than exempting them.
+  return remote ? normalizeAddress(remote) : 'unknown';
+}
+
+export interface RateLimitOptions {
+  perIp: TokenBucketLimiter;
+  /** Omitted where a shared budget would behave as a lockout — see the sign-in limiter. */
+  shared?: TokenBucketLimiter;
+  /** Which response statuses cost a token. Only a caller that is guessing pays. */
+  chargeStatuses?: number[];
+  message?: string;
+  trustedProxies?: readonly string[];
+}
+
+export function createRateLimit(options: RateLimitOptions): MiddlewareHandler {
+  const chargeStatuses = options.chargeStatuses ?? [404];
+  const message = options.message ?? 'Too many failed lookups.';
+
+  return async (c, next) => {
+    const ip = clientIp(c, options.trustedProxies);
+    const shared = options.shared;
+
+    const wait = !options.perIp.allow(ip)
+      ? options.perIp.retryAfter(ip)
+      : shared && !shared.allow(SHARED_KEY)
+        ? shared.retryAfter(SHARED_KEY)
         : 0;
 
     if (wait > 0) {
       c.header('Retry-After', String(wait));
-      return c.json({ code: 'rate_limited', message: 'Too many failed lookups.' }, 429);
+      return c.json({ code: 'rate_limited', message }, 429);
     }
 
     await next();
 
-    if (c.res.status === 404) {
-      limiters.perIp.penalize(ip);
-      limiters.shared.penalize(SHARED_KEY);
+    if (chargeStatuses.includes(c.res.status)) {
+      options.perIp.penalize(ip);
+      shared?.penalize(SHARED_KEY);
     }
   };
 }
@@ -51,4 +79,21 @@ export function createRateLimit(limiters: {
 export const publicRateLimit = createRateLimit({
   perIp: new TokenBucketLimiter({ capacity: 20, refillPerSecond: 1 }),
   shared: new TokenBucketLimiter({ capacity: 200, refillPerSecond: 10 }),
+});
+
+/**
+ * Ten wrong answers, then one a minute — an administrator mistyping twice never feels it
+ * and a guesser gets nowhere. No shared budget behind it: against a single account that
+ * behaves as a lockout, because the budget check runs before the handler and a distributed
+ * guesser holding it at zero would refuse the correct password too. What a shared budget
+ * would have protected — many 32 MB scrypt allocations at once — is bounded in
+ * core/auth/password.ts instead, which makes a caller wait rather than fail.
+ *
+ * Setup shares the bucket and charges on its own refusal: it takes credentials and pays
+ * for a hash, so repeating it must cost something too.
+ */
+export const signInRateLimit = createRateLimit({
+  perIp: new TokenBucketLimiter({ capacity: 10, refillPerSecond: 1 / 60 }),
+  chargeStatuses: [401, 409],
+  message: 'Too many sign-in attempts.',
 });

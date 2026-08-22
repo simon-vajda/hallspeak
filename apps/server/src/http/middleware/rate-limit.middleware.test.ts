@@ -65,3 +65,106 @@ describe('createRateLimit', () => {
     expect((await app.request('/miss', undefined, from('5.5.5.5'))).status).toBe(404);
   });
 });
+
+function buildFor(options: {
+  capacity: number;
+  chargeStatuses?: number[];
+  trustedProxies?: readonly string[];
+}) {
+  const now = 0;
+  const app = new Hono();
+  app.use(
+    '*',
+    createRateLimit({
+      perIp: new TokenBucketLimiter({
+        capacity: options.capacity,
+        refillPerSecond: 1,
+        now: () => now,
+      }),
+      chargeStatuses: options.chargeStatuses,
+      trustedProxies: options.trustedProxies,
+    }),
+  );
+  app.get('/miss', (c) => c.json({ code: 'not_found', message: 'Not found.' }, 404));
+  app.get('/refused', (c) => c.json({ code: 'invalid_credentials', message: 'No.' }, 401));
+  return app;
+}
+
+describe('chargeStatuses', () => {
+  it('charges the configured status and nothing else', async () => {
+    const app = buildFor({ capacity: 1, chargeStatuses: [401] });
+
+    expect((await app.request('/miss', undefined, from('6.6.6.6'))).status).toBe(404);
+    expect((await app.request('/refused', undefined, from('6.6.6.6'))).status).toBe(401);
+
+    expect((await app.request('/refused', undefined, from('6.6.6.6'))).status).toBe(429);
+    // The 404 above cost nothing, so the same address still has its whole budget there.
+    expect((await app.request('/miss', undefined, from('7.7.7.7'))).status).toBe(404);
+  });
+});
+
+describe('clientIp behind a proxy', () => {
+  const forwarded = (ip: string, chain: string) => ({
+    ...from(ip),
+    headers: { 'x-forwarded-for': chain },
+  });
+
+  it('buckets by the rightmost forwarded entry when the proxy is trusted', async () => {
+    const app = buildFor({ capacity: 1, trustedProxies: ['10.0.0.9'] });
+    const proxy = from('10.0.0.9');
+
+    await app.request('/miss', { headers: { 'x-forwarded-for': '1.1.1.1' } }, proxy);
+
+    expect(
+      (await app.request('/miss', { headers: { 'x-forwarded-for': '1.1.1.1' } }, proxy)).status,
+    ).toBe(429);
+    expect(
+      (await app.request('/miss', { headers: { 'x-forwarded-for': '2.2.2.2' } }, proxy)).status,
+    ).toBe(404);
+  });
+
+  it('cannot be displaced by an entry the client supplied', async () => {
+    const app = buildFor({ capacity: 1, trustedProxies: ['10.0.0.9'] });
+    const proxy = from('10.0.0.9');
+    const spoofed = { headers: { 'x-forwarded-for': '9.9.9.9, 1.1.1.1' } };
+
+    await app.request('/miss', spoofed, proxy);
+
+    // Bucketed on 1.1.1.1, the entry the trusted proxy appended, not on the forged one.
+    expect((await app.request('/miss', spoofed, proxy)).status).toBe(429);
+    expect(
+      (await app.request('/miss', { headers: { 'x-forwarded-for': '9.9.9.9' } }, proxy)).status,
+    ).toBe(404);
+  });
+
+  it('ignores the header from an address that is not a trusted proxy', async () => {
+    const app = buildFor({ capacity: 1, trustedProxies: ['10.0.0.9'] });
+
+    await app.request('/miss', undefined, forwarded('8.8.8.8', '1.1.1.1'));
+
+    expect((await app.request('/miss', undefined, forwarded('8.8.8.8', '2.2.2.2'))).status).toBe(
+      429,
+    );
+  });
+
+  it('ignores the header entirely when no proxy is trusted', async () => {
+    const app = buildFor({ capacity: 1, trustedProxies: [] });
+
+    await app.request('/miss', undefined, forwarded('8.8.8.9', '1.1.1.1'));
+
+    expect((await app.request('/miss', undefined, forwarded('8.8.8.9', '2.2.2.2'))).status).toBe(
+      429,
+    );
+  });
+
+  it('matches a configured IPv4 address against an IPv4-mapped connection', async () => {
+    const app = buildFor({ capacity: 1, trustedProxies: ['10.0.0.9'] });
+    const proxy = from('::ffff:10.0.0.9');
+
+    await app.request('/miss', { headers: { 'x-forwarded-for': '1.1.1.1' } }, proxy);
+
+    expect(
+      (await app.request('/miss', { headers: { 'x-forwarded-for': '1.1.1.1' } }, proxy)).status,
+    ).toBe(429);
+  });
+});
