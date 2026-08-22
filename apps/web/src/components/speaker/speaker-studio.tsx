@@ -243,10 +243,6 @@ export function SpeakerStudio({
 
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <div className="absolute top-3.5 right-gutter z-10 lg:hidden">
-        <TempThemeToggle />
-      </div>
-
       <AppHeader
         right={
           <>
@@ -260,9 +256,15 @@ export function SpeakerStudio({
 
       <main className="flex flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header>
-          <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
-            Interpreter · off air
-          </span>
+          <div className="flex items-center justify-between gap-3">
+            <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
+              Interpreter · off air
+            </span>
+            {/* Centred on the chip rather than floated over it; the bar does this from `lg`. */}
+            <div className="-my-1 lg:hidden">
+              <TempThemeToggle />
+            </div>
+          </div>
           <h1 className="mt-4 mb-1 text-screen lg:text-[44px] lg:leading-[1.03] lg:tracking-[-0.045em]">
             {channel.name}
           </h1>
@@ -370,10 +372,6 @@ function OnAir({
 
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <div className="absolute top-3.5 right-gutter z-10 lg:hidden">
-        <TempThemeToggle />
-      </div>
-
       <AppHeader
         right={
           <>
@@ -387,11 +385,12 @@ function OnAir({
         <header className="flex items-center justify-between gap-3 lg:justify-start">
           {/* `On air` is a claim about audio, so only a live producer earns it. */}
           <LiveBadge live={onAir} label={BADGE_LABEL[state]} />
-          {/* `mr-11` reserves room for the toggle absolutely positioned over this row's right
-              edge; the name truncates rather than running under it. */}
-          <span className="mr-11 truncate text-meta text-muted-foreground lg:hidden">
-            {eventName}
-          </span>
+          {/* The phone's echo of the header bar: the toggle sits in this row so it centres on
+              it, and `-my-1` keeps the taller button from setting the row's height. */}
+          <div className="-my-1 flex min-w-0 items-center gap-3 lg:hidden">
+            <span className="truncate text-meta text-muted-foreground">{eventName}</span>
+            <TempThemeToggle />
+          </div>
         </header>
 
         <h1 className="mt-4 text-screen lg:mt-3.5 lg:mb-7.5 lg:text-[40px] lg:leading-[1.03] lg:tracking-[-0.045em]">
