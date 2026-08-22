@@ -66,6 +66,13 @@ The only authenticated role in the system, and a single account. The Admin creat
 
 Speakers and Listeners are deliberately not accounts: they are authorized purely by holding a link or code. Requiring anything more of them is treated as a product defect, not a security improvement.
 
+The Admin's credentials are held outside the database, in a file the server writes and reads once at startup. There is no password reset inside the product: recovery means deleting that file and restarting the server, which is why it is an act of whoever can reach the machine rather than of whoever is looking at the screen.
+
+### Unconfigured
+A server that started with no Admin credentials — a fresh install, or one whose credential file was deleted to recover a forgotten password. An Unconfigured server offers the setup wizard and has no Admin.
+
+It is a property of the running process, not of the data: Events, Channels, PINs and Speaker codes survive it untouched, and Listener and Speaker links keep working while it lasts. Only the site root and the admin surface divert to the wizard. Because the credential file is read once at startup, a server cannot become Unconfigured while running — it can only start that way.
+
 ## Protocol
 
 ### Problem
