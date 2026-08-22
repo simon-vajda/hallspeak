@@ -269,7 +269,7 @@ export function useMedia(socket: SocketClient | null) {
         // server creates its Producer paused before its opened status is published.
         const producer = await transport.produce({
           track,
-          ...producerOptions,
+          ...PRODUCER_OPTIONS,
           appData: { paused },
         });
         // The server is already paused at this point; match the local sender before this
@@ -458,6 +458,11 @@ const STATS_POLL_MS = 2_000;
  * kept. Enlarging the buffer is the only latency knob left once forwarding is fixed, and
  * spending it would trade away the thing the product exists for.
  */
-const producerOptions = {
+export const PRODUCER_OPTIONS = {
   codecOptions: { opusStereo: false, opusFec: true, opusDtx: true },
+  // mediasoup-client stops the track when the Producer closes unless told not to, and the
+  // track belongs to the capture graph, which outlives any one broadcast: ending a
+  // broadcast would leave the studio holding an ended track and every later produce would
+  // throw. Releasing capture stays `src/lib/audio`'s single path.
+  stopTracks: false,
 } as const;
