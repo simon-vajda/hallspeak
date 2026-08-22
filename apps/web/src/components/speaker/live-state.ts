@@ -8,7 +8,7 @@ export interface AudioPreferences {
   noiseSuppression: boolean;
   autoGain: boolean;
   echoCancellation: boolean;
-  /** 0–100 on the slider, which is not what a GainNode takes. */
+  /** 0–200 on the slider, which is not what a GainNode takes. */
   gain: number;
 }
 
@@ -30,12 +30,13 @@ export function trackConstraints(
   };
 }
 
-/** The slider's midpoint is unity, so 0–100 maps onto 0–2 rather than 0–1. */
-export const MAX_GAIN = 2;
+/** Fifty slider points remain 1x, so existing stored values keep their current loudness. */
+export const MAX_GAIN_SLIDER_VALUE = 200;
+export const MAX_GAIN_NODE_VALUE = 4;
 
 export function gainNodeValue(sliderValue: number): number {
-  const clamped = Math.min(Math.max(sliderValue, 0), 100);
-  return (clamped / 100) * MAX_GAIN;
+  const clamped = Math.min(Math.max(sliderValue, 0), MAX_GAIN_SLIDER_VALUE);
+  return (clamped / MAX_GAIN_SLIDER_VALUE) * MAX_GAIN_NODE_VALUE;
 }
 
 /**

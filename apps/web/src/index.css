@@ -66,7 +66,7 @@
    and change value at `lg` — are worth a name of their own. */
 @theme {
   --spacing-gutter: 1.625rem; /* 26px screen gutter; 40px (px-10) from lg up */
-  --spacing-shell: 70rem; /* 1120px admin content cap */
+  --spacing-shell: 70rem; /* 1120px application content cap */
 
   /* The ramp steps the design fixes size, weight and tracking for together.
      Body (14px/1.5) is Tailwind's own `text-sm`, so it stays that. */

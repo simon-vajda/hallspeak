@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SocketAuth } from '../../core/access';
 import { createChannel } from '../../core/channels.service';
 import { createEvent } from '../../core/events.service';
-import { isOnline } from '../../core/media';
+import { channelStatus, isOnline } from '../../core/media';
 import { fakeMediaControls, startFakeMedia } from '../../core/media/testing';
 import type { Db } from '../../db/client';
 import { createTestDb } from '../../db/testing';
@@ -63,7 +63,11 @@ afterEach(async () => {
 /** The three calls a speaker makes, through the handlers rather than the facade. */
 async function goLive(id = 'speaker-a', auth = speaker, slug = 'english') {
   await openTransport(socket(id), auth, { direction: 'send' });
-  return startProducing(db, socket(id), auth, { slug, rtpParameters: { codecs: [] } });
+  return startProducing(db, socket(id), auth, {
+    slug,
+    rtpParameters: { codecs: [] },
+    paused: false,
+  });
 }
 
 async function armListener(id = 'guest-a') {
@@ -179,6 +183,18 @@ describe('startProducing', () => {
     expect(isOnline(eventId, englishId)).toBe(true);
   });
 
+  it('creates a reconnecting producer in its validated paused state', async () => {
+    await openTransport(socket('speaker-a'), speaker, { direction: 'send' });
+
+    await startProducing(db, socket('speaker-a'), speaker, {
+      slug: 'english',
+      rtpParameters: { codecs: [] },
+      paused: true,
+    });
+
+    expect(channelStatus(eventId, englishId)).toEqual({ online: true, muted: true });
+  });
+
   it('refuses a socket that holds the claim for a different channel', async () => {
     await openTransport(socket('speaker-a'), speaker, { direction: 'send' });
 
@@ -186,6 +202,7 @@ describe('startProducing', () => {
       startProducing(db, socket('speaker-a'), speaker, {
         slug: 'spanish',
         rtpParameters: { codecs: [] },
+        paused: false,
       }),
     ).rejects.toMatchObject({ code: 'not_speaker' });
     expect(isOnline(eventId, spanishId)).toBe(false);
@@ -196,6 +213,7 @@ describe('startProducing', () => {
       startProducing(db, socket('guest-a'), listener, {
         slug: 'english',
         rtpParameters: { codecs: [] },
+        paused: false,
       }),
     ).rejects.toMatchObject({ code: 'not_speaker' });
   });
@@ -205,6 +223,7 @@ describe('startProducing', () => {
       startProducing(db, socket('speaker-a'), speaker, {
         slug: foreignSlug,
         rtpParameters: { codecs: [] },
+        paused: false,
       }),
     ).rejects.toMatchObject({ code: 'not_found' });
   });
@@ -214,6 +233,7 @@ describe('startProducing', () => {
     const second = await startProducing(db, socket('speaker-a'), speaker, {
       slug: 'english',
       rtpParameters: { codecs: [] },
+      paused: false,
     });
 
     expect(second.producerId).not.toBe(first.producerId);
@@ -227,9 +247,11 @@ describe('pause and resume producing', () => {
 
     await pauseProducing(socket('speaker-a'), speaker, { producerId });
     expect(isOnline(eventId, englishId)).toBe(true);
+    expect(channelStatus(eventId, englishId)).toEqual({ online: true, muted: true });
 
     await resumeProducing(socket('speaker-a'), speaker, { producerId });
     expect(isOnline(eventId, englishId)).toBe(true);
+    expect(channelStatus(eventId, englishId)).toEqual({ online: true, muted: false });
   });
 
   it('refuses a producer that does not exist', async () => {

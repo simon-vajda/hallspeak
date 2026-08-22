@@ -22,7 +22,7 @@ export interface Signalling {
     dtlsParameters: Wire;
   }>;
   connectTransport(transportId: string, dtlsParameters: Wire): Promise<void>;
-  produce(slug: string, rtpParameters: Wire): Promise<{ producerId: string }>;
+  produce(slug: string, rtpParameters: Wire, paused: boolean): Promise<{ producerId: string }>;
   pauseProducer(producerId: string): Promise<void>;
   resumeProducer(producerId: string): Promise<void>;
   closeProducer(producerId: string): Promise<void>;
@@ -45,8 +45,15 @@ export function signalling(socket: SocketClient): Signalling {
       unwrap(await socket.emitWithAck('media:connect-transport', { transportId, dtlsParameters }));
     },
 
-    produce: async (slug, rtpParameters) =>
-      unwrap(await socket.emitWithAck('media:produce', { slug, kind: 'audio', rtpParameters })),
+    produce: async (slug, rtpParameters, paused) =>
+      unwrap(
+        await socket.emitWithAck('media:produce', {
+          slug,
+          kind: 'audio',
+          rtpParameters,
+          paused,
+        }),
+      ),
 
     pauseProducer: async (producerId) => {
       unwrap(await socket.emitWithAck('media:pause-producer', { producerId }));

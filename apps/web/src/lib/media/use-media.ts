@@ -5,12 +5,14 @@ import { loadDevice } from './device';
 import {
   afterConnect,
   beginRebuild,
+  canRollbackProducerControl,
   consumerClosed,
   consumerOpened,
   initialMediaState,
   isCurrent,
   type MediaState,
   needsRebuild,
+  type ProducerControlIdentity,
   producerClosed,
   producerOpened,
   type TransportConnectionState,
@@ -231,8 +233,16 @@ export function useMedia(socket: SocketClient | null) {
         if (!active) throw new Error(SUPERSEDED);
 
         active.producer?.close();
-        const producer = await transport.produce({ track, ...producerOptions });
-        if (paused) await producer.pause();
+        // mediasoup-client forwards appData to the transport's produce callback, so the
+        // server creates its Producer paused before its opened status is published.
+        const producer = await transport.produce({
+          track,
+          ...producerOptions,
+          appData: { paused },
+        });
+        // The server is already paused at this point; match the local sender before this
+        // Producer is exposed to the studio.
+        if (paused) producer.pause();
         active.producer = producer;
         setState((prev) => producerOpened(prev, producer.id));
         return producer;
@@ -295,6 +305,20 @@ export function useMedia(socket: SocketClient | null) {
       }
     },
     [socket],
+  );
+
+  const setLocalProducerPaused = useCallback(
+    (paused: boolean, request: ProducerControlIdentity): boolean => {
+      if (!canRollbackProducerControl(stateRef.current, request)) return false;
+      const producer = session.current?.producer;
+      if (!producer || producer.id !== request.producerId) return false;
+      setStats(null);
+      previousSample.current = null;
+      if (paused && !producer.paused) producer.pause();
+      if (!paused && producer.paused) producer.resume();
+      return true;
+    },
+    [],
   );
 
   const startConsuming = useCallback(
@@ -361,6 +385,7 @@ export function useMedia(socket: SocketClient | null) {
     stopProducing,
     replaceProducerTrack,
     setProducerPaused,
+    setLocalProducerPaused,
     startConsuming,
     stopConsuming,
     release: releaseSession,

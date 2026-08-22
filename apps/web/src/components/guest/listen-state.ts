@@ -9,6 +9,8 @@ export type ListenState =
   | 'idle'
   | 'waiting'
   | 'playing'
+  | 'syncing'
+  | 'muted'
   | 'interpreter-away'
   | 'reconnecting'
   | 'media-trouble'
@@ -22,22 +24,42 @@ export interface ListenInput {
   isPlaying: boolean;
   /** A producer exists on this channel. */
   live: boolean;
+  /** Socket-authoritative producer pause; null while an online HTTP seed is reconciled. */
+  muted: boolean | null;
   socketConnected: boolean;
   mediaTrouble: boolean;
 }
 
 /**
- * The three-way distinction R32 needs. Losing the socket, the media path failing under a
- * healthy socket, and nobody being live are different situations and read differently:
- * only one of them is about a person, and none of them asks the guest to do anything.
+ * Losing the socket, the media path failing under a healthy socket, and nobody being live
+ * are different situations and read differently: only one is about a person, and none
+ * asks the guest to do anything.
  */
 export function listenState(input: ListenInput): ListenState {
-  // Above `armed`: a session the server ended is over whether or not the guest armed.
+  // Failures outrank broadcast status, including a stale mute held through reconnect.
   if (input.terminal) return 'ended';
-  if (!input.armed) return 'idle';
+  // Before the guest arms, only a connected producer's known or pending mute is useful.
+  // Initial connection and media plumbing stay behind the ordinary tap-to-listen state.
+  if (!input.armed && (!input.socketConnected || input.mediaTrouble || !input.live)) return 'idle';
   if (!input.socketConnected) return 'reconnecting';
   if (input.mediaTrouble) return 'media-trouble';
-  if (!input.live) return 'interpreter-away';
+  if (!input.live) return input.armed ? 'interpreter-away' : 'idle';
+  if (input.muted === null) return 'syncing';
+  if (input.muted) return 'muted';
+  if (!input.armed) return 'idle';
+  return input.isPlaying ? 'playing' : 'waiting';
+}
+
+export type ListenActionState = 'idle' | 'waiting' | 'playing' | 'ended';
+
+/** Broadcast status never changes the guest's armed gesture or their consumer ownership. */
+export function listenActionState(input: {
+  armed: boolean;
+  isPlaying: boolean;
+  terminal: boolean;
+}): ListenActionState {
+  if (input.terminal) return 'ended';
+  if (!input.armed) return 'idle';
   return input.isPlaying ? 'playing' : 'waiting';
 }
 
@@ -46,14 +68,12 @@ export function listenState(input: ListenInput): ListenState {
  * the middle one the control looks identical before and after the tap, which invites a
  * second press that does nothing.
  */
-export function playTargetLabel(state: ListenState): string {
+export function playTargetLabel(state: ListenActionState): string {
   switch (state) {
     case 'idle':
       return 'Tap to listen';
     case 'playing':
       return 'Pause';
-    case 'media-trouble':
-      return 'Reconnecting';
     case 'ended':
       return 'Ended';
     default:
@@ -77,6 +97,10 @@ export function badgeLabel(state: ListenState): string {
       return 'Waiting for the interpreter';
     case 'media-trouble':
       return 'Reconnecting the audio';
+    case 'syncing':
+      return 'Checking interpreter status…';
+    case 'muted':
+      return 'Interpreter muted';
     case 'waiting':
       return 'Interpreter on air';
     case 'playing':
@@ -104,6 +128,10 @@ export function statusNote(state: ListenState): string | null {
       return 'The interpreter has dropped off. Audio resumes by itself when they are back.';
     case 'media-trouble':
       return 'The audio connection is re-establishing. The interpreter is still on air.';
+    case 'syncing':
+      return 'Checking whether the interpreter is sending audio.';
+    case 'muted':
+      return 'The interpreter is muted. Audio resumes automatically when they unmute.';
     case 'reconnecting':
       return 'Reconnecting. Nothing to do — this picks itself back up.';
     case 'playing':

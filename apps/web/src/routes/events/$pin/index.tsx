@@ -1,5 +1,4 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useEffect } from 'react';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { $api } from '@/api/client';
 import { ChannelRow } from '@/components/guest/channel-row';
 import { EventHeader } from '@/components/guest/event-header';
@@ -11,7 +10,6 @@ export const Route = createFileRoute('/events/$pin/')({ component: EventPage });
 
 function EventPage() {
   const { pin } = Route.useParams();
-  const navigate = useNavigate();
   const { data, isPending, error } = $api.useQuery('get', '/events/{pin}', {
     params: { path: { pin } },
   });
@@ -20,18 +18,6 @@ function EventPage() {
   const { status, online } = useSocket(data ? { pin } : null);
 
   useConnectionToast(status);
-
-  // With one option there is nothing to choose, so the selector gets out of the way.
-  // `replace` so Back does not bounce the guest between the two.
-  const onlyChannel = data?.channels.length === 1 ? data.channels[0] : undefined;
-  useEffect(() => {
-    if (!onlyChannel) return;
-    navigate({
-      to: '/events/$pin/$slug',
-      params: { pin, slug: onlyChannel.slug },
-      replace: true,
-    });
-  }, [onlyChannel, navigate, pin]);
 
   if (isPending) {
     return <GuestMessage title="Looking for your event" body="One moment — checking that PIN." />;

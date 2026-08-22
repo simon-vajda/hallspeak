@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   afterConnect,
   beginRebuild,
+  canRollbackProducerControl,
   consumerClosed,
   consumerOpened,
   consumerPlan,
@@ -36,6 +37,21 @@ describe('afterConnect', () => {
 
     expect(isCurrent(after, before)).toBe(false);
     expect(isCurrent(after, after.generation)).toBe(true);
+  });
+});
+
+describe('producer control rollback', () => {
+  it('cannot mutate a replacement Producer when an old control fails after recovery', () => {
+    const oldControl = { generation: live.generation, producerId: live.producerId };
+    const recovered = producerOpened(afterConnect(live), 'p2');
+
+    expect(canRollbackProducerControl(recovered, oldControl)).toBe(false);
+    expect(
+      canRollbackProducerControl(recovered, {
+        generation: recovered.generation,
+        producerId: recovered.producerId,
+      }),
+    ).toBe(true);
   });
 });
 
@@ -122,6 +138,16 @@ describe('consumerPlan', () => {
     });
   });
 
+  it('keeps the same consumer plan when an online producer mutes and resumes', () => {
+    const beforeMute = consumerPlan({ consumers: listening, armedSlug: 'english', online: true });
+    const whileMuted = consumerPlan({ consumers: listening, armedSlug: 'english', online: true });
+    const afterResume = consumerPlan({ consumers: listening, armedSlug: 'english', online: true });
+
+    expect(whileMuted).toEqual(beforeMute);
+    expect(afterResume).toEqual(beforeMute);
+    expect(whileMuted).toEqual({ close: [], consume: null });
+  });
+
   it('closes the consumer when the interpreter goes away, and asks for nothing', () => {
     expect(consumerPlan({ consumers: listening, armedSlug: 'english', online: false })).toEqual({
       close: ['english'],
@@ -136,7 +162,7 @@ describe('consumerPlan', () => {
     });
   });
 
-  /** The leak R27 exists to prevent: the old channel's audio keeps arriving otherwise. */
+  /** Closing the old consumer prevents its audio continuing after the channel switch. */
   it('closes the previous channel and opens the new one on a switch', () => {
     expect(consumerPlan({ consumers: listening, armedSlug: 'spanish', online: true })).toEqual({
       close: ['english'],

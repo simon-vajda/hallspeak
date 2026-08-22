@@ -24,8 +24,8 @@ function ctx(socket: MediaSocket, auth: SocketAuth): media.MediaContext {
 }
 
 /**
- * A speaker may bring a room into being; a listener may not. That is the whole of R6 at
- * this layer — a guest arming before anyone is live allocates nothing on either side.
+ * A speaker may bring a room into being; a listener may not. A guest arming before anyone
+ * is live allocates nothing on either side.
  */
 function mayCreateRoom(auth: SocketAuth): boolean {
   return auth.speakerChannelId !== null;
@@ -72,7 +72,7 @@ export async function startProducing(
   db: Db,
   socket: MediaSocket,
   auth: SocketAuth,
-  payload: { slug: string; rtpParameters: Wire },
+  payload: { slug: string; rtpParameters: Wire; paused: boolean },
 ) {
   const channel = channelOrThrow(db, auth, payload.slug);
   // Holding the claim is the whole authorization to broadcast; the handshake took it.
@@ -83,6 +83,7 @@ export async function startProducing(
     channelId: channel.id,
     slug: channel.slug,
     rtpParameters: asMediasoup<types.RtpParameters>(payload.rtpParameters),
+    paused: payload.paused,
   });
 }
 

@@ -83,6 +83,11 @@ describe('connectionState', () => {
     });
   });
 
+  it('does not claim a flowing connection before socket mute status is known', () => {
+    expect(connectionState({ ...flowing, paused: null })).toEqual({ kind: 'syncing' });
+    expect(connectionLabel({ kind: 'syncing' })).toMatch(/checking/i);
+  });
+
   it('reports trouble over a pause, because a failed transport still matters', () => {
     expect(connectionState({ ...flowing, paused: true, mediaTrouble: true })).toEqual({
       kind: 'trouble',
