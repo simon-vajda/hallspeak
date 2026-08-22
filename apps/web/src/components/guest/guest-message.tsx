@@ -16,7 +16,7 @@ export function GuestShell({ children }: { children: ReactNode }) {
 
       <AppHeader />
 
-      <main className="flex flex-1 flex-col px-gutter pt-7 pb-gutter lg:px-10 lg:pt-15 lg:pb-16.5">
+      <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-7 pb-gutter lg:px-10 lg:pt-15 lg:pb-16.5">
         {children}
       </main>
     </div>
