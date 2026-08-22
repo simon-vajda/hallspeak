@@ -4,44 +4,81 @@ import {
   HOLD_DECAY_MS,
   holdPeak,
   levelStatus,
+  METER_FLOOR_DB,
+  meterLevel,
   PEAK_THRESHOLD,
   RELEASE_MS,
   rms,
   smoothLevel,
 } from './level';
 
-/** A byte-domain frame filled with one sample value. */
+/** A time-domain frame filled with one sample value. */
 function frame(value: number, length = 256) {
-  return new Uint8Array(length).fill(value);
+  return new Float32Array(length).fill(value);
 }
 
 describe('rms', () => {
   it('reads digital silence as zero', () => {
-    expect(rms(frame(128))).toBe(0);
+    expect(rms(frame(0))).toBe(0);
   });
 
   it('reads a full-swing signal as ~1', () => {
-    const full = new Uint8Array(256);
-    for (let i = 0; i < full.length; i++) full[i] = i % 2 === 0 ? 0 : 255;
-    expect(rms(full)).toBeCloseTo(1, 2);
+    const full = new Float32Array(256);
+    for (let i = 0; i < full.length; i++) full[i] = i % 2 === 0 ? -1 : 1;
+    expect(rms(full)).toBeCloseTo(1, 5);
   });
 
   it('reads a constant half-swing offset as ~0.5', () => {
-    expect(rms(frame(192))).toBeCloseTo(0.5, 2);
+    expect(rms(frame(0.5))).toBeCloseTo(0.5, 5);
+  });
+
+  // The reason the frame is float: an 8-bit step is ~-42 dBFS, which a quiet room lives below.
+  it('resolves a level far below one 8-bit step', () => {
+    expect(rms(frame(1 / 2048))).toBeCloseTo(1 / 2048, 6);
   });
 
   it('is zero for an empty frame rather than NaN', () => {
-    expect(rms(new Uint8Array(0))).toBe(0);
+    expect(rms(new Float32Array(0))).toBe(0);
+  });
+});
+
+describe('meterLevel', () => {
+  it('puts silence at the bottom and full scale at the top', () => {
+    expect(meterLevel(0)).toBe(0);
+    expect(meterLevel(1)).toBe(1);
+  });
+
+  it('puts the floor itself at zero rather than below it', () => {
+    expect(meterLevel(10 ** (METER_FLOOR_DB / 20))).toBeCloseTo(0, 5);
+    expect(meterLevel(10 ** ((METER_FLOOR_DB - 20) / 20))).toBe(0);
+  });
+
+  // The complaint this scale answers: normal speech is an RMS around 0.1, which a linear bar
+  // draws at a tenth of the track.
+  it('draws ordinary speech across the middle of the bar', () => {
+    const level = meterLevel(0.1);
+    expect(level).toBeGreaterThan(0.6);
+    expect(level).toBeLessThan(0.75);
+  });
+
+  it('is monotonic', () => {
+    expect(meterLevel(0.02)).toBeLessThan(meterLevel(0.05));
+    expect(meterLevel(0.05)).toBeLessThan(meterLevel(0.2));
+  });
+
+  it('rises by a fixed step for every doubling', () => {
+    const step = meterLevel(0.5) - meterLevel(0.25);
+    expect(meterLevel(0.25) - meterLevel(0.125)).toBeCloseTo(step, 6);
   });
 });
 
 describe('levelStatus', () => {
   it('calls a usable level good', () => {
-    expect(levelStatus(0.4)).toBe('good');
+    expect(levelStatus(meterLevel(0.05))).toBe('good');
   });
 
   it('calls a near-silent level quiet', () => {
-    expect(levelStatus(0.02)).toBe('quiet');
+    expect(levelStatus(meterLevel(0.002))).toBe('quiet');
   });
 
   it('calls a clipping level peaking', () => {

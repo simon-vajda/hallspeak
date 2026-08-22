@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { holdPeak, type LevelStatus, levelStatus, rms, smoothLevel } from '@/lib/audio/level';
+import {
+  holdPeak,
+  type LevelStatus,
+  levelStatus,
+  meterLevel,
+  rms,
+  smoothLevel,
+} from '@/lib/audio/level';
 import { cn } from '@/lib/utils';
 
 const STATUS_TEXT: Record<LevelStatus, string> = {
@@ -38,7 +45,7 @@ export function LevelMeter({
     const fill = fillRef.current;
     if (!analyser || !fill) return;
 
-    const frame = new Uint8Array(analyser.fftSize);
+    const frame = new Float32Array(analyser.fftSize);
     let raf = 0;
     let last: LevelStatus | null = null;
     let smoothed = 0;
@@ -51,8 +58,8 @@ export function LevelMeter({
       const elapsed = lastTimestamp === 0 ? 0 : timestamp - lastTimestamp;
       lastTimestamp = timestamp;
 
-      analyser.getByteTimeDomainData(frame);
-      const level = Math.min(rms(frame), 1);
+      analyser.getFloatTimeDomainData(frame);
+      const level = meterLevel(rms(frame));
       smoothed = smoothLevel(smoothed, level, elapsed);
       peak = holdPeak(peak, level, elapsed);
 

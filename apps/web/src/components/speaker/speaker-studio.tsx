@@ -12,7 +12,7 @@ import { MicPanel } from '@/components/speaker/mic-panel';
 import { OnAirStats } from '@/components/speaker/on-air-stats';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
-import { levelStatus, rms } from '@/lib/audio/level';
+import { levelStatus, meterLevel, rms } from '@/lib/audio/level';
 import { useAudioPreferences } from '@/lib/audio/use-audio-preferences';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { formatPin } from '@/lib/format';
@@ -173,10 +173,10 @@ export function SpeakerStudio({
     const analyser = mic.analyser;
     if (!analyser || heardSomething) return;
 
-    const frame = new Uint8Array(analyser.fftSize);
+    const frame = new Float32Array(analyser.fftSize);
     const timer = setInterval(() => {
-      analyser.getByteTimeDomainData(frame);
-      if (levelStatus(Math.min(rms(frame), 1)) !== 'quiet') setHeardSomething(true);
+      analyser.getFloatTimeDomainData(frame);
+      if (levelStatus(meterLevel(rms(frame))) !== 'quiet') setHeardSomething(true);
     }, SIGNAL_POLL_MS);
 
     return () => clearInterval(timer);
