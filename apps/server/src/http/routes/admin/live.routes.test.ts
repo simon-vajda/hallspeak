@@ -10,17 +10,20 @@ import {
   stopMedia,
 } from '../../../core/media';
 import { goLive, startFakeMedia } from '../../../core/media/testing';
-import { createTestApi } from '../../../testing/api';
+import { type ApiRequest, createTestApi } from '../../../testing/api';
 
 const EVENT = 1;
 const ENGLISH = 10;
 const GRACE_MS = 60_000;
 
-let api: Awaited<ReturnType<typeof createTestApi>>['api'];
 let cleanup: () => void;
+// Every /admin route is behind requireAdmin; drop this and the whole file 401s.
+let request: ApiRequest;
 
 beforeAll(async () => {
-  ({ api, cleanup } = await createTestApi());
+  const created = await createTestApi();
+  ({ cleanup } = created);
+  request = await created.signInAsAdmin();
 });
 
 afterAll(() => {
@@ -37,7 +40,7 @@ type LiveEvent = {
 };
 
 const live = async (): Promise<LiveEvent[]> => {
-  const res = await api.request('/admin/live');
+  const res = await request('/admin/live');
   expect(res.status).toBe(200);
   return (await res.json()) as LiveEvent[];
 };
@@ -109,7 +112,7 @@ describe('GET /admin/live', () => {
     await goLive({ eventId: EVENT, socketId: 'speaker', channelId: ENGLISH, slug: 'english' });
     await listen('guest-a');
 
-    const res = await api.request('/admin/live');
+    const res = await request('/admin/live');
 
     expect(z.array(AdminLiveEvent).safeParse(await res.json()).success).toBe(true);
   });

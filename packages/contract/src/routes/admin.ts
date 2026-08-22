@@ -11,7 +11,7 @@ import {
 } from '../schemas/event';
 import { Problem } from '../schemas/problem';
 
-// Unguarded. The /admin prefix exists so authentication lands as one middleware on one subtree.
+// Guarded by one middleware on the /admin prefix, which is why the prefix exists.
 const TAGS = ['Admin'];
 
 // z.coerce: a path parameter always arrives as a string.

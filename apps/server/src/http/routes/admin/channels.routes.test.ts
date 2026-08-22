@@ -2,14 +2,17 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createChannel } from '../../../core/channels.service';
 import { createEvent } from '../../../core/events.service';
 import type { Db } from '../../../db/client';
-import { createTestApi } from '../../../testing/api';
+import { type ApiRequest, createTestApi } from '../../../testing/api';
 
-let api: Awaited<ReturnType<typeof createTestApi>>['api'];
 let db: Db;
 let cleanup: () => void;
+// Every /admin route is behind requireAdmin; drop this and the whole file 401s.
+let request: ApiRequest;
 
 beforeAll(async () => {
-  ({ api, db, cleanup } = await createTestApi());
+  const created = await createTestApi();
+  ({ db, cleanup } = created);
+  request = await created.signInAsAdmin();
 });
 
 afterAll(() => {
@@ -22,7 +25,7 @@ function seedChannel(slug = 'english') {
 }
 
 const patch = (path: string, body: unknown) =>
-  api.request(path, {
+  request(path, {
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
@@ -47,7 +50,7 @@ describe('PATCH /admin/channels/{id}', () => {
     const channel = seedChannel('spanish');
 
     const res = await patch(`/admin/channels/${channel.id}`, { slug: 'espanol' });
-    const after = await api.request(`/admin/events/${channel.eventId}`);
+    const after = await request(`/admin/events/${channel.eventId}`);
     const event = (await after.json()) as { channels: { slug: string }[] };
 
     expect(res.status).toBe(400);
@@ -63,7 +66,7 @@ describe('POST /admin/channels/{id}/regenerate-speaker-code', () => {
   it('replaces the code, invalidating the old one immediately', async () => {
     const channel = seedChannel('french');
 
-    const res = await api.request(`/admin/channels/${channel.id}/regenerate-speaker-code`, {
+    const res = await request(`/admin/channels/${channel.id}/regenerate-speaker-code`, {
       method: 'POST',
     });
     const body = (await res.json()) as { speakerCode: string };
@@ -74,7 +77,7 @@ describe('POST /admin/channels/{id}/regenerate-speaker-code', () => {
   });
 
   it('answers 404 for an unknown channel', async () => {
-    const res = await api.request('/admin/channels/999999/regenerate-speaker-code', {
+    const res = await request('/admin/channels/999999/regenerate-speaker-code', {
       method: 'POST',
     });
 
@@ -86,13 +89,11 @@ describe('DELETE /admin/channels/{id}', () => {
   it('deletes the channel but not its event', async () => {
     const channel = seedChannel('german');
 
-    expect((await api.request(`/admin/channels/${channel.id}`, { method: 'DELETE' })).status).toBe(
-      204,
-    );
-    expect((await api.request(`/admin/events/${channel.eventId}`)).status).toBe(200);
+    expect((await request(`/admin/channels/${channel.id}`, { method: 'DELETE' })).status).toBe(204);
+    expect((await request(`/admin/events/${channel.eventId}`)).status).toBe(200);
   });
 
   it('answers 404 for an unknown channel', async () => {
-    expect((await api.request('/admin/channels/999999', { method: 'DELETE' })).status).toBe(404);
+    expect((await request('/admin/channels/999999', { method: 'DELETE' })).status).toBe(404);
   });
 });
