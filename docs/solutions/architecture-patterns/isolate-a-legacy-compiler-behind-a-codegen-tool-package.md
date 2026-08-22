@@ -58,5 +58,5 @@ the `openapi-codegen` bin disappears from `contract`'s `gen:types` script.
 
 ## Related
 
-- `CLAUDE.md` carries the rule and points here.
+- `AGENTS.md` carries the rule and points here.
 - `packages/contract/package.json` — the `gen:types` script and the dependency on the tool.

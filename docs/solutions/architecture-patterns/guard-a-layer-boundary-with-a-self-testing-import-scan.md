@@ -34,7 +34,7 @@ and must not reach sideways into `../http/` or `../socket/`. It must still be fr
 `drizzle-orm`, `better-sqlite3` and (later) `mediasoup`, because those are engines `core/`
 owns rather than transports clients reach it through.
 
-Nothing in TypeScript expresses that. A rule stated only in `CLAUDE.md` decays: the very
+Nothing in TypeScript expresses that. A rule stated only in `AGENTS.md` decays: the very
 misfiling the restructure started from was `semver.ts` sitting under the socket layer purely
 because its one caller lived there. So the rule got a test —
 `apps/server/src/core/boundary.test.ts`, a text scan over every `.ts` under `core/` that fails
@@ -237,7 +237,7 @@ is generality, not a depth bug.
 ## Related
 
 - `apps/server/src/core/boundary.test.ts` — the guard itself
-- `CLAUDE.md` — records the `core/` / `http/` / `socket/` split and the naming rule this
+- `AGENTS.md` — records the `core/` / `http/` / `socket/` split and the naming rule this
   boundary enforces
 - The `foreign_keys` pragma test in `apps/server/src/db` is the same species of tripwire: a
   non-default that is silently inert when unset, so it carries a test rather than trust

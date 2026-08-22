@@ -102,6 +102,6 @@ Type sizes are the category to watch. Twelve `text-[Npx]` values live across the
 
 ## Related
 
-- `CLAUDE.md` carries the short form of this rule alongside the concrete values already mapped; this doc is the procedure for the next value.
+- `AGENTS.md` carries the short form of this rule alongside the concrete values already mapped; this doc is the procedure for the next value.
 - `apps/web/src/index.css` holds the `@theme` block — the scale entries and the type ramp — with the design's hex values kept in comments as the source of truth.
-- Deliberate customisations to `components/ui` must be recorded in `CLAUDE.md`, because re-running `shadcn add` silently drops them.
+- Deliberate customisations to `components/ui` must be recorded in `AGENTS.md`, because re-running `shadcn add` silently drops them.

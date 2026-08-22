@@ -152,7 +152,7 @@ payload".
 
 ## Related
 
-- `CLAUDE.md` — the "Access model" section is what makes this class of defect load-bearing
+- `AGENTS.md` — the "Access model" section is what makes this class of defect load-bearing
   here: possession is the whole credential, so ids must not become credentials by accident.
 - `docs/solutions/conventions/identical-404s-for-disabled-and-nonexistent-resources.md` — the
   sibling rule on the HTTP side. Both come from the same premise: with no accounts, every
