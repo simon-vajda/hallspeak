@@ -5,7 +5,8 @@ import {
   broadcastState,
   gainNodeValue,
   isBroadcasting,
-  MAX_GAIN,
+  MAX_GAIN_NODE_VALUE,
+  MAX_GAIN_SLIDER_VALUE,
   onReconnect,
   trackConstraints,
 } from './live-state';
@@ -66,18 +67,18 @@ describe('trackConstraints', () => {
 });
 
 describe('gainNodeValue', () => {
-  it('is silent at zero and doubled at the top', () => {
-    expect(gainNodeValue(0)).toBe(0);
-    expect(gainNodeValue(100)).toBe(MAX_GAIN);
-  });
-
-  it('puts unity at the slider’s midpoint', () => {
-    expect(gainNodeValue(50)).toBe(1);
+  it('keeps 50 slider points equal to 1x across the expanded range', () => {
+    expect([
+      gainNodeValue(0),
+      gainNodeValue(50),
+      gainNodeValue(100),
+      gainNodeValue(MAX_GAIN_SLIDER_VALUE),
+    ]).toEqual([0, 1, 2, MAX_GAIN_NODE_VALUE]);
   });
 
   it('clamps a value from outside the slider’s range', () => {
     expect(gainNodeValue(-20)).toBe(0);
-    expect(gainNodeValue(140)).toBe(MAX_GAIN);
+    expect(gainNodeValue(MAX_GAIN_SLIDER_VALUE + 20)).toBe(MAX_GAIN_NODE_VALUE);
   });
 });
 
