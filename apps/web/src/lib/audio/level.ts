@@ -3,26 +3,45 @@
  * anything?" gate on Go live reuses the same numbers the meter draws.
  */
 
+/**
+ * The meter's floor. Everything the bar draws is a position on a decibel scale running from
+ * here to full scale, not a raw amplitude: speech that sounds loud in the room is an RMS
+ * around 0.1, which on a linear bar never leaves the left tenth of the track.
+ */
+export const METER_FLOOR_DB = -60;
+
 /** Above this the fill goes `destructive`, and the design draws its tick here. */
 export const PEAK_THRESHOLD = 0.85;
 
 /** Below this the mic is reading room noise at most, not enough to go live on. */
-export const SILENCE_THRESHOLD = 0.05;
+export const SILENCE_THRESHOLD = 0.25;
 
 export type LevelStatus = 'quiet' | 'good' | 'peaking';
 
 /**
- * RMS of an `AnalyserNode` time-domain byte frame, normalised to 0–1. Bytes are centred on
- * 128, so a frame of all-128 is digital silence and reads exactly 0.
+ * An RMS amplitude as a position on the meter, 0 at `METER_FLOOR_DB` and 1 at full scale.
+ * Perceived loudness is logarithmic, so this is what makes a rise the interpreter can hear a
+ * rise they can also see; the thresholds and the design's tick are positions on this scale.
  */
-export function rms(frame: Uint8Array): number {
+export function meterLevel(amplitude: number): number {
+  if (!(amplitude > 0)) return 0;
+
+  const db = 20 * Math.log10(amplitude);
+  return Math.min(Math.max((db - METER_FLOOR_DB) / -METER_FLOOR_DB, 0), 1);
+}
+
+/**
+ * RMS of an `AnalyserNode` time-domain frame, 0 for digital silence and 1 for full scale.
+ *
+ * The frame must be float, not `getByteTimeDomainData`'s bytes: one 8-bit step is 1/128, about
+ * -42 dBFS, so a byte frame cannot represent a quiet room at all and pins the meter near a
+ * quarter of the track no matter what the microphone is doing.
+ */
+export function rms(frame: Float32Array): number {
   if (frame.length === 0) return 0;
 
   let sum = 0;
-  for (const byte of frame) {
-    const sample = (byte - 128) / 128;
-    sum += sample * sample;
-  }
+  for (const sample of frame) sum += sample * sample;
   return Math.sqrt(sum / frame.length);
 }
 
