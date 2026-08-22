@@ -12,6 +12,9 @@ export const SEMVER_PATTERN = /^\d+\.\d+\.\d+$/;
 // `password9!`, which is the weaker of the two.
 export const PASSWORD_MIN_LENGTH = 8;
 
+// A request-size safety bound, not a fourth checklist rule.
+export const PASSWORD_MAX_LENGTH = 128;
+
 export const PASSWORD_NUMBER_PATTERN = /\d/;
 
 export const PASSWORD_SPECIAL_PATTERN = /[^A-Za-z0-9]/;

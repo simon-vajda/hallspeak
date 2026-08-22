@@ -1,3 +1,4 @@
+import { PASSWORD_MAX_LENGTH } from '@linguacast/contract/patterns';
 import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useId, useRef, useState } from 'react';
@@ -101,6 +102,7 @@ function LoginPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
+            maxLength={PASSWORD_MAX_LENGTH}
             placeholder="Password"
             aria-invalid={message !== undefined}
           />

@@ -44,4 +44,10 @@ describe('canFinishSetup', () => {
   it('allows a matching pair that satisfies every rule', () => {
     expect(canFinishSetup('hunter2!x', 'hunter2!x')).toBe(true);
   });
+
+  it('refuses a password above the API safety limit', () => {
+    const password = `hunter2!${'x'.repeat(121)}`;
+
+    expect(canFinishSetup(password, password)).toBe(false);
+  });
 });

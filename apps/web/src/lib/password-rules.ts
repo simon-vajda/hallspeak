@@ -1,4 +1,5 @@
 import {
+  PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
   PASSWORD_NUMBER_PATTERN,
   PASSWORD_SPECIAL_PATTERN,
@@ -32,5 +33,9 @@ export function evaluatePassword(password: string): PasswordRule[] {
 }
 
 export function canFinishSetup(password: string, confirmation: string): boolean {
-  return password === confirmation && evaluatePassword(password).every((rule) => rule.satisfied);
+  return (
+    password.length <= PASSWORD_MAX_LENGTH &&
+    password === confirmation &&
+    evaluatePassword(password).every((rule) => rule.satisfied)
+  );
 }

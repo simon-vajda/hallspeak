@@ -1,9 +1,12 @@
 import { z } from '@hono/zod-openapi';
-import { PASSWORD_MIN_LENGTH, PASSWORD_NUMBER_PATTERN, PASSWORD_SPECIAL_PATTERN } from './patterns';
+import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_NUMBER_PATTERN,
+  PASSWORD_SPECIAL_PATTERN,
+} from './patterns';
 
 export const AdminUsername = z.string().min(1).max(64).openapi({ example: 'admin' });
-
-const PASSWORD_MAX_LENGTH = 128;
 
 // One lookahead pattern rather than two .regex() calls: OpenAPI carries a single `pattern`
 // per schema, so chaining them publishes whichever the generator kept and silently drops
