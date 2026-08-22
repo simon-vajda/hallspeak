@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server';
 import { app } from './app';
+import { credentialsPath, isConfigured, startAuth } from './core/auth';
 import { startMedia, stopMedia } from './core/media';
 import { closeDb, db } from './db';
 import { runMigrations } from './db/migrate';
@@ -9,6 +10,19 @@ import { attachSocket } from './socket';
 // Before serve(): the process either has a current schema or fails to start, so the
 // operator's upgrade procedure stays "pull and restart".
 runMigrations(db);
+
+// Read once, and fatal on a damaged file: treating one as "unconfigured" would silently
+// re-open the account-claim window after a disk glitch.
+startAuth();
+console.log(
+  isConfigured()
+    ? `Admin account loaded from ${credentialsPath()}`
+    : `No admin account at ${credentialsPath()} — the setup wizard is open to whoever reaches it first`,
+);
+// Reaching the server directly over plain HTTP gives a working listener page, a studio
+// that cannot open a microphone, and a sign-in that fails silently because the Secure
+// cookie is discarded — with no error anywhere.
+console.log('Serve this behind HTTPS: microphone capture and the admin session both require it.');
 
 // Also before serve(), and fatal for the same reason: a deployment that cannot start a
 // worker cannot carry audio, and finding that out on the first Go live is worse than
