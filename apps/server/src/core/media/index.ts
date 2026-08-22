@@ -120,6 +120,14 @@ export function isOnline(eventId: number, channelId: number): boolean {
   return state?.registry.get(eventId)?.isOnline(channelId) ?? false;
 }
 
+/** Current producer existence and pause state, read together so they cannot disagree. */
+export function channelStatus(
+  eventId: number,
+  channelId: number,
+): { online: boolean; muted: boolean } {
+  return state?.registry.get(eventId)?.channelStatus(channelId) ?? { online: false, muted: false };
+}
+
 /**
  * A listener is a guest holding an open, locally unpaused consumer on the channel's
  * producer — somebody receiving audio, not somebody with a page open. Structurally zero
@@ -221,6 +229,7 @@ export interface ProduceInput {
   channelId: number;
   slug: string;
   rtpParameters: types.RtpParameters;
+  paused: boolean;
 }
 
 export async function produce(
@@ -234,6 +243,7 @@ export async function produce(
   const producer = await transport.produce({
     kind: 'audio',
     rtpParameters: input.rtpParameters,
+    paused: input.paused,
     appData: { channelId: input.channelId, slug: input.slug },
   });
 
@@ -264,7 +274,14 @@ export async function pauseProducer(
   channelId: number,
   producerId: string,
 ): Promise<void> {
-  await producerOrThrow(ctx, channelId, producerId).pause();
+  const { producer, slug } = producerWithSlugOrThrow(ctx, channelId, producerId);
+  await producer.pause();
+  notifications.publish({
+    type: 'producer-paused',
+    eventId: ctx.eventId,
+    channelId,
+    slug,
+  });
 }
 
 export async function resumeProducer(
@@ -272,7 +289,14 @@ export async function resumeProducer(
   channelId: number,
   producerId: string,
 ): Promise<void> {
-  await producerOrThrow(ctx, channelId, producerId).resume();
+  const { producer, slug } = producerWithSlugOrThrow(ctx, channelId, producerId);
+  await producer.resume();
+  notifications.publish({
+    type: 'producer-resumed',
+    eventId: ctx.eventId,
+    channelId,
+    slug,
+  });
 }
 
 export async function closeProducer(
@@ -328,8 +352,8 @@ export async function consume(
     throw new AppError('incompatible_client', 'This device cannot play that audio.');
   }
 
-  // Paused, per KTD13: unpaused races RTP against the client's decoder setup, which is
-  // the most commonly reported cause of artefacts at join.
+  // Created paused because unpaused RTP races the client's decoder setup, which is the
+  // most commonly reported cause of artefacts at join.
   const slug = room.producerSlug(input.channelId) ?? '';
   const consumer = await transport.consume({
     producerId: producer.id,
@@ -449,10 +473,15 @@ function peerOrThrow(ctx: MediaContext) {
  * Looked up by the caller's own channel and only then matched on id, never by id across
  * the event: the id is public to every listener the moment they consume.
  */
-function producerOrThrow(ctx: MediaContext, channelId: number, producerId: string): types.Producer {
-  const producer = roomOrThrow(ctx.eventId).producer(channelId);
+function producerWithSlugOrThrow(
+  ctx: MediaContext,
+  channelId: number,
+  producerId: string,
+): { producer: types.Producer; slug: string } {
+  const room = roomOrThrow(ctx.eventId);
+  const producer = room.producer(channelId);
   if (!producer || producer.id !== producerId) {
     throw new AppError('no_producer', 'No such producer on this channel.');
   }
-  return producer;
+  return { producer, slug: room.producerSlug(channelId) ?? '' };
 }

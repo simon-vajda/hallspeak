@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AUDIO_PREFERENCES_STORAGE_KEY,
   DEFAULT_AUDIO_PREFERENCES,
   mergeStoredPreferences,
   parseStoredPreferences,
@@ -8,6 +9,14 @@ import {
 } from './preferences';
 
 describe('parseStoredPreferences', () => {
+  it('keeps the browser-global storage key stable', () => {
+    expect(AUDIO_PREFERENCES_STORAGE_KEY).toBe('linguacast-audio-preferences');
+  });
+
+  it('keeps the established manual gain default', () => {
+    expect(DEFAULT_AUDIO_PREFERENCES.gain).toBe(68);
+  });
+
   it('returns the defaults when nothing is stored', () => {
     expect(parseStoredPreferences(null)).toEqual(DEFAULT_AUDIO_PREFERENCES);
   });
@@ -28,7 +37,7 @@ describe('parseStoredPreferences', () => {
       noiseSuppression: false,
       autoGain: true,
       echoCancellation: true,
-      gain: 40,
+      gain: 180,
     };
     expect(parseStoredPreferences(serializePreferences(preferences))).toEqual(preferences);
   });
@@ -48,8 +57,14 @@ describe('parseStoredPreferences', () => {
     });
   });
 
-  it('clamps a gain from above the slider’s range', () => {
-    expect(parseStoredPreferences('{"gain": 150}').gain).toBe(100);
+  it('keeps existing gain meaning while accepting the expanded range', () => {
+    expect(parseStoredPreferences('{"gain": 100}').gain).toBe(100);
+    expect(parseStoredPreferences('{"gain": 150}').gain).toBe(150);
+    expect(parseStoredPreferences('{"gain": 200}').gain).toBe(200);
+  });
+
+  it('clamps a gain from above the expanded slider range', () => {
+    expect(parseStoredPreferences('{"gain": 250}').gain).toBe(200);
   });
 
   it('refuses to restore a silent gain, which is what a reload is trying to escape', () => {
@@ -110,9 +125,19 @@ describe('mergeStoredPreferences', () => {
 
   it('writes a field this tab did change even when another tab stored something else', () => {
     const stored = { ...baseline, gain: 40 };
-    const next = { ...baseline, gain: 90 };
+    const next = { ...baseline, gain: 180 };
 
-    expect(mergeStoredPreferences(stored, baseline, next).gain).toBe(90);
+    expect(mergeStoredPreferences(stored, baseline, next).gain).toBe(180);
+  });
+
+  it('preserves an extended stored gain while merging an unrelated field', () => {
+    const stored = { ...baseline, gain: 180 };
+    const next = { ...baseline, echoCancellation: !baseline.echoCancellation };
+
+    expect(mergeStoredPreferences(stored, baseline, next)).toEqual({
+      ...stored,
+      echoCancellation: next.echoCancellation,
+    });
   });
 
   it('is the stored object when this tab changed nothing', () => {

@@ -1,5 +1,6 @@
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+import { MAX_GAIN_SLIDER_VALUE } from './live-state';
 
 /**
  * Two callers place this differently, so the wrapper deciding where it shows is theirs. It
@@ -11,7 +12,7 @@ export function GainSlider({
   disabled,
   className,
 }: {
-  /** 0–100. */
+  /** 0–200. */
   gain: number;
   onGainChange: (gain: number) => void;
   disabled?: boolean;
@@ -28,6 +29,7 @@ export function GainSlider({
         // An array, not the scalar: the wrapper derives its thumb count from Array.isArray and
         // falls back to [min, max], two stacked thumbs, for a number.
         value={[gain]}
+        max={MAX_GAIN_SLIDER_VALUE}
         onValueChange={(value) =>
           onGainChange(typeof value === 'number' ? value : (value[0] ?? gain))
         }

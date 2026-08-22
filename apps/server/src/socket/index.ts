@@ -46,8 +46,8 @@ export function attachSocket(httpServer: ServerType): SocketServer {
 
   io.use(handshakeGate);
 
-  // The one subscriber, per KTD10: every eviction and every liveness change reaches a
-  // client through here and nowhere else.
+  // The only subscriber: every eviction and liveness change reaches a client through
+  // this transport boundary and nowhere else.
   notifications.subscribe((notification) => applyNotification(io, notification));
 
   io.on('connection', (socket) => {

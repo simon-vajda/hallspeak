@@ -1,5 +1,6 @@
 import type { components } from '@linguacast/contract/openapi';
-import { Mic, MicOff } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { ExternalLink, Mic, MicOff } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
@@ -15,10 +16,12 @@ import { Button } from '@/components/ui/button';
 import { levelStatus, meterLevel, rms } from '@/lib/audio/level';
 import { useAudioPreferences } from '@/lib/audio/use-audio-preferences';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
+import { type ChannelStatusEntry, rollbackMutedAfterFailure } from '@/lib/channel-status';
 import { formatPin } from '@/lib/format';
 import { type ConnectionState, connectionState } from '@/lib/media/stats';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
+import { cn } from '@/lib/utils';
 import type { SocketClient } from '@/socket/client';
 import {
   type AudioPreferences,
@@ -46,6 +49,7 @@ export function SpeakerStudio({
   socket,
   status,
   socketError,
+  channelStatus,
 }: {
   eventName: string;
   pin: string;
@@ -56,9 +60,12 @@ export function SpeakerStudio({
   socket: SocketClient | null;
   status: SocketStatus;
   socketError: string | null;
+  /** Current Socket.IO snapshot; REST deliberately carries liveness only. */
+  channelStatus: ChannelStatusEntry | undefined;
 }) {
   const [goLivePressed, setGoLivePressed] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  // Used before the first server snapshot and while recovering from a rejected control.
+  const [localMuted, setLocalMuted] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [displaced, setDisplaced] = useState(false);
   const [lastEnd, setLastEnd] = useState<EndReason | null>(null);
@@ -67,8 +74,12 @@ export function SpeakerStudio({
   const { preferences, setPreferences } = useAudioPreferences();
   const mic = useMicCapture(preferences);
   const media = useMedia(socket);
+  const channelStatusRef = useRef(channelStatus);
+  channelStatusRef.current = channelStatus;
 
   const hasProducer = media.state.producerId !== null;
+  const isMuted =
+    channelStatus?.online && channelStatus.muted !== null ? channelStatus.muted : localMuted;
   const state = broadcastState({
     goLivePressed,
     hasProducer,
@@ -146,10 +157,9 @@ export function SpeakerStudio({
   }, [status, goLivePressed, lastEnd]);
 
   /**
-   * The whole of R44: after an involuntary drop the client rebuilds and re-produces on its
-   * own, but paused, so the interpreter's one action is to unmute. After a deliberate end
-   * it does nothing — a broadcast somebody chose to stop must not restart itself because
-   * the Wi-Fi blinked.
+   * After an involuntary drop the client rebuilds and re-produces on its own, but paused,
+   * so the interpreter's one action is to unmute. After a deliberate end it does nothing —
+   * a broadcast somebody chose to stop must not restart itself because the Wi-Fi blinked.
    */
   useEffect(() => {
     if (status !== 'connected' || hasProducer || !outputTrack) return;
@@ -158,7 +168,7 @@ export function SpeakerStudio({
     let cancelled = false;
     void produce(true).then(() => {
       if (cancelled) return;
-      setIsMuted(true);
+      setLocalMuted(true);
       // Only a recovery reads as back-from-drop; the first Go live is an ordinary start.
       if (lastEnd === 'dropped') setRecoveredSilently(true);
       setLastEnd(null);
@@ -204,8 +214,9 @@ export function SpeakerStudio({
   if (goLivePressed) {
     return (
       <OnAir
-        channelName={channel.name}
+        channel={channel}
         eventName={eventName}
+        pin={pin}
         mic={mic}
         startedAt={startedAt}
         listeners={listeners}
@@ -219,15 +230,29 @@ export function SpeakerStudio({
         })}
         onToggleMute={() => {
           const next = !isMuted;
-          setIsMuted(next);
+          const requestRevision = channelStatus?.revision ?? 0;
+          const producerControl = {
+            generation: media.state.generation,
+            producerId: media.state.producerId,
+          };
+          setLocalMuted(next);
           setRecoveredSilently(false);
-          void media.setProducerPaused(next);
+          void media.setProducerPaused(next).catch((cause) => {
+            const rollbackMuted = rollbackMutedAfterFailure({
+              requestedMuted: next,
+              requestRevision,
+              current: channelStatusRef.current,
+            });
+            if (!media.setLocalProducerPaused(rollbackMuted, producerControl)) return;
+            setLocalMuted(rollbackMuted);
+            console.error('media: could not change mute', cause);
+          });
         }}
         onEnd={() => {
           // Recorded before the close, so the reconnect effect cannot read it as a drop.
           setLastEnd('deliberate');
           setGoLivePressed(false);
-          setIsMuted(false);
+          setLocalMuted(false);
           setRecoveredSilently(false);
           setStartedAt(null);
           void media.stopProducing();
@@ -255,7 +280,7 @@ export function SpeakerStudio({
         }
       />
 
-      <main className="flex flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
+      <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header>
           <div className="flex items-center justify-between gap-3">
             <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
@@ -324,6 +349,7 @@ export function SpeakerStudio({
                 <br />
                 Speaker link · code ends {speakerCode.slice(-4)}
               </p>
+              <ListenerPageLink pin={pin} slug={channel.slug} className="mt-2" />
             </div>
           </div>
         </div>
@@ -338,8 +364,9 @@ export function SpeakerStudio({
  * interpreter unmutes, which is the one thing that screen has to ask for.
  */
 function OnAir({
-  channelName,
+  channel,
   eventName,
+  pin,
   mic,
   startedAt,
   listeners,
@@ -352,8 +379,9 @@ function OnAir({
   status,
   socketError,
 }: {
-  channelName: string;
+  channel: PublicChannel;
   eventName: string;
+  pin: string;
   mic: ReturnType<typeof useMicCapture>;
   /** `Date.now()` at the moment Go live was pressed. */
   startedAt: number | null;
@@ -382,7 +410,7 @@ function OnAir({
         }
       />
 
-      <main className="flex flex-1 flex-col px-gutter pt-6 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
+      <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-6 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header className="flex items-center justify-between gap-3 lg:justify-start">
           {/* `On air` is a claim about audio, so only a live producer earns it. */}
           <LiveBadge live={onAir} label={BADGE_LABEL[state]} />
@@ -395,7 +423,7 @@ function OnAir({
         </header>
 
         <h1 className="mt-4 text-screen lg:mt-3.5 lg:mb-7.5 lg:text-[40px] lg:leading-[1.03] lg:tracking-[-0.045em]">
-          {channelName}
+          {channel.name}
         </h1>
 
         <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-0 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start lg:gap-x-8.5 lg:gap-y-4">
@@ -446,6 +474,7 @@ function OnAir({
             >
               End broadcast
             </Button>
+            <ListenerPageLink pin={pin} slug={channel.slug} className="mt-2" />
           </div>
         </div>
       </main>
@@ -459,6 +488,33 @@ function OnAir({
         }}
       />
     </div>
+  );
+}
+
+function ListenerPageLink({
+  pin,
+  slug,
+  className,
+}: {
+  pin: string;
+  slug: string;
+  className?: string;
+}) {
+  return (
+    <Link
+      to="/events/$pin/$slug"
+      params={{ pin, slug }}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Open the listener page in a new tab"
+      className={cn(
+        'mx-auto flex w-fit items-center gap-1.5 text-meta font-semibold text-muted-foreground hover:text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+        className,
+      )}
+    >
+      Open listener page
+      <ExternalLink aria-hidden className="size-3.5" />
+    </Link>
   );
 }
 
@@ -501,7 +557,7 @@ function Displaced({ channelName, eventName }: { channelName: string; eventName:
         }
       />
 
-      <main className="flex flex-1 flex-col items-center justify-center px-gutter pb-16 text-center lg:px-10">
+      <main className="mx-auto flex w-full max-w-shell flex-1 flex-col items-center justify-center px-gutter pb-16 text-center lg:px-10">
         <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
           Interpreter · off air
         </span>

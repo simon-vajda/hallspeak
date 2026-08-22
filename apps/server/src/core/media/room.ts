@@ -53,6 +53,13 @@ export class Room {
     return producer !== undefined && !producer.closed;
   }
 
+  /** One read of the current producer owns both public broadcast-status bits. */
+  channelStatus(channelId: number): { online: boolean; muted: boolean } {
+    const producer = this.producers.get(channelId);
+    if (!producer || producer.closed) return { online: false, muted: false };
+    return { online: true, muted: producer.paused };
+  }
+
   /** Producing twice on one channel replaces rather than duplicating. */
   setProducer(channelId: number, producer: types.Producer): void {
     this.producers.get(channelId)?.close();

@@ -14,6 +14,9 @@ import type { WorkerFactory } from './workers';
 
 const seq = { producer: 0, consumer: 0, transport: 0 };
 
+/** Failure controls make post-success notification ordering observable in facade tests. */
+export const fakeMediaControls = { refuseConsume: false, failPause: false, failResume: false };
+
 function nextId(kind: keyof typeof seq): string {
   seq[kind] += 1;
   return `${kind[0]}${seq[kind]}`;
@@ -26,8 +29,10 @@ class FakeProducer extends EventEmitter {
   constructor(
     readonly id: string,
     readonly appData: Record<string, unknown> = {},
+    paused = false,
   ) {
     super();
+    this.paused = paused;
   }
   close = () => {
     if (this.closed) return;
@@ -35,9 +40,11 @@ class FakeProducer extends EventEmitter {
     this.observer.emit('close');
   };
   pause = async () => {
+    if (fakeMediaControls.failPause) throw new Error('pause failed');
     this.paused = true;
   };
   resume = async () => {
+    if (fakeMediaControls.failResume) throw new Error('resume failed');
     this.paused = false;
   };
 }
@@ -89,8 +96,14 @@ class FakeTransport {
 
   // mediasoup stores whatever appData it is handed on the producer, and `Room` reads the
   // slug back off it, so a fake that dropped the option would make that read untestable.
-  produce = async ({ appData }: { appData?: Record<string, unknown> } = {}) => {
-    const producer = new FakeProducer(nextId('producer'), appData ?? {});
+  produce = async ({
+    appData,
+    paused = false,
+  }: {
+    appData?: Record<string, unknown>;
+    paused?: boolean;
+  } = {}) => {
+    const producer = new FakeProducer(nextId('producer'), appData ?? {}, paused);
     this.children.push(producer);
     this.router.registerProducer(producer);
     return producer;
@@ -109,9 +122,6 @@ class FakeTransport {
     return consumer;
   };
 }
-
-/** Set to make the next canConsume refuse, so the incompatible-client path is reachable. */
-export const fakeMediaControls = { refuseConsume: false };
 
 class FakeRouter {
   closed = false;
@@ -177,6 +187,8 @@ export async function startFakeMedia(options: FakeMediaOptions = {}): Promise<()
   seq.consumer = 0;
   seq.transport = 0;
   fakeMediaControls.refuseConsume = false;
+  fakeMediaControls.failPause = false;
+  fakeMediaControls.failResume = false;
   await startMedia({
     net: { listenIp: '0.0.0.0', announcedIp: '203.0.113.1', rtcPortBase: 44400, maxWorkers: 1 },
     turn: options.turn ?? {},
@@ -200,5 +212,6 @@ export async function goLive(input: {
     channelId: input.channelId,
     slug: input.slug,
     rtpParameters: { codecs: [] },
+    paused: false,
   });
 }

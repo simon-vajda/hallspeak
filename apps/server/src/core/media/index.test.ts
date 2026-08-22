@@ -4,6 +4,7 @@ import { notifications } from '../notifications';
 import { presence } from '../presence';
 import {
   activeRooms,
+  channelStatus,
   closeConsumer,
   closeProducer,
   consume,
@@ -12,11 +13,13 @@ import {
   pauseProducer,
   produce,
   releasePeer,
+  resumeConsumer,
+  resumeProducer,
   revokeChannel,
   revokeEvent,
   stopMedia,
 } from './index';
-import { goLive as goLiveOn, startFakeMedia } from './testing';
+import { fakeMediaControls, goLive as goLiveOn, startFakeMedia } from './testing';
 
 const EVENT = 1;
 const ENGLISH = 10;
@@ -75,6 +78,24 @@ describe('isOnline', () => {
   });
 });
 
+describe('channelStatus', () => {
+  it('tracks mute independently from liveness and clears it on close', async () => {
+    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: false, muted: false });
+
+    const { producerId } = await goLive('speaker-a');
+    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: true, muted: false });
+
+    await pauseProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: true, muted: true });
+
+    await resumeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: true, muted: false });
+
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: false, muted: false });
+  });
+});
+
 describe('produce', () => {
   it('publishes producer-opened naming the channel and its slug', async () => {
     await goLive('speaker-a');
@@ -101,6 +122,65 @@ describe('produce', () => {
     });
   });
 
+  it('creates an initially paused producer before publishing opened', async () => {
+    let statusAtOpened: { online: boolean; muted: boolean } | undefined;
+    const unsubscribeStatus = notifications.subscribe((notification) => {
+      if (notification.type === 'producer-opened') {
+        statusAtOpened = channelStatus(notification.eventId, notification.channelId);
+      }
+    });
+    await createTransport({ eventId: EVENT, socketId: 'speaker-a' }, 'send', { create: true });
+    try {
+      await produce(
+        { eventId: EVENT, socketId: 'speaker-a' },
+        {
+          channelId: ENGLISH,
+          slug: 'english',
+          rtpParameters: { codecs: [] },
+          paused: true,
+        },
+      );
+    } finally {
+      unsubscribeStatus();
+    }
+
+    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: true, muted: true });
+    expect(statusAtOpened).toEqual({ online: true, muted: true });
+    expect(published.at(-1)).toEqual({
+      type: 'producer-opened',
+      eventId: EVENT,
+      channelId: ENGLISH,
+      slug: 'english',
+    });
+  });
+
+  it('publishes pause and resume invalidations only after each operation succeeds', async () => {
+    const { producerId } = await goLive('speaker-a');
+    published = [];
+    fakeMediaControls.failPause = true;
+
+    await expect(
+      pauseProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId),
+    ).rejects.toThrow('pause failed');
+    expect(published).toEqual([]);
+
+    fakeMediaControls.failPause = false;
+    await pauseProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+    fakeMediaControls.failResume = true;
+    await expect(
+      resumeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId),
+    ).rejects.toThrow('resume failed');
+    expect(published.map((notification) => notification.type)).toEqual(['producer-paused']);
+
+    fakeMediaControls.failResume = false;
+    await resumeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+
+    expect(published.map((notification) => notification.type)).toEqual([
+      'producer-paused',
+      'producer-resumed',
+    ]);
+  });
+
   it('lands two channels of one event on the same router', async () => {
     await goLive('speaker-a', ENGLISH, 'english');
     await goLive('speaker-b', SPANISH, 'spanish');
@@ -113,9 +193,32 @@ describe('produce', () => {
     await expect(
       produce(
         { eventId: EVENT, socketId: 'nobody' },
-        { channelId: ENGLISH, slug: 'english', rtpParameters: { codecs: [] } },
+        {
+          channelId: ENGLISH,
+          slug: 'english',
+          rtpParameters: { codecs: [] },
+          paused: false,
+        },
       ),
     ).rejects.toMatchObject({ code: 'no_transport' });
+  });
+});
+
+describe('muted listener count', () => {
+  it('retains a resumed consumer while its producer is paused', async () => {
+    const { producerId } = await goLive('speaker-a');
+    const guest = { eventId: EVENT, socketId: 'guest-a' };
+    await createTransport(guest, 'recv', { create: false });
+    const { consumerId } = await consume(guest, {
+      channelId: ENGLISH,
+      rtpCapabilities: { codecs: [] },
+    });
+    await resumeConsumer(guest, consumerId);
+
+    await pauseProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+
+    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: true, muted: true });
+    expect(activeRooms()[0]?.listenerCount(ENGLISH)).toBe(1);
   });
 });
 
@@ -203,7 +306,12 @@ describe('a listener whose speaker stops', () => {
     // The speaker keeps their send transport across this and only produces again.
     await produce(
       { eventId: EVENT, socketId: 'speaker-a' },
-      { channelId: ENGLISH, slug: 'english', rtpParameters: { codecs: [] } },
+      {
+        channelId: ENGLISH,
+        slug: 'english',
+        rtpParameters: { codecs: [] },
+        paused: false,
+      },
     );
     const again = await consume(
       { eventId: EVENT, socketId: 'guest-a' },

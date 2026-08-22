@@ -14,7 +14,7 @@ runMigrations(db);
 // Read once, and fatal on a damaged file: treating one as "unconfigured" would silently
 // re-open the account-claim window after a disk glitch.
 startAuth();
-// The only scheduled half of KTD9: every other expired row is deleted where it is found.
+// Boot is the only scheduled sweep; later lookups delete expired rows where they find them.
 sweepExpired(db);
 console.log(
   isConfigured()

@@ -74,6 +74,23 @@ export function isCurrent(state: MediaState, generation: number): boolean {
   return state.generation === generation;
 }
 
+export interface ProducerControlIdentity {
+  generation: number;
+  producerId: string | null;
+}
+
+/** A failed control may roll back only the Producer that originated its request. */
+export function canRollbackProducerControl(
+  state: MediaState,
+  request: ProducerControlIdentity,
+): boolean {
+  return (
+    request.producerId !== null &&
+    state.generation === request.generation &&
+    state.producerId === request.producerId
+  );
+}
+
 export function transportOpened(
   state: MediaState,
   direction: TransportDirection,
@@ -114,8 +131,8 @@ export function consumerClosed(state: MediaState, slug: string): MediaState {
  * and arming before anyone is live is neither.
  *
  * Closing the channels the guest is no longer on is what makes a switch a consumer swap
- * on the one transport. Skipped, the old consumer stays open and its audio keeps
- * arriving, which is the leak R27 exists to prevent.
+ * on the one transport. Otherwise, the old consumer stays open and its audio keeps
+ * arriving alongside the newly selected channel.
  */
 export interface ConsumerPlan {
   close: string[];

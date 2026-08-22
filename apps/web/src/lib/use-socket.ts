@@ -1,4 +1,15 @@
-import { useEffect, useState } from 'react';
+import { unwrap } from '@linguacast/contract/socket';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  applyJoinStatus,
+  applyRealtimeStatus,
+  beginChannelJoin,
+  type ChannelStatusState,
+  initialChannelStatuses,
+  projectOnlineStatuses,
+  resetStatusesForAuth,
+  resetStatusOrdering,
+} from '@/lib/channel-status';
 import { connectSocket } from '@/lib/socket';
 import type { SocketAuth, SocketClient } from '@/socket/client';
 
@@ -13,9 +24,25 @@ export type SocketStatus = 'idle' | 'connecting' | 'connected' | 'error';
 export function useSocket(auth: SocketAuth | null) {
   const [status, setStatus] = useState<SocketStatus>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [online, setOnline] = useState<Record<string, boolean>>({});
+  const [channelStatusState, setChannelStatusState] =
+    useState<ChannelStatusState>(initialChannelStatuses);
   const [listeners, setListeners] = useState<Record<string, number>>({});
   const [socket, setSocket] = useState<SocketClient | null>(null);
+  const channelStatusRef = useRef(channelStatusState);
+  channelStatusRef.current = channelStatusState;
+  const online = useMemo(
+    () => projectOnlineStatuses(channelStatusState.channels),
+    [channelStatusState.channels],
+  );
+
+  const updateChannelStatuses = useCallback(
+    (update: (current: ChannelStatusState) => ChannelStatusState) => {
+      const next = update(channelStatusRef.current);
+      channelStatusRef.current = next;
+      setChannelStatusState(next);
+    },
+    [],
+  );
 
   // Destructured so the effect depends on the values, not on a fresh object identity.
   const pin = auth?.pin ?? null;
@@ -24,11 +51,13 @@ export function useSocket(auth: SocketAuth | null) {
   useEffect(() => {
     if (pin === null) return;
 
+    updateChannelStatuses(resetStatusesForAuth);
     setStatus('connecting');
     const s = connectSocket(speakerCode === null ? { pin } : { pin, speakerCode });
     setSocket(s);
 
     s.on('connect', () => {
+      updateChannelStatuses(resetStatusOrdering);
       setStatus('connected');
       setError(null);
     });
@@ -51,8 +80,10 @@ export function useSocket(auth: SocketAuth | null) {
       setStatus('error');
       setError(err.message);
     });
-    s.on('channel:status', ({ slug, online: isOnline }) => {
-      setOnline((prev) => ({ ...prev, [slug]: isOnline }));
+    s.on('channel:status', ({ slug, online: isOnline, muted }) => {
+      updateChannelStatuses((current) =>
+        applyRealtimeStatus(current, slug, { online: isOnline, muted }),
+      );
     });
     // Addressed to the speaker's socket alone, and sent once on connect, so a studio never
     // holds the `?? 0` fallback waiting for the first arrival or departure.
@@ -66,7 +97,37 @@ export function useSocket(auth: SocketAuth | null) {
       setSocket(null);
       setStatus('idle');
     };
-  }, [pin, speakerCode]);
+  }, [pin, speakerCode, updateChannelStatuses]);
 
-  return { status, error, online, listeners, socket };
+  const joinChannel = useCallback(
+    async (slug: string, httpOnline: boolean) => {
+      if (!socket) throw new Error('No socket.');
+
+      const started = beginChannelJoin(channelStatusRef.current, slug, httpOnline);
+      channelStatusRef.current = started.state;
+      setChannelStatusState(started.state);
+
+      const snapshot = unwrap(await socket.emitWithAck('channel:join', { slug }));
+      updateChannelStatuses((current) => applyJoinStatus(current, started.ticket, snapshot));
+    },
+    [socket, updateChannelStatuses],
+  );
+
+  const leaveChannel = useCallback(
+    (slug: string) => {
+      socket?.emit('channel:leave', { slug });
+    },
+    [socket],
+  );
+
+  return {
+    status,
+    error,
+    online,
+    channelStatuses: channelStatusState.channels,
+    listeners,
+    socket,
+    joinChannel,
+    leaveChannel,
+  };
 }
