@@ -74,6 +74,23 @@ export function isCurrent(state: MediaState, generation: number): boolean {
   return state.generation === generation;
 }
 
+export interface ProducerControlIdentity {
+  generation: number;
+  producerId: string | null;
+}
+
+/** A failed control may roll back only the Producer that originated its request. */
+export function canRollbackProducerControl(
+  state: MediaState,
+  request: ProducerControlIdentity,
+): boolean {
+  return (
+    request.producerId !== null &&
+    state.generation === request.generation &&
+    state.producerId === request.producerId
+  );
+}
+
 export function transportOpened(
   state: MediaState,
   direction: TransportDirection,

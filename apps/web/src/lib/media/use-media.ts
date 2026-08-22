@@ -5,12 +5,14 @@ import { loadDevice } from './device';
 import {
   afterConnect,
   beginRebuild,
+  canRollbackProducerControl,
   consumerClosed,
   consumerOpened,
   initialMediaState,
   isCurrent,
   type MediaState,
   needsRebuild,
+  type ProducerControlIdentity,
   producerClosed,
   producerOpened,
   type TransportConnectionState,
@@ -305,14 +307,19 @@ export function useMedia(socket: SocketClient | null) {
     [socket],
   );
 
-  const setLocalProducerPaused = useCallback((paused: boolean) => {
-    const producer = session.current?.producer;
-    if (!producer) return;
-    setStats(null);
-    previousSample.current = null;
-    if (paused && !producer.paused) producer.pause();
-    if (!paused && producer.paused) producer.resume();
-  }, []);
+  const setLocalProducerPaused = useCallback(
+    (paused: boolean, request: ProducerControlIdentity): boolean => {
+      if (!canRollbackProducerControl(stateRef.current, request)) return false;
+      const producer = session.current?.producer;
+      if (!producer || producer.id !== request.producerId) return false;
+      setStats(null);
+      previousSample.current = null;
+      if (paused && !producer.paused) producer.pause();
+      if (!paused && producer.paused) producer.resume();
+      return true;
+    },
+    [],
+  );
 
   const startConsuming = useCallback(
     async (slug: string): Promise<MediaStreamTrack> => {
