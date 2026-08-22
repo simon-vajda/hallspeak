@@ -8,8 +8,7 @@ type PublicChannel = components['schemas']['PublicChannel'];
 const PILL = 'flex items-center gap-2.25 rounded-full px-4.5 py-2.5 text-sm font-semibold';
 
 /**
- * Desktop-only: below `lg` the listener room's own back link is the way out of a channel. An
- * offline channel is inert, matching the selector's rows.
+ * Desktop-only: below `lg` the listener room's own back link is the way out of a channel.
  */
 export function ChannelStrip({
   channels,
@@ -47,12 +46,18 @@ export function ChannelStrip({
 
           if (!channel.online) {
             return (
-              <span
+              <Link
                 key={channel.slug}
-                className={cn(PILL, 'border border-dashed border-border text-muted-foreground')}
+                to="/events/$pin/$slug"
+                params={{ pin, slug: channel.slug }}
+                className={cn(
+                  PILL,
+                  'border border-dashed border-border text-muted-foreground',
+                  'focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+                )}
               >
                 {channel.name}
-              </span>
+              </Link>
             );
           }
 

@@ -1,5 +1,6 @@
 import type { components } from '@linguacast/contract/openapi';
 import { useQueryClient } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { $api } from '@/api/client';
@@ -98,7 +99,16 @@ function ChannelRow({
             {channel.enabled ? 'Enabled' : 'Disabled'}
           </ChannelChip>
         </div>
-        <p className="mt-1 truncate font-mono text-muted-foreground text-xs">{listenerPath}</p>
+        <Link
+          to="/events/$pin/$slug"
+          params={{ pin: event.pin, slug: channel.slug }}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Open the listener page for ${channel.name} in a new tab`}
+          className="mt-1 block truncate font-mono text-muted-foreground text-xs hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+        >
+          {listenerPath}
+        </Link>
         <p className="mt-1 text-meta text-muted-foreground">{live}</p>
       </div>
 

@@ -113,7 +113,7 @@ function EventRow({ event, onAir }: { event: AdminEventDetail; onAir: number }) 
       </div>
       <p className={cn('font-semibold text-[16px] tracking-[0.04em]', dim)}>
         <span className="sr-only">PIN </span>
-        {formatPin(event.pin)}
+        <ListenerEventLink event={event} />
       </p>
       <ChannelChips channels={event.channels} variant="collapse" className={dim} />
       <p className={cn('text-meta text-muted-foreground', dim)}>{statusLabel(event, onAir)}</p>
@@ -137,13 +137,30 @@ function EventCard({ event, onAir }: { event: AdminEventDetail; onAir: number })
       <div className="flex items-start justify-between gap-3">
         <div className={dim}>
           <EventNameLink event={event} className="text-[19px] tracking-[-0.025em]" />
-          <p className="mt-0.5 text-[13px] text-muted-foreground">PIN {formatPin(event.pin)}</p>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
+            PIN <ListenerEventLink event={event} />
+          </p>
         </div>
         <EventEnabledSwitch event={event} />
       </div>
       <ChannelChips channels={event.channels} variant="wrap" className={cn('mt-3', dim)} />
       <p className={cn('mt-3 text-meta text-muted-foreground', dim)}>{statusLabel(event, onAir)}</p>
     </li>
+  );
+}
+
+function ListenerEventLink({ event }: { event: AdminEventDetail }) {
+  return (
+    <Link
+      to="/events/$pin"
+      params={{ pin: event.pin }}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`Open the listener page for ${event.name} in a new tab`}
+      className="hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+    >
+      {formatPin(event.pin)}
+    </Link>
   );
 }
 

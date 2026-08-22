@@ -1,5 +1,6 @@
 import type { components } from '@linguacast/contract/openapi';
-import { Mic, MicOff } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { ExternalLink, Mic, MicOff } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
@@ -20,6 +21,7 @@ import { formatPin } from '@/lib/format';
 import { type ConnectionState, connectionState } from '@/lib/media/stats';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
+import { cn } from '@/lib/utils';
 import type { SocketClient } from '@/socket/client';
 import {
   type AudioPreferences,
@@ -214,7 +216,9 @@ export function SpeakerStudio({
     return (
       <OnAir
         channelName={channel.name}
+        channelSlug={channel.slug}
         eventName={eventName}
+        pin={pin}
         mic={mic}
         startedAt={startedAt}
         listeners={listeners}
@@ -343,6 +347,7 @@ export function SpeakerStudio({
                 <br />
                 Speaker link · code ends {speakerCode.slice(-4)}
               </p>
+              <ListenerPageLink pin={pin} slug={channel.slug} className="mt-2" />
             </div>
           </div>
         </div>
@@ -358,7 +363,9 @@ export function SpeakerStudio({
  */
 function OnAir({
   channelName,
+  channelSlug,
   eventName,
+  pin,
   mic,
   startedAt,
   listeners,
@@ -372,7 +379,9 @@ function OnAir({
   socketError,
 }: {
   channelName: string;
+  channelSlug: string;
   eventName: string;
+  pin: string;
   mic: ReturnType<typeof useMicCapture>;
   /** `Date.now()` at the moment Go live was pressed. */
   startedAt: number | null;
@@ -465,6 +474,7 @@ function OnAir({
             >
               End broadcast
             </Button>
+            <ListenerPageLink pin={pin} slug={channelSlug} className="mt-2" />
           </div>
         </div>
       </main>
@@ -478,6 +488,33 @@ function OnAir({
         }}
       />
     </div>
+  );
+}
+
+function ListenerPageLink({
+  pin,
+  slug,
+  className,
+}: {
+  pin: string;
+  slug: string;
+  className?: string;
+}) {
+  return (
+    <Link
+      to="/events/$pin/$slug"
+      params={{ pin, slug }}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Open the listener page in a new tab"
+      className={cn(
+        'mx-auto flex w-fit items-center gap-1.5 text-meta font-semibold text-muted-foreground hover:text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+        className,
+      )}
+    >
+      Open listener page
+      <ExternalLink aria-hidden className="size-3.5" />
+    </Link>
   );
 }
 
