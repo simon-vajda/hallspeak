@@ -68,16 +68,35 @@ export class TokenBucketLimiter {
       return existing;
     }
 
-    if (this.buckets.size >= this.maxKeys) this.prune();
+    if (this.buckets.size >= this.maxKeys) this.prune(now);
     const fresh: Bucket = { tokens: this.capacity, updatedAt: now };
     this.buckets.set(key, fresh);
     return fresh;
   }
 
-  /** A full bucket is indistinguishable from an absent one, so dropping it loses nothing. */
-  private prune(): void {
+  /**
+   * A refilled bucket is indistinguishable from an absent one. If every tracked address
+   * still carries a penalty, evict the least recently touched state: preserving every
+   * penalty would let a distributed guesser turn the limiter itself into an unbounded map.
+   */
+  private prune(now: number): void {
     for (const [key, bucket] of this.buckets) {
-      if (bucket.tokens >= this.capacity) this.buckets.delete(key);
+      const elapsedSeconds = (now - bucket.updatedAt) / 1000;
+      const tokens = Math.min(this.capacity, bucket.tokens + elapsedSeconds * this.refillPerSecond);
+      if (tokens >= this.capacity) this.buckets.delete(key);
+    }
+
+    while (this.buckets.size >= this.maxKeys) {
+      let oldest: string | undefined;
+      let oldestUpdate = Number.POSITIVE_INFINITY;
+      for (const [key, bucket] of this.buckets) {
+        if (bucket.updatedAt < oldestUpdate) {
+          oldest = key;
+          oldestUpdate = bucket.updatedAt;
+        }
+      }
+      if (oldest === undefined) break;
+      this.buckets.delete(oldest);
     }
   }
 }

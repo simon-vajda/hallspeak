@@ -83,4 +83,18 @@ describe('TokenBucketLimiter', () => {
     limiter.penalize('keeps-state');
     expect(limiter.allow('keeps-state')).toBe(false);
   });
+
+  it('stays bounded when every tracked key still carries a penalty', () => {
+    const clock = fixedClock();
+    const limiter = new TokenBucketLimiter({
+      capacity: 2,
+      refillPerSecond: 1,
+      now: clock.now,
+      maxKeys: 4,
+    });
+
+    for (let i = 0; i < 20; i++) limiter.penalize(`ip-${i}`);
+
+    expect(limiter.size).toBeLessThanOrEqual(4);
+  });
 });
