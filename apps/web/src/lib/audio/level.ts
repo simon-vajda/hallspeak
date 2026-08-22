@@ -38,7 +38,7 @@ export function levelStatus(level: number): LevelStatus {
  * gaps between them. Both are time constants, not durations: a step covers ~63% of the distance
  * in one tau.
  */
-export const ATTACK_MS = 60;
+export const ATTACK_MS = 20;
 export const RELEASE_MS = 280;
 
 /** The clip marker's own fall, slow enough that a plosive is still on screen when read. */

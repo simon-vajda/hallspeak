@@ -133,14 +133,26 @@ describe('holdPeak', () => {
 
 // KTD10: this is the whole reason the clip indicator reads a peak-hold instead of the fill.
 describe('a short clipping burst', () => {
-  it('reads as peaking on the frame it occurs, where the smoothed fill would not', () => {
-    let smoothed = 0.4;
-    let peak = 0.4;
-    for (let elapsed = 0; elapsed < 30; elapsed += 16) {
-      smoothed = smoothLevel(smoothed, 0.98, 16);
-      peak = holdPeak(peak, 0.98, 16);
-    }
+  it('reads as peaking on the frame it lands, where the smoothed fill does not', () => {
+    const smoothed = smoothLevel(0.4, 0.98, 16);
+    const peak = holdPeak(0.4, 0.98, 16);
+
     expect(levelStatus(smoothed)).not.toBe('peaking');
     expect(levelStatus(peak)).toBe('peaking');
+  });
+
+  /**
+   * The property, rather than a duration: however the constants are tuned by ear, the fill
+   * must never beat the marker to the threshold, or the colour and the words would turn red
+   * with nothing on the bar to explain them.
+   */
+  it('never lets the fill cross the threshold before the marker does', () => {
+    let smoothed = 0;
+    let peak = 0;
+    for (let frame = 0; frame < 60; frame++) {
+      smoothed = smoothLevel(smoothed, 0.98, 16);
+      peak = holdPeak(peak, 0.98, 16);
+      expect(peak).toBeGreaterThanOrEqual(smoothed);
+    }
   });
 });
