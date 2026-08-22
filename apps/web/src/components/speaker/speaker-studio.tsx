@@ -25,7 +25,6 @@ import {
   type BroadcastState,
   broadcastState,
   type EndReason,
-  onAirNote,
   onReconnect,
 } from './live-state';
 
@@ -282,10 +281,7 @@ export function SpeakerStudio({
           />
 
           <div className="flex flex-1 flex-col gap-4 lg:flex-none lg:gap-4.5">
-            <InputLevelPanel
-              analyser={mic.analyser}
-              note="Speak at your normal volume — aim to sit just under the peak mark. Nobody hears you until you go live."
-            />
+            <InputLevelPanel analyser={mic.analyser} />
 
             <div className="mt-auto pt-8 lg:mt-0 lg:pt-0">
               {(socketError || status !== 'connected') && (
@@ -414,11 +410,7 @@ function OnAir({
             )}
           </div>
 
-          <InputLevelPanel
-            analyser={mic.analyser}
-            note={onAirNote(state)}
-            className="lg:col-start-2 lg:row-start-2"
-          />
+          <InputLevelPanel analyser={mic.analyser} className="lg:col-start-2 lg:row-start-2" />
 
           <AudioSettings
             mic={mic}
