@@ -67,11 +67,14 @@ describe('authorizeHandshake', () => {
   });
 
   // The version gate fires before the database is touched.
-  it('rejects an old client', () => {
-    expect(authorizeHandshake(db, presence, { clientVersion: '0.0.1', pin }, 's')).toEqual({
+  it('rejects the previous socket protocol and admits the current one', () => {
+    expect(authorizeHandshake(db, presence, { clientVersion: '0.1.0', pin }, 'old')).toEqual({
       ok: false,
       error: 'client_too_old',
     });
+    expect(
+      authorizeHandshake(db, presence, { clientVersion: '0.2.0', pin }, 'current'),
+    ).toMatchObject({ ok: true, data: { pin } });
   });
 
   it('rejects a malformed handshake', () => {
