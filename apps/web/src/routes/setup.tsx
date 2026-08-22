@@ -1,3 +1,4 @@
+import { PASSWORD_MAX_LENGTH } from '@linguacast/contract/patterns';
 import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Check } from 'lucide-react';
@@ -138,6 +139,7 @@ function Credentials() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           autoComplete="new-password"
+          maxLength={PASSWORD_MAX_LENGTH}
         />
         <PasswordChecklist password={password} />
       </Field>
@@ -151,6 +153,7 @@ function Credentials() {
           value={confirmation}
           onChange={(event) => setConfirmation(event.target.value)}
           autoComplete="new-password"
+          maxLength={PASSWORD_MAX_LENGTH}
           placeholder="Repeat it"
         />
       </Field>
