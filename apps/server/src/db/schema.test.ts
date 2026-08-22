@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { channels, events } from './schema';
+import { adminSessions, channels, events } from './schema';
 import { createTestDb } from './testing';
 
 function seedEvent(db: ReturnType<typeof createTestDb>['db'], pin: string) {
@@ -88,6 +88,21 @@ describe('schema', () => {
 
       expect(event.enabled).toBe(false);
       expect(channel.enabled).toBe(false);
+    } finally {
+      cleanup();
+    }
+  });
+});
+
+describe('admin_sessions', () => {
+  it('rejects a second row for the same token hash', () => {
+    const { db, cleanup } = createTestDb();
+    try {
+      const now = Date.now();
+      const row = { tokenHash: 'abc', createdAt: now, expiresAt: now + 1000 };
+      db.insert(adminSessions).values(row).run();
+
+      expect(() => db.insert(adminSessions).values(row).run()).toThrow();
     } finally {
       cleanup();
     }
