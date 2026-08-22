@@ -95,13 +95,20 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
   // Re-opening the same device leaves `requested` unchanged; bumping this re-runs the effect.
   const [attempt, setAttempt] = useState(0);
 
-  // Read inside the open, never depended on: a preference change re-applies to the live
-  // graph below rather than re-opening the device and interrupting a live broadcast.
+  // Only the gain is read this way: it is one node's value, applied to the live graph below,
+  // and the slider reports every pointer move — depending on it would re-open through a drag.
   const preferencesRef = useRef(preferences);
   preferencesRef.current = preferences;
 
   const { noiseSuppression, autoGain, echoCancellation } = preferences;
 
+  /**
+   * Re-opens on a processing preference as well as on a device change. `applyConstraints`
+   * looks like the gentler option and is not one: Chrome resolves it and leaves
+   * `getSettings()` untouched, so the three toggles were inert after the first open. The
+   * browser fixes its processing chain at `getUserMedia` time and nothing short of another
+   * `getUserMedia` moves it, which is why toggling mid-broadcast costs a track swap.
+   */
   // biome-ignore lint/correctness/useExhaustiveDependencies: nothing reads `attempt` on purpose — re-running this effect is the whole of what bumping it does
   useEffect(() => {
     if (!isSupported()) {
@@ -117,7 +124,10 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
 
     void (async () => {
       try {
-        const opened = await openCapture(requested, trackConstraints(preferencesRef.current));
+        const opened = await openCapture(
+          requested,
+          trackConstraints({ noiseSuppression, autoGain, echoCancellation }),
+        );
         opened.gain.gain.value = gainNodeValue(preferencesRef.current.gain);
         // Cleaned up while getUserMedia was resolving: the capture exists but nothing holds it.
         if (cancelled) {
@@ -156,7 +166,7 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
       if (current) release(current);
       setCapture(null);
     };
-  }, [requested, attempt]);
+  }, [requested, attempt, noiseSuppression, autoGain, echoCancellation]);
 
   // Tracks the context rather than the read taken at open time: a gesture-driven resume and
   // an OS interruption both arrive as a statechange.
@@ -214,17 +224,6 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
     if (!capture) return;
     capture.gain.gain.value = gainNodeValue(preferences.gain);
   }, [capture, preferences.gain]);
-
-  // Separate from the gain, and keyed on the processing fields alone: `applyConstraints`
-  // renegotiates the browser's processing on the live track, and the slider reports every
-  // pointer move, so one effect over the whole object would renegotiate it through a drag.
-  useEffect(() => {
-    if (!capture) return;
-    void capture.stream
-      .getAudioTracks()[0]
-      ?.applyConstraints(trackConstraints({ noiseSuppression, autoGain, echoCancellation }))
-      .catch(() => {});
-  }, [capture, noiseSuppression, autoGain, echoCancellation]);
 
   const selectDevice = useCallback((next: string) => {
     setNotice(null);

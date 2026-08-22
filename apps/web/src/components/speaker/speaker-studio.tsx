@@ -100,11 +100,12 @@ export function SpeakerStudio({
   );
 
   /**
-   * Changing microphone rebuilds the capture graph, which closes the AudioContext the
-   * previous track belonged to. Left alone, the producer keeps that dead track and the
-   * channel stays live while transmitting silence — so the new track is swapped in.
-   * Covers an unplugged microphone falling back to the default, not just a deliberate
-   * change.
+   * Anything that re-opens the microphone rebuilds the capture graph and closes the
+   * AudioContext the previous track belonged to. Left alone, the producer keeps that dead
+   * track and the channel stays live while transmitting silence — so the new track is
+   * swapped in. Covers a deliberate device change, an unplugged microphone falling back to
+   * the default, and a noise-suppression, auto-gain or echo-cancellation toggle, which the
+   * browser will only honour on a fresh `getUserMedia`.
    */
   useEffect(() => {
     if (!hasProducer || !outputTrack) return;
