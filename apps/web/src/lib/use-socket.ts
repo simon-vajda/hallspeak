@@ -33,6 +33,10 @@ export function useSocket(auth: SocketAuth | null) {
       setError(null);
     });
     s.on('disconnect', (reason: string) => {
+      // Counts are the server's to report and it can no longer report them: held through the
+      // outage, the studio's tile would state an audience for a broadcast the server has
+      // already reaped. `sendInitialListenerCount` re-seeds the real number on reconnect.
+      setListeners({});
       // The server ends a session by disconnecting it and Socket.IO does not retry that,
       // so it is terminal, not a blip. Reported as such or the screen promises a recovery
       // that will never come.
