@@ -27,4 +27,10 @@ describe('LoginBody', () => {
   it('still requires both fields', () => {
     expect(LoginBody.safeParse({ username: 'admin', password: '' }).success).toBe(false);
   });
+
+  it('caps the password body before it reaches scrypt', () => {
+    expect(LoginBody.safeParse({ username: 'admin', password: 'x'.repeat(129) }).success).toBe(
+      false,
+    );
+  });
 });

@@ -396,7 +396,8 @@
           },
           "password": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -1224,6 +1225,17 @@
           },
           "429": {
             "description": "Too many attempts",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "description": "Whole seconds until another attempt may be made",
+                  "example": "60"
+                },
+                "required": true,
+                "description": "Whole seconds until another attempt may be made"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -1297,6 +1309,17 @@
           },
           "429": {
             "description": "Too many attempts",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "description": "Whole seconds until another attempt may be made",
+                  "example": "60"
+                },
+                "required": true,
+                "description": "Whole seconds until another attempt may be made"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {

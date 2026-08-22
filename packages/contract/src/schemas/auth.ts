@@ -23,9 +23,10 @@ export const SetupBody = z
   .openapi('SetupBody');
 
 // Deliberately not NewPassword: the rules govern what may be chosen, and restating them
-// here would refuse a stored password the day the rules are tightened.
+// here would refuse a stored password the day the rules are tightened. The length ceiling
+// is a request-size bound, so it applies on both setup and sign-in.
 export const LoginBody = z
-  .object({ username: z.string().min(1), password: z.string().min(1) })
+  .object({ username: z.string().min(1), password: z.string().min(1).max(PASSWORD_MAX_LENGTH) })
   .openapi('LoginBody');
 
 export const SessionState = z

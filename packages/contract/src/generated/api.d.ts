@@ -829,6 +829,8 @@ export interface paths {
                 /** @description Too many attempts */
                 429: {
                     headers: {
+                        /** @description Whole seconds until another attempt may be made */
+                        "Retry-After": string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -930,6 +932,8 @@ export interface paths {
                 /** @description Too many attempts */
                 429: {
                     headers: {
+                        /** @description Whole seconds until another attempt may be made */
+                        "Retry-After": string;
                         [name: string]: unknown;
                     };
                     content: {

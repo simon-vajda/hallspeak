@@ -1,4 +1,4 @@
-import { createRoute, type z } from '@hono/zod-openapi';
+import { createRoute, z } from '@hono/zod-openapi';
 import { LoginBody, SessionState, SetupBody } from '../schemas/auth';
 import { Problem } from '../schemas/problem';
 
@@ -11,6 +11,15 @@ const json = <T extends z.ZodType>(schema: T, description: string) => ({
   description,
 });
 const problem = (description: string) => json(Problem, description);
+const rateLimited = (description: string) => ({
+  ...problem(description),
+  headers: z.object({
+    'Retry-After': z.string().openapi({
+      description: 'Whole seconds until another attempt may be made',
+      example: '60',
+    }),
+  }),
+});
 const body = <T extends z.ZodType>(schema: T) => ({
   content: { 'application/json': { schema } },
   required: true as const,
@@ -34,7 +43,7 @@ export const setupAdmin = createRoute({
     201: json(SessionState, 'Created, and signed in'),
     400: problem('The password does not meet the rules'),
     409: problem('This server already has an administrator'),
-    429: problem('Too many attempts'),
+    429: rateLimited('Too many attempts'),
   },
 });
 
@@ -49,7 +58,7 @@ export const login = createRoute({
     400: problem('Invalid body'),
     // One response for a wrong username and a wrong password alike.
     401: problem('Those credentials do not match'),
-    429: problem('Too many attempts'),
+    429: rateLimited('Too many attempts'),
   },
 });
 
