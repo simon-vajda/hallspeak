@@ -398,7 +398,7 @@ function OnAir({
             className="lg:col-start-2 lg:row-start-1"
           />
 
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 py-4 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 py-8 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
             {/* The meter below is untouched, so the speaker still sees the mic work. */}
             <PlayTarget
               icon={isMuted ? <MicOff /> : <Mic />}
