@@ -65,6 +65,14 @@ describe('TokenBucketLimiter', () => {
     expect(limiter.allow('b')).toBe(true);
   });
 
+  it('does not retain no-op state for successful addresses', () => {
+    const limiter = new TokenBucketLimiter({ capacity: 2, refillPerSecond: 1 });
+
+    for (let i = 0; i < 20; i++) limiter.allow(`ip-${i}`);
+
+    expect(limiter.size).toBe(0);
+  });
+
   // Unbounded growth is the obvious way an in-memory limiter becomes the outage.
   it('prunes full buckets once maxKeys is reached', () => {
     const clock = fixedClock();

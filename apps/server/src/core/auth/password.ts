@@ -32,7 +32,7 @@ function maxmem(cost: ScryptCost): number {
 export const MAX_CONCURRENT_HASHES = 3;
 
 let inFlight = 0;
-const waiting: Array<() => void> = [];
+const waiting = new Set<() => void>();
 
 /** Exposed so the cap is provable rather than asserted; nothing outside a test reads it. */
 export function hashesInFlight(): number {
@@ -41,14 +41,18 @@ export function hashesInFlight(): number {
 
 async function withSlot<T>(work: () => Promise<T>): Promise<T> {
   if (inFlight >= MAX_CONCURRENT_HASHES) {
-    await new Promise<void>((resolve) => waiting.push(resolve));
+    await new Promise<void>((resolve) => waiting.add(resolve));
   }
   inFlight += 1;
   try {
     return await work();
   } finally {
     inFlight -= 1;
-    waiting.shift()?.();
+    const next = waiting.values().next().value;
+    if (next) {
+      waiting.delete(next);
+      next();
+    }
   }
 }
 

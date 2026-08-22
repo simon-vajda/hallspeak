@@ -33,45 +33,53 @@ export class TokenBucketLimiter {
 
   /** Whether the key has a token; does not consume one, only `penalize` does. */
   allow(key: string): boolean {
-    return this.refill(key).tokens >= 1;
+    return (this.refill(key)?.tokens ?? this.capacity) >= 1;
   }
 
   /** Charges the key one token. Called only for a failed lookup. */
   penalize(key: string): void {
-    const bucket = this.refill(key);
-    bucket.tokens = Math.max(0, bucket.tokens - 1);
+    const now = this.now();
+    const existing = this.refill(key, now);
+    if (existing) {
+      existing.tokens = Math.max(0, existing.tokens - 1);
+      return;
+    }
+
+    if (this.buckets.size >= this.maxKeys) this.prune(now);
+    this.buckets.set(key, { tokens: Math.max(0, this.capacity - 1), updatedAt: now });
   }
 
   /** Returns a token charged by `penalize`, never taking a bucket past its capacity. */
   refund(key: string): void {
     const bucket = this.refill(key);
+    if (!bucket) return;
     bucket.tokens = Math.min(this.capacity, bucket.tokens + 1);
+    if (bucket.tokens >= this.capacity) this.buckets.delete(key);
   }
 
   /** Whole seconds until the key has a token again; 0 when it already does. */
   retryAfter(key: string): number {
     const bucket = this.refill(key);
+    if (!bucket) return 0;
     if (bucket.tokens >= 1) return 0;
     return Math.max(1, Math.ceil((1 - bucket.tokens) / this.refillPerSecond));
   }
 
-  private refill(key: string): Bucket {
-    const now = this.now();
+  private refill(key: string, now: number = this.now()): Bucket | undefined {
     const existing = this.buckets.get(key);
-    if (existing) {
-      const elapsedSeconds = (now - existing.updatedAt) / 1000;
-      existing.tokens = Math.min(
-        this.capacity,
-        existing.tokens + elapsedSeconds * this.refillPerSecond,
-      );
-      existing.updatedAt = now;
-      return existing;
-    }
+    if (!existing) return undefined;
 
-    if (this.buckets.size >= this.maxKeys) this.prune(now);
-    const fresh: Bucket = { tokens: this.capacity, updatedAt: now };
-    this.buckets.set(key, fresh);
-    return fresh;
+    existing.tokens = this.tokensAt(existing, now);
+    existing.updatedAt = now;
+    if (existing.tokens < this.capacity) return existing;
+
+    this.buckets.delete(key);
+    return undefined;
+  }
+
+  private tokensAt(bucket: Bucket, now: number): number {
+    const elapsedSeconds = (now - bucket.updatedAt) / 1000;
+    return Math.min(this.capacity, bucket.tokens + elapsedSeconds * this.refillPerSecond);
   }
 
   /**
@@ -81,9 +89,7 @@ export class TokenBucketLimiter {
    */
   private prune(now: number): void {
     for (const [key, bucket] of this.buckets) {
-      const elapsedSeconds = (now - bucket.updatedAt) / 1000;
-      const tokens = Math.min(this.capacity, bucket.tokens + elapsedSeconds * this.refillPerSecond);
-      if (tokens >= this.capacity) this.buckets.delete(key);
+      if (this.tokensAt(bucket, now) >= this.capacity) this.buckets.delete(key);
     }
 
     while (this.buckets.size >= this.maxKeys) {
