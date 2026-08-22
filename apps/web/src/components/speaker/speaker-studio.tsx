@@ -243,16 +243,18 @@ export function SpeakerStudio({
 
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <div className="absolute top-3.5 right-gutter z-10 lg:top-4 lg:right-10">
+      <div className="absolute top-3.5 right-gutter z-10 lg:hidden">
         <TempThemeToggle />
       </div>
 
-      {/* `mr-11` reserves room for the toggle absolutely positioned over this bar's right edge. */}
       <AppHeader
         right={
-          <span className="mr-11 text-meta text-muted-foreground">
-            {eventName} · PIN {formatPin(pin)}
-          </span>
+          <>
+            <span className="text-meta text-muted-foreground">
+              {eventName} · PIN {formatPin(pin)}
+            </span>
+            <TempThemeToggle />
+          </>
         }
       />
 
@@ -368,12 +370,17 @@ function OnAir({
 
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <div className="absolute top-3.5 right-gutter z-10 lg:top-4 lg:right-10">
+      <div className="absolute top-3.5 right-gutter z-10 lg:hidden">
         <TempThemeToggle />
       </div>
 
       <AppHeader
-        right={<span className="mr-11 text-meta text-muted-foreground">{eventName}</span>}
+        right={
+          <>
+            <span className="text-meta text-muted-foreground">{eventName}</span>
+            <TempThemeToggle />
+          </>
+        }
       />
 
       <main className="flex flex-1 flex-col px-gutter pt-6 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
@@ -481,12 +488,17 @@ const TARGET_LABEL: Record<BroadcastState, string> = {
 function Displaced({ channelName, eventName }: { channelName: string; eventName: string }) {
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <div className="absolute top-3.5 right-gutter z-10 lg:top-4 lg:right-10">
+      <div className="absolute top-3.5 right-gutter z-10 lg:hidden">
         <TempThemeToggle />
       </div>
 
       <AppHeader
-        right={<span className="mr-11 text-meta text-muted-foreground">{eventName}</span>}
+        right={
+          <>
+            <span className="text-meta text-muted-foreground">{eventName}</span>
+            <TempThemeToggle />
+          </>
+        }
       />
 
       <main className="flex flex-1 flex-col items-center justify-center px-gutter pb-16 text-center lg:px-10">
