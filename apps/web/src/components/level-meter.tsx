@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { type LevelStatus, levelStatus, rms } from '@/lib/audio/level';
+import {
+  holdPeak,
+  type LevelStatus,
+  levelStatus,
+  meterLevel,
+  rms,
+  smoothLevel,
+} from '@/lib/audio/level';
 import { cn } from '@/lib/utils';
 
 const STATUS_TEXT: Record<LevelStatus, string> = {
@@ -15,9 +22,12 @@ const STATUS_TONE: Record<LevelStatus, string> = {
 };
 
 /**
- * The fill's width and the peaking colour are written to the DOM every frame and never go
- * through React, which would re-render the screen around the meter too. Only the status label
- * is state. `analyser` is null until the mic is open, and the bar then sits empty.
+ * The fill's width, the peak marker and the peaking colour are written to the DOM every frame
+ * and never go through React, which would re-render the screen around the meter too. Only the
+ * status label is state. `analyser` is null until the mic is open, and the bar then sits empty.
+ *
+ * The bar is smoothed and the marker is not: the words and the colour follow the marker, so a
+ * plosive that clips for 30ms is still reported, and the interpreter can see what reported it.
  */
 export function LevelMeter({
   analyser,
@@ -28,22 +38,35 @@ export function LevelMeter({
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
+  const peakRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<LevelStatus>('quiet');
 
   useEffect(() => {
     const fill = fillRef.current;
     if (!analyser || !fill) return;
 
-    const frame = new Uint8Array(analyser.fftSize);
+    const frame = new Float32Array(analyser.fftSize);
     let raf = 0;
     let last: LevelStatus | null = null;
+    let smoothed = 0;
+    let peak = 0;
+    let lastTimestamp = 0;
 
-    const read = () => {
-      analyser.getByteTimeDomainData(frame);
-      const level = Math.min(rms(frame), 1);
-      fill.style.width = `${level * 100}%`;
+    // rAF's own timestamp, not `performance.now()`: a frame the browser coalesced then carries
+    // the time it actually stood for rather than the time it was finally delivered.
+    const read = (timestamp: number) => {
+      const elapsed = lastTimestamp === 0 ? 0 : timestamp - lastTimestamp;
+      lastTimestamp = timestamp;
 
-      const next = levelStatus(level);
+      analyser.getFloatTimeDomainData(frame);
+      const level = meterLevel(rms(frame));
+      smoothed = smoothLevel(smoothed, level, elapsed);
+      peak = holdPeak(peak, level, elapsed);
+
+      fill.style.width = `${smoothed * 100}%`;
+      if (peakRef.current) peakRef.current.style.left = `${peak * 100}%`;
+
+      const next = levelStatus(peak);
       rootRef.current?.setAttribute('data-peaking', String(next === 'peaking'));
       if (next !== last) {
         last = next;
@@ -58,6 +81,7 @@ export function LevelMeter({
       cancelAnimationFrame(raf);
       // The readout and the peaking colour are as stale as the bar once the analyser is gone.
       fill.style.width = '0%';
+      if (peakRef.current) peakRef.current.style.left = '0%';
       rootRef.current?.setAttribute('data-peaking', 'false');
       setStatus('quiet');
     };
@@ -79,6 +103,10 @@ export function LevelMeter({
             className="h-full w-0 rounded-full bg-live group-data-[peaking=true]:bg-destructive"
           />
         </div>
+        <div
+          ref={peakRef}
+          className="absolute inset-y-0 left-0 w-0.5 -translate-x-1/2 rounded-[1px] bg-foreground/60"
+        />
         {/* The clip threshold, drawn at PEAK_THRESHOLD. */}
         <div className="absolute -inset-y-1.25 left-[85%] w-0.5 rounded-[1px] bg-foreground/35" />
       </div>

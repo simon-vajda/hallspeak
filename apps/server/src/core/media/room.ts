@@ -2,6 +2,11 @@ import type { types } from 'mediasoup';
 import { AppError } from '../../lib/problem';
 import { Peer, type TransportDirection } from './peer';
 
+function slugOf(producer: types.Producer): string {
+  const slug = (producer.appData as { slug?: unknown }).slug;
+  return typeof slug === 'string' ? slug : '';
+}
+
 export interface RoomInit {
   eventId: number;
   router: types.Router;
@@ -64,8 +69,32 @@ export class Room {
     producer.close();
   }
 
-  liveChannelIds(): number[] {
-    return [...this.producers.keys()];
+  /** Each live channel with the slug its producer was stamped with at produce time. */
+  liveChannels(): Array<{ channelId: number; slug: string }> {
+    return [...this.producers.entries()].map(([channelId, producer]) => ({
+      channelId,
+      slug: slugOf(producer),
+    }));
+  }
+
+  producerSlug(channelId: number): string | undefined {
+    const producer = this.producers.get(channelId);
+    return producer === undefined ? undefined : slugOf(producer);
+  }
+
+  /**
+   * How many guests are actually receiving this channel: peers holding an open, locally
+   * unpaused consumer on its producer. Structurally zero until somebody goes live, and
+   * zero again the moment the producer closes, because mediasoup closes its consumers.
+   */
+  listenerCount(channelId: number): number {
+    const producer = this.producers.get(channelId);
+    if (!producer || producer.closed) return 0;
+    let count = 0;
+    for (const peer of this.peers.values()) {
+      if (peer.isListeningTo(producer.id)) count += 1;
+    }
+    return count;
   }
 
   // --- peers ------------------------------------------------------------------

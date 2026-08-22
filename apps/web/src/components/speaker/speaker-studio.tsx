@@ -1,6 +1,6 @@
 import type { components } from '@linguacast/contract/openapi';
 import { Mic, MicOff } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { LiveBadge } from '@/components/live-badge';
@@ -12,14 +12,21 @@ import { MicPanel } from '@/components/speaker/mic-panel';
 import { OnAirStats } from '@/components/speaker/on-air-stats';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
-import { levelStatus, rms } from '@/lib/audio/level';
+import { levelStatus, meterLevel, rms } from '@/lib/audio/level';
+import { useAudioPreferences } from '@/lib/audio/use-audio-preferences';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { formatPin } from '@/lib/format';
 import { type ConnectionState, connectionState } from '@/lib/media/stats';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import type { SocketClient } from '@/socket/client';
-import { type BroadcastState, broadcastState, type EndReason, onReconnect } from './live-state';
+import {
+  type AudioPreferences,
+  type BroadcastState,
+  broadcastState,
+  type EndReason,
+  onReconnect,
+} from './live-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -35,6 +42,7 @@ export function SpeakerStudio({
   pin,
   channel,
   speakerCode,
+  listeners,
   socket,
   status,
   socketError,
@@ -43,6 +51,8 @@ export function SpeakerStudio({
   pin: string;
   channel: PublicChannel;
   speakerCode: string;
+  /** Guests currently receiving this channel's audio. */
+  listeners: number;
   socket: SocketClient | null;
   status: SocketStatus;
   socketError: string | null;
@@ -54,14 +64,7 @@ export function SpeakerStudio({
   const [lastEnd, setLastEnd] = useState<EndReason | null>(null);
   const [recoveredSilently, setRecoveredSilently] = useState(false);
 
-  const [noiseSuppression, setNoiseSuppression] = useState(true);
-  const [autoGain, setAutoGain] = useState(false);
-  const [gain, setGain] = useState(68);
-
-  const preferences = useMemo(
-    () => ({ noiseSuppression, autoGain, gain }),
-    [noiseSuppression, autoGain, gain],
-  );
+  const { preferences, setPreferences } = useAudioPreferences();
   const mic = useMicCapture(preferences);
   const media = useMedia(socket);
 
@@ -97,11 +100,12 @@ export function SpeakerStudio({
   );
 
   /**
-   * Changing microphone rebuilds the capture graph, which closes the AudioContext the
-   * previous track belonged to. Left alone, the producer keeps that dead track and the
-   * channel stays live while transmitting silence — so the new track is swapped in.
-   * Covers an unplugged microphone falling back to the default, not just a deliberate
-   * change.
+   * Anything that re-opens the microphone rebuilds the capture graph and closes the
+   * AudioContext the previous track belonged to. Left alone, the producer keeps that dead
+   * track and the channel stays live while transmitting silence — so the new track is
+   * swapped in. Covers a deliberate device change, an unplugged microphone falling back to
+   * the default, and a noise-suppression, auto-gain or echo-cancellation toggle, which the
+   * browser will only honour on a fresh `getUserMedia`.
    */
   useEffect(() => {
     if (!hasProducer || !outputTrack) return;
@@ -170,10 +174,10 @@ export function SpeakerStudio({
     const analyser = mic.analyser;
     if (!analyser || heardSomething) return;
 
-    const frame = new Uint8Array(analyser.fftSize);
+    const frame = new Float32Array(analyser.fftSize);
     const timer = setInterval(() => {
-      analyser.getByteTimeDomainData(frame);
-      if (levelStatus(Math.min(rms(frame), 1)) !== 'quiet') setHeardSomething(true);
+      analyser.getFloatTimeDomainData(frame);
+      if (levelStatus(meterLevel(rms(frame))) !== 'quiet') setHeardSomething(true);
     }, SIGNAL_POLL_MS);
 
     return () => clearInterval(timer);
@@ -204,6 +208,7 @@ export function SpeakerStudio({
         eventName={eventName}
         mic={mic}
         startedAt={startedAt}
+        listeners={listeners}
         state={state}
         connection={connectionState({
           socketConnected: status === 'connected',
@@ -227,12 +232,8 @@ export function SpeakerStudio({
           setStartedAt(null);
           void media.stopProducing();
         }}
-        noiseSuppression={noiseSuppression}
-        onNoiseSuppressionChange={setNoiseSuppression}
-        autoGain={autoGain}
-        onAutoGainChange={setAutoGain}
-        gain={gain}
-        onGainChange={setGain}
+        preferences={preferences}
+        onPreferencesChange={setPreferences}
         status={status}
         socketError={socketError}
       />
@@ -243,28 +244,31 @@ export function SpeakerStudio({
 
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <div className="absolute top-3.5 right-gutter z-10 lg:top-4 lg:right-10">
-        <TempThemeToggle />
-      </div>
-
-      {/* `mr-11` reserves room for the toggle absolutely positioned over this bar's right edge. */}
       <AppHeader
         right={
-          <span className="mr-11 text-meta text-muted-foreground">
-            {eventName} · PIN {formatPin(pin)}
-          </span>
+          <>
+            <span className="text-meta text-muted-foreground">
+              {eventName} · PIN {formatPin(pin)}
+            </span>
+            <TempThemeToggle />
+          </>
         }
       />
 
       <main className="flex flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header>
-          <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
-            Interpreter · off air
-          </span>
+          <div className="flex items-center justify-between gap-3">
+            <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
+              Interpreter · off air
+            </span>
+            {/* Centred on the chip rather than floated over it; the bar does this from `lg`. */}
+            <div className="-my-1 lg:hidden">
+              <TempThemeToggle />
+            </div>
+          </div>
           <h1 className="mt-4 mb-1 text-screen lg:text-[44px] lg:leading-[1.03] lg:tracking-[-0.045em]">
             {channel.name}
           </h1>
-          {/* The design pairs this with a waiting-listener count; nothing reports one yet. */}
           <p className="text-sm text-muted-foreground lg:mb-8">{eventName}</p>
         </header>
 
@@ -277,19 +281,12 @@ export function SpeakerStudio({
             deviceId={mic.deviceId}
             onSelectDevice={mic.selectDevice}
             onRetry={mic.retry}
-            noiseSuppression={noiseSuppression}
-            onNoiseSuppressionChange={setNoiseSuppression}
-            autoGain={autoGain}
-            onAutoGainChange={setAutoGain}
-            gain={gain}
-            onGainChange={setGain}
+            preferences={preferences}
+            onPreferencesChange={setPreferences}
           />
 
           <div className="flex flex-1 flex-col gap-4 lg:flex-none lg:gap-4.5">
-            <InputLevelPanel
-              analyser={mic.analyser}
-              note="Speak at your normal volume — aim to sit just under the peak mark. Nobody hears you until you go live."
-            />
+            <InputLevelPanel analyser={mic.analyser} />
 
             <div className="mt-auto pt-8 lg:mt-0 lg:pt-0">
               {(socketError || status !== 'connected') && (
@@ -345,29 +342,28 @@ function OnAir({
   eventName,
   mic,
   startedAt,
+  listeners,
   state,
   connection,
   onToggleMute,
   onEnd,
+  preferences,
+  onPreferencesChange,
   status,
   socketError,
-  ...preferences
 }: {
   channelName: string;
   eventName: string;
   mic: ReturnType<typeof useMicCapture>;
   /** `Date.now()` at the moment Go live was pressed. */
   startedAt: number | null;
+  listeners: number;
   state: BroadcastState;
   connection: ConnectionState;
   onToggleMute: () => void;
   onEnd: () => void;
-  noiseSuppression: boolean;
-  onNoiseSuppressionChange: (on: boolean) => void;
-  autoGain: boolean;
-  onAutoGainChange: (on: boolean) => void;
-  gain: number;
-  onGainChange: (gain: number) => void;
+  preferences: AudioPreferences;
+  onPreferencesChange: (patch: Partial<AudioPreferences>) => void;
   status: SocketStatus;
   socketError: string | null;
 }) {
@@ -377,19 +373,25 @@ function OnAir({
 
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <div className="absolute top-3.5 right-gutter z-10 lg:top-4 lg:right-10">
-        <TempThemeToggle />
-      </div>
-
       <AppHeader
-        right={<span className="mr-11 text-meta text-muted-foreground">{eventName}</span>}
+        right={
+          <>
+            <span className="text-meta text-muted-foreground">{eventName}</span>
+            <TempThemeToggle />
+          </>
+        }
       />
 
       <main className="flex flex-1 flex-col px-gutter pt-6 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header className="flex items-center justify-between gap-3 lg:justify-start">
           {/* `On air` is a claim about audio, so only a live producer earns it. */}
           <LiveBadge live={onAir} label={BADGE_LABEL[state]} />
-          <span className="text-meta text-muted-foreground lg:hidden">{eventName}</span>
+          {/* The phone's echo of the header bar: the toggle sits in this row so it centres on
+              it, and `-my-1` keeps the taller button from setting the row's height. */}
+          <div className="-my-1 flex min-w-0 items-center gap-3 lg:hidden">
+            <span className="truncate text-meta text-muted-foreground">{eventName}</span>
+            <TempThemeToggle />
+          </div>
         </header>
 
         <h1 className="mt-4 text-screen lg:mt-3.5 lg:mb-7.5 lg:text-[40px] lg:leading-[1.03] lg:tracking-[-0.045em]">
@@ -397,9 +399,13 @@ function OnAir({
         </h1>
 
         <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-0 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start lg:gap-x-8.5 lg:gap-y-4">
-          <OnAirStats startedAt={startedAt} className="lg:col-start-2 lg:row-start-1" />
+          <OnAirStats
+            startedAt={startedAt}
+            listeners={listeners}
+            className="lg:col-start-2 lg:row-start-1"
+          />
 
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 py-4 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 py-10 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
             {/* The meter below is untouched, so the speaker still sees the mic work. */}
             <PlayTarget
               icon={isMuted ? <MicOff /> : <Mic />}
@@ -415,15 +421,18 @@ function OnAir({
             )}
           </div>
 
-          <InputLevelPanel
-            analyser={mic.analyser}
-            note={onAir ? undefined : 'Nobody is hearing this yet.'}
-            className="lg:col-start-2 lg:row-start-2"
+          <InputLevelPanel analyser={mic.analyser} className="lg:col-start-2 lg:row-start-2" />
+
+          <AudioSettings
+            mic={mic}
+            preferences={preferences}
+            onPreferencesChange={onPreferencesChange}
+            className="lg:col-start-2 lg:row-start-3"
           />
 
-          <AudioSettings mic={mic} {...preferences} className="lg:col-start-2 lg:row-start-3" />
-
-          <div className="lg:col-start-1 lg:row-start-4">
+          {/* Clear of the settings row above it: on a phone this is the last thing in a
+              scrolling column, not a grid cell with its own gutter. */}
+          <div className="mt-4 lg:col-start-1 lg:row-start-4 lg:mt-0">
             <ConnectionLine
               status={status}
               error={socketError}
@@ -479,12 +488,17 @@ const TARGET_LABEL: Record<BroadcastState, string> = {
 function Displaced({ channelName, eventName }: { channelName: string; eventName: string }) {
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <div className="absolute top-3.5 right-gutter z-10 lg:top-4 lg:right-10">
+      <div className="absolute top-3.5 right-gutter z-10 lg:hidden">
         <TempThemeToggle />
       </div>
 
       <AppHeader
-        right={<span className="mr-11 text-meta text-muted-foreground">{eventName}</span>}
+        right={
+          <>
+            <span className="text-meta text-muted-foreground">{eventName}</span>
+            <TempThemeToggle />
+          </>
+        }
       />
 
       <main className="flex flex-1 flex-col items-center justify-center px-gutter pb-16 text-center lg:px-10">

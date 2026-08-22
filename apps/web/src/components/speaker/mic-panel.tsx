@@ -1,6 +1,7 @@
 import { Mic } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { GainSlider } from '@/components/speaker/gain-slider';
+import type { AudioPreferences } from '@/components/speaker/live-state';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -21,9 +22,10 @@ const SETTING_TRACK = 'data-checked:bg-foreground';
 const ROW = 'mt-3.5 flex items-center gap-3.5 border-t border-border pt-3.5';
 
 /**
- * Noise suppression and auto gain are `MediaTrackConstraints` on the capture track; the
- * manual gain is a `GainNode` on the graph feeding the producer. All three apply to the
- * live capture rather than re-opening the device, so changing one mid-broadcast is silent.
+ * Noise suppression, echo cancellation and auto gain are `MediaTrackConstraints` on the
+ * capture track; the manual gain is a `GainNode` on the graph feeding the producer. All four
+ * apply to the live capture rather than re-opening the device, so changing one mid-broadcast
+ * is silent.
  */
 export function MicPanel({
   status,
@@ -33,12 +35,8 @@ export function MicPanel({
   deviceId,
   onSelectDevice,
   onRetry,
-  noiseSuppression,
-  onNoiseSuppressionChange,
-  autoGain,
-  onAutoGainChange,
-  gain,
-  onGainChange,
+  preferences,
+  onPreferencesChange,
   inSettings = false,
   className,
 }: {
@@ -50,13 +48,8 @@ export function MicPanel({
   deviceId: string | null;
   onSelectDevice: (deviceId: string) => void;
   onRetry: () => void;
-  noiseSuppression: boolean;
-  onNoiseSuppressionChange: (on: boolean) => void;
-  autoGain: boolean;
-  onAutoGainChange: (on: boolean) => void;
-  /** 0–100. */
-  gain: number;
-  onGainChange: (gain: number) => void;
+  preferences: AudioPreferences;
+  onPreferencesChange: (patch: Partial<AudioPreferences>) => void;
   /** Rendered inside the audio-settings surface, which supplies the gain slider itself. */
   inSettings?: boolean;
   className?: string;
@@ -66,7 +59,15 @@ export function MicPanel({
   const empty = status === 'ready' && devices.length === 0;
 
   return (
-    <section className={cn('rounded-lg bg-secondary px-5 py-4.5 lg:p-5.5', className)}>
+    <section
+      className={cn(
+        // Not a card inside the settings surface: nesting one there would inset these rows
+        // further than the gain slider under them. `min-w-0` lets the device name truncate
+        // rather than setting a min-content width the surface has to grow to.
+        inSettings ? 'min-w-0' : 'rounded-lg bg-secondary px-5 py-4.5 lg:p-5.5',
+        className,
+      )}
+    >
       <h2 className="text-label text-muted-foreground uppercase">Microphone</h2>
 
       {blocked || empty ? (
@@ -87,7 +88,7 @@ export function MicPanel({
           >
             {/* The trigger's height is a `data-[size]` variant, so a plain `h-11` loses on
                 specificity and the override has to be written at the same weight. */}
-            <SelectTrigger className="mt-2.25 w-full gap-2.5 rounded-full border-border bg-background px-4 font-semibold text-sm data-[size=default]:h-11 lg:mt-2.5 lg:px-4.5 lg:data-[size=default]:h-11.5">
+            <SelectTrigger className="mt-2.25 w-full min-w-0 gap-2.5 rounded-full border-border bg-background px-4 font-semibold text-sm data-[size=default]:h-11 lg:mt-2.5 lg:px-4.5 lg:data-[size=default]:h-11.5">
               <Mic className="size-4.25 stroke-[2.25]" />
               <SelectValue placeholder="Opening the microphone…" />
             </SelectTrigger>
@@ -113,8 +114,14 @@ export function MicPanel({
           <SettingRow
             title="Noise suppression"
             description="Filters room hum and rustle."
-            checked={noiseSuppression}
-            onCheckedChange={onNoiseSuppressionChange}
+            checked={preferences.noiseSuppression}
+            onCheckedChange={(on) => onPreferencesChange({ noiseSuppression: on })}
+          />
+          <SettingRow
+            title="Echo cancellation"
+            description="Removes sound the room plays back. Leave it off on headphones."
+            checked={preferences.echoCancellation}
+            onCheckedChange={(on) => onPreferencesChange({ echoCancellation: on })}
           />
           <SettingRow
             title="Auto gain control"
@@ -125,16 +132,16 @@ export function MicPanel({
                 {!inSettings && <span className="lg:hidden">, in Audio settings</span>}.
               </>
             }
-            checked={autoGain}
-            onCheckedChange={onAutoGainChange}
+            checked={preferences.autoGain}
+            onCheckedChange={(on) => onPreferencesChange({ autoGain: on })}
           />
 
           {/* Desktop-only here: a phone reaches the slider through the audio-settings surface. */}
           {!inSettings && (
             <GainSlider
-              gain={gain}
-              onGainChange={onGainChange}
-              disabled={autoGain}
+              gain={preferences.gain}
+              onGainChange={(gain) => onPreferencesChange({ gain })}
+              disabled={preferences.autoGain}
               className="mt-3.5 hidden border-t border-border pt-3.5 lg:block"
             />
           )}

@@ -27,6 +27,13 @@ export const ChannelLeavePayload = z.object({ slug: SocketSlug });
 export const ChannelStatus = z.object({ slug: SocketSlug, online: z.boolean() });
 
 /**
+ * Separate from `ChannelStatus` on purpose: that one fans out to the event room on producer
+ * lifecycle, this one goes to the speaker's socket alone on consumer lifecycle. Different
+ * audience, different trigger, different frequency.
+ */
+export const ChannelListeners = z.object({ slug: SocketSlug, count: z.int().nonnegative() });
+
+/**
  * mediasoup's capability, ICE, DTLS and RTP structures cross the wire as validated but
  * opaque objects: this package compiles with `"types": []` and no DOM and must never
  * import mediasoup. Loose rather than strict, so every key survives the round trip —

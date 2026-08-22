@@ -48,6 +48,7 @@ function ChannelPage() {
     status,
     error: socketError,
     online,
+    listeners,
     socket,
   } = useSocket(data ? (speakerCode ? { pin, speakerCode } : { pin }) : null);
 
@@ -101,6 +102,7 @@ function ChannelPage() {
         pin={data.event.pin}
         channel={data.channel}
         speakerCode={speakerCode}
+        listeners={listeners[slug] ?? 0}
         socket={socket}
         status={status}
         socketError={message}

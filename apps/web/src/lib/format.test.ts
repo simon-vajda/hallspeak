@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatElapsed, formatPin, plural } from './format';
+import { channelLiveLabel, eventStatusLabel, formatElapsed, formatPin, plural } from './format';
 
 describe('formatPin', () => {
   it('groups the six digits 3+3', () => {
@@ -47,5 +47,54 @@ describe('formatElapsed', () => {
 
   it('treats a negative span as zero, so a clock skew cannot print -1:-1', () => {
     expect(formatElapsed(-5_000)).toBe('0:00');
+  });
+});
+
+describe('eventStatusLabel', () => {
+  it('reports enablement for a disabled event, whatever is on air', () => {
+    expect(eventStatusLabel({ enabled: false, channels: 3, onAir: 2 })).toBe('Disabled');
+  });
+
+  it('reports the empty event rather than nobody being on air', () => {
+    expect(eventStatusLabel({ enabled: true, channels: 0, onAir: 0 })).toBe('No channels yet');
+  });
+
+  it('says nobody is on air when every channel is idle', () => {
+    expect(eventStatusLabel({ enabled: true, channels: 3, onAir: 0 })).toBe('Nobody on air');
+  });
+
+  it('counts the channels that are on air', () => {
+    expect(eventStatusLabel({ enabled: true, channels: 3, onAir: 1 })).toBe('1 on air');
+    expect(eventStatusLabel({ enabled: true, channels: 3, onAir: 2 })).toBe('2 on air');
+  });
+
+  it('treats an event absent from the live payload as none on air', () => {
+    // Absence is zero, not an error: a caller indexes the payload and finds nothing.
+    const live = new Map<number, number>();
+    expect(eventStatusLabel({ enabled: true, channels: 2, onAir: live.get(7) ?? 0 })).toBe(
+      'Nobody on air',
+    );
+  });
+});
+
+describe('channelLiveLabel', () => {
+  it('counts the listeners of a channel that is on air', () => {
+    expect(channelLiveLabel({ online: true, listeners: 37 })).toBe('On air · 37 listening');
+  });
+
+  it('reads the same at one, because the participle does not agree', () => {
+    expect(channelLiveLabel({ online: true, listeners: 1 })).toBe('On air · 1 listening');
+  });
+
+  it('still says on air with nobody listening yet', () => {
+    expect(channelLiveLabel({ online: true, listeners: 0 })).toBe('On air · 0 listening');
+  });
+
+  it('says nobody is on air for an idle channel', () => {
+    expect(channelLiveLabel({ online: false, listeners: 0 })).toBe('Nobody on air');
+  });
+
+  it('says nobody is on air for a channel absent from the payload', () => {
+    expect(channelLiveLabel(undefined)).toBe('Nobody on air');
   });
 });

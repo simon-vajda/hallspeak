@@ -116,12 +116,14 @@ export function ListenerRoom({
 
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <div className="absolute top-3.5 right-gutter z-10 lg:top-4 lg:right-10">
-        <TempThemeToggle />
-      </div>
-
-      {/* `mr-11` reserves room for the toggle absolutely positioned over this bar's right edge. */}
-      <AppHeader right={<span className="mr-11 text-meta text-muted-foreground">{meta}</span>} />
+      <AppHeader
+        right={
+          <>
+            <span className="text-meta text-muted-foreground">{meta}</span>
+            <TempThemeToggle />
+          </>
+        }
+      />
       <ChannelStrip channels={channels} currentSlug={channel.slug} pin={pin} />
 
       {/* The phone's way back to the selector; from `lg` the channel strip is it. */}
@@ -134,7 +136,9 @@ export function ListenerRoom({
         >
           <ChevronLeft className="size-4.5 stroke-[2.25]" />
         </Link>
-        <span className="text-meta text-muted-foreground">{meta}</span>
+        <span className="flex-1 truncate text-meta text-muted-foreground">{meta}</span>
+        {/* In the row rather than floated over it, so it centres on the back button. */}
+        <TempThemeToggle />
       </div>
 
       <main className="flex flex-1 flex-col items-center justify-center px-8 text-center lg:px-10 lg:py-13">
