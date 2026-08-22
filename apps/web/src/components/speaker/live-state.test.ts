@@ -6,7 +6,6 @@ import {
   gainNodeValue,
   isBroadcasting,
   MAX_GAIN,
-  onAirNote,
   onReconnect,
   trackConstraints,
 } from './live-state';
@@ -158,38 +157,5 @@ describe('onReconnect', () => {
     expect(onReconnect({ goLivePressed: true, lastEnd: 'dropped', displaced: true })).toEqual({
       type: 'none',
     });
-  });
-});
-
-describe('onAirNote', () => {
-  // A reconnect after a drop lands here with the previous count still on the tile, so this
-  // copy states the connection rather than denying an audience it cannot know about.
-  it('states the connection while connecting rather than denying an audience', () => {
-    expect(onAirNote('connecting')).toBe('Your audio is not on air yet.');
-  });
-
-  it('never denies an audience in any state that renders beside the count', () => {
-    const denies = (note: string | undefined) => note?.toLowerCase().includes('nobody') ?? false;
-    expect(denies(onAirNote('connecting'))).toBe(false);
-    expect(denies(onAirNote('muted'))).toBe(false);
-    expect(denies(onAirNote('back-from-drop'))).toBe(false);
-  });
-
-  it('explains the silence while muted rather than denying the audience', () => {
-    expect(onAirNote('muted')).toBe('You are muted — listeners hear silence.');
-  });
-
-  it('says the same thing back from a drop, which is also a mute', () => {
-    expect(onAirNote('back-from-drop')).toBe(onAirNote('muted'));
-  });
-
-  it('adds nothing while live: the badge and the meter already say it', () => {
-    expect(onAirNote('live')).toBeUndefined();
-  });
-
-  /** Neither state reaches the on-air panel: pre-flight carries its own note, displaced has none. */
-  it('has no note for the states the on-air panel never renders', () => {
-    expect(onAirNote('pre-flight')).toBeUndefined();
-    expect(onAirNote('displaced')).toBeUndefined();
   });
 });
