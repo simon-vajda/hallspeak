@@ -51,12 +51,11 @@ function LoginPage() {
       if (target) await navigate({ href: target });
       else await navigate({ to: '/admin/events' });
     },
-    onError: (error, _variables, _context) => {
+    onError: (error) => {
       failures.current += 1;
       // The generic message for a refusal, and the server's own words for anything else —
       // being throttled or unreachable is not a wrong password and must not read as one.
-      const problem = error as { code?: string; message?: string };
-      setMessage(problem.code === 'invalid_credentials' ? REFUSED : (problem.message ?? REFUSED));
+      setMessage(error.code === 'invalid_credentials' ? REFUSED : (error.message ?? REFUSED));
       // Both fields keep their value until then; only the password is cleared.
       if (failures.current >= CLEAR_PASSWORD_AFTER) setPassword('');
     },

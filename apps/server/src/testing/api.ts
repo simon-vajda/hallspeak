@@ -43,12 +43,11 @@ export async function createTestApi() {
     signInAsAdmin: async (): Promise<ApiRequest> => {
       await createAccount('admin', 'hunter2!');
       const cookie = `__Host-linguacast_session=${createSession(db)}`;
-      return (path, init, env) =>
-        apiRoutes.request(
-          path,
-          { ...init, headers: { ...(init?.headers as Record<string, string>), cookie } },
-          env,
-        );
+      return (path, init, env) => {
+        const headers = new Headers(init?.headers);
+        headers.set('cookie', cookie);
+        return apiRoutes.request(path, { ...init, headers }, env);
+      };
     },
     /** `now` is injectable so a test can mint an already-expired session. */
     createSession: (now?: number): string => createSession(db, now),

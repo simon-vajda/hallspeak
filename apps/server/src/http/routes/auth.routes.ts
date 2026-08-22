@@ -1,5 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import * as routes from '@linguacast/contract/routes';
+import type { Context } from 'hono';
 import {
   createAccount,
   createSession,
@@ -21,6 +22,11 @@ const REFUSED = {
   message: 'Those credentials do not match.',
 } as const;
 
+const ALREADY_CONFIGURED = {
+  code: 'already_configured',
+  message: 'This server already has an administrator.',
+} as const;
+
 const app = new OpenAPIHono({ defaultHook });
 
 // Two statements rather than one '/auth/*' mount: the session read runs on every page load
@@ -28,7 +34,7 @@ const app = new OpenAPIHono({ defaultHook });
 app.use('/auth/login', signInRateLimit);
 app.use('/auth/setup', signInRateLimit);
 
-function authenticated(c: Parameters<Parameters<typeof app.openapi>[1]>[0]): boolean {
+function authenticated(c: Context): boolean {
   const token = readSessionCookie(c);
   // KTD10: between a recovery restart and the finished wizard the table still holds rows
   // that correspond to no account at all.
@@ -42,10 +48,7 @@ export const authRoutes = app
   .openapi(routes.setupAdmin, async (c) => {
     const { username, password } = c.req.valid('json');
     if (isConfigured()) {
-      return c.json(
-        { code: 'already_configured', message: 'This server already has an administrator.' },
-        409,
-      );
+      return c.json(ALREADY_CONFIGURED, 409);
     }
 
     try {
@@ -55,10 +58,7 @@ export const authRoutes = app
       // failure, and reporting it as "already configured" would send the installer looking
       // for an account that does not exist.
       if (!(err instanceof AppError) || err.code !== 'already_configured') throw err;
-      return c.json(
-        { code: 'already_configured', message: 'This server already has an administrator.' },
-        409,
-      );
+      return c.json(ALREADY_CONFIGURED, 409);
     }
 
     // Before the session below: a browser signed in before a recovery must be signed out
