@@ -26,6 +26,11 @@ Whether audio is actually being broadcast on a Channel. A Channel is Live for ex
 
 Live is distinct from Enabled, which is an admin's decision that a Channel is open at all, and distinct from the Speaker's broadcast claim, which is taken when their page connects and can be held by someone who has not gone Live yet. A Channel can therefore be Enabled, claimed by a Speaker, and still not Live.
 
+### Muted
+The reversible state in which a Live Channel's Producer is paused, so its Listeners hear no audio even though the broadcast has not ended.
+
+Muting leaves the Channel Live, preserves its Consumers and Listener count, and is surfaced to active Listeners to explain silence rather than redefining the Channel's liveness.
+
 ### Broadcast claim
 The exclusive right to speak on one Channel, held by whoever presented its Speaker code first. A Channel has one claim at a time; a second interpreter arriving with a different code is refused as busy.
 
