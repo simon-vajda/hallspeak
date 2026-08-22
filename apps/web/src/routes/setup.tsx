@@ -3,7 +3,7 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Check } from 'lucide-react';
 import { useId, useState } from 'react';
 import { $api } from '@/api/client';
-import { AuthCard } from '@/components/auth/auth-card';
+import { AUTH_FIELD, AUTH_LABEL, AuthCard } from '@/components/auth/auth-card';
 import { PasswordChecklist } from '@/components/auth/password-checklist';
 import { PasswordField } from '@/components/auth/password-field';
 import { Button } from '@/components/ui/button';
@@ -21,10 +21,6 @@ export const Route = createFileRoute('/setup')({
   },
   component: SetupPage,
 });
-
-const LABEL = 'text-label text-muted-foreground uppercase';
-const TEXT_FIELD =
-  'h-13 rounded-full border-2 border-transparent bg-secondary px-5 text-base focus-visible:border-primary focus-visible:bg-card focus-visible:ring-0';
 
 const PROMISES = [
   'Create events and language channels',
@@ -48,7 +44,7 @@ function StepPips({ step }: { step: 1 | 2 }) {
     <div className="mb-6 flex items-center gap-2">
       <div className="h-1 w-5.5 rounded-full bg-primary" />
       <div className={cn('h-1 w-5.5 rounded-full', step === 2 ? 'bg-primary' : 'bg-border')} />
-      <span className={cn(LABEL, 'ml-1')}>Step {step} of 2</span>
+      <span className={cn(AUTH_LABEL, 'ml-1')}>Step {step} of 2</span>
     </div>
   );
 }
@@ -118,7 +114,7 @@ function Credentials() {
       </p>
 
       <Field className="mb-5 gap-2">
-        <FieldLabel htmlFor={usernameId} className={LABEL}>
+        <FieldLabel htmlFor={usernameId} className={AUTH_LABEL}>
           Username
         </FieldLabel>
         <Input
@@ -129,12 +125,12 @@ function Credentials() {
           autoCapitalize="none"
           spellCheck={false}
           placeholder="admin"
-          className={TEXT_FIELD}
+          className={AUTH_FIELD}
         />
       </Field>
 
       <Field className="mb-5 gap-2">
-        <FieldLabel htmlFor={passwordId} className={LABEL}>
+        <FieldLabel htmlFor={passwordId} className={AUTH_LABEL}>
           Password
         </FieldLabel>
         <PasswordField
@@ -147,7 +143,7 @@ function Credentials() {
       </Field>
 
       <Field className="mb-7 gap-2">
-        <FieldLabel htmlFor={confirmId} className={LABEL}>
+        <FieldLabel htmlFor={confirmId} className={AUTH_LABEL}>
           Confirm password
         </FieldLabel>
         <PasswordField
