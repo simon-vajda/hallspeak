@@ -41,10 +41,6 @@ function writeStoredPreferences(next: AudioPreferences, baseline: AudioPreferenc
 /**
  * Read once, synchronously, so the first render already carries the stored settings and the
  * microphone opens with them rather than audibly re-applying them a moment later.
- *
- * The returned object is a piece of state, so its identity only changes when a preference
- * does — `useMicCapture` re-applies constraints to the live track on that identity, and a
- * fresh object per render would re-apply them continuously mid-broadcast.
  */
 export function useAudioPreferences() {
   const [preferences, setPreferencesState] = useState<AudioPreferences>(readStoredPreferences);
@@ -52,8 +48,6 @@ export function useAudioPreferences() {
   const setPreferences = useCallback((patch: Partial<AudioPreferences>) => {
     setPreferencesState((previous) => {
       const next = { ...previous, ...patch };
-      // A patch that settles on the values already held must keep the object it already has:
-      // a new identity would re-apply constraints to a live track for no reason.
       return samePreferences(next, previous) ? previous : next;
     });
   }, []);

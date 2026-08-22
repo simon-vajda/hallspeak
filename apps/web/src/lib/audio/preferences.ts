@@ -97,9 +97,8 @@ export function mergeStoredPreferences(
 }
 
 /**
- * Compared by value because identity is load-bearing downstream: `useMicCapture` re-applies
- * constraints to the live capture track whenever the preferences object changes identity, so
- * a change that changes nothing must not look like a change.
+ * Compared by value so a patch that settles on the values already held can keep the object
+ * it already has, and a write that changes nothing costs no render.
  */
 export function samePreferences(a: AudioPreferences, b: AudioPreferences): boolean {
   return (
