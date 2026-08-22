@@ -1,11 +1,24 @@
-import { createFileRoute, Link, Outlet } from '@tanstack/react-router';
+import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router';
+import { SignOutButton } from '@/components/admin/sign-out-button';
 import { LogoLockup } from '@/components/logo-lockup';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
+import { sessionQueryOptions } from '@/lib/auth-queries';
 
-export const Route = createFileRoute('/admin')({ component: AdminLayout });
+export const Route = createFileRoute('/admin')({
+  beforeLoad: async ({ context, location }) => {
+    const session = await context.queryClient.ensureQueryData(sessionQueryOptions());
+    // Before the session branch: a fresh installer who opens an admin screen would otherwise
+    // land on a sign-in form with no account to sign into.
+    if (!session.configured) throw redirect({ to: '/setup' });
+    if (!session.authenticated) {
+      throw redirect({ to: '/login', search: { redirect: location.href } });
+    }
+  },
+  component: AdminLayout,
+});
 
-// The design also draws a Settings tab and an account avatar. Neither surface exists, and a
-// control that cannot be used is a promise the app can't keep.
+// The design also draws a Settings tab. That surface does not exist, and a control that
+// cannot be used is a promise the app can't keep.
 function AdminLayout() {
   return (
     <div className="min-h-dvh">
@@ -21,6 +34,7 @@ function AdminLayout() {
             >
               Events
             </Link>
+            <SignOutButton />
             <TempThemeToggle />
           </nav>
         </div>

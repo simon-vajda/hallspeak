@@ -2,12 +2,22 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { setUnauthenticatedHandler } from './api/client';
 import { ThemeProvider } from './components/theme-provider';
+import { sessionKey } from './lib/auth-queries';
 import { routeTree } from './routeTree.gen';
 import './index.css';
 
 const queryClient = new QueryClient();
 const router = createRouter({ routeTree, context: { queryClient } });
+
+// A 401 from any admin call means the session died server-side. Invalidating the query
+// alone refetches it but never re-runs a route guard; invalidating the router is what turns
+// it into one redirect instead of a poll that fails forever.
+setUnauthenticatedHandler(() => {
+  void queryClient.invalidateQueries({ queryKey: sessionKey() });
+  void router.invalidate();
+});
 
 declare module '@tanstack/react-router' {
   interface Register {

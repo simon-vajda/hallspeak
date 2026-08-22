@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { Controller, useForm } from 'react-hook-form';
 import { LogoLockup } from '@/components/logo-lockup';
@@ -7,10 +7,19 @@ import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { sessionQueryOptions } from '@/lib/auth-queries';
 import { type PinFormValues, pinFormSchema } from '@/lib/pin-form';
 import { cn } from '@/lib/utils';
 
-export const Route = createFileRoute('/')({ component: IndexPage });
+export const Route = createFileRoute('/')({
+  // The site root, and only it: a listener or speaker link keeps working while the server
+  // is unconfigured, so a printed QR code survives a recovery.
+  beforeLoad: async ({ context }) => {
+    const session = await context.queryClient.ensureQueryData(sessionQueryOptions());
+    if (!session.configured) throw redirect({ to: '/setup' });
+  },
+  component: IndexPage,
+});
 
 const PIN_LENGTH = 6;
 
