@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   afterConnect,
   beginRebuild,
+  canRollbackProducerControl,
   consumerClosed,
   consumerOpened,
   consumerPlan,
@@ -36,6 +37,21 @@ describe('afterConnect', () => {
 
     expect(isCurrent(after, before)).toBe(false);
     expect(isCurrent(after, after.generation)).toBe(true);
+  });
+});
+
+describe('producer control rollback', () => {
+  it('cannot mutate a replacement Producer when an old control fails after recovery', () => {
+    const oldControl = { generation: live.generation, producerId: live.producerId };
+    const recovered = producerOpened(afterConnect(live), 'p2');
+
+    expect(canRollbackProducerControl(recovered, oldControl)).toBe(false);
+    expect(
+      canRollbackProducerControl(recovered, {
+        generation: recovered.generation,
+        producerId: recovered.producerId,
+      }),
+    ).toBe(true);
   });
 });
 

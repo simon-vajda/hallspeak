@@ -231,6 +231,10 @@ export function SpeakerStudio({
         onToggleMute={() => {
           const next = !isMuted;
           const requestRevision = channelStatus?.revision ?? 0;
+          const producerControl = {
+            generation: media.state.generation,
+            producerId: media.state.producerId,
+          };
           setLocalMuted(next);
           setRecoveredSilently(false);
           void media.setProducerPaused(next).catch((cause) => {
@@ -239,7 +243,7 @@ export function SpeakerStudio({
               requestRevision,
               current: channelStatusRef.current,
             });
-            media.setLocalProducerPaused(rollbackMuted);
+            if (!media.setLocalProducerPaused(rollbackMuted, producerControl)) return;
             setLocalMuted(rollbackMuted);
             console.error('media: could not change mute', cause);
           });
