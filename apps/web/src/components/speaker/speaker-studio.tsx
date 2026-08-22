@@ -380,7 +380,11 @@ function OnAir({
         <header className="flex items-center justify-between gap-3 lg:justify-start">
           {/* `On air` is a claim about audio, so only a live producer earns it. */}
           <LiveBadge live={onAir} label={BADGE_LABEL[state]} />
-          <span className="text-meta text-muted-foreground lg:hidden">{eventName}</span>
+          {/* `mr-11` reserves room for the toggle absolutely positioned over this row's right
+              edge; the name truncates rather than running under it. */}
+          <span className="mr-11 truncate text-meta text-muted-foreground lg:hidden">
+            {eventName}
+          </span>
         </header>
 
         <h1 className="mt-4 text-screen lg:mt-3.5 lg:mb-7.5 lg:text-[40px] lg:leading-[1.03] lg:tracking-[-0.045em]">
@@ -419,7 +423,9 @@ function OnAir({
             className="lg:col-start-2 lg:row-start-3"
           />
 
-          <div className="lg:col-start-1 lg:row-start-4">
+          {/* Clear of the settings row above it: on a phone this is the last thing in a
+              scrolling column, not a grid cell with its own gutter. */}
+          <div className="mt-4 lg:col-start-1 lg:row-start-4 lg:mt-0">
             <ConnectionLine
               status={status}
               error={socketError}
