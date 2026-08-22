@@ -26,8 +26,7 @@ export const ChannelLeavePayload = z.object({ slug: SocketSlug });
 
 export const ChannelStatus = z.object({
   slug: SocketSlug,
-  online: z.boolean(),
-  muted: z.boolean(),
+  ...ChannelJoinResponse.shape,
 });
 
 /**

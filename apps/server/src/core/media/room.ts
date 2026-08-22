@@ -49,7 +49,8 @@ export class Room {
 
   /** A channel is live while an unclosed producer exists. Mute pauses; it does not close. */
   isOnline(channelId: number): boolean {
-    return this.channelStatus(channelId).online;
+    const producer = this.producers.get(channelId);
+    return producer !== undefined && !producer.closed;
   }
 
   /** One read of the current producer owns both public broadcast-status bits. */

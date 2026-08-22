@@ -117,7 +117,7 @@ function require_(): MediaState {
  * this. Replaces the claim-derived answer `core/presence.ts` used to give.
  */
 export function isOnline(eventId: number, channelId: number): boolean {
-  return channelStatus(eventId, channelId).online;
+  return state?.registry.get(eventId)?.isOnline(channelId) ?? false;
 }
 
 /** Current producer existence and pause state, read together so they cannot disagree. */
@@ -274,8 +274,7 @@ export async function pauseProducer(
   channelId: number,
   producerId: string,
 ): Promise<void> {
-  const producer = producerOrThrow(ctx, channelId, producerId);
-  const slug = producerSlug(producer);
+  const { producer, slug } = producerWithSlugOrThrow(ctx, channelId, producerId);
   await producer.pause();
   notifications.publish({
     type: 'producer-paused',
@@ -290,8 +289,7 @@ export async function resumeProducer(
   channelId: number,
   producerId: string,
 ): Promise<void> {
-  const producer = producerOrThrow(ctx, channelId, producerId);
-  const slug = producerSlug(producer);
+  const { producer, slug } = producerWithSlugOrThrow(ctx, channelId, producerId);
   await producer.resume();
   notifications.publish({
     type: 'producer-resumed',
@@ -475,15 +473,15 @@ function peerOrThrow(ctx: MediaContext) {
  * Looked up by the caller's own channel and only then matched on id, never by id across
  * the event: the id is public to every listener the moment they consume.
  */
-function producerOrThrow(ctx: MediaContext, channelId: number, producerId: string): types.Producer {
-  const producer = roomOrThrow(ctx.eventId).producer(channelId);
+function producerWithSlugOrThrow(
+  ctx: MediaContext,
+  channelId: number,
+  producerId: string,
+): { producer: types.Producer; slug: string } {
+  const room = roomOrThrow(ctx.eventId);
+  const producer = room.producer(channelId);
   if (!producer || producer.id !== producerId) {
     throw new AppError('no_producer', 'No such producer on this channel.');
   }
-  return producer;
-}
-
-function producerSlug(producer: types.Producer): string {
-  const slug = (producer.appData as { slug?: unknown }).slug;
-  return typeof slug === 'string' ? slug : '';
+  return { producer, slug: room.producerSlug(channelId) ?? '' };
 }

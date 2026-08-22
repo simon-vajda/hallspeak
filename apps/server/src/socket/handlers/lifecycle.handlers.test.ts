@@ -150,6 +150,7 @@ describe('applyNotification producer lifecycle', () => {
     });
 
     expect(emitted[0]?.payload).toEqual({ slug: 'english', online: true, muted: true });
+    expect(emitted[0]?.room).toBe(eventRoom(EVENT));
   });
 
   it('broadcasts mute and resume without changing online', async () => {
@@ -180,6 +181,10 @@ describe('applyNotification producer lifecycle', () => {
       { slug: 'english', online: true, muted: true },
       { slug: 'english', online: true, muted: false },
     ]);
+    expect(emitted.map((entry) => entry.room)).toEqual([
+      channelRoom(ENGLISH),
+      channelRoom(ENGLISH),
+    ]);
   });
 
   it('broadcasts offline and clears muted when a paused producer closes', async () => {
@@ -201,6 +206,7 @@ describe('applyNotification producer lifecycle', () => {
     });
 
     expect(emitted[0]?.payload).toEqual({ slug: 'english', online: false, muted: false });
+    expect(emitted[0]?.room).toBe(eventRoom(EVENT));
   });
 
   it('keeps a late pause invalidation offline after its producer closed', async () => {
@@ -221,6 +227,7 @@ describe('applyNotification producer lifecycle', () => {
     });
 
     expect(emitted[0]?.payload).toEqual({ slug: 'english', online: false, muted: false });
+    expect(emitted[0]?.room).toBe(channelRoom(ENGLISH));
   });
 
   it('uses the current replacement snapshot for a stale pause invalidation', async () => {
@@ -236,6 +243,7 @@ describe('applyNotification producer lifecycle', () => {
     });
 
     expect(emitted[0]?.payload).toEqual({ slug: 'english', online: true, muted: false });
+    expect(emitted[0]?.room).toBe(channelRoom(ENGLISH));
   });
 });
 
