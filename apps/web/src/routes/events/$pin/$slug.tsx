@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { z } from 'zod';
 import { $api } from '@/api/client';
 import { GuestMessage, GuestMessageAction } from '@/components/guest/guest-message';
@@ -27,6 +27,7 @@ function socketMessage(code: string): string {
 function ChannelPage() {
   const { pin, slug } = Route.useParams();
   const { speaker_code: speakerCode } = Route.useSearch();
+  const [joinFailed, setJoinFailed] = useState(false);
 
   const { data, isPending, error } = $api.useQuery('get', '/events/{pin}/{slug}', {
     params: {
@@ -48,20 +49,32 @@ function ChannelPage() {
     status,
     error: socketError,
     online,
+    channelStatuses,
     listeners,
     socket,
+    joinChannel,
+    leaveChannel,
   } = useSocket(data ? (speakerCode ? { pin, speakerCode } : { pin }) : null);
 
   useConnectionToast(status);
 
+  const role = data?.role;
+  const httpOnline = data?.channel.online;
+
   // A speaker is already in its channel room from the handshake; a listener has to ask.
   useEffect(() => {
-    if (!socket || status !== 'connected' || data?.role !== 'listener') return;
-    void socket.emitWithAck('channel:join', { slug }).catch(() => {});
+    if (!socket || status !== 'connected' || role !== 'listener' || httpOnline === undefined)
+      return;
+    let cancelled = false;
+    setJoinFailed(false);
+    void joinChannel(slug, httpOnline).catch(() => {
+      if (!cancelled) setJoinFailed(true);
+    });
     return () => {
-      socket.emit('channel:leave', { slug });
+      cancelled = true;
+      leaveChannel(slug);
     };
-  }, [socket, status, data?.role, slug]);
+  }, [socket, status, role, httpOnline, slug, joinChannel, leaveChannel]);
 
   if (isPending) {
     return <GuestMessage title="Opening the channel" body="One moment." />;
@@ -90,7 +103,22 @@ function ChannelPage() {
     );
   }
 
-  const isLive = online[slug] ?? data.channel.online;
+  // A failed acknowledgement has no authoritative muted bit. Do not leave the HTTP
+  // liveness seed looking like an eternally pending or implicitly unmuted broadcast.
+  if (data.role === 'listener' && joinFailed) {
+    return (
+      <GuestMessage
+        title="Could not join this channel"
+        body="Its status could not be confirmed. Go back to the channel list and try again."
+      >
+        <ChannelsButton pin={pin}>Back to channels</ChannelsButton>
+      </GuestMessage>
+    );
+  }
+
+  const authoritativeStatus = channelStatuses[slug];
+  const isLive = authoritativeStatus?.online ?? online[slug] ?? data.channel.online;
+  const muted = authoritativeStatus?.muted ?? (isLive ? null : false);
   const message = socketError ? socketMessage(socketError) : null;
 
   // The server only answers `speaker` to a request that carried a code, so the second half
@@ -106,6 +134,7 @@ function ChannelPage() {
         socket={socket}
         status={status}
         socketError={message}
+        channelStatus={authoritativeStatus}
       />
     );
   }
@@ -122,6 +151,7 @@ function ChannelPage() {
         })) ?? []
       }
       live={isLive}
+      muted={muted}
       socket={socket}
       status={status}
       socketError={message}

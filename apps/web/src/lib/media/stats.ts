@@ -25,6 +25,7 @@ export type ConnectionState =
   | { kind: 'reconnecting' }
   | { kind: 'trouble' }
   | { kind: 'offline' }
+  | { kind: 'syncing' }
   | { kind: 'paused' }
   | { kind: 'flowing'; grade: ConnectionGrade };
 
@@ -48,7 +49,7 @@ export interface ConnectionInput {
   /** A producer exists on the channel in question. */
   live: boolean;
   /** This speaker muted: the producer is paused and sending nothing. */
-  paused?: boolean;
+  paused?: boolean | null;
   /** Present only while samples are actually moving. */
   stats: MediaStats | null;
 }
@@ -58,6 +59,7 @@ export function connectionState(input: ConnectionInput): ConnectionState {
   if (!input.socketConnected) return { kind: 'reconnecting' };
   if (input.mediaTrouble) return { kind: 'trouble' };
   if (!input.live) return { kind: 'offline' };
+  if (input.paused === null) return { kind: 'syncing' };
   /**
    * A paused producer sends nothing, so there is nothing to grade. Graded anyway, the
    * report covering the moment of the mute reads the stopped stream's tail as loss — and
@@ -90,6 +92,8 @@ export function connectionLabel(state: ConnectionState): string {
       return 'Audio connection re-establishing';
     case 'offline':
       return 'Waiting for the interpreter';
+    case 'syncing':
+      return 'Checking interpreter status…';
     case 'paused':
       return 'Muted — nothing is being sent';
     case 'idle':

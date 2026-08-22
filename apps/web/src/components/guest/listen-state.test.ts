@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   badgeLabel,
   type ListenInput,
+  listenActionState,
   listenState,
   playTargetLabel,
   showsRings,
@@ -12,6 +13,8 @@ const ALL_STATES = [
   'idle',
   'waiting',
   'playing',
+  'syncing',
+  'muted',
   'interpreter-away',
   'reconnecting',
   'media-trouble',
@@ -22,6 +25,7 @@ const playing: ListenInput = {
   armed: true,
   isPlaying: true,
   live: true,
+  muted: false,
   socketConnected: true,
   mediaTrouble: false,
 };
@@ -40,6 +44,22 @@ describe('listenState', () => {
     expect(listenState(playing)).toBe('playing');
   });
 
+  it('identifies a muted online interpreter before and after the guest arms', () => {
+    expect(listenState({ ...playing, armed: false, isPlaying: false, muted: true })).toBe('muted');
+    expect(listenState({ ...playing, muted: true })).toBe('muted');
+    expect(badgeLabel('muted')).toMatch(/muted/i);
+    expect(statusNote('muted')).toMatch(/automatically/i);
+    expect(showsRings('muted')).toBe(false);
+  });
+
+  it('does not claim unmuted while an online HTTP seed awaits socket reconciliation', () => {
+    const syncing = listenState({ ...playing, muted: null });
+
+    expect(syncing).toBe('syncing');
+    expect(badgeLabel(syncing)).not.toMatch(/on air|listening/i);
+    expect(showsRings(syncing)).toBe(false);
+  });
+
   it('stays armed and reads as the interpreter being away when they drop', () => {
     expect(listenState({ ...playing, live: false, isPlaying: false })).toBe('interpreter-away');
   });
@@ -49,6 +69,13 @@ describe('listenState', () => {
 
     expect(trouble).toBe('media-trouble');
     expect(trouble).not.toBe(listenState({ ...playing, live: false }));
+  });
+
+  it('keeps terminal, socket, media trouble and offline ahead of stale muted status', () => {
+    expect(listenState({ ...playing, muted: true, terminal: true })).toBe('ended');
+    expect(listenState({ ...playing, muted: true, socketConnected: false })).toBe('reconnecting');
+    expect(listenState({ ...playing, muted: true, mediaTrouble: true })).toBe('media-trouble');
+    expect(listenState({ ...playing, muted: true, live: false })).toBe('interpreter-away');
   });
 
   it('tells a lost socket apart from a failed media path', () => {
@@ -67,12 +94,18 @@ describe('listenState', () => {
 describe('the three rendered states', () => {
   it('gives not-yet-armed, armed-and-waiting and playing distinct labels', () => {
     const labels = [
-      playTargetLabel(listenState({ ...playing, armed: false })),
-      playTargetLabel(listenState({ ...playing, isPlaying: false })),
-      playTargetLabel(listenState(playing)),
+      playTargetLabel(listenActionState({ armed: false, isPlaying: false, terminal: false })),
+      playTargetLabel(listenActionState({ armed: true, isPlaying: false, terminal: false })),
+      playTargetLabel(listenActionState({ armed: true, isPlaying: true, terminal: false })),
     ];
 
     expect(new Set(labels).size).toBe(3);
+  });
+
+  it('keeps Play/Pause action based on arming and consumer ownership while muted', () => {
+    expect(listenActionState({ armed: false, isPlaying: false, terminal: false })).toBe('idle');
+    expect(listenActionState({ armed: true, isPlaying: true, terminal: false })).toBe('playing');
+    expect(listenActionState({ armed: true, isPlaying: false, terminal: false })).toBe('waiting');
   });
 
   it('rings only while samples are moving', () => {
@@ -106,6 +139,8 @@ describe('the three rendered states', () => {
       'idle',
       'waiting',
       'playing',
+      'muted',
+      'syncing',
       'interpreter-away',
       'reconnecting',
       'media-trouble',

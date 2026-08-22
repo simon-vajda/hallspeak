@@ -34,14 +34,14 @@ export async function openTransport(input: {
   });
 
   if (input.direction === 'send') {
-    transport.on('produce', ({ rtpParameters }, callback, errback) => {
+    transport.on('produce', ({ rtpParameters, appData }, callback, errback) => {
       const slug = input.slug;
       if (slug === undefined) {
         errback(new Error('A send transport needs the channel it produces on.'));
         return;
       }
       input.api
-        .produce(slug, rtpParameters)
+        .produce(slug, rtpParameters, appData.paused === true)
         .then(({ producerId }) => callback({ id: producerId }))
         .catch(errback);
     });

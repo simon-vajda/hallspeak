@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { levelStatus, meterLevel, rms } from '@/lib/audio/level';
 import { useAudioPreferences } from '@/lib/audio/use-audio-preferences';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
+import { type ChannelStatusEntry, rollbackMutedAfterFailure } from '@/lib/channel-status';
 import { formatPin } from '@/lib/format';
 import { type ConnectionState, connectionState } from '@/lib/media/stats';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
@@ -46,6 +47,7 @@ export function SpeakerStudio({
   socket,
   status,
   socketError,
+  channelStatus,
 }: {
   eventName: string;
   pin: string;
@@ -56,9 +58,12 @@ export function SpeakerStudio({
   socket: SocketClient | null;
   status: SocketStatus;
   socketError: string | null;
+  /** Current Socket.IO snapshot; REST deliberately carries liveness only. */
+  channelStatus: ChannelStatusEntry | undefined;
 }) {
   const [goLivePressed, setGoLivePressed] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  // Used before the first server snapshot and while recovering from a rejected control.
+  const [localMuted, setLocalMuted] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [displaced, setDisplaced] = useState(false);
   const [lastEnd, setLastEnd] = useState<EndReason | null>(null);
@@ -67,8 +72,12 @@ export function SpeakerStudio({
   const { preferences, setPreferences } = useAudioPreferences();
   const mic = useMicCapture(preferences);
   const media = useMedia(socket);
+  const channelStatusRef = useRef(channelStatus);
+  channelStatusRef.current = channelStatus;
 
   const hasProducer = media.state.producerId !== null;
+  const isMuted =
+    channelStatus?.online && channelStatus.muted !== null ? channelStatus.muted : localMuted;
   const state = broadcastState({
     goLivePressed,
     hasProducer,
@@ -158,7 +167,7 @@ export function SpeakerStudio({
     let cancelled = false;
     void produce(true).then(() => {
       if (cancelled) return;
-      setIsMuted(true);
+      setLocalMuted(true);
       // Only a recovery reads as back-from-drop; the first Go live is an ordinary start.
       if (lastEnd === 'dropped') setRecoveredSilently(true);
       setLastEnd(null);
@@ -219,15 +228,25 @@ export function SpeakerStudio({
         })}
         onToggleMute={() => {
           const next = !isMuted;
-          setIsMuted(next);
+          const requestRevision = channelStatus?.revision ?? 0;
+          setLocalMuted(next);
           setRecoveredSilently(false);
-          void media.setProducerPaused(next);
+          void media.setProducerPaused(next).catch((cause) => {
+            const rollbackMuted = rollbackMutedAfterFailure({
+              requestedMuted: next,
+              requestRevision,
+              current: channelStatusRef.current,
+            });
+            media.setLocalProducerPaused(rollbackMuted);
+            setLocalMuted(rollbackMuted);
+            console.error('media: could not change mute', cause);
+          });
         }}
         onEnd={() => {
           // Recorded before the close, so the reconnect effect cannot read it as a drop.
           setLastEnd('deliberate');
           setGoLivePressed(false);
-          setIsMuted(false);
+          setLocalMuted(false);
           setRecoveredSilently(false);
           setStartedAt(null);
           void media.stopProducing();
