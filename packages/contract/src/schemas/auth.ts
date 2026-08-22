@@ -5,12 +5,18 @@ export const AdminUsername = z.string().min(1).max(64).openapi({ example: 'admin
 
 const PASSWORD_MAX_LENGTH = 128;
 
+// One lookahead pattern rather than two .regex() calls: OpenAPI carries a single `pattern`
+// per schema, so chaining them publishes whichever the generator kept and silently drops
+// the other. Built from the same constants, so the rules still live in one place.
+const NEW_PASSWORD_PATTERN = new RegExp(
+  `^(?=.*${PASSWORD_NUMBER_PATTERN.source})(?=.*${PASSWORD_SPECIAL_PATTERN.source})`,
+);
+
 export const NewPassword = z
   .string()
   .min(PASSWORD_MIN_LENGTH)
   .max(PASSWORD_MAX_LENGTH)
-  .regex(PASSWORD_NUMBER_PATTERN)
-  .regex(PASSWORD_SPECIAL_PATTERN);
+  .regex(NEW_PASSWORD_PATTERN);
 
 export const SetupBody = z
   .object({ username: AdminUsername, password: NewPassword })

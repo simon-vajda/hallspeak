@@ -42,6 +42,12 @@ export class TokenBucketLimiter {
     bucket.tokens = Math.max(0, bucket.tokens - 1);
   }
 
+  /** Returns a token charged by `penalize`, never taking a bucket past its capacity. */
+  refund(key: string): void {
+    const bucket = this.refill(key);
+    bucket.tokens = Math.min(this.capacity, bucket.tokens + 1);
+  }
+
   /** Whole seconds until the key has a token again; 0 when it already does. */
   retryAfter(key: string): number {
     const bucket = this.refill(key);

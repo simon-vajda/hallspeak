@@ -39,6 +39,13 @@ export interface RateLimitOptions {
   shared?: TokenBucketLimiter;
   /** Which response statuses cost a token. Only a caller that is guessing pays. */
   chargeStatuses?: number[];
+  /**
+   * Charge on the way in and refund on a status that costs nothing, instead of charging on
+   * the way out. `allow` does not consume, so a caller firing attempts concurrently is
+   * measured against a budget none of them has spent yet — fine for a lookup that answers
+   * in a millisecond, not for one that awaits a deliberately slow hash.
+   */
+  reserve?: boolean;
   message?: string;
   trustedProxies?: readonly string[];
 }
@@ -62,9 +69,18 @@ export function createRateLimit(options: RateLimitOptions): MiddlewareHandler {
       return c.json({ code: 'rate_limited', message }, 429);
     }
 
+    if (options.reserve) {
+      options.perIp.penalize(ip);
+      shared?.penalize(SHARED_KEY);
+    }
+
     await next();
 
-    if (chargeStatuses.includes(c.res.status)) {
+    const chargeable = chargeStatuses.includes(c.res.status);
+    if (options.reserve && !chargeable) {
+      options.perIp.refund(ip);
+      shared?.refund(SHARED_KEY);
+    } else if (!options.reserve && chargeable) {
       options.perIp.penalize(ip);
       shared?.penalize(SHARED_KEY);
     }
@@ -95,5 +111,6 @@ export const publicRateLimit = createRateLimit({
 export const signInRateLimit = createRateLimit({
   perIp: new TokenBucketLimiter({ capacity: 10, refillPerSecond: 1 / 60 }),
   chargeStatuses: [401, 409],
+  reserve: true,
   message: 'Too many sign-in attempts.',
 });

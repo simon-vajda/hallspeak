@@ -25,6 +25,15 @@ console.log(
 // that cannot open a microphone, and a sign-in that fails silently because the Secure
 // cookie is discarded — with no error anywhere.
 console.log('Serve this behind HTTPS: microphone capture and the admin session both require it.');
+if (env.TRUSTED_PROXY_IPS.length === 0) {
+  // Unset is the safe default — a forged header must never move a bucket — but behind a
+  // reverse proxy it means every visitor shares the proxy's address, so one guesser can
+  // spend the sign-in budget the administrator needs.
+  console.warn(
+    'TRUSTED_PROXY_IPS is unset: if a reverse proxy fronts this server, every client shares ' +
+      "one sign-in throttle bucket. Set it to the proxy's address.",
+  );
+}
 
 // Also before serve(), and fatal for the same reason: a deployment that cannot start a
 // worker cannot carry audio, and finding that out on the first Go live is worse than

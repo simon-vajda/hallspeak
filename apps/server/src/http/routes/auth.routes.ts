@@ -10,6 +10,7 @@ import {
   verifyCredentials,
 } from '../../core/auth';
 import { db } from '../../db';
+import { AppError } from '../../lib/problem';
 import { defaultHook } from '../default-hook';
 import { signInRateLimit } from '../middleware/rate-limit.middleware';
 import { clearSessionCookie, readSessionCookie, setSessionCookie } from '../session-cookie';
@@ -31,7 +32,7 @@ function authenticated(c: Parameters<Parameters<typeof app.openapi>[1]>[0]): boo
   const token = readSessionCookie(c);
   // KTD10: between a recovery restart and the finished wizard the table still holds rows
   // that correspond to no account at all.
-  return isConfigured() && token !== undefined && lookupSession(db, token);
+  return isConfigured() && token !== undefined && lookupSession(db, token) !== 'unknown';
 }
 
 export const authRoutes = app
@@ -49,9 +50,11 @@ export const authRoutes = app
 
     try {
       await createAccount(username, password);
-    } catch {
-      // The synchronous claim inside createAccount is what closes the window two setup
-      // requests in the same tick would otherwise both pass.
+    } catch (err) {
+      // Only the claim, and nothing else: a credential file that could not be written is a
+      // failure, and reporting it as "already configured" would send the installer looking
+      // for an account that does not exist.
+      if (!(err instanceof AppError) || err.code !== 'already_configured') throw err;
       return c.json(
         { code: 'already_configured', message: 'This server already has an administrator.' },
         409,

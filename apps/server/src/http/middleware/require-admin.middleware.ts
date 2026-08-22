@@ -1,7 +1,7 @@
 import type { MiddlewareHandler } from 'hono';
 import { isConfigured, lookupSession } from '../../core/auth';
 import { db } from '../../db';
-import { readSessionCookie } from '../session-cookie';
+import { readSessionCookie, setSessionCookie } from '../session-cookie';
 
 /**
  * A Problem and never a redirect: the caller is `fetch` from the admin SPA, which turns a
@@ -15,7 +15,14 @@ export const requireAdmin: MiddlewareHandler = async (c, next) => {
   if (!isConfigured()) return c.json(REFUSED, 401);
 
   const token = readSessionCookie(c);
-  if (token === undefined || !lookupSession(db, token)) return c.json(REFUSED, 401);
+  if (token === undefined) return c.json(REFUSED, 401);
+
+  const session = lookupSession(db, token);
+  if (session === 'unknown') return c.json(REFUSED, 401);
+  // The row rolled forward; the browser's Max-Age has to follow it or the cookie expires
+  // 30 days after sign-in however active the administrator has been. Same token — this is
+  // a lifetime refresh, not a rotation, and it costs one Set-Cookie a day.
+  if (session === 'renewed') setSessionCookie(c, token);
 
   await next();
 };

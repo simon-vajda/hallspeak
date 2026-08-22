@@ -47,6 +47,15 @@ export interface paths {
                         "application/json": components["schemas"]["Problem"];
                     };
                 };
+                /** @description Sign in first */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
                 /** @description No such event */
                 404: {
                     headers: {
@@ -99,6 +108,15 @@ export interface paths {
                         "application/json": components["schemas"]["AdminEventDetail"][];
                     };
                 };
+                /** @description Sign in first */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
             };
         };
         put?: never;
@@ -127,6 +145,15 @@ export interface paths {
                 };
                 /** @description Invalid body */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
+                /** @description Sign in first */
+                401: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -170,6 +197,15 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+                /** @description Sign in first */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
                 };
                 /** @description No such channel */
                 404: {
@@ -218,6 +254,15 @@ export interface paths {
                         "application/json": components["schemas"]["Problem"];
                     };
                 };
+                /** @description Sign in first */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
                 /** @description No such channel */
                 404: {
                     headers: {
@@ -259,6 +304,15 @@ export interface paths {
                         "application/json": components["schemas"]["AdminEventDetail"];
                     };
                 };
+                /** @description Sign in first */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
                 /** @description No such event */
                 404: {
                     headers: {
@@ -290,6 +344,15 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+                /** @description Sign in first */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
                 };
                 /** @description No such event */
                 404: {
@@ -338,6 +401,15 @@ export interface paths {
                         "application/json": components["schemas"]["Problem"];
                     };
                 };
+                /** @description Sign in first */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
                 /** @description No such event */
                 404: {
                     headers: {
@@ -375,6 +447,15 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["AdminLiveEvent"][];
+                    };
+                };
+                /** @description Sign in first */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
                     };
                 };
             };
@@ -415,6 +496,15 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["AdminEvent"];
+                    };
+                };
+                /** @description Sign in first */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
                     };
                 };
                 /** @description No such event */
@@ -462,6 +552,15 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["AdminChannel"];
+                    };
+                };
+                /** @description Sign in first */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
                     };
                 };
                 /** @description No such channel */

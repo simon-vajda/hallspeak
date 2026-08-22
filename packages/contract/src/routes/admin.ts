@@ -22,6 +22,11 @@ const json = <T extends z.ZodType>(schema: T, description: string) => ({
   description,
 });
 const problem = (description: string) => json(Problem, description);
+/** Every route below sits behind requireAdmin, so every one of them can answer 401. */
+const guarded = <T extends Record<number, unknown>>(responses: T) => ({
+  ...responses,
+  401: problem('Sign in first'),
+});
 const body = <T extends z.ZodType>(schema: T) => ({
   content: { 'application/json': { schema } },
   required: true as const,
@@ -32,7 +37,7 @@ export const adminListEvents = createRoute({
   path: '/admin/events',
   tags: TAGS,
   summary: 'Every event, enabled or not, with its channels',
-  responses: { 200: json(z.array(AdminEventDetail), 'OK') },
+  responses: guarded({ 200: json(z.array(AdminEventDetail), 'OK') }),
 });
 
 export const adminCreateEvent = createRoute({
@@ -41,7 +46,7 @@ export const adminCreateEvent = createRoute({
   tags: TAGS,
   summary: 'Create an event',
   request: { body: body(CreateEventBody) },
-  responses: { 201: json(AdminEventDetail, 'Created'), 400: problem('Invalid body') },
+  responses: guarded({ 201: json(AdminEventDetail, 'Created'), 400: problem('Invalid body') }),
 });
 
 export const adminGetEvent = createRoute({
@@ -50,7 +55,7 @@ export const adminGetEvent = createRoute({
   tags: TAGS,
   summary: 'One event with all its channels',
   request: { params: IdParam },
-  responses: { 200: json(AdminEventDetail, 'OK'), 404: problem('No such event') },
+  responses: guarded({ 200: json(AdminEventDetail, 'OK'), 404: problem('No such event') }),
 });
 
 export const adminPatchEvent = createRoute({
@@ -59,11 +64,11 @@ export const adminPatchEvent = createRoute({
   tags: TAGS,
   summary: 'Edit an event',
   request: { params: IdParam, body: body(UpdateEventBody) },
-  responses: {
+  responses: guarded({
     200: json(AdminEventDetail, 'OK'),
     400: problem('Invalid body'),
     404: problem('No such event'),
-  },
+  }),
 });
 
 export const adminDeleteEvent = createRoute({
@@ -72,7 +77,7 @@ export const adminDeleteEvent = createRoute({
   tags: TAGS,
   summary: 'Delete an event and its channels',
   request: { params: IdParam },
-  responses: { 204: { description: 'Deleted' }, 404: problem('No such event') },
+  responses: guarded({ 204: { description: 'Deleted' }, 404: problem('No such event') }),
 });
 
 export const adminRegeneratePin = createRoute({
@@ -81,7 +86,7 @@ export const adminRegeneratePin = createRoute({
   tags: TAGS,
   summary: 'Replace the event PIN, invalidating the old one immediately',
   request: { params: IdParam },
-  responses: { 200: json(AdminEvent, 'OK'), 404: problem('No such event') },
+  responses: guarded({ 200: json(AdminEvent, 'OK'), 404: problem('No such event') }),
 });
 
 // No path parameter: one poll covers the events list and an event detail page alike.
@@ -90,7 +95,7 @@ export const adminGetLive = createRoute({
   path: '/admin/live',
   tags: TAGS,
   summary: 'Live channels across every event, with their listener counts',
-  responses: { 200: json(z.array(AdminLiveEvent), 'OK') },
+  responses: guarded({ 200: json(z.array(AdminLiveEvent), 'OK') }),
 });
 
 export const adminCreateChannel = createRoute({
@@ -99,12 +104,12 @@ export const adminCreateChannel = createRoute({
   tags: TAGS,
   summary: 'Add a channel to an event',
   request: { params: IdParam, body: body(CreateChannelBody) },
-  responses: {
+  responses: guarded({
     201: json(AdminChannel, 'Created'),
     400: problem('Invalid body'),
     404: problem('No such event'),
     409: problem('That slug is already used on this event'),
-  },
+  }),
 });
 
 export const adminPatchChannel = createRoute({
@@ -113,11 +118,11 @@ export const adminPatchChannel = createRoute({
   tags: TAGS,
   summary: 'Edit a channel name or its enabled flag — never its slug',
   request: { params: IdParam, body: body(UpdateChannelBody) },
-  responses: {
+  responses: guarded({
     200: json(AdminChannel, 'OK'),
     400: problem('Invalid body'),
     404: problem('No such channel'),
-  },
+  }),
 });
 
 export const adminDeleteChannel = createRoute({
@@ -126,7 +131,7 @@ export const adminDeleteChannel = createRoute({
   tags: TAGS,
   summary: 'Delete a channel',
   request: { params: IdParam },
-  responses: { 204: { description: 'Deleted' }, 404: problem('No such channel') },
+  responses: guarded({ 204: { description: 'Deleted' }, 404: problem('No such channel') }),
 });
 
 export const adminRegenerateSpeakerCode = createRoute({
@@ -135,5 +140,5 @@ export const adminRegenerateSpeakerCode = createRoute({
   tags: TAGS,
   summary: 'Replace the speaker code — the sole mitigation for a leaked one',
   request: { params: IdParam },
-  responses: { 200: json(AdminChannel, 'OK'), 404: problem('No such channel') },
+  responses: guarded({ 200: json(AdminChannel, 'OK'), 404: problem('No such channel') }),
 });

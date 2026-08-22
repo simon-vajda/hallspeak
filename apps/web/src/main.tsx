@@ -11,11 +11,13 @@ import './index.css';
 const queryClient = new QueryClient();
 const router = createRouter({ routeTree, context: { queryClient } });
 
-// A 401 from any admin call means the session died server-side. Invalidating the query
-// alone refetches it but never re-runs a route guard; invalidating the router is what turns
-// it into one redirect instead of a poll that fails forever.
+// A 401 from any admin call means the session died server-side. Removed rather than
+// invalidated: the guards read this entry through `ensureQueryData`, which hands back a
+// cached value however stale it is marked, so an invalidated entry would still say signed
+// in. Removing it forces the refetch, and invalidating the router is what turns that into
+// one redirect instead of a poll that fails forever.
 setUnauthenticatedHandler(() => {
-  void queryClient.invalidateQueries({ queryKey: sessionKey() });
+  queryClient.removeQueries({ queryKey: sessionKey() });
   void router.invalidate();
 });
 
