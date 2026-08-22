@@ -73,14 +73,20 @@ export class ListenerCountPublisher {
   forgetEvent(eventId: number): void {
     const prefix = `${eventId}:`;
     for (const [key, entry] of [...this.pending]) {
-      if (!key.startsWith(prefix)) continue;
+      if (!key.startsWith(prefix)) {
+        continue;
+      }
       clearTimeout(entry.timer);
       this.pending.delete(key);
     }
     for (const [key, entry] of [...this.published]) {
-      if (!key.startsWith(prefix)) continue;
+      if (!key.startsWith(prefix)) {
+        continue;
+      }
       this.published.delete(key);
-      if (entry.count === 0) continue;
+      if (entry.count === 0) {
+        continue;
+      }
       const channelId = Number(key.slice(prefix.length));
       this.publisher({
         type: 'listeners-changed',
@@ -94,7 +100,9 @@ export class ListenerCountPublisher {
 
   /** Shutdown: every window dropped, nothing published, nothing remembered. */
   close(): void {
-    for (const entry of this.pending.values()) clearTimeout(entry.timer);
+    for (const entry of this.pending.values()) {
+      clearTimeout(entry.timer);
+    }
     this.pending.clear();
     this.published.clear();
   }
@@ -107,7 +115,9 @@ export class ListenerCountPublisher {
     // Nothing remembered means zero, not "unknown": every channel starts with no
     // listeners, so a first recount of zero is not a change worth a notification.
     const previous = this.published.get(key)?.count ?? 0;
-    if (previous === count) return;
+    if (previous === count) {
+      return;
+    }
     this.published.set(key, { count, slug });
     this.publisher({ type: 'listeners-changed', eventId, channelId, slug, count });
   }

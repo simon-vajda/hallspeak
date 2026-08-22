@@ -18,7 +18,9 @@ export const Route = createFileRoute('/setup')({
   beforeLoad: async ({ context }) => {
     const session = await context.queryClient.ensureQueryData(sessionQueryOptions());
     // The wizard is unreachable once an account exists; it cannot create a second one.
-    if (session.configured) throw redirect({ to: '/login' });
+    if (session.configured) {
+      throw redirect({ to: '/login' });
+    }
   },
   component: SetupPage,
 });
@@ -105,7 +107,9 @@ function Credentials() {
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        if (ready) setup.mutate({ body: { username, password } });
+        if (ready) {
+          setup.mutate({ body: { username, password } });
+        }
       }}
       className="flex flex-col"
     >

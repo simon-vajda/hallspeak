@@ -131,18 +131,24 @@ export class WorkerPool {
 
   async close(): Promise<void> {
     this.closing = true;
-    for (const timer of this.retries.values()) clearTimeout(timer);
+    for (const timer of this.retries.values()) {
+      clearTimeout(timer);
+    }
     this.retries.clear();
 
     const slots = [...this.slots.values()];
     this.slots.clear();
-    for (const slot of slots) slot.worker.close();
+    for (const slot of slots) {
+      slot.worker.close();
+    }
   }
 
   private pick(): Slot {
     let chosen: Slot | undefined;
     for (const slot of this.slots.values()) {
-      if (!chosen || slot.routers < chosen.routers) chosen = slot;
+      if (!chosen || slot.routers < chosen.routers) {
+        chosen = slot;
+      }
     }
     if (!chosen) {
       throw new AppError('media_unavailable', 'No media worker is available.');
@@ -164,15 +170,21 @@ export class WorkerPool {
 
   private async handleDeath(slot: Slot): Promise<void> {
     // A death arriving after close(), or after this slot was already replaced, is stale.
-    if (this.closing || this.slots.get(slot.index) !== slot) return;
+    if (this.closing || this.slots.get(slot.index) !== slot) {
+      return;
+    }
     this.slots.delete(slot.index);
 
     const err = new Error(`mediasoup worker ${slot.index} died`);
-    for (const reject of slot.pending) reject(err);
+    for (const reject of slot.pending) {
+      reject(err);
+    }
     slot.pending.clear();
 
     console.error(`mediasoup: worker ${slot.index} died; dropping its rooms`);
-    for (const listener of this.listeners) listener(slot.index);
+    for (const listener of this.listeners) {
+      listener(slot.index);
+    }
 
     const recent = this.recordDeath(slot.index);
     if (recent.length > REPLACEMENT_LIMIT) {
@@ -199,10 +211,14 @@ export class WorkerPool {
    * one costs one spawn a minute rather than a pinned core.
    */
   private scheduleRetry(index: number): void {
-    if (this.retries.has(index)) return;
+    if (this.retries.has(index)) {
+      return;
+    }
     const timer = setTimeout(() => {
       this.retries.delete(index);
-      if (this.closing || this.slots.has(index)) return;
+      if (this.closing || this.slots.has(index)) {
+        return;
+      }
       this.deathsByIndex.delete(index);
       void this.replace(index);
     }, REPLACEMENT_WINDOW_MS);

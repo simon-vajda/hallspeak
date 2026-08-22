@@ -59,8 +59,11 @@ async function withSlot<T>(work: () => Promise<T>): Promise<T> {
 function scryptAsync(password: string, salt: Buffer, options: ScryptOptions): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     scrypt(password, salt, KEY_BYTES, options, (err, key) => {
-      if (err) reject(err);
-      else resolve(key);
+      if (err) {
+        reject(err);
+      } else {
+        resolve(key);
+      }
     });
   });
 }
@@ -90,10 +93,14 @@ export async function hashPassword(password: string, cost: ScryptCost = COST): P
 
 export async function verifyPassword(password: string, encoded: string): Promise<boolean> {
   const parts = encoded.split('$');
-  if (parts.length !== 6) return false;
+  if (parts.length !== 6) {
+    return false;
+  }
 
   const [algorithm, n = '', r = '', p = '', salt = '', key = ''] = parts;
-  if (algorithm !== 'scrypt') return false;
+  if (algorithm !== 'scrypt') {
+    return false;
+  }
 
   const cost = { n: Number(n), r: Number(r), p: Number(p) };
   if (!Number.isInteger(cost.n) || !Number.isInteger(cost.r) || !Number.isInteger(cost.p)) {
@@ -101,7 +108,9 @@ export async function verifyPassword(password: string, encoded: string): Promise
   }
 
   const expected = Buffer.from(key, 'base64url');
-  if (expected.length !== KEY_BYTES) return false;
+  if (expected.length !== KEY_BYTES) {
+    return false;
+  }
 
   try {
     const actual = await derive(password, Buffer.from(salt, 'base64url'), cost);

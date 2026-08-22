@@ -9,7 +9,9 @@ export const Route = createFileRoute('/admin')({
     const session = await context.queryClient.ensureQueryData(sessionQueryOptions());
     // Before the session branch: a fresh installer who opens an admin screen would otherwise
     // land on a sign-in form with no account to sign into.
-    if (!session.configured) throw redirect({ to: '/setup' });
+    if (!session.configured) {
+      throw redirect({ to: '/setup' });
+    }
     if (!session.authenticated) {
       throw redirect({ to: '/login', search: { redirect: location.href } });
     }

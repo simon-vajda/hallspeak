@@ -26,7 +26,9 @@ export function readCredentials(path: string): StoredAccount | null {
   try {
     raw = readFileSync(path, 'utf8');
   } catch (cause) {
-    if ((cause as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    if ((cause as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
     throw new Error(`Cannot read the admin credential file at ${path}`, { cause });
   }
 

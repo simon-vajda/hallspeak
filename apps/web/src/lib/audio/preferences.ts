@@ -33,7 +33,9 @@ function boolean(value: unknown, fallback: boolean): boolean {
 }
 
 function gain(value: unknown, fallback: number): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
   const clamped = Math.min(Math.max(value, 0), MAX_GAIN_SLIDER_VALUE);
   return clamped < MIN_RESTORED_GAIN ? fallback : clamped;
 }

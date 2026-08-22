@@ -26,7 +26,9 @@ export function ConnectionLine({
   className?: string;
 }) {
   const hasConnected = useRef(false);
-  if (status === 'connected') hasConnected.current = true;
+  if (status === 'connected') {
+    hasConnected.current = true;
+  }
 
   const text =
     status === 'error'

@@ -41,7 +41,9 @@ function fakePool() {
 
   const pool = {
     createRouter: async (): Promise<RouterAllocation> => {
-      if (gate) await gate.promise;
+      if (gate) {
+        await gate.promise;
+      }
       if (failNext) {
         const err = failNext;
         failNext = undefined;
@@ -67,7 +69,9 @@ function fakePool() {
     pool,
     routers,
     killWorker: (index: number) => {
-      for (const listener of deathListeners) listener(index);
+      for (const listener of deathListeners) {
+        listener(index);
+      }
     },
     onWorker: (index: number) => {
       nextWorkerIndex = index;

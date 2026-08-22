@@ -38,7 +38,9 @@ function indexLive(events: AdminLiveEvent[] | undefined): AdminLiveIndex {
     let onAir = 0;
     for (const channel of event.channels) {
       index.channels.set(channel.channelId, channel);
-      if (channel.online) onAir += 1;
+      if (channel.online) {
+        onAir += 1;
+      }
     }
     index.onAir.set(event.eventId, onAir);
   }
@@ -113,7 +115,9 @@ export function useOptimisticEventUpdate(eventId: number) {
           events?.map((event) => (event.id === eventId ? row : event)),
         );
       }
-      if (previous?.detail) queryClient.setQueryData(detailKey, previous.detail);
+      if (previous?.detail) {
+        queryClient.setQueryData(detailKey, previous.detail);
+      }
     },
 
     settle() {

@@ -139,7 +139,9 @@ describe('the rendered line', () => {
     ];
 
     expect(new Set(labels).size).toBe(5);
-    for (const label of labels) expect(label.length).toBeGreaterThan(0);
+    for (const label of labels) {
+      expect(label.length).toBeGreaterThan(0);
+    }
   });
 
   it('blames the mute rather than the connection while paused', () => {

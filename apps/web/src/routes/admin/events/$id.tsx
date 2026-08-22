@@ -19,7 +19,9 @@ export const Route = createFileRoute('/admin/events/$id')({
   params: {
     parse: ({ id }) => {
       const parsed = Number(id);
-      if (!Number.isInteger(parsed) || parsed < 1) throw new Error(`Invalid event id: ${id}`);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new Error(`Invalid event id: ${id}`);
+      }
       return { id: parsed };
     },
     stringify: ({ id }) => ({ id: String(id) }),

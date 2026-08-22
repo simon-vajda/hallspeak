@@ -37,8 +37,12 @@ export interface MediaStats {
 }
 
 export function gradeStats(stats: MediaStats): ConnectionGrade {
-  if (stats.packetLoss >= POOR_LOSS || stats.jitter >= POOR_JITTER) return 'poor';
-  if (stats.packetLoss >= FAIR_LOSS || stats.jitter >= FAIR_JITTER) return 'fair';
+  if (stats.packetLoss >= POOR_LOSS || stats.jitter >= POOR_JITTER) {
+    return 'poor';
+  }
+  if (stats.packetLoss >= FAIR_LOSS || stats.jitter >= FAIR_JITTER) {
+    return 'fair';
+  }
   return 'good';
 }
 
@@ -56,18 +60,30 @@ export interface ConnectionInput {
 
 export function connectionState(input: ConnectionInput): ConnectionState {
   // The socket first: without it, nothing else the client believes is current.
-  if (!input.socketConnected) return { kind: 'reconnecting' };
-  if (input.mediaTrouble) return { kind: 'trouble' };
-  if (!input.live) return { kind: 'offline' };
-  if (input.paused === null) return { kind: 'syncing' };
+  if (!input.socketConnected) {
+    return { kind: 'reconnecting' };
+  }
+  if (input.mediaTrouble) {
+    return { kind: 'trouble' };
+  }
+  if (!input.live) {
+    return { kind: 'offline' };
+  }
+  if (input.paused === null) {
+    return { kind: 'syncing' };
+  }
   /**
    * A paused producer sends nothing, so there is nothing to grade. Graded anyway, the
    * report covering the moment of the mute reads the stopped stream's tail as loss — and
    * because no fresher report can arrive while nothing is being sent, that reading
    * freezes and the line blames the network for the speaker's own mute.
    */
-  if (input.paused) return { kind: 'paused' };
-  if (!input.stats) return { kind: 'idle' };
+  if (input.paused) {
+    return { kind: 'paused' };
+  }
+  if (!input.stats) {
+    return { kind: 'idle' };
+  }
   return { kind: 'flowing', grade: gradeStats(input.stats) };
 }
 
@@ -75,8 +91,12 @@ export function connectionState(input: ConnectionInput): ConnectionState {
 export const BAR_COUNT = 9;
 
 export function filledBars(state: ConnectionState): number {
-  if (state.kind !== 'flowing') return 0;
-  if (state.grade === 'good') return BAR_COUNT;
+  if (state.kind !== 'flowing') {
+    return 0;
+  }
+  if (state.grade === 'good') {
+    return BAR_COUNT;
+  }
   return state.grade === 'fair' ? 6 : 3;
 }
 
@@ -132,12 +152,16 @@ export function summarise(report: StatsSample, previous?: StatsSample): MediaSta
   if (report.fractionLost !== undefined) {
     return { packetLoss: report.fractionLost, jitter };
   }
-  if (report.packetsReceived === undefined) return null;
+  if (report.packetsReceived === undefined) {
+    return null;
+  }
 
   const received = report.packetsReceived - (previous?.packetsReceived ?? 0);
   const lost = (report.packetsLost ?? 0) - (previous?.packetsLost ?? 0);
   const total = received + lost;
   // Nothing moved since the last sample: no rate to give, rather than a fabricated zero.
-  if (total <= 0) return null;
+  if (total <= 0) {
+    return null;
+  }
   return { packetLoss: Math.max(0, lost) / total, jitter };
 }

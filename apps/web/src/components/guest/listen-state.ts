@@ -37,16 +37,32 @@ export interface ListenInput {
  */
 export function listenState(input: ListenInput): ListenState {
   // Failures outrank broadcast status, including a stale mute held through reconnect.
-  if (input.terminal) return 'ended';
+  if (input.terminal) {
+    return 'ended';
+  }
   // Before the guest arms, only a connected producer's known or pending mute is useful.
   // Initial connection and media plumbing stay behind the ordinary tap-to-listen state.
-  if (!input.armed && (!input.socketConnected || input.mediaTrouble || !input.live)) return 'idle';
-  if (!input.socketConnected) return 'reconnecting';
-  if (input.mediaTrouble) return 'media-trouble';
-  if (!input.live) return input.armed ? 'interpreter-away' : 'idle';
-  if (input.muted === null) return 'syncing';
-  if (input.muted) return 'muted';
-  if (!input.armed) return 'idle';
+  if (!input.armed && (!input.socketConnected || input.mediaTrouble || !input.live)) {
+    return 'idle';
+  }
+  if (!input.socketConnected) {
+    return 'reconnecting';
+  }
+  if (input.mediaTrouble) {
+    return 'media-trouble';
+  }
+  if (!input.live) {
+    return input.armed ? 'interpreter-away' : 'idle';
+  }
+  if (input.muted === null) {
+    return 'syncing';
+  }
+  if (input.muted) {
+    return 'muted';
+  }
+  if (!input.armed) {
+    return 'idle';
+  }
   return input.isPlaying ? 'playing' : 'waiting';
 }
 
@@ -58,8 +74,12 @@ export function listenActionState(input: {
   isPlaying: boolean;
   terminal: boolean;
 }): ListenActionState {
-  if (input.terminal) return 'ended';
-  if (!input.armed) return 'idle';
+  if (input.terminal) {
+    return 'ended';
+  }
+  if (!input.armed) {
+    return 'idle';
+  }
   return input.isPlaying ? 'playing' : 'waiting';
 }
 

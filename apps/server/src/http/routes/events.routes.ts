@@ -24,7 +24,9 @@ export const publicEventRoutes = app
   .openapi(routes.getPublicEvent, (c) => {
     const { pin } = c.req.valid('param');
     const event = findEnabledEventByPin(db, pin);
-    if (!event) return c.json(NOT_FOUND, 404);
+    if (!event) {
+      return c.json(NOT_FOUND, 404);
+    }
 
     return c.json(
       {
@@ -42,11 +44,15 @@ export const publicEventRoutes = app
     const speakerCode = c.req.valid('query').speaker_code || undefined;
 
     const event = findEnabledEventByPin(db, pin);
-    if (!event) return c.json(NOT_FOUND, 404);
+    if (!event) {
+      return c.json(NOT_FOUND, 404);
+    }
 
     const channel = findEnabledChannelBySlug(db, event.id, slug);
     // Before the code, so a valid code on a disabled channel still 404s.
-    if (!channel) return c.json(NOT_FOUND, 404);
+    if (!channel) {
+      return c.json(NOT_FOUND, 404);
+    }
 
     if (speakerCode !== undefined && speakerCode !== channel.speakerCode) {
       return c.json(

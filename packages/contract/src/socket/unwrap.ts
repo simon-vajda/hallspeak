@@ -15,6 +15,8 @@ export class SocketError extends Error {
  * Application failures throw SocketError; timeouts reject with Socket.IO's own Error.
  */
 export function unwrap<T>(res: Ack<T>): T {
-  if (!res.ok) throw new SocketError(res.error.code, res.error.message);
+  if (!res.ok) {
+    throw new SocketError(res.error.code, res.error.message);
+  }
   return res.data;
 }

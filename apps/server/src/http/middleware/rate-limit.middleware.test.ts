@@ -91,7 +91,9 @@ function buildFor(options: {
   app.get('/miss', (c) => c.json({ code: 'not_found', message: 'Not found.' }, 404));
   app.get('/refused', async (c) => {
     // Stands in for the deliberately slow hash a real sign-in awaits.
-    if (options.slowMs) await new Promise((resolve) => setTimeout(resolve, options.slowMs));
+    if (options.slowMs) {
+      await new Promise((resolve) => setTimeout(resolve, options.slowMs));
+    }
     return c.json({ code: 'invalid_credentials', message: 'No.' }, 401);
   });
   app.get('/ok', (c) => c.json({ ok: true }));

@@ -39,7 +39,9 @@ fetchClient.use({
       onUnauthenticated?.();
     }
 
-    if (response.ok || (await response.clone().text()) !== '') return;
+    if (response.ok || (await response.clone().text()) !== '') {
+      return;
+    }
 
     return unavailable(response.status, `The server returned ${response.status}.`);
   },

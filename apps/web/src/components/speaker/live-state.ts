@@ -66,10 +66,18 @@ export interface BroadcastInput {
 
 export function broadcastState(input: BroadcastInput): BroadcastState {
   // A takeover ends this session outright; nothing below it can apply.
-  if (input.displaced) return 'displaced';
-  if (!input.goLivePressed) return 'pre-flight';
-  if (!input.hasProducer) return 'connecting';
-  if (input.recoveredSilently) return 'back-from-drop';
+  if (input.displaced) {
+    return 'displaced';
+  }
+  if (!input.goLivePressed) {
+    return 'pre-flight';
+  }
+  if (!input.hasProducer) {
+    return 'connecting';
+  }
+  if (input.recoveredSilently) {
+    return 'back-from-drop';
+  }
   return input.isMuted ? 'muted' : 'live';
 }
 
@@ -100,8 +108,14 @@ export type ReconnectAction = { type: 'none' } | { type: 're-produce'; paused: t
  * lands muted on the one path that has to just work.
  */
 export function onReconnect(input: ReconnectInput): ReconnectAction {
-  if (input.displaced) return { type: 'none' };
-  if (!input.goLivePressed) return { type: 'none' };
-  if (input.lastEnd !== 'dropped') return { type: 'none' };
+  if (input.displaced) {
+    return { type: 'none' };
+  }
+  if (!input.goLivePressed) {
+    return { type: 'none' };
+  }
+  if (input.lastEnd !== 'dropped') {
+    return { type: 'none' };
+  }
   return { type: 're-produce', paused: true };
 }

@@ -42,7 +42,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     };
 
     apply();
-    if (theme !== 'system') return;
+    if (theme !== 'system') {
+      return;
+    }
 
     // Only 'system' tracks the OS; an explicit choice must not be overridden by it.
     const query = window.matchMedia('(prefers-color-scheme: dark)');
@@ -64,6 +66,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 export function useTheme() {
   const context = use(ThemeContext);
-  if (!context) throw new Error('useTheme must be used within a ThemeProvider');
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
   return context;
 }

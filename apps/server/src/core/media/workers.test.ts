@@ -19,7 +19,9 @@ class FakeRouter extends EventEmitter {
   closed = false;
   readonly observer = new EventEmitter();
   close() {
-    if (this.closed) return;
+    if (this.closed) {
+      return;
+    }
     this.closed = true;
     this.observer.emit('close');
   }
@@ -34,12 +36,16 @@ class FakeWorker extends EventEmitter {
 
   // biome-ignore lint/suspicious/noExplicitAny: a stand-in for mediasoup's Worker.
   async createWebRtcServer(options: any) {
-    for (const info of options.listenInfos) this.listenPorts.push(info.port);
+    for (const info of options.listenInfos) {
+      this.listenPorts.push(info.port);
+    }
     return { close: () => {} };
   }
 
   async createRouter() {
-    if (this.hangOnCreateRouter) return new Promise<FakeRouter>(() => {});
+    if (this.hangOnCreateRouter) {
+      return new Promise<FakeRouter>(() => {});
+    }
     const router = new FakeRouter();
     this.routers.push(router);
     return router;
@@ -196,7 +202,9 @@ describe('WorkerPool.createRouter', () => {
     const { pool, spawned } = harness({ maxWorkers: 1 }, 1);
     await pool.start();
     const worker = spawned[0];
-    if (!worker) throw new Error('no worker');
+    if (!worker) {
+      throw new Error('no worker');
+    }
     worker.hangOnCreateRouter = true;
 
     const creation = pool.createRouter();

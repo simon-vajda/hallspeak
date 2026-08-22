@@ -24,7 +24,9 @@ describe('rms', () => {
 
   it('reads a full-swing signal as ~1', () => {
     const full = new Float32Array(256);
-    for (let i = 0; i < full.length; i++) full[i] = i % 2 === 0 ? -1 : 1;
+    for (let i = 0; i < full.length; i++) {
+      full[i] = i % 2 === 0 ? -1 : 1;
+    }
     expect(rms(full)).toBeCloseTo(1, 5);
   });
 
@@ -154,7 +156,9 @@ describe('holdPeak', () => {
 
   it('reaches the lower level eventually', () => {
     let peak = 0.9;
-    for (let i = 0; i < 400; i++) peak = holdPeak(peak, 0.1, 16);
+    for (let i = 0; i < 400; i++) {
+      peak = holdPeak(peak, 0.1, 16);
+    }
     expect(peak).toBeCloseTo(0.1, 2);
   });
 

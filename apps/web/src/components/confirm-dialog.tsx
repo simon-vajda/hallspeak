@@ -65,7 +65,9 @@ export function ConfirmDialog({
       // Closing is refused mid-flight: the error line below is the only report a failure gets,
       // so dismissing early makes a failed destructive action look like one that worked.
       onOpenChange={(next) => {
-        if (next || !pending) onOpenChange(next);
+        if (next || !pending) {
+          onOpenChange(next);
+        }
       }}
     >
       {/* No close cross: the two named buttons are the only ways out, so neither choice is

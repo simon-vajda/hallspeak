@@ -25,7 +25,9 @@ export function useConnectionToast(status: SocketStatus) {
       return;
     }
 
-    if (!hasConnected.current || status === 'idle') return;
+    if (!hasConnected.current || status === 'idle') {
+      return;
+    }
 
     const timer = setTimeout(() => {
       toast.loading(status === 'error' ? 'Connection lost' : 'Reconnecting…', {

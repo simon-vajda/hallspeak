@@ -55,7 +55,9 @@ class FakeRouter {
 
   // biome-ignore lint/suspicious/noExplicitAny: a stand-in for mediasoup's Router.
   async createWebRtcTransport(_options: any): Promise<any> {
-    if (this.failNextTransport) throw new Error('port allocation failed');
+    if (this.failNextTransport) {
+      throw new Error('port allocation failed');
+    }
     const transport = {
       id: `t${this.created.length}`,
       closed: false,

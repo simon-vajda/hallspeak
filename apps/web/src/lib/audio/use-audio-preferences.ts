@@ -81,7 +81,9 @@ export function useAudioPreferences() {
   // `beforeunload` does not on iOS Safari.
   useEffect(() => {
     const flush = () => {
-      if (!pending.current) return;
+      if (!pending.current) {
+        return;
+      }
       pending.current = false;
       writeStoredPreferences(latest.current, persisted.current);
       persisted.current = latest.current;

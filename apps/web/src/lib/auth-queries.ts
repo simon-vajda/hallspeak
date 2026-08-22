@@ -22,12 +22,16 @@ export const sessionKey = () => sessionQueryOptions().queryKey;
 const SENTINEL_ORIGIN = 'http://internal.invalid';
 
 export function internalPath(value: unknown): string | undefined {
-  if (typeof value !== 'string' || !value.startsWith('/')) return undefined;
+  if (typeof value !== 'string' || !value.startsWith('/')) {
+    return undefined;
+  }
 
   try {
     const url = new URL(value, SENTINEL_ORIGIN);
     // Anything that resolved to another origin was a host in disguise.
-    if (url.origin !== SENTINEL_ORIGIN) return undefined;
+    if (url.origin !== SENTINEL_ORIGIN) {
+      return undefined;
+    }
     return `${url.pathname}${url.search}${url.hash}`;
   } catch {
     return undefined;

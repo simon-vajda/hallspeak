@@ -34,12 +34,17 @@ export function shapeDevices(devices: readonly DeviceInfoLike[]): MicDevice[] {
   const groups = new Map<string, [DeviceInfoLike, ...DeviceInfoLike[]]>();
 
   for (const device of devices) {
-    if (device.kind !== 'audioinput') continue;
+    if (device.kind !== 'audioinput') {
+      continue;
+    }
     // An empty groupId is Firefox saying "unknown", not "same device as the last unknown".
     const key = device.groupId === '' ? `device:${device.deviceId}` : `group:${device.groupId}`;
     const members = groups.get(key);
-    if (members) members.push(device);
-    else groups.set(key, [device]);
+    if (members) {
+      members.push(device);
+    } else {
+      groups.set(key, [device]);
+    }
   }
 
   return [...groups.values()].map((members, index) => {
@@ -59,6 +64,8 @@ export function resolveSelection(
   devices: readonly MicDevice[],
   selected: string | null,
 ): string | null {
-  if (selected !== null && devices.some((d) => d.deviceId === selected)) return selected;
+  if (selected !== null && devices.some((d) => d.deviceId === selected)) {
+    return selected;
+  }
   return devices[0]?.deviceId ?? null;
 }

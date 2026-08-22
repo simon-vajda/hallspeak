@@ -20,8 +20,12 @@ export const Route = createFileRoute('/events/$pin/$slug')({
 
 /** Maps the handshake gate's connect_error to a message. Never a 404 — see useSocket. */
 function socketMessage(code: string): string {
-  if (code === 'channel_busy') return 'Someone is already speaking on this channel.';
-  if (code === 'client_too_old') return 'This page is out of date. Reload it.';
+  if (code === 'channel_busy') {
+    return 'Someone is already speaking on this channel.';
+  }
+  if (code === 'client_too_old') {
+    return 'This page is out of date. Reload it.';
+  }
   return `Connection failed: ${code}`;
 }
 
@@ -64,12 +68,15 @@ function ChannelPage() {
 
   // A speaker is already in its channel room from the handshake; a listener has to ask.
   useEffect(() => {
-    if (!socket || status !== 'connected' || role !== 'listener' || httpOnline === undefined)
+    if (!socket || status !== 'connected' || role !== 'listener' || httpOnline === undefined) {
       return;
+    }
     let cancelled = false;
     setJoinFailed(false);
     void joinChannel(slug, httpOnline).catch(() => {
-      if (!cancelled) setJoinFailed(true);
+      if (!cancelled) {
+        setJoinFailed(true);
+      }
     });
     return () => {
       cancelled = true;

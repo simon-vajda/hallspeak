@@ -55,7 +55,9 @@ export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'>
   // drops into a slide or a print shop's upload form without anyone converting anything.
   const download = () => {
     const canvas = downloadRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      return;
+    }
 
     const link = document.createElement('a');
     link.href = canvas.toDataURL('image/png');

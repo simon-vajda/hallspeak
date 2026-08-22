@@ -56,7 +56,9 @@ export class Room {
   /** One read of the current producer owns both public broadcast-status bits. */
   channelStatus(channelId: number): { online: boolean; muted: boolean } {
     const producer = this.producers.get(channelId);
-    if (!producer || producer.closed) return { online: false, muted: false };
+    if (!producer || producer.closed) {
+      return { online: false, muted: false };
+    }
     return { online: true, muted: producer.paused };
   }
 
@@ -65,13 +67,17 @@ export class Room {
     this.producers.get(channelId)?.close();
     this.producers.set(channelId, producer);
     producer.observer.once('close', () => {
-      if (this.producers.get(channelId) === producer) this.producers.delete(channelId);
+      if (this.producers.get(channelId) === producer) {
+        this.producers.delete(channelId);
+      }
     });
   }
 
   closeProducer(channelId: number): void {
     const producer = this.producers.get(channelId);
-    if (!producer) return;
+    if (!producer) {
+      return;
+    }
     this.producers.delete(channelId);
     producer.close();
   }
@@ -96,10 +102,14 @@ export class Room {
    */
   listenerCount(channelId: number): number {
     const producer = this.producers.get(channelId);
-    if (!producer || producer.closed) return 0;
+    if (!producer || producer.closed) {
+      return 0;
+    }
     let count = 0;
     for (const peer of this.peers.values()) {
-      if (peer.isListeningTo(producer.id)) count += 1;
+      if (peer.isListeningTo(producer.id)) {
+        count += 1;
+      }
     }
     return count;
   }
@@ -113,7 +123,9 @@ export class Room {
 
   peerFor(socketId: string): Peer {
     const existing = this.peers.get(socketId);
-    if (existing) return existing;
+    if (existing) {
+      return existing;
+    }
     const peer = new Peer(socketId);
     this.peers.set(socketId, peer);
     return peer;
@@ -125,7 +137,9 @@ export class Room {
 
   closePeer(socketId: string): void {
     const peer = this.peers.get(socketId);
-    if (!peer) return;
+    if (!peer) {
+      return;
+    }
     this.peers.delete(socketId);
     peer.close();
   }
@@ -178,19 +192,29 @@ export class Room {
 
   /** No producers and nothing attached: the state the idle teardown timer waits for. */
   get isIdle(): boolean {
-    if (this.producers.size > 0) return false;
+    if (this.producers.size > 0) {
+      return false;
+    }
     for (const peer of this.peers.values()) {
-      if (peer.transportCount > 0) return false;
+      if (peer.transportCount > 0) {
+        return false;
+      }
     }
     return true;
   }
 
   close(): void {
-    if (this.closed) return;
+    if (this.closed) {
+      return;
+    }
     this.closed = true;
-    for (const producer of this.producers.values()) producer.close();
+    for (const producer of this.producers.values()) {
+      producer.close();
+    }
     this.producers.clear();
-    for (const peer of this.peers.values()) peer.close();
+    for (const peer of this.peers.values()) {
+      peer.close();
+    }
     this.peers.clear();
     this.router.close();
   }

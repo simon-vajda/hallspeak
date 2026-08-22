@@ -25,9 +25,13 @@ const channelNotFound = { code: 'not_found', message: 'No such channel.' } as co
 export const adminChannelRoutes = new OpenAPIHono({ defaultHook })
   .openapi(routes.adminPatchChannel, (c) => {
     const updated = updateChannel(db, c.req.valid('param').id, c.req.valid('json'));
-    if (!updated) return c.json(channelNotFound, 404);
+    if (!updated) {
+      return c.json(channelNotFound, 404);
+    }
     // Only disabling revokes; a rename or an enable takes nobody's access away.
-    if (updated.enabled === false) revokeChannel(updated.eventId, updated.id, 'access_revoked');
+    if (updated.enabled === false) {
+      revokeChannel(updated.eventId, updated.id, 'access_revoked');
+    }
     return c.json(toAdminChannel(updated), 200);
   })
 
@@ -35,14 +39,20 @@ export const adminChannelRoutes = new OpenAPIHono({ defaultHook })
     const { id } = c.req.valid('param');
     // Read before the delete: the row is what names the event to revoke against.
     const channel = getChannelById(db, id);
-    if (!deleteChannel(db, id)) return c.json(channelNotFound, 404);
-    if (channel) revokeChannel(channel.eventId, channel.id, 'access_revoked');
+    if (!deleteChannel(db, id)) {
+      return c.json(channelNotFound, 404);
+    }
+    if (channel) {
+      revokeChannel(channel.eventId, channel.id, 'access_revoked');
+    }
     return c.body(null, 204);
   })
 
   .openapi(routes.adminRegenerateSpeakerCode, (c) => {
     const updated = regenerateSpeakerCode(db, c.req.valid('param').id);
-    if (!updated) return c.json(channelNotFound, 404);
+    if (!updated) {
+      return c.json(channelNotFound, 404);
+    }
     // The sole mitigation for a leaked speaker code, and worth nothing unless it also
     // evicts whoever is holding the old one right now.
     revokeChannel(updated.eventId, updated.id, 'access_revoked');

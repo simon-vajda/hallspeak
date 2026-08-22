@@ -21,7 +21,9 @@ export function ChannelStrip({
   pin: string;
   className?: string;
 }) {
-  if (channels.length < 2) return null;
+  if (channels.length < 2) {
+    return null;
+  }
 
   return (
     <nav aria-label="Channels" className={cn('hidden border-b border-border lg:block', className)}>

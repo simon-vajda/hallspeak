@@ -8,7 +8,9 @@ export function semverLt(a: string, b: string): boolean {
   for (let i = 0; i < 3; i++) {
     const x = left[i] ?? 0;
     const y = right[i] ?? 0;
-    if (x !== y) return x < y;
+    if (x !== y) {
+      return x < y;
+    }
   }
   return false;
 }
