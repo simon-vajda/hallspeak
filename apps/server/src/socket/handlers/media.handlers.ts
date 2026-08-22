@@ -72,7 +72,7 @@ export async function startProducing(
   db: Db,
   socket: MediaSocket,
   auth: SocketAuth,
-  payload: { slug: string; rtpParameters: Wire },
+  payload: { slug: string; rtpParameters: Wire; paused: boolean },
 ) {
   const channel = channelOrThrow(db, auth, payload.slug);
   // Holding the claim is the whole authorization to broadcast; the handshake took it.
@@ -83,6 +83,7 @@ export async function startProducing(
     channelId: channel.id,
     slug: channel.slug,
     rtpParameters: asMediasoup<types.RtpParameters>(payload.rtpParameters),
+    paused: payload.paused,
   });
 }
 

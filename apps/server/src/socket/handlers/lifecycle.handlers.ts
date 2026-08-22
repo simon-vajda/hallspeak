@@ -9,7 +9,10 @@ import { eventRoom } from '../lib/rooms';
 /** The subset of Server this module needs; a real Server satisfies it. */
 export interface LifecycleServer {
   to(room: string): {
-    emit(event: 'channel:status', payload: { slug: string; online: boolean }): unknown;
+    emit(
+      event: 'channel:status',
+      payload: { slug: string; online: boolean; muted: boolean },
+    ): unknown;
     emit(event: 'media:reset', payload: { reason: 'worker_died' }): unknown;
     emit(event: 'channel:listeners', payload: { slug: string; count: number }): unknown;
   };
@@ -46,9 +49,11 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
   switch (notification.type) {
     case 'producer-opened':
     case 'producer-closed':
+    case 'producer-paused':
+    case 'producer-resumed':
       io.to(eventRoom(notification.eventId)).emit('channel:status', {
         slug: notification.slug,
-        online: notification.type === 'producer-opened',
+        ...media.channelStatus(notification.eventId, notification.channelId),
       });
       return;
 
