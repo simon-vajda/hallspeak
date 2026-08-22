@@ -319,8 +319,8 @@ describe('applyNotification room eviction', () => {
 
 describe('applyNotification listener counts', () => {
   /**
-   * KTD11: every listening guest is in the channel room, so a room-scoped emit would hand
-   * n guests a number meant for the one speaker. The claim holder is addressed directly.
+   * Every listening guest is in the channel room, so a room-scoped emit would hand n
+   * guests a number meant for the one speaker. The claim holder is addressed directly.
    */
   it('emits to the claim holder’s socket and to no room at all', () => {
     const { io, emitted } = fakeIo();

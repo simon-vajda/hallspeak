@@ -354,8 +354,8 @@ export async function consume(
     throw new AppError('incompatible_client', 'This device cannot play that audio.');
   }
 
-  // Paused, per KTD13: unpaused races RTP against the client's decoder setup, which is
-  // the most commonly reported cause of artefacts at join.
+  // Created paused because unpaused RTP races the client's decoder setup, which is the
+  // most commonly reported cause of artefacts at join.
   const slug = room.producerSlug(input.channelId) ?? '';
   const consumer = await transport.consume({
     producerId: producer.id,

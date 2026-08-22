@@ -114,8 +114,8 @@ export function consumerClosed(state: MediaState, slug: string): MediaState {
  * and arming before anyone is live is neither.
  *
  * Closing the channels the guest is no longer on is what makes a switch a consumer swap
- * on the one transport. Skipped, the old consumer stays open and its audio keeps
- * arriving, which is the leak R27 exists to prevent.
+ * on the one transport. Otherwise, the old consumer stays open and its audio keeps
+ * arriving alongside the newly selected channel.
  */
 export interface ConsumerPlan {
   close: string[];

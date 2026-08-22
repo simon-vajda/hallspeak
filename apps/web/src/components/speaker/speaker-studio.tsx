@@ -157,10 +157,9 @@ export function SpeakerStudio({
   }, [status, goLivePressed, lastEnd]);
 
   /**
-   * The whole of R44: after an involuntary drop the client rebuilds and re-produces on its
-   * own, but paused, so the interpreter's one action is to unmute. After a deliberate end
-   * it does nothing — a broadcast somebody chose to stop must not restart itself because
-   * the Wi-Fi blinked.
+   * After an involuntary drop the client rebuilds and re-produces on its own, but paused,
+   * so the interpreter's one action is to unmute. After a deliberate end it does nothing —
+   * a broadcast somebody chose to stop must not restart itself because the Wi-Fi blinked.
    */
   useEffect(() => {
     if (status !== 'connected' || hasProducer || !outputTrack) return;

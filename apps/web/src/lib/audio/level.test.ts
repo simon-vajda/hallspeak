@@ -168,7 +168,7 @@ describe('holdPeak', () => {
   });
 });
 
-// KTD10: this is the whole reason the clip indicator reads a peak-hold instead of the fill.
+// A peak-hold catches brief clipping that the smoothed meter fill deliberately hides.
 describe('a short clipping burst', () => {
   it('reads as peaking on the frame it lands, where the smoothed fill does not', () => {
     const smoothed = smoothLevel(0.4, 0.98, 16);

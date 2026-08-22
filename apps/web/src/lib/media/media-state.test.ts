@@ -146,7 +146,7 @@ describe('consumerPlan', () => {
     });
   });
 
-  /** The leak R27 exists to prevent: the old channel's audio keeps arriving otherwise. */
+  /** Closing the old consumer prevents its audio continuing after the channel switch. */
   it('closes the previous channel and opens the new one on a switch', () => {
     expect(consumerPlan({ consumers: listening, armedSlug: 'spanish', online: true })).toEqual({
       close: ['english'],
