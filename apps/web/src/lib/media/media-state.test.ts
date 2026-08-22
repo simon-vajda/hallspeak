@@ -122,6 +122,16 @@ describe('consumerPlan', () => {
     });
   });
 
+  it('keeps the same consumer plan when an online producer mutes and resumes', () => {
+    const beforeMute = consumerPlan({ consumers: listening, armedSlug: 'english', online: true });
+    const whileMuted = consumerPlan({ consumers: listening, armedSlug: 'english', online: true });
+    const afterResume = consumerPlan({ consumers: listening, armedSlug: 'english', online: true });
+
+    expect(whileMuted).toEqual(beforeMute);
+    expect(afterResume).toEqual(beforeMute);
+    expect(whileMuted).toEqual({ close: [], consume: null });
+  });
+
   it('closes the consumer when the interpreter goes away, and asks for nothing', () => {
     expect(consumerPlan({ consumers: listening, armedSlug: 'english', online: false })).toEqual({
       close: ['english'],
