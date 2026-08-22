@@ -214,8 +214,7 @@ export function SpeakerStudio({
   if (goLivePressed) {
     return (
       <OnAir
-        channelName={channel.name}
-        channelSlug={channel.slug}
+        channel={channel}
         eventName={eventName}
         pin={pin}
         mic={mic}
@@ -361,8 +360,7 @@ export function SpeakerStudio({
  * interpreter unmutes, which is the one thing that screen has to ask for.
  */
 function OnAir({
-  channelName,
-  channelSlug,
+  channel,
   eventName,
   pin,
   mic,
@@ -377,8 +375,7 @@ function OnAir({
   status,
   socketError,
 }: {
-  channelName: string;
-  channelSlug: string;
+  channel: PublicChannel;
   eventName: string;
   pin: string;
   mic: ReturnType<typeof useMicCapture>;
@@ -422,7 +419,7 @@ function OnAir({
         </header>
 
         <h1 className="mt-4 text-screen lg:mt-3.5 lg:mb-7.5 lg:text-[40px] lg:leading-[1.03] lg:tracking-[-0.045em]">
-          {channelName}
+          {channel.name}
         </h1>
 
         <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-0 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start lg:gap-x-8.5 lg:gap-y-4">
@@ -473,7 +470,7 @@ function OnAir({
             >
               End broadcast
             </Button>
-            <ListenerPageLink pin={pin} slug={channelSlug} className="mt-2" />
+            <ListenerPageLink pin={pin} slug={channel.slug} className="mt-2" />
           </div>
         </div>
       </main>

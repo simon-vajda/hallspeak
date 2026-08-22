@@ -5,6 +5,7 @@ import { $api } from '@/api/client';
 import { GuestMessage, GuestMessageAction } from '@/components/guest/guest-message';
 import { ListenerRoom } from '@/components/guest/listener-room';
 import { SpeakerStudio } from '@/components/speaker/speaker-studio';
+import { channelStatusFromHttp } from '@/lib/channel-status';
 import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useSocket } from '@/lib/use-socket';
 
@@ -117,8 +118,9 @@ function ChannelPage() {
   }
 
   const authoritativeStatus = channelStatuses[slug];
-  const isLive = authoritativeStatus?.online ?? online[slug] ?? data.channel.online;
-  const muted = authoritativeStatus?.muted ?? (isLive ? null : false);
+  const currentStatus = authoritativeStatus ?? channelStatusFromHttp(data.channel.online);
+  const isLive = currentStatus.online;
+  const muted = currentStatus.muted;
   const message = socketError ? socketMessage(socketError) : null;
 
   // The server only answers `speaker` to a request that carried a code, so the second half

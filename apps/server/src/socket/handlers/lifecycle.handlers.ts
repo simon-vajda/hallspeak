@@ -4,7 +4,7 @@ import * as media from '../../core/media';
 import type { Notification } from '../../core/notifications';
 import { presence } from '../../core/presence';
 import type { Db } from '../../db/client';
-import { eventRoom } from '../lib/rooms';
+import { channelRoom, eventRoom } from '../lib/rooms';
 
 /** The subset of Server this module needs; a real Server satisfies it. */
 export interface LifecycleServer {
@@ -49,9 +49,15 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
   switch (notification.type) {
     case 'producer-opened':
     case 'producer-closed':
+      io.to(eventRoom(notification.eventId)).emit('channel:status', {
+        slug: notification.slug,
+        ...media.channelStatus(notification.eventId, notification.channelId),
+      });
+      return;
+
     case 'producer-paused':
     case 'producer-resumed':
-      io.to(eventRoom(notification.eventId)).emit('channel:status', {
+      io.to(channelRoom(notification.channelId)).emit('channel:status', {
         slug: notification.slug,
         ...media.channelStatus(notification.eventId, notification.channelId),
       });

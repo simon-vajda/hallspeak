@@ -60,7 +60,7 @@ export function resetStatusOrdering(state: ChannelStatusState): ChannelStatusSta
     channels: Object.fromEntries(
       Object.entries(state.channels).map(([slug, status]) => [
         slug,
-        { ...status, muted: status.online ? null : false, revision: 0 },
+        { ...status, ...channelStatusFromHttp(status.online), revision: 0 },
       ]),
     ),
   };
