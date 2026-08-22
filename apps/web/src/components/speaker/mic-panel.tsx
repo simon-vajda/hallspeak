@@ -59,7 +59,15 @@ export function MicPanel({
   const empty = status === 'ready' && devices.length === 0;
 
   return (
-    <section className={cn('rounded-lg bg-secondary px-5 py-4.5 lg:p-5.5', className)}>
+    <section
+      className={cn(
+        // Not a card inside the settings surface: nesting one there would inset these rows
+        // further than the gain slider under them. `min-w-0` lets the device name truncate
+        // rather than setting a min-content width the surface has to grow to.
+        inSettings ? 'min-w-0' : 'rounded-lg bg-secondary px-5 py-4.5 lg:p-5.5',
+        className,
+      )}
+    >
       <h2 className="text-label text-muted-foreground uppercase">Microphone</h2>
 
       {blocked || empty ? (
@@ -80,7 +88,7 @@ export function MicPanel({
           >
             {/* The trigger's height is a `data-[size]` variant, so a plain `h-11` loses on
                 specificity and the override has to be written at the same weight. */}
-            <SelectTrigger className="mt-2.25 w-full gap-2.5 rounded-full border-border bg-background px-4 font-semibold text-sm data-[size=default]:h-11 lg:mt-2.5 lg:px-4.5 lg:data-[size=default]:h-11.5">
+            <SelectTrigger className="mt-2.25 w-full min-w-0 gap-2.5 rounded-full border-border bg-background px-4 font-semibold text-sm data-[size=default]:h-11 lg:mt-2.5 lg:px-4.5 lg:data-[size=default]:h-11.5">
               <Mic className="size-4.25 stroke-[2.25]" />
               <SelectValue placeholder="Opening the microphone…" />
             </SelectTrigger>

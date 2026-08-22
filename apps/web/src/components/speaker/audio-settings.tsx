@@ -58,7 +58,10 @@ export function AudioSettings({ className, ...props }: Props) {
       <Dialog>
         <DialogTrigger className={trigger}>{row}</DialogTrigger>
         {/* Centred rather than anchored, and held to the width the settings body was drawn at. */}
-        <DialogContent showCloseButton={false} className="w-85 gap-0 rounded-lg p-5 sm:max-w-85">
+        <DialogContent
+          showCloseButton={false}
+          className="grid-cols-[minmax(0,1fr)] gap-0 rounded-lg p-5.5 sm:max-w-100"
+        >
           <div className="mb-3.5 flex items-baseline justify-between gap-3">
             <DialogTitle className="text-section">Audio</DialogTitle>
             {/* `Done` as on the sheet: a modal dialog needs a way out that is not the backdrop. */}
@@ -113,14 +116,14 @@ function SettingsBody({ mic, preferences, onPreferencesChange }: Omit<Props, 'cl
         preferences={preferences}
         onPreferencesChange={onPreferencesChange}
         inSettings
-        className="lg:p-5"
       />
 
+      {/* The rule the card used to draw: without it the gain reads as part of the row above. */}
       <GainSlider
         gain={preferences.gain}
         onGainChange={(gain) => onPreferencesChange({ gain })}
         disabled={preferences.autoGain}
-        className="mt-3.5"
+        className="mt-3.5 border-t border-border pt-3.5"
       />
 
       <p className="mt-3.5 text-note text-muted-foreground">
