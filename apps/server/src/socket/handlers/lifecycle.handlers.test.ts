@@ -2,7 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SocketAuth } from '../../core/access';
 import { createChannel } from '../../core/channels.service';
 import { createEvent } from '../../core/events.service';
-import { consume, createTransport, isOnline, resumeConsumer } from '../../core/media';
+import {
+  closeProducer,
+  consume,
+  createTransport,
+  isOnline,
+  pauseProducer,
+  produce,
+  resumeConsumer,
+  resumeProducer,
+} from '../../core/media';
 import { goLive, startFakeMedia } from '../../core/media/testing';
 import { presence } from '../../core/presence';
 import type { Db } from '../../db/client';
@@ -100,8 +109,9 @@ describe('releaseSocket', () => {
 });
 
 describe('applyNotification producer lifecycle', () => {
-  it('broadcasts online to the event room, not the channel room', () => {
+  it('broadcasts the current online and muted snapshot to the event room', async () => {
     const { io, emitted } = fakeIo();
+    await goLive({ eventId: EVENT, socketId: 'speaker-a', channelId: ENGLISH, slug: 'english' });
 
     applyNotification(io, {
       type: 'producer-opened',
@@ -114,13 +124,74 @@ describe('applyNotification producer lifecycle', () => {
       {
         room: eventRoom(EVENT),
         event: 'channel:status',
-        payload: { slug: 'english', online: true },
+        payload: { slug: 'english', online: true, muted: false },
       },
     ]);
   });
 
-  it('broadcasts offline when the producer closes', () => {
+  it('broadcasts muted on the opened invalidation for an initially paused producer', async () => {
     const { io, emitted } = fakeIo();
+    await createTransport({ eventId: EVENT, socketId: 'speaker-a' }, 'send', { create: true });
+    await produce(
+      { eventId: EVENT, socketId: 'speaker-a' },
+      {
+        channelId: ENGLISH,
+        slug: 'english',
+        rtpParameters: { codecs: [] },
+        paused: true,
+      },
+    );
+
+    applyNotification(io, {
+      type: 'producer-opened',
+      eventId: EVENT,
+      channelId: ENGLISH,
+      slug: 'english',
+    });
+
+    expect(emitted[0]?.payload).toEqual({ slug: 'english', online: true, muted: true });
+  });
+
+  it('broadcasts mute and resume without changing online', async () => {
+    const { io, emitted } = fakeIo();
+    const { producerId } = await goLive({
+      eventId: EVENT,
+      socketId: 'speaker-a',
+      channelId: ENGLISH,
+      slug: 'english',
+    });
+    const ctx = { eventId: EVENT, socketId: 'speaker-a' };
+    await pauseProducer(ctx, ENGLISH, producerId);
+    applyNotification(io, {
+      type: 'producer-paused',
+      eventId: EVENT,
+      channelId: ENGLISH,
+      slug: 'english',
+    });
+    await resumeProducer(ctx, ENGLISH, producerId);
+    applyNotification(io, {
+      type: 'producer-resumed',
+      eventId: EVENT,
+      channelId: ENGLISH,
+      slug: 'english',
+    });
+
+    expect(emitted.map((entry) => entry.payload)).toEqual([
+      { slug: 'english', online: true, muted: true },
+      { slug: 'english', online: true, muted: false },
+    ]);
+  });
+
+  it('broadcasts offline and clears muted when a paused producer closes', async () => {
+    const { io, emitted } = fakeIo();
+    const { producerId } = await goLive({
+      eventId: EVENT,
+      socketId: 'speaker-a',
+      channelId: ENGLISH,
+      slug: 'english',
+    });
+    await pauseProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
 
     applyNotification(io, {
       type: 'producer-closed',
@@ -129,7 +200,42 @@ describe('applyNotification producer lifecycle', () => {
       slug: 'english',
     });
 
-    expect(emitted[0]?.payload).toEqual({ slug: 'english', online: false });
+    expect(emitted[0]?.payload).toEqual({ slug: 'english', online: false, muted: false });
+  });
+
+  it('keeps a late pause invalidation offline after its producer closed', async () => {
+    const { io, emitted } = fakeIo();
+    const { producerId } = await goLive({
+      eventId: EVENT,
+      socketId: 'speaker-a',
+      channelId: ENGLISH,
+      slug: 'english',
+    });
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+
+    applyNotification(io, {
+      type: 'producer-paused',
+      eventId: EVENT,
+      channelId: ENGLISH,
+      slug: 'english',
+    });
+
+    expect(emitted[0]?.payload).toEqual({ slug: 'english', online: false, muted: false });
+  });
+
+  it('uses the current replacement snapshot for a stale pause invalidation', async () => {
+    const { io, emitted } = fakeIo();
+    await goLive({ eventId: EVENT, socketId: 'speaker-a', channelId: ENGLISH, slug: 'english' });
+    await goLive({ eventId: EVENT, socketId: 'speaker-b', channelId: ENGLISH, slug: 'english' });
+
+    applyNotification(io, {
+      type: 'producer-paused',
+      eventId: EVENT,
+      channelId: ENGLISH,
+      slug: 'english',
+    });
+
+    expect(emitted[0]?.payload).toEqual({ slug: 'english', online: true, muted: false });
   });
 });
 
@@ -265,9 +371,10 @@ describe('applyNotification listener counts', () => {
     expect(emitted).toEqual([]);
   });
 
-  it('leaves the producer lifecycle emit untouched', () => {
+  it('leaves the producer lifecycle emit untouched', async () => {
     const { io, emitted } = fakeIo();
     presence.claim(ENGLISH, 'code-english', 'speaker-a');
+    await goLive({ eventId: EVENT, socketId: 'speaker-a', channelId: ENGLISH, slug: 'english' });
 
     applyNotification(io, {
       type: 'producer-opened',
@@ -280,7 +387,7 @@ describe('applyNotification listener counts', () => {
       {
         room: eventRoom(EVENT),
         event: 'channel:status',
-        payload: { slug: 'english', online: true },
+        payload: { slug: 'english', online: true, muted: false },
       },
     ]);
   });

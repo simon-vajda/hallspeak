@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { SocketAuth } from '../../core/access';
 import { createChannel } from '../../core/channels.service';
 import { createEvent } from '../../core/events.service';
+import { pauseProducer } from '../../core/media';
 import { goLive, startFakeMedia } from '../../core/media/testing';
 import { PresenceRegistry } from '../../core/presence';
 import type { Db } from '../../db/client';
@@ -46,7 +47,7 @@ describe('joinChannel', () => {
   it('puts the socket in the channel room and reports liveness', () => {
     const socket = fakeSocket();
 
-    expect(joinChannel(db, socket, authA, 'english')).toEqual({ online: false });
+    expect(joinChannel(db, socket, authA, 'english')).toEqual({ online: false, muted: false });
     expect(socket.rooms.has(channelRoom(englishId))).toBe(true);
   });
 
@@ -55,7 +56,7 @@ describe('joinChannel', () => {
     presence.claim(englishId, 'code-x', 'speaker-socket');
     const socket = fakeSocket();
 
-    expect(joinChannel(db, socket, authA, 'english')).toEqual({ online: false });
+    expect(joinChannel(db, socket, authA, 'english')).toEqual({ online: false, muted: false });
   });
 
   it('reports online once a producer exists on the channel', async () => {
@@ -68,7 +69,34 @@ describe('joinChannel', () => {
         slug: 'english',
       });
 
-      expect(joinChannel(db, fakeSocket(), authA, 'english')).toEqual({ online: true });
+      expect(joinChannel(db, fakeSocket(), authA, 'english')).toEqual({
+        online: true,
+        muted: false,
+      });
+    } finally {
+      await stopMedia();
+    }
+  });
+
+  it('reports a paused producer as online and muted', async () => {
+    const stopMedia = await startFakeMedia();
+    try {
+      const { producerId } = await goLive({
+        eventId: authA.eventId,
+        socketId: 'speaker-socket',
+        channelId: englishId,
+        slug: 'english',
+      });
+      await pauseProducer(
+        { eventId: authA.eventId, socketId: 'speaker-socket' },
+        englishId,
+        producerId,
+      );
+
+      expect(joinChannel(db, fakeSocket(), authA, 'english')).toEqual({
+        online: true,
+        muted: true,
+      });
     } finally {
       await stopMedia();
     }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ChannelJoinResponse,
+  ChannelStatus,
   MediaCapabilitiesResponse,
   MediaConnectTransportPayload,
   MediaConsumePayload,
@@ -28,11 +30,26 @@ describe('media payload schemas', () => {
     expect(MediaConnectTransportPayload.safeParse({ dtlsParameters: opaque }).success).toBe(false);
   });
 
-  it('accepts a produce payload and rejects a non-audio kind', () => {
-    const valid = { slug: 'english', kind: 'audio', rtpParameters: opaque };
+  it('requires initial paused intent on a produce payload and rejects a non-audio kind', () => {
+    const valid = { slug: 'english', kind: 'audio', rtpParameters: opaque, paused: true };
     expect(MediaProducePayload.parse(valid)).toEqual(valid);
     expect(MediaProducePayload.safeParse({ ...valid, kind: 'video' }).success).toBe(false);
+    expect(MediaProducePayload.safeParse({ ...valid, paused: undefined }).success).toBe(false);
     expect(MediaProducePayload.safeParse({ slug: 'english', kind: 'audio' }).success).toBe(false);
+  });
+
+  it('requires online and muted together in channel status payloads', () => {
+    expect(ChannelJoinResponse.parse({ online: true, muted: true })).toEqual({
+      online: true,
+      muted: true,
+    });
+    expect(ChannelStatus.parse({ slug: 'english', online: true, muted: false })).toEqual({
+      slug: 'english',
+      online: true,
+      muted: false,
+    });
+    expect(ChannelJoinResponse.safeParse({ online: true }).success).toBe(false);
+    expect(ChannelStatus.safeParse({ slug: 'english', online: true }).success).toBe(false);
   });
 
   it('accepts a consume payload and rejects one missing capabilities', () => {

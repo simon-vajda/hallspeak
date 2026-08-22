@@ -117,7 +117,15 @@ function require_(): MediaState {
  * this. Replaces the claim-derived answer `core/presence.ts` used to give.
  */
 export function isOnline(eventId: number, channelId: number): boolean {
-  return state?.registry.get(eventId)?.isOnline(channelId) ?? false;
+  return channelStatus(eventId, channelId).online;
+}
+
+/** Current producer existence and pause state, read together so they cannot disagree. */
+export function channelStatus(
+  eventId: number,
+  channelId: number,
+): { online: boolean; muted: boolean } {
+  return state?.registry.get(eventId)?.channelStatus(channelId) ?? { online: false, muted: false };
 }
 
 /**
@@ -221,6 +229,7 @@ export interface ProduceInput {
   channelId: number;
   slug: string;
   rtpParameters: types.RtpParameters;
+  paused: boolean;
 }
 
 export async function produce(
@@ -234,6 +243,7 @@ export async function produce(
   const producer = await transport.produce({
     kind: 'audio',
     rtpParameters: input.rtpParameters,
+    paused: input.paused,
     appData: { channelId: input.channelId, slug: input.slug },
   });
 
@@ -264,7 +274,15 @@ export async function pauseProducer(
   channelId: number,
   producerId: string,
 ): Promise<void> {
-  await producerOrThrow(ctx, channelId, producerId).pause();
+  const producer = producerOrThrow(ctx, channelId, producerId);
+  const slug = producerSlug(producer);
+  await producer.pause();
+  notifications.publish({
+    type: 'producer-paused',
+    eventId: ctx.eventId,
+    channelId,
+    slug,
+  });
 }
 
 export async function resumeProducer(
@@ -272,7 +290,15 @@ export async function resumeProducer(
   channelId: number,
   producerId: string,
 ): Promise<void> {
-  await producerOrThrow(ctx, channelId, producerId).resume();
+  const producer = producerOrThrow(ctx, channelId, producerId);
+  const slug = producerSlug(producer);
+  await producer.resume();
+  notifications.publish({
+    type: 'producer-resumed',
+    eventId: ctx.eventId,
+    channelId,
+    slug,
+  });
 }
 
 export async function closeProducer(
@@ -455,4 +481,9 @@ function producerOrThrow(ctx: MediaContext, channelId: number, producerId: strin
     throw new AppError('no_producer', 'No such producer on this channel.');
   }
   return producer;
+}
+
+function producerSlug(producer: types.Producer): string {
+  const slug = (producer.appData as { slug?: unknown }).slug;
+  return typeof slug === 'string' ? slug : '';
 }

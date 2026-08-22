@@ -20,11 +20,15 @@ const SocketSlug = z.string().min(1).max(40).regex(SLUG_PATTERN);
 
 export const ChannelJoinPayload = z.object({ slug: SocketSlug });
 
-export const ChannelJoinResponse = z.object({ online: z.boolean() });
+export const ChannelJoinResponse = z.object({ online: z.boolean(), muted: z.boolean() });
 
 export const ChannelLeavePayload = z.object({ slug: SocketSlug });
 
-export const ChannelStatus = z.object({ slug: SocketSlug, online: z.boolean() });
+export const ChannelStatus = z.object({
+  slug: SocketSlug,
+  online: z.boolean(),
+  muted: z.boolean(),
+});
 
 /**
  * Separate from `ChannelStatus` on purpose: that one fans out to the event room on producer
@@ -81,6 +85,7 @@ export const MediaProducePayload = z.object({
   slug: SocketSlug,
   kind: z.literal('audio'),
   rtpParameters: MediaParams,
+  paused: z.boolean(),
 });
 
 export const MediaProduceResponse = z.object({ producerId: MediaId });
