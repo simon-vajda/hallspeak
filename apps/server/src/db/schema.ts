@@ -33,9 +33,19 @@ export const channels = sqliteTable(
   (t) => [uniqueIndex('channels_event_id_slug_unique').on(t.eventId, t.slug)],
 );
 
+// Keyed on the token's digest, never the token: a database read — a backup, a copied
+// file — must not yield live sessions. There is one account, so a session has nothing to
+// be associated with beyond its own lifetime.
+export const adminSessions = sqliteTable('admin_sessions', {
+  tokenHash: text('token_hash').primaryKey(),
+  createdAt: integer('created_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+});
+
 // Not `Event`: Node has a global of that name and socket/lib/validate.ts imports another
 // from socket.io.
 export type EventRow = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
 export type ChannelRow = typeof channels.$inferSelect;
 export type NewChannel = typeof channels.$inferInsert;
+export type AdminSessionRow = typeof adminSessions.$inferSelect;

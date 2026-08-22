@@ -1,6 +1,6 @@
 import { serve } from '@hono/node-server';
 import { app } from './app';
-import { credentialsPath, isConfigured, startAuth } from './core/auth';
+import { credentialsPath, isConfigured, startAuth, sweepExpired } from './core/auth';
 import { startMedia, stopMedia } from './core/media';
 import { closeDb, db } from './db';
 import { runMigrations } from './db/migrate';
@@ -14,6 +14,8 @@ runMigrations(db);
 // Read once, and fatal on a damaged file: treating one as "unconfigured" would silently
 // re-open the account-claim window after a disk glitch.
 startAuth();
+// The only scheduled half of KTD9: every other expired row is deleted where it is found.
+sweepExpired(db);
 console.log(
   isConfigured()
     ? `Admin account loaded from ${credentialsPath()}`

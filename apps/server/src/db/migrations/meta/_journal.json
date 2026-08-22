@@ -15,6 +15,13 @@
       "when": 1786397753033,
       "tag": "0001_parallel_justice",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787421102645,
+      "tag": "0002_mixed_the_professor",
+      "breakpoints": true
     }
   ]
 }
