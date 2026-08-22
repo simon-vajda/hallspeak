@@ -6,3 +6,12 @@ export const PIN_PATTERN = /^\d{6}$/;
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export const SEMVER_PATTERN = /^\d+\.\d+\.\d+$/;
+
+// The drawn checklist is three lines, so there are three rules. A space counts as the
+// special character: refusing it would reject `correct horse battery 9` while accepting
+// `password9!`, which is the weaker of the two.
+export const PASSWORD_MIN_LENGTH = 8;
+
+export const PASSWORD_NUMBER_PATTERN = /\d/;
+
+export const PASSWORD_SPECIAL_PATTERN = /[^A-Za-z0-9]/;
