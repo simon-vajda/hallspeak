@@ -44,5 +44,5 @@ package actually declared.
 
 ## Related
 
-- `CLAUDE.md` carries the rule and points here.
+- `AGENTS.md` carries the rule and points here.
 - `pnpm-workspace.yaml` — the `allowBuilds` entry.

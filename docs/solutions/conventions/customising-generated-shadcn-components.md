@@ -34,7 +34,7 @@ a component pulled in as a *dependency* of the one being installed (`sheet` does
 
 ## Guidance
 
-**Customise, but record it.** `CLAUDE.md` carries the ledger of current customisations to
+**Customise, but record it.** `AGENTS.md` carries the ledger of current customisations to
 `components/ui`, because that file loads into every session and a `docs/solutions/` entry is
 only read on purpose. An unrecorded customisation is one `add` away from gone.
 
@@ -55,7 +55,7 @@ just means the next `add` reintroduces the error. Formatting still applies, whic
 
 ## Related
 
-- `CLAUDE.md` — the current customisation ledger and the rules in short form.
+- `AGENTS.md` — the current customisation ledger and the rules in short form.
 - `biome.json` — the per-directory rule carve-out for `apps/web/src/components/ui`.
 - `docs/solutions/conventions/design-values-onto-the-scale.md` — where a new design value
   belongs when a customisation needs one.

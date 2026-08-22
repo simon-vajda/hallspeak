@@ -2,7 +2,7 @@ import { Switch as SwitchPrimitive } from '@base-ui/react/switch';
 
 import { cn } from '@/lib/utils';
 
-// CUSTOMISED (see CLAUDE.md): an `lg` size, and `cursor-pointer` on every size, which
+// CUSTOMISED (see AGENTS.md): an `lg` size, and `cursor-pointer` on every size, which
 // Tailwind v4 dropped. The lg padding and checked offset are written out because the
 // generated calc(100%-2px) only centres the thumb at the default size's proportions.
 function Switch({

@@ -51,6 +51,6 @@ Two consequences that are easy to get wrong:
 
 ## Related
 
-- `CLAUDE.md` carries the rule and points here.
+- `AGENTS.md` carries the rule and points here.
 - `apps/server/src/http/routes/events.routes.test.ts` — the parity test.
 - `apps/server/src/lib/rate-limit.ts` — the token bucket.

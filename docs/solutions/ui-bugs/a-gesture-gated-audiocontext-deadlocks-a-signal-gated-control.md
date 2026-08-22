@@ -168,7 +168,7 @@ pauses between words.
 - `apps/web/src/lib/audio/use-mic-capture.ts` — the capture layer; its other two
   non-obvious rules (open a stream before enumerating or device labels come back empty;
   the system default is listed twice as a `default`/`communications` alias) are recorded
-  in `CLAUDE.md`.
+  in `AGENTS.md`.
 - `docs/solutions/workflow-issues/browser-permission-prompts-stall-the-agent-silently.md`
   — the neighbouring hazard on the same screen: a Chrome permission prompt that also
   produces a screen where nothing moves and nothing errors.

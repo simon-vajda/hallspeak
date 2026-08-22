@@ -135,7 +135,7 @@ throughput problem, not the default.
   learned while building these screens.
 - `apps/web/src/lib/audio/use-mic-capture.ts` — the capture layer this gate sits in
   front of; its own non-obvious rule (open a stream *before* enumerating, or labels
-  come back empty) is a separate permission consequence, recorded in `CLAUDE.md`.
+  come back empty) is a separate permission consequence, recorded in `AGENTS.md`.
 - Verified against `chrome-devtools-mcp@1.7.0`. If a future version adds a
   permission-granting tool, this doc's "no in-band escape" claim is the part to
   re-check.
