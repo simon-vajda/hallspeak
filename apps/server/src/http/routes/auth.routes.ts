@@ -57,7 +57,9 @@ export const authRoutes = app
       // Only the claim, and nothing else: a credential file that could not be written is a
       // failure, and reporting it as "already configured" would send the installer looking
       // for an account that does not exist.
-      if (!(err instanceof AppError) || err.code !== 'already_configured') throw err;
+      if (!(err instanceof AppError) || err.code !== 'already_configured') {
+        throw err;
+      }
       return c.json(ALREADY_CONFIGURED, 409);
     }
 
@@ -70,14 +72,18 @@ export const authRoutes = app
   .openapi(routes.login, async (c) => {
     const { username, password } = c.req.valid('json');
     // False on an unconfigured server too, and an unknown username still pays for a hash.
-    if (!(await verifyCredentials(username, password))) return c.json(REFUSED, 401);
+    if (!(await verifyCredentials(username, password))) {
+      return c.json(REFUSED, 401);
+    }
 
     setSessionCookie(c, createSession(db));
     return c.json({ configured: true, authenticated: true }, 200);
   })
   .openapi(routes.logout, (c) => {
     const token = readSessionCookie(c);
-    if (token) deleteSession(db, token);
+    if (token) {
+      deleteSession(db, token);
+    }
     // Cleared either way: a cookie naming a session that is already gone is still a cookie
     // the browser would keep sending.
     clearSessionCookie(c);

@@ -106,7 +106,9 @@ export function iceServersFor(
   mint: (secret: string) => SessionCredential,
 ): IceServer[] {
   const servers: IceServer[] = [];
-  if (turn.stunUrl) servers.push({ urls: [turn.stunUrl] });
+  if (turn.stunUrl) {
+    servers.push({ urls: [turn.stunUrl] });
+  }
   // A TURN url without a secret would have to be offered uncredentialed, which is an
   // open relay rather than a degraded one. Dropping it is the safe reading.
   if (turn.turnUrl && turn.turnSecret) {
@@ -130,7 +132,11 @@ const PRIVATE_V4 = [
  * DDNS case and resolves somewhere this process cannot see.
  */
 export function isUnroutableAnnouncedAddress(address: string): boolean {
-  if (address === '::1') return true;
-  if (!/^\d+\.\d+\.\d+\.\d+$/.test(address)) return false;
+  if (address === '::1') {
+    return true;
+  }
+  if (!/^\d+\.\d+\.\d+\.\d+$/.test(address)) {
+    return false;
+  }
   return PRIVATE_V4.some((range) => range.test(address));
 }

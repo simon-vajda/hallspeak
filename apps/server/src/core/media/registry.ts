@@ -55,10 +55,14 @@ export class RoomRegistry {
     this.cancelTeardown(eventId);
 
     const existing = this.rooms.get(eventId);
-    if (existing) return existing;
+    if (existing) {
+      return existing;
+    }
 
     const inFlight = this.creating.get(eventId);
-    if (inFlight) return inFlight;
+    if (inFlight) {
+      return inFlight;
+    }
 
     const creation = this.create(eventId).finally(() => {
       // Cleared on both settle paths: a rejection left cached would wedge this event
@@ -72,14 +76,20 @@ export class RoomRegistry {
   /** Arms the grace timer if the room has nothing left attached; otherwise does nothing. */
   releaseIfIdle(eventId: number): void {
     const room = this.rooms.get(eventId);
-    if (!room?.isIdle) return;
-    if (this.teardowns.has(eventId)) return;
+    if (!room?.isIdle) {
+      return;
+    }
+    if (this.teardowns.has(eventId)) {
+      return;
+    }
 
     const timer = setTimeout(() => {
       this.teardowns.delete(eventId);
       const current = this.rooms.get(eventId);
       // Re-checked, not assumed: anything that arrived during the grace period wins.
-      if (!current?.isIdle) return;
+      if (!current?.isIdle) {
+        return;
+      }
       this.closeRoom(eventId, 'idle');
     }, this.graceMs);
     timer.unref?.();
@@ -89,7 +99,9 @@ export class RoomRegistry {
   /** A dead worker takes its rooms with it; rooms on other workers are untouched. */
   evictWorker(index: number): void {
     for (const [eventId, room] of this.rooms) {
-      if (room.workerIndex === index) this.closeRoom(eventId, 'worker_died');
+      if (room.workerIndex === index) {
+        this.closeRoom(eventId, 'worker_died');
+      }
     }
   }
 
@@ -98,9 +110,13 @@ export class RoomRegistry {
   }
 
   async closeAll(): Promise<void> {
-    for (const timer of this.teardowns.values()) clearTimeout(timer);
+    for (const timer of this.teardowns.values()) {
+      clearTimeout(timer);
+    }
     this.teardowns.clear();
-    for (const eventId of [...this.rooms.keys()]) this.closeRoom(eventId, 'shutdown');
+    for (const eventId of [...this.rooms.keys()]) {
+      this.closeRoom(eventId, 'shutdown');
+    }
   }
 
   private async create(eventId: number): Promise<Room> {
@@ -118,7 +134,9 @@ export class RoomRegistry {
 
   private cancelTeardown(eventId: number): void {
     const timer = this.teardowns.get(eventId);
-    if (!timer) return;
+    if (!timer) {
+      return;
+    }
     clearTimeout(timer);
     this.teardowns.delete(eventId);
   }
@@ -129,7 +147,9 @@ export class RoomRegistry {
       // A creation in flight is invisible in `rooms`, so closing now would miss it and
       // the router would surface moments later with nothing left to close it.
       const inFlight = this.creating.get(eventId);
-      if (inFlight) void inFlight.then(() => this.closeRoom(eventId, reason)).catch(() => {});
+      if (inFlight) {
+        void inFlight.then(() => this.closeRoom(eventId, reason)).catch(() => {});
+      }
       return;
     }
     // Deleted before closing, so nothing can be handed a room whose router is going away.

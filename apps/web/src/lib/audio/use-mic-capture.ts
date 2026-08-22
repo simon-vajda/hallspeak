@@ -36,7 +36,9 @@ function isSupported() {
 
 /** Every exit from a capture goes through here: unstopped tracks leave the indicator lit. */
 function release(capture: Capture) {
-  for (const track of capture.stream.getTracks()) track.stop();
+  for (const track of capture.stream.getTracks()) {
+    track.stop();
+  }
   void capture.context.close();
 }
 
@@ -68,11 +70,15 @@ async function openCapture(
 
 function failureMessage(error: unknown): string {
   const name = error instanceof DOMException ? error.name : '';
-  if (name === 'NotAllowedError')
+  if (name === 'NotAllowedError') {
     return 'Microphone access was blocked. Allow it in your browser’s site settings, then reload.';
-  if (name === 'NotFoundError') return 'No microphone was found on this device.';
-  if (name === 'NotReadableError')
+  }
+  if (name === 'NotFoundError') {
+    return 'No microphone was found on this device.';
+  }
+  if (name === 'NotReadableError') {
     return 'The microphone is in use by another app. Close it and try again.';
+  }
   return 'The microphone could not be opened.';
 }
 
@@ -139,7 +145,9 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
         setStatus('ready');
 
         const shaped = shapeDevices(await navigator.mediaDevices.enumerateDevices());
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setDevices(shaped);
         setDeviceId(
           resolveSelection(
@@ -148,7 +156,9 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
           ),
         );
       } catch (err) {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         // The device vanished between the picker and the open: retry on the default.
         if (requested !== null && err instanceof DOMException && err.name !== 'NotAllowedError') {
           setNotice('That microphone is no longer available. Switched to the system default.');
@@ -163,7 +173,9 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
 
     return () => {
       cancelled = true;
-      if (current) release(current);
+      if (current) {
+        release(current);
+      }
       setCapture(null);
     };
   }, [requested, attempt, noiseSuppression, autoGain, echoCancellation]);
@@ -184,7 +196,9 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
   }, [capture]);
 
   useEffect(() => {
-    if (!isSupported()) return;
+    if (!isSupported()) {
+      return;
+    }
 
     let cancelled = false;
     // Chrome fires devicechange twice per hot-plug, so two enumerations can resolve out of order.
@@ -198,7 +212,9 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
       } catch {
         return;
       }
-      if (cancelled || token !== latest) return;
+      if (cancelled || token !== latest) {
+        return;
+      }
 
       setDevices(shaped);
       setDeviceId((prev) => resolveSelection(shaped, prev));
@@ -221,7 +237,9 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
 
   // Applied to the live graph rather than by re-opening: the gain is one node's value.
   useEffect(() => {
-    if (!capture) return;
+    if (!capture) {
+      return;
+    }
     capture.gain.gain.value = gainNodeValue(preferences.gain);
   }, [capture, preferences.gain]);
 
@@ -239,7 +257,9 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
 
   /** Must be called from a real user gesture: Safari resumes on nothing else. */
   const resume = useCallback(() => {
-    if (!capture) return;
+    if (!capture) {
+      return;
+    }
     void capture.context.resume().catch(() => {});
   }, [capture]);
 

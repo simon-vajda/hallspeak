@@ -32,12 +32,16 @@ export class PresenceRegistry {
    */
   claim(channelId: number, speakerCode: string, socketId: string): ClaimResult {
     const held = this.claimByChannel.get(channelId);
-    if (held && held.speakerCode !== speakerCode) return { ok: false };
+    if (held && held.speakerCode !== speakerCode) {
+      return { ok: false };
+    }
 
     this.claimByChannel.set(channelId, { speakerCode, socketId });
     this.channelBySocket.set(socketId, channelId);
 
-    if (!held || held.socketId === socketId) return { ok: true, displaced: null };
+    if (!held || held.socketId === socketId) {
+      return { ok: true, displaced: null };
+    }
 
     console.log(
       `presence: channel ${channelId} taken over by ${socketId}, displacing ${held.socketId}`,
@@ -48,7 +52,9 @@ export class PresenceRegistry {
   /** The channel this socket just gave up, or null if it held none. */
   release(socketId: string): number | null {
     const channelId = this.channelBySocket.get(socketId);
-    if (channelId === undefined) return null;
+    if (channelId === undefined) {
+      return null;
+    }
     this.channelBySocket.delete(socketId);
     // A late release from a socket that lost the channel must not evict its successor.
     if (this.claimByChannel.get(channelId)?.socketId === socketId) {
@@ -61,7 +67,9 @@ export class PresenceRegistry {
   /** Drops a claim from the channel's side, for admin revocation; names who held it. */
   releaseChannel(channelId: number): string | null {
     const held = this.claimByChannel.get(channelId);
-    if (!held) return null;
+    if (!held) {
+      return null;
+    }
     this.claimByChannel.delete(channelId);
     this.channelBySocket.delete(held.socketId);
     return held.socketId;

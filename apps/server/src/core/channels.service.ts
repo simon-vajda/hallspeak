@@ -100,7 +100,9 @@ export function deleteChannel(db: Db, id: number): boolean {
 }
 
 export function regenerateSpeakerCode(db: Db, id: number): ChannelRow | undefined {
-  if (!getChannelById(db, id)) return undefined;
+  if (!getChannelById(db, id)) {
+    return undefined;
+  }
   return db
     .update(channels)
     .set({ speakerCode: generateSpeakerCode(), updatedAt: Date.now() })

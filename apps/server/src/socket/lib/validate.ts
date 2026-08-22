@@ -8,7 +8,9 @@ import { z } from 'zod';
  */
 function replyError(args: unknown[], error: { code: string; message: string }): void {
   const ack = args.at(-1);
-  if (typeof ack === 'function') (ack as (res: Ack<never>) => void)({ ok: false, error });
+  if (typeof ack === 'function') {
+    (ack as (res: Ack<never>) => void)({ ok: false, error });
+  }
 }
 
 /**

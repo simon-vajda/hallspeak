@@ -41,7 +41,9 @@ export type SessionLookup = 'unknown' | 'valid' | 'renewed';
 export function lookupSession(db: Db, token: string, now: number = Date.now()): SessionLookup {
   const tokenHash = digest(token);
   const row = db.select().from(adminSessions).where(eq(adminSessions.tokenHash, tokenHash)).get();
-  if (!row) return 'unknown';
+  if (!row) {
+    return 'unknown';
+  }
 
   if (row.expiresAt <= now) {
     db.delete(adminSessions).where(eq(adminSessions.tokenHash, tokenHash)).run();

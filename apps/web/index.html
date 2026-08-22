@@ -10,15 +10,18 @@
          src/components/theme-provider.tsx — this runs before any module loads. -->
     <script>
       (() => {
-        let dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        let dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
         try {
-          const stored = localStorage.getItem('linguacast-theme');
-          if (stored === 'dark') dark = true;
-          else if (stored === 'light') dark = false;
+          const stored = localStorage.getItem("linguacast-theme");
+          if (stored === "dark") {
+            dark = true;
+          } else if (stored === "light") {
+            dark = false;
+          }
         } catch {
           // Blocked storage throws here; fall back to the system preference.
         }
-        document.documentElement.classList.add(dark ? 'dark' : 'light');
+        document.documentElement.classList.add(dark ? "dark" : "light");
       })();
     </script>
   </head>

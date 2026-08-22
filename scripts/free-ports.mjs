@@ -63,7 +63,9 @@ for (const port of ports) {
   }
 
   // Give a graceful shutdown a moment before escalating.
-  for (let i = 0; i < 20 && pids.some(alive); i++) await delay(50);
+  for (let i = 0; i < 20 && pids.some(alive); i++) {
+    await delay(50);
+  }
 
   for (const pid of pids.filter(alive)) {
     try {

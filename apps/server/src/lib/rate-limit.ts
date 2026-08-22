@@ -45,33 +45,47 @@ export class TokenBucketLimiter {
       return;
     }
 
-    if (this.buckets.size >= this.maxKeys) this.prune(now);
+    if (this.buckets.size >= this.maxKeys) {
+      this.prune(now);
+    }
     this.buckets.set(key, { tokens: Math.max(0, this.capacity - 1), updatedAt: now });
   }
 
   /** Returns a token charged by `penalize`, never taking a bucket past its capacity. */
   refund(key: string): void {
     const bucket = this.refill(key);
-    if (!bucket) return;
+    if (!bucket) {
+      return;
+    }
     bucket.tokens = Math.min(this.capacity, bucket.tokens + 1);
-    if (bucket.tokens >= this.capacity) this.buckets.delete(key);
+    if (bucket.tokens >= this.capacity) {
+      this.buckets.delete(key);
+    }
   }
 
   /** Whole seconds until the key has a token again; 0 when it already does. */
   retryAfter(key: string): number {
     const bucket = this.refill(key);
-    if (!bucket) return 0;
-    if (bucket.tokens >= 1) return 0;
+    if (!bucket) {
+      return 0;
+    }
+    if (bucket.tokens >= 1) {
+      return 0;
+    }
     return Math.max(1, Math.ceil((1 - bucket.tokens) / this.refillPerSecond));
   }
 
   private refill(key: string, now: number = this.now()): Bucket | undefined {
     const existing = this.buckets.get(key);
-    if (!existing) return undefined;
+    if (!existing) {
+      return undefined;
+    }
 
     existing.tokens = this.tokensAt(existing, now);
     existing.updatedAt = now;
-    if (existing.tokens < this.capacity) return existing;
+    if (existing.tokens < this.capacity) {
+      return existing;
+    }
 
     this.buckets.delete(key);
     return undefined;
@@ -89,7 +103,9 @@ export class TokenBucketLimiter {
    */
   private prune(now: number): void {
     for (const [key, bucket] of this.buckets) {
-      if (this.tokensAt(bucket, now) >= this.capacity) this.buckets.delete(key);
+      if (this.tokensAt(bucket, now) >= this.capacity) {
+        this.buckets.delete(key);
+      }
     }
 
     while (this.buckets.size >= this.maxKeys) {
@@ -101,7 +117,9 @@ export class TokenBucketLimiter {
           oldestUpdate = bucket.updatedAt;
         }
       }
-      if (oldest === undefined) break;
+      if (oldest === undefined) {
+        break;
+      }
       this.buckets.delete(oldest);
     }
   }

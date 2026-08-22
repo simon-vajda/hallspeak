@@ -49,7 +49,9 @@ export function useSocket(auth: SocketAuth | null) {
   const speakerCode = auth?.speakerCode ?? null;
 
   useEffect(() => {
-    if (pin === null) return;
+    if (pin === null) {
+      return;
+    }
 
     updateChannelStatuses(resetStatusesForAuth);
     setStatus('connecting');
@@ -101,7 +103,9 @@ export function useSocket(auth: SocketAuth | null) {
 
   const joinChannel = useCallback(
     async (slug: string, httpOnline: boolean) => {
-      if (!socket) throw new Error('No socket.');
+      if (!socket) {
+        throw new Error('No socket.');
+      }
 
       const started = beginChannelJoin(channelStatusRef.current, slug, httpOnline);
       channelStatusRef.current = started.state;

@@ -77,16 +77,24 @@ export function useMedia(socket: SocketClient | null) {
     const current = session.current;
     session.current = null;
     pendingSession.current = null;
-    if (!current) return;
+    if (!current) {
+      return;
+    }
     // One release path, as on the capture side: a partial teardown leaks a transport
     // nothing will ever name again.
-    for (const consumer of current.consumers.values()) consumer.close();
+    for (const consumer of current.consumers.values()) {
+      consumer.close();
+    }
     current.producer?.close();
-    for (const transport of Object.values(current.transports)) transport?.close();
+    for (const transport of Object.values(current.transports)) {
+      transport?.close();
+    }
   }, []);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) {
+      return;
+    }
 
     const reset = () => {
       releaseSession();
@@ -123,10 +131,14 @@ export function useMedia(socket: SocketClient | null) {
     const sample = async () => {
       const active = session.current;
       const transport = active?.transports.recv ?? active?.transports.send;
-      if (!transport || transport.closed) return;
+      if (!transport || transport.closed) {
+        return;
+      }
 
       const report = await transport.getStats().catch(() => null);
-      if (!report) return;
+      if (!report) {
+        return;
+      }
 
       for (const entry of report.values()) {
         // Inbound for a listener, remote-inbound for a speaker. They do NOT carry the same
@@ -135,7 +147,9 @@ export function useMedia(socket: SocketClient | null) {
           const current = entry as StatsSample;
           const summary = summarise(current, previousSample.current ?? undefined);
           previousSample.current = current;
-          if (summary) setStats(summary);
+          if (summary) {
+            setStats(summary);
+          }
           return;
         }
       }
@@ -147,9 +161,15 @@ export function useMedia(socket: SocketClient | null) {
   }, [state.recvTransportId, state.sendTransportId]);
 
   const ensureSession = useCallback(async (): Promise<Session> => {
-    if (session.current) return session.current;
-    if (pendingSession.current) return pendingSession.current;
-    if (!socket) throw new Error('No socket.');
+    if (session.current) {
+      return session.current;
+    }
+    if (pendingSession.current) {
+      return pendingSession.current;
+    }
+    if (!socket) {
+      throw new Error('No socket.');
+    }
 
     const loading = loadDevice(signalling(socket))
       .then(({ device, iceServers }) => {
@@ -177,12 +197,18 @@ export function useMedia(socket: SocketClient | null) {
     async (direction: TransportDirection, slug?: string): Promise<types.Transport> => {
       const active = await ensureSession();
       const existing = active.transports[direction];
-      if (existing && !existing.closed) return existing;
+      if (existing && !existing.closed) {
+        return existing;
+      }
 
       const inFlight = active.pendingTransports[direction];
-      if (inFlight) return inFlight;
+      if (inFlight) {
+        return inFlight;
+      }
 
-      if (!socket) throw new Error('No socket.');
+      if (!socket) {
+        throw new Error('No socket.');
+      }
       const generation = stateRef.current.generation;
       const opening = openTransport({
         api: signalling(socket),
@@ -207,7 +233,9 @@ export function useMedia(socket: SocketClient | null) {
         setHealth(
           next === 'connected' ? 'connected' : needsRebuild(next) ? 'trouble' : 'connecting',
         );
-        if (!needsRebuild(next)) return;
+        if (!needsRebuild(next)) {
+          return;
+        }
         transport.close();
         delete active.transports[direction];
         setState((prev) => beginRebuild(prev, direction));
@@ -225,12 +253,16 @@ export function useMedia(socket: SocketClient | null) {
       const started = session.current?.pendingProducer;
       // Re-entering while the first produce is still in flight would close it and start
       // another, which the server broadcasts as the channel going offline and back on.
-      if (started) return started;
+      if (started) {
+        return started;
+      }
 
       const produce = (async () => {
         const transport = await ensureTransport('send', slug);
         const active = session.current;
-        if (!active) throw new Error(SUPERSEDED);
+        if (!active) {
+          throw new Error(SUPERSEDED);
+        }
 
         active.producer?.close();
         // mediasoup-client forwards appData to the transport's produce callback, so the
@@ -242,7 +274,9 @@ export function useMedia(socket: SocketClient | null) {
         });
         // The server is already paused at this point; match the local sender before this
         // Producer is exposed to the studio.
-        if (paused) producer.pause();
+        if (paused) {
+          producer.pause();
+        }
         active.producer = producer;
         setState((prev) => producerOpened(prev, producer.id));
         return producer;
@@ -254,7 +288,9 @@ export function useMedia(socket: SocketClient | null) {
         void produce
           .catch(() => {})
           .finally(() => {
-            if (session.current === active) active.pendingProducer = undefined;
+            if (session.current === active) {
+              active.pendingProducer = undefined;
+            }
           });
       }
       return produce;
@@ -265,7 +301,9 @@ export function useMedia(socket: SocketClient | null) {
   const stopProducing = useCallback(async () => {
     const active = session.current;
     const producer = active?.producer;
-    if (!active || !producer || !socket) return;
+    if (!active || !producer || !socket) {
+      return;
+    }
     active.producer = undefined;
     producer.close();
     setState(producerClosed);
@@ -280,7 +318,9 @@ export function useMedia(socket: SocketClient | null) {
    */
   const replaceProducerTrack = useCallback(async (track: MediaStreamTrack) => {
     const producer = session.current?.producer;
-    if (!producer || producer.closed) return;
+    if (!producer || producer.closed) {
+      return;
+    }
     // Keeps the producer's paused state, so this cannot unmute anyone behind their back.
     await producer.replaceTrack({ track });
   }, []);
@@ -288,7 +328,9 @@ export function useMedia(socket: SocketClient | null) {
   const setProducerPaused = useCallback(
     async (paused: boolean) => {
       const producer = session.current?.producer;
-      if (!producer || !socket) return;
+      if (!producer || !socket) {
+        return;
+      }
       // Both directions discard the sample history. The readings either side of a mute
       // describe different situations, and differencing across the gap would charge the
       // silence to the line the moment audio came back.
@@ -309,13 +351,21 @@ export function useMedia(socket: SocketClient | null) {
 
   const setLocalProducerPaused = useCallback(
     (paused: boolean, request: ProducerControlIdentity): boolean => {
-      if (!canRollbackProducerControl(stateRef.current, request)) return false;
+      if (!canRollbackProducerControl(stateRef.current, request)) {
+        return false;
+      }
       const producer = session.current?.producer;
-      if (!producer || producer.id !== request.producerId) return false;
+      if (!producer || producer.id !== request.producerId) {
+        return false;
+      }
       setStats(null);
       previousSample.current = null;
-      if (paused && !producer.paused) producer.pause();
-      if (!paused && producer.paused) producer.resume();
+      if (paused && !producer.paused) {
+        producer.pause();
+      }
+      if (!paused && producer.paused) {
+        producer.resume();
+      }
       return true;
     },
     [],
@@ -326,12 +376,16 @@ export function useMedia(socket: SocketClient | null) {
       const started = session.current?.pendingConsumers.get(slug);
       // The effect that drives this depends on the consumers map, which a close mutates
       // synchronously — so it re-enters while the first consume is still awaiting.
-      if (started) return started;
+      if (started) {
+        return started;
+      }
 
       const consume = (async () => {
         const transport = await ensureTransport('recv');
         const active = session.current;
-        if (!socket || !active) throw new Error(SUPERSEDED);
+        if (!socket || !active) {
+          throw new Error(SUPERSEDED);
+        }
 
         const api = signalling(socket);
         const params = await api.consume(slug, active.device.rtpCapabilities);
@@ -356,7 +410,9 @@ export function useMedia(socket: SocketClient | null) {
         void consume
           .catch(() => {})
           .finally(() => {
-            if (session.current === active) active.pendingConsumers.delete(slug);
+            if (session.current === active) {
+              active.pendingConsumers.delete(slug);
+            }
           });
       }
       return consume;
@@ -368,7 +424,9 @@ export function useMedia(socket: SocketClient | null) {
     async (slug: string) => {
       const active = session.current;
       const consumer = active?.consumers.get(slug);
-      if (!active || !consumer || !socket) return;
+      if (!active || !consumer || !socket) {
+        return;
+      }
       active.consumers.delete(slug);
       consumer.close();
       setState((prev) => consumerClosed(prev, slug));

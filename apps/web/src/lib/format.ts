@@ -11,7 +11,9 @@ export function formatElapsed(ms: number) {
   const total = Math.floor(Math.max(ms, 0) / 1000);
   const seconds = String(total % 60).padStart(2, '0');
   const hours = Math.floor(total / 3600);
-  if (hours === 0) return `${Math.floor(total / 60)}:${seconds}`;
+  if (hours === 0) {
+    return `${Math.floor(total / 60)}:${seconds}`;
+  }
 
   return `${hours}:${String(Math.floor(total / 60) % 60).padStart(2, '0')}:${seconds}`;
 }
@@ -27,9 +29,15 @@ export function plural(n: number, noun: string) {
  * absent from the live payload has none, which is a count of zero rather than a missing answer.
  */
 export function eventStatusLabel(event: { enabled: boolean; channels: number; onAir: number }) {
-  if (!event.enabled) return 'Disabled';
-  if (event.channels === 0) return 'No channels yet';
-  if (event.onAir === 0) return 'Nobody on air';
+  if (!event.enabled) {
+    return 'Disabled';
+  }
+  if (event.channels === 0) {
+    return 'No channels yet';
+  }
+  if (event.onAir === 0) {
+    return 'Nobody on air';
+  }
 
   return `${event.onAir} on air`;
 }
@@ -39,7 +47,9 @@ export function eventStatusLabel(event: { enabled: boolean; channels: number; on
  * `listening` is a participle, so it counts without agreeing — no pluralisation to get wrong.
  */
 export function channelLiveLabel(live: { online: boolean; listeners: number } | undefined) {
-  if (!live?.online) return 'Nobody on air';
+  if (!live?.online) {
+    return 'Nobody on air';
+  }
 
   return `On air · ${live.listeners} listening`;
 }

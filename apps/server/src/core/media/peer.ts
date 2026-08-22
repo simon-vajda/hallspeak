@@ -31,7 +31,9 @@ export class Peer {
 
   transportById(id: string): types.WebRtcTransport | undefined {
     for (const transport of this.transports.values()) {
-      if (transport.id === id) return transport;
+      if (transport.id === id) {
+        return transport;
+      }
     }
     return undefined;
   }
@@ -76,7 +78,9 @@ export class Peer {
     // never calls close would otherwise leave a dead reference here for the whole
     // connection — and a later resume would reach it and throw an untyped error.
     consumer.observer.once('close', () => {
-      if (this.consumers.get(consumer.id) === consumer) this.forget(consumer);
+      if (this.consumers.get(consumer.id) === consumer) {
+        this.forget(consumer);
+      }
     });
   }
 
@@ -87,7 +91,9 @@ export class Peer {
   /** Unknown is a no-op: a client racing its own close must not get an error for it. */
   closeConsumer(id: string): void {
     const consumer = this.consumers.get(id);
-    if (!consumer) return;
+    if (!consumer) {
+      return;
+    }
     this.forget(consumer);
     consumer.close();
   }
@@ -100,14 +106,20 @@ export class Peer {
   }
 
   close(): void {
-    if (this.closed) return;
+    if (this.closed) {
+      return;
+    }
     this.closed = true;
-    for (const consumer of this.consumers.values()) consumer.close();
+    for (const consumer of this.consumers.values()) {
+      consumer.close();
+    }
     this.consumers.clear();
     this.consumerByProducer.clear();
     // Closing a transport closes its consumers too; both are cleared anyway so a later
     // lookup cannot reach a dead object.
-    for (const transport of this.transports.values()) transport.close();
+    for (const transport of this.transports.values()) {
+      transport.close();
+    }
     this.transports.clear();
   }
 }

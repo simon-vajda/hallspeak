@@ -43,7 +43,9 @@ export function LevelMeter({
 
   useEffect(() => {
     const fill = fillRef.current;
-    if (!analyser || !fill) return;
+    if (!analyser || !fill) {
+      return;
+    }
 
     const frame = new Float32Array(analyser.fftSize);
     let raf = 0;
@@ -64,7 +66,9 @@ export function LevelMeter({
       peak = holdPeak(peak, level, elapsed);
 
       fill.style.width = `${smoothed * 100}%`;
-      if (peakRef.current) peakRef.current.style.left = `${peak * 100}%`;
+      if (peakRef.current) {
+        peakRef.current.style.left = `${peak * 100}%`;
+      }
 
       const next = levelStatus(peak);
       rootRef.current?.setAttribute('data-peaking', String(next === 'peaking'));
@@ -81,7 +85,9 @@ export function LevelMeter({
       cancelAnimationFrame(raf);
       // The readout and the peaking colour are as stale as the bar once the analyser is gone.
       fill.style.width = '0%';
-      if (peakRef.current) peakRef.current.style.left = '0%';
+      if (peakRef.current) {
+        peakRef.current.style.left = '0%';
+      }
       rootRef.current?.setAttribute('data-peaking', 'false');
       setStatus('quiet');
     };

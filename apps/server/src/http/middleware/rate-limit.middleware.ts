@@ -25,7 +25,9 @@ export function clientIp(
 
   if (remote && trustedProxies.includes(normalizeAddress(remote))) {
     const appended = c.req.header('x-forwarded-for')?.split(',').at(-1)?.trim();
-    if (appended) return normalizeAddress(appended);
+    if (appended) {
+      return normalizeAddress(appended);
+    }
   }
 
   // 'unknown' collapses every unidentifiable caller into one bucket, throttling them

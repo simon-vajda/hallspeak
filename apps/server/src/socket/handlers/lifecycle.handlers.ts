@@ -72,7 +72,9 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
      */
     case 'listeners-changed': {
       const holder = presence.holder(notification.channelId);
-      if (holder === undefined) return;
+      if (holder === undefined) {
+        return;
+      }
       io.to(holder).emit('channel:listeners', {
         slug: notification.slug,
         count: notification.count,
@@ -110,11 +112,15 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
  */
 export function sendInitialListenerCount(db: Db, socket: LifecycleSocket, auth: SocketAuth): void {
   const channelId = auth.speakerChannelId;
-  if (channelId === null) return;
+  if (channelId === null) {
+    return;
+  }
 
   // `socket.data` carries no slug, so the wire's identifier is read back off the row.
   const channel = getChannelById(db, channelId);
-  if (!channel) return;
+  if (!channel) {
+    return;
+  }
 
   socket.emit('channel:listeners', {
     slug: channel.slug,

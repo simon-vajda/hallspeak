@@ -22,7 +22,9 @@ export function joinChannel(
   slug: string,
 ): { online: boolean; muted: boolean } {
   const channel = findEnabledChannelBySlug(db, auth.eventId, slug);
-  if (!channel) throw new AppError('not_found', `No channel "${slug}" on this event.`);
+  if (!channel) {
+    throw new AppError('not_found', `No channel "${slug}" on this event.`);
+  }
 
   socket.join(channelRoom(channel.id));
   return channelStatus(auth.eventId, channel.id);
@@ -31,5 +33,7 @@ export function joinChannel(
 /** Fire-and-forget: a leave that resolves to nothing has already achieved its goal. */
 export function leaveChannel(db: Db, socket: RoomSocket, auth: SocketAuth, slug: string): void {
   const channel = findEnabledChannelBySlug(db, auth.eventId, slug);
-  if (channel) socket.leave(channelRoom(channel.id));
+  if (channel) {
+    socket.leave(channelRoom(channel.id));
+  }
 }

@@ -30,7 +30,9 @@ export function startAuth(path: string = credentialsPath()): void {
  * drive a server from configured back to unconfigured without one.
  */
 export function resetAuth(): void {
-  if (file) rmSync(file, { force: true });
+  if (file) {
+    rmSync(file, { force: true });
+  }
   account = null;
   claiming = false;
 }
@@ -44,7 +46,9 @@ export function isConfigured(): boolean {
  * writing asynchronously lets two setup requests in the same tick both pass the check.
  */
 export async function createAccount(username: string, password: string): Promise<void> {
-  if (!file) throw new AppError('auth_unavailable', 'Authentication is not available.');
+  if (!file) {
+    throw new AppError('auth_unavailable', 'Authentication is not available.');
+  }
   if (account || claiming) {
     throw new AppError('already_configured', 'This server already has an administrator.');
   }

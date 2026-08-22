@@ -66,7 +66,9 @@ export function EventFormDialog({
           onSaved={(saved) => {
             onOpenChange(false);
             // A new event has a PIN and nothing else, so adding channels is the next act.
-            if (mode === 'create') navigate({ to: '/admin/events/$id', params: { id: saved.id } });
+            if (mode === 'create') {
+              navigate({ to: '/admin/events/$id', params: { id: saved.id } });
+            }
           }}
         />
       </DialogContent>

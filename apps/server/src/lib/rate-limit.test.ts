@@ -22,7 +22,9 @@ describe('TokenBucketLimiter', () => {
   it('refills over time', () => {
     const clock = fixedClock();
     const limiter = new TokenBucketLimiter({ capacity: 3, refillPerSecond: 1, now: clock.now });
-    for (let i = 0; i < 3; i++) limiter.penalize('ip');
+    for (let i = 0; i < 3; i++) {
+      limiter.penalize('ip');
+    }
 
     expect(limiter.allow('ip')).toBe(false);
 
@@ -68,7 +70,9 @@ describe('TokenBucketLimiter', () => {
   it('does not retain no-op state for successful addresses', () => {
     const limiter = new TokenBucketLimiter({ capacity: 2, refillPerSecond: 1 });
 
-    for (let i = 0; i < 20; i++) limiter.allow(`ip-${i}`);
+    for (let i = 0; i < 20; i++) {
+      limiter.allow(`ip-${i}`);
+    }
 
     expect(limiter.size).toBe(0);
   });
@@ -83,7 +87,9 @@ describe('TokenBucketLimiter', () => {
       maxKeys: 4,
     });
     limiter.penalize('keeps-state');
-    for (let i = 0; i < 20; i++) limiter.allow(`ip-${i}`);
+    for (let i = 0; i < 20; i++) {
+      limiter.allow(`ip-${i}`);
+    }
 
     expect(limiter.size).toBeLessThanOrEqual(4);
     // The one bucket that carries state survives pruning.
@@ -101,7 +107,9 @@ describe('TokenBucketLimiter', () => {
       maxKeys: 4,
     });
 
-    for (let i = 0; i < 20; i++) limiter.penalize(`ip-${i}`);
+    for (let i = 0; i < 20; i++) {
+      limiter.penalize(`ip-${i}`);
+    }
 
     expect(limiter.size).toBeLessThanOrEqual(4);
   });

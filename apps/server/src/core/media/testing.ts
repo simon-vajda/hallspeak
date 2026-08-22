@@ -35,16 +35,22 @@ class FakeProducer extends EventEmitter {
     this.paused = paused;
   }
   close = () => {
-    if (this.closed) return;
+    if (this.closed) {
+      return;
+    }
     this.closed = true;
     this.observer.emit('close');
   };
   pause = async () => {
-    if (fakeMediaControls.failPause) throw new Error('pause failed');
+    if (fakeMediaControls.failPause) {
+      throw new Error('pause failed');
+    }
     this.paused = true;
   };
   resume = async () => {
-    if (fakeMediaControls.failResume) throw new Error('resume failed');
+    if (fakeMediaControls.failResume) {
+      throw new Error('resume failed');
+    }
     this.paused = false;
   };
 }
@@ -63,7 +69,9 @@ class FakeConsumer extends EventEmitter {
     super();
   }
   close = () => {
-    if (this.closed) return;
+    if (this.closed) {
+      return;
+    }
     this.closed = true;
     // mediasoup emits this when the consumer closes for any reason, including its
     // producer going away. Peer's cleanup hangs off it, so a fake that stays silent
@@ -91,7 +99,9 @@ class FakeTransport {
 
   close = () => {
     this.closed = true;
-    for (const child of this.children) child.close();
+    for (const child of this.children) {
+      child.close();
+    }
   };
 
   // mediasoup stores whatever appData it is handed on the producer, and `Room` reads the
@@ -148,7 +158,9 @@ class FakeRouter {
    */
   registerProducer(producer: FakeProducer): void {
     producer.observer.once('close', () => {
-      for (const consumer of this.consumersByProducer.get(producer.id) ?? []) consumer.close();
+      for (const consumer of this.consumersByProducer.get(producer.id) ?? []) {
+        consumer.close();
+      }
       this.consumersByProducer.delete(producer.id);
     });
   }

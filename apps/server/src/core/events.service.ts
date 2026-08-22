@@ -60,7 +60,9 @@ export function createEvent(
         .returning()
         .get();
     } catch (err) {
-      if (!isUniqueViolation(err)) throw err;
+      if (!isUniqueViolation(err)) {
+        throw err;
+      }
     }
   }
   throw new AppError('pin_unavailable', 'Could not allocate a unique PIN.');
@@ -80,7 +82,9 @@ export function deleteEvent(db: Db, id: number): boolean {
 }
 
 export function regeneratePin(db: Db, id: number): EventRow | undefined {
-  if (!getEventById(db, id)) return undefined;
+  if (!getEventById(db, id)) {
+    return undefined;
+  }
   for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
     try {
       return db
@@ -90,7 +94,9 @@ export function regeneratePin(db: Db, id: number): EventRow | undefined {
         .returning()
         .get();
     } catch (err) {
-      if (!isUniqueViolation(err)) throw err;
+      if (!isUniqueViolation(err)) {
+        throw err;
+      }
     }
   }
   throw new AppError('pin_unavailable', 'Could not allocate a unique PIN.');

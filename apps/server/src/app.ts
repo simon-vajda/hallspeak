@@ -32,7 +32,9 @@ if (existsSync(env.WEB_ROOT)) {
   // Response with c.body() before awaiting onFound, so headers set there land nowhere.
   app.use('*', async (c, next) => {
     await next();
-    if (c.res.status !== 200 && c.res.status !== 206) return;
+    if (c.res.status !== 200 && c.res.status !== 206) {
+      return;
+    }
     // Vite content-hashes everything under /assets. index.html must revalidate, or a
     // browser holding a cached shell requests asset hashes that no longer exist.
     c.res.headers.set(

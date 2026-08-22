@@ -34,7 +34,9 @@ function mayCreateRoom(auth: SocketAuth): boolean {
 /** The slug resolves against the socket's own event, so a foreign channel does not exist. */
 function channelOrThrow(db: Db, auth: SocketAuth, slug: string) {
   const channel = findEnabledChannelBySlug(db, auth.eventId, slug);
-  if (!channel) throw new AppError('not_found', `No channel "${slug}" on this event.`);
+  if (!channel) {
+    throw new AppError('not_found', `No channel "${slug}" on this event.`);
+  }
   return channel;
 }
 

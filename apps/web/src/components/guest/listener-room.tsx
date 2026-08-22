@@ -96,15 +96,23 @@ export function ListenerRoom({
 
   useEffect(() => {
     const plan = consumerPlan({ consumers, armedSlug, online });
-    for (const slug of plan.close) void stopConsuming(slug);
-    if (!plan.consume) return;
+    for (const slug of plan.close) {
+      void stopConsuming(slug);
+    }
+    if (!plan.consume) {
+      return;
+    }
 
     let cancelled = false;
     void startConsuming(plan.consume)
       .then((track) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         const element = audio.current;
-        if (!element) return;
+        if (!element) {
+          return;
+        }
         element.srcObject = new MediaStream([track]);
         // Started under the arming gesture's context, so this resolves rather than
         // rejecting on autoplay policy.
@@ -112,7 +120,9 @@ export function ListenerRoom({
       })
       .catch((cause) => {
         // Swallowed silently, a failed consume left the screen claiming it was waiting.
-        if (!cancelled && !isSuperseded(cause)) console.error('media: could not listen', cause);
+        if (!cancelled && !isSuperseded(cause)) {
+          console.error('media: could not listen', cause);
+        }
       });
 
     return () => {
@@ -214,7 +224,11 @@ export function ListenerRoom({
 
 /** Waiting gets its own mark, so armed-and-waiting cannot be mistaken for untapped. */
 function PlayIcon({ state }: { state: ReturnType<typeof listenActionState> }) {
-  if (state === 'playing') return <Pause className="fill-current" />;
-  if (state === 'idle') return <Play className="fill-current" />;
+  if (state === 'playing') {
+    return <Pause className="fill-current" />;
+  }
+  if (state === 'idle') {
+    return <Play className="fill-current" />;
+  }
   return <Loader2 className="animate-spin motion-reduce:animate-none" />;
 }

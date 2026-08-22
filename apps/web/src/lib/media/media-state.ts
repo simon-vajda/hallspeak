@@ -147,7 +147,9 @@ export function consumerPlan(input: {
   online: boolean;
 }): ConsumerPlan {
   const close = Object.keys(input.consumers).filter((slug) => slug !== input.armedSlug);
-  if (input.armedSlug === null) return { close, consume: null };
+  if (input.armedSlug === null) {
+    return { close, consume: null };
+  }
 
   const open = input.consumers[input.armedSlug] !== undefined;
   if (!input.online) {

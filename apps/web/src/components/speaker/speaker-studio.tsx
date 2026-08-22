@@ -98,13 +98,17 @@ export function SpeakerStudio({
 
   const produce = useCallback(
     async (paused: boolean) => {
-      if (!outputTrack) return;
+      if (!outputTrack) {
+        return;
+      }
       try {
         await startProducing(channel.slug, outputTrack, paused);
         producedTrack.current = outputTrack;
       } catch (cause) {
         // A reset landed mid-negotiation; its own renegotiation takes over from here.
-        if (!isSuperseded(cause)) console.error('media: could not go live', cause);
+        if (!isSuperseded(cause)) {
+          console.error('media: could not go live', cause);
+        }
       }
     },
     [startProducing, outputTrack, channel.slug],
@@ -119,8 +123,12 @@ export function SpeakerStudio({
    * browser will only honour on a fresh `getUserMedia`.
    */
   useEffect(() => {
-    if (!hasProducer || !outputTrack) return;
-    if (producedTrack.current === outputTrack) return;
+    if (!hasProducer || !outputTrack) {
+      return;
+    }
+    if (producedTrack.current === outputTrack) {
+      return;
+    }
 
     producedTrack.current = outputTrack;
     void replaceProducerTrack(outputTrack).catch((cause) => {
@@ -134,9 +142,13 @@ export function SpeakerStudio({
    * speaker link, or the code behind it was regenerated.
    */
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) {
+      return;
+    }
     const onDisconnect = (reason: string) => {
-      if (reason === 'io server disconnect') setDisplaced(true);
+      if (reason === 'io server disconnect') {
+        setDisplaced(true);
+      }
     };
     socket.on('disconnect', onDisconnect);
     return () => {
@@ -162,15 +174,23 @@ export function SpeakerStudio({
    * a broadcast somebody chose to stop must not restart itself because the Wi-Fi blinked.
    */
   useEffect(() => {
-    if (status !== 'connected' || hasProducer || !outputTrack) return;
-    if (onReconnect({ goLivePressed, lastEnd, displaced }).type !== 're-produce') return;
+    if (status !== 'connected' || hasProducer || !outputTrack) {
+      return;
+    }
+    if (onReconnect({ goLivePressed, lastEnd, displaced }).type !== 're-produce') {
+      return;
+    }
 
     let cancelled = false;
     void produce(true).then(() => {
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
       setLocalMuted(true);
       // Only a recovery reads as back-from-drop; the first Go live is an ordinary start.
-      if (lastEnd === 'dropped') setRecoveredSilently(true);
+      if (lastEnd === 'dropped') {
+        setRecoveredSilently(true);
+      }
       setLastEnd(null);
     });
     return () => {
@@ -182,12 +202,16 @@ export function SpeakerStudio({
 
   useEffect(() => {
     const analyser = mic.analyser;
-    if (!analyser || heardSomething) return;
+    if (!analyser || heardSomething) {
+      return;
+    }
 
     const frame = new Float32Array(analyser.fftSize);
     const timer = setInterval(() => {
       analyser.getFloatTimeDomainData(frame);
-      if (levelStatus(meterLevel(rms(frame))) !== 'quiet') setHeardSomething(true);
+      if (levelStatus(meterLevel(rms(frame))) !== 'quiet') {
+        setHeardSomething(true);
+      }
     }, SIGNAL_POLL_MS);
 
     return () => clearInterval(timer);
@@ -197,7 +221,9 @@ export function SpeakerStudio({
   // live stays disabled. Go live is the one control that cannot be the resuming gesture.
   const { suspended, resume } = mic;
   useEffect(() => {
-    if (!suspended) return;
+    if (!suspended) {
+      return;
+    }
 
     window.addEventListener('pointerdown', resume);
     window.addEventListener('keydown', resume);
@@ -243,7 +269,9 @@ export function SpeakerStudio({
               requestRevision,
               current: channelStatusRef.current,
             });
-            if (!media.setLocalProducerPaused(rollbackMuted, producerControl)) return;
+            if (!media.setLocalProducerPaused(rollbackMuted, producerControl)) {
+              return;
+            }
             setLocalMuted(rollbackMuted);
             console.error('media: could not change mute', cause);
           });

@@ -61,7 +61,9 @@ export function attachSocket(httpServer: ServerType): SocketServer {
     const speakerChannelId = socket.data.speakerChannelId;
     // Joining the channel room is all a claim buys. Liveness is the producer's to report,
     // so nothing is broadcast here — an open studio is not audio.
-    if (speakerChannelId !== null) socket.join(channelRoom(speakerChannelId));
+    if (speakerChannelId !== null) {
+      socket.join(channelRoom(speakerChannelId));
+    }
 
     on(socket, 'ping', () => ({ serverTime: Date.now() }));
     on(socket, 'channel:join', ({ slug }) => joinChannel(db, socket, socket.data, slug));

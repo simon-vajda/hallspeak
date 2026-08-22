@@ -66,7 +66,9 @@ const SHUTDOWN_TIMEOUT_MS = 10_000;
 let shuttingDown = false;
 
 function shutdown(signal: NodeJS.Signals): void {
-  if (shuttingDown) return;
+  if (shuttingDown) {
+    return;
+  }
   shuttingDown = true;
   console.log(`${signal} received, shutting down`);
 

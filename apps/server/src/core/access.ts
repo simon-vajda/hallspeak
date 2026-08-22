@@ -41,13 +41,17 @@ export function authorizeHandshake(
   socketId: string,
 ): AuthorizeResult {
   const parsed = Handshake.safeParse(auth);
-  if (!parsed.success) return { ok: false, error: 'invalid_handshake' };
+  if (!parsed.success) {
+    return { ok: false, error: 'invalid_handshake' };
+  }
   if (semverLt(parsed.data.clientVersion, MIN_CLIENT_VERSION)) {
     return { ok: false, error: 'client_too_old' };
   }
 
   const event = findEnabledEventByPin(db, parsed.data.pin);
-  if (!event) return { ok: false, error: 'not_found' };
+  if (!event) {
+    return { ok: false, error: 'not_found' };
+  }
 
   const { speakerCode } = parsed.data;
   if (speakerCode === undefined) {
@@ -68,7 +72,9 @@ export function authorizeHandshake(
   // Another code holds it: busy. The same code takes it over, and the loser is named so
   // the caller can close its media and its socket.
   const claim = presence.claim(channel.id, speakerCode, socketId);
-  if (!claim.ok) return { ok: false, error: 'channel_busy' };
+  if (!claim.ok) {
+    return { ok: false, error: 'channel_busy' };
+  }
 
   return {
     ok: true,

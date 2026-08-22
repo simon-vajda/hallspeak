@@ -82,7 +82,9 @@ export function MicPanel({
             items={devices.map((device) => ({ label: device.label, value: device.deviceId }))}
             value={deviceId}
             onValueChange={(value) => {
-              if (value) onSelectDevice(value);
+              if (value) {
+                onSelectDevice(value);
+              }
             }}
             disabled={devices.length === 0}
           >

@@ -48,7 +48,9 @@ let state: MediaState | null = null;
  * rather than a runtime surprise. A worker dying later is deliberately not fatal.
  */
 export async function startMedia(options: StartMediaOptions): Promise<void> {
-  if (state) throw new Error('startMedia called twice');
+  if (state) {
+    throw new Error('startMedia called twice');
+  }
 
   const turnConfigured = Boolean(options.turn.turnUrl && options.turn.turnSecret);
   const pool = new WorkerPool({
@@ -89,7 +91,9 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
 }
 
 export async function stopMedia(): Promise<void> {
-  if (!state) return;
+  if (!state) {
+    return;
+  }
   const { pool, registry, listeners } = state;
   // Nulled first, so every consumer closed inside closeAll() finds `scheduleRecount` inert
   // rather than arming a fresh window behind a drain that already ran.
@@ -105,7 +109,9 @@ function keepAlive(eventId: number): void {
 }
 
 function require_(): MediaState {
-  if (!state) throw new AppError('media_unavailable', 'Media is not available.');
+  if (!state) {
+    throw new AppError('media_unavailable', 'Media is not available.');
+  }
   return state;
 }
 
@@ -221,7 +227,9 @@ export async function connectTransport(
   dtlsParameters: types.DtlsParameters,
 ): Promise<void> {
   const transport = peerOrThrow(ctx).transportById(transportId);
-  if (!transport) throw new AppError('no_transport', 'No such transport on this session.');
+  if (!transport) {
+    throw new AppError('no_transport', 'No such transport on this session.');
+  }
   await transport.connect({ dtlsParameters });
 }
 
@@ -238,7 +246,9 @@ export async function produce(
 ): Promise<{ producerId: string }> {
   const room = await roomFor(ctx.eventId, true);
   const transport = room.peerFor(ctx.socketId).transport('send');
-  if (!transport) throw new AppError('no_transport', 'Create a send transport first.');
+  if (!transport) {
+    throw new AppError('no_transport', 'Create a send transport first.');
+  }
 
   const producer = await transport.produce({
     kind: 'audio',
@@ -307,7 +317,9 @@ export async function closeProducer(
   const producer = state?.registry.get(ctx.eventId)?.producer(channelId);
   // A close that finds nothing has already achieved what it asked for. Scoped to the
   // caller's own channel, so a wrong id can never reach somebody else's producer.
-  if (!producer || producer.id !== producerId) return;
+  if (!producer || producer.id !== producerId) {
+    return;
+  }
   producer.close();
 }
 
@@ -332,7 +344,9 @@ export async function consume(
   }
   const peer = room.peerFor(ctx.socketId);
   const transport = peer.transport('recv');
-  if (!transport) throw new AppError('no_transport', 'Create a receive transport first.');
+  if (!transport) {
+    throw new AppError('no_transport', 'Create a receive transport first.');
+  }
 
   // A repeated consume of the same channel returns what this peer already holds. Left
   // uncapped, one PIN holder could fan a channel out as many times as they asked.
@@ -380,11 +394,15 @@ export async function consume(
 
 export async function resumeConsumer(ctx: MediaContext, consumerId: string): Promise<void> {
   const consumer = peerOrThrow(ctx).consumerById(consumerId);
-  if (!consumer) throw new AppError('no_consumer', 'No such consumer on this session.');
+  if (!consumer) {
+    throw new AppError('no_consumer', 'No such consumer on this session.');
+  }
   await consumer.resume();
   // The other half of the count: a resume is the moment a guest starts hearing anything.
   const { channelId, slug } = consumerChannel(consumer);
-  if (channelId !== undefined) scheduleRecount(ctx.eventId, channelId, slug);
+  if (channelId !== undefined) {
+    scheduleRecount(ctx.eventId, channelId, slug);
+  }
 }
 
 function consumerChannel(consumer: types.Consumer): { channelId?: number; slug: string } {
@@ -425,7 +443,9 @@ export function revokeChannel(eventId: number, channelId: number, reason: Evicti
  * regenerated PIN must remove.
  */
 export function revokeEvent(eventId: number, channelIds: number[], reason: EvictionReason): void {
-  for (const channelId of channelIds) presence.releaseChannel(channelId);
+  for (const channelId of channelIds) {
+    presence.releaseChannel(channelId);
+  }
   state?.registry.closeEvent(eventId, 'revoked');
   notifications.publish({ type: 'room-evicted', eventId, reason });
 }
@@ -452,20 +472,26 @@ async function roomFor(eventId: number, create: boolean): Promise<Room> {
     keepAlive(eventId);
     return existing;
   }
-  if (!create) throw new AppError('not_live', 'Nobody is broadcasting on this event.');
+  if (!create) {
+    throw new AppError('not_live', 'Nobody is broadcasting on this event.');
+  }
   return registry.getOrCreate(eventId);
 }
 
 function roomOrThrow(eventId: number): Room {
   const room = require_().registry.get(eventId);
-  if (!room) throw new AppError('not_live', 'Nobody is broadcasting on this event.');
+  if (!room) {
+    throw new AppError('not_live', 'Nobody is broadcasting on this event.');
+  }
   keepAlive(eventId);
   return room;
 }
 
 function peerOrThrow(ctx: MediaContext) {
   const peer = roomOrThrow(ctx.eventId).peer(ctx.socketId);
-  if (!peer) throw new AppError('no_transport', 'This session holds no media.');
+  if (!peer) {
+    throw new AppError('no_transport', 'This session holds no media.');
+  }
   return peer;
 }
 

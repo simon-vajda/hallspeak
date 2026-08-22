@@ -17,7 +17,9 @@ export const Route = createFileRoute('/login')({
   },
   beforeLoad: async ({ context }) => {
     const session = await context.queryClient.ensureQueryData(sessionQueryOptions());
-    if (!session.configured) throw redirect({ to: '/setup' });
+    if (!session.configured) {
+      throw redirect({ to: '/setup' });
+    }
   },
   component: LoginPage,
 });
@@ -49,8 +51,11 @@ function LoginPage() {
       queryClient.setQueryData(sessionKey(), session);
       // `href` rather than `to`: the attempted path is a string the guard put in the URL,
       // already narrowed to an internal router path, and there is no route literal for it.
-      if (target) await navigate({ href: target });
-      else await navigate({ to: '/admin/events' });
+      if (target) {
+        await navigate({ href: target });
+      } else {
+        await navigate({ to: '/admin/events' });
+      }
     },
     onError: (error) => {
       failures.current += 1;
@@ -58,7 +63,9 @@ function LoginPage() {
       // being throttled or unreachable is not a wrong password and must not read as one.
       setMessage(error.code === 'invalid_credentials' ? REFUSED : (error.message ?? REFUSED));
       // Both fields keep their value until then; only the password is cleared.
-      if (failures.current >= CLEAR_PASSWORD_AFTER) setPassword('');
+      if (failures.current >= CLEAR_PASSWORD_AFTER) {
+        setPassword('');
+      }
     },
   });
 
@@ -67,7 +74,9 @@ function LoginPage() {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (username && password) login.mutate({ body: { username, password } });
+          if (username && password) {
+            login.mutate({ body: { username, password } });
+          }
         }}
         className="flex flex-col"
       >

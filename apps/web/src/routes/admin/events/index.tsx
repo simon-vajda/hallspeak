@@ -204,7 +204,9 @@ function statusLabel(event: AdminEventDetail, onAir: number) {
 }
 
 function summarise(events: AdminEventDetail[]) {
-  if (events.length === 0) return 'Nothing here yet';
+  if (events.length === 0) {
+    return 'Nothing here yet';
+  }
 
   const enabled = events.filter((event) => event.enabled).length;
   const channels = events.reduce((total, event) => total + event.channels.length, 0);

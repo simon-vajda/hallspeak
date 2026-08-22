@@ -24,7 +24,9 @@ export type LevelStatus = 'quiet' | 'good' | 'peaking';
  * rise they can also see; the thresholds and the design's tick are positions on this scale.
  */
 export function meterLevel(amplitude: number): number {
-  if (!(amplitude > 0)) return 0;
+  if (!(amplitude > 0)) {
+    return 0;
+  }
 
   const db = 20 * Math.log10(amplitude);
   return Math.min(Math.max((db - METER_FLOOR_DB) / -METER_FLOOR_DB, 0), 1);
@@ -38,16 +40,22 @@ export function meterLevel(amplitude: number): number {
  * quarter of the track no matter what the microphone is doing.
  */
 export function rms(frame: Float32Array): number {
-  if (frame.length === 0) return 0;
+  if (frame.length === 0) {
+    return 0;
+  }
 
   let sum = 0;
-  for (const sample of frame) sum += sample * sample;
+  for (const sample of frame) {
+    sum += sample * sample;
+  }
   return Math.sqrt(sum / frame.length);
 }
 
 /** The threshold is inclusive so the colour change agrees with the tick drawn at it. */
 export function levelStatus(level: number): LevelStatus {
-  if (level >= PEAK_THRESHOLD) return 'peaking';
+  if (level >= PEAK_THRESHOLD) {
+    return 'peaking';
+  }
   return level < SILENCE_THRESHOLD ? 'quiet' : 'good';
 }
 
@@ -69,7 +77,9 @@ export const HOLD_DECAY_MS = 900;
  * has no elapsed time to integrate over and simply adopts the target.
  */
 export function smoothLevel(previous: number, target: number, elapsedMs: number): number {
-  if (!(elapsedMs > 0)) return target;
+  if (!(elapsedMs > 0)) {
+    return target;
+  }
 
   const tau = target > previous ? ATTACK_MS : RELEASE_MS;
   return previous + (target - previous) * (1 - Math.exp(-elapsedMs / tau));
@@ -81,7 +91,9 @@ export function smoothLevel(previous: number, target: number, elapsedMs: number)
  * the 10–50ms bursts the indicator exists to catch.
  */
 export function holdPeak(previous: number, level: number, elapsedMs: number): number {
-  if (!(elapsedMs > 0) || level >= previous) return level;
+  if (!(elapsedMs > 0) || level >= previous) {
+    return level;
+  }
 
   return level + (previous - level) * Math.exp(-elapsedMs / HOLD_DECAY_MS);
 }

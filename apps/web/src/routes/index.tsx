@@ -16,7 +16,9 @@ export const Route = createFileRoute('/')({
   // is unconfigured, so a printed QR code survives a recovery.
   beforeLoad: async ({ context }) => {
     const session = await context.queryClient.ensureQueryData(sessionQueryOptions());
-    if (!session.configured) throw redirect({ to: '/setup' });
+    if (!session.configured) {
+      throw redirect({ to: '/setup' });
+    }
   },
   component: IndexPage,
 });
