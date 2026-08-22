@@ -50,17 +50,22 @@ expected failure sequence rather than a set of unrelated faults.
 
 ## First things to check, in order
 
-1. The process is alive.
-2. The announced address in the startup log is the router's public address. A stale value
+1. Ask the affected listener what their active Channel screen says. **"Interpreter muted"**
+   means the Producer still exists and the Channel is still Live; the interpreter paused it
+   intentionally, so audio resumes without any infrastructure repair. Admin and Channel lists
+   remain "On air" in this state by design. See
+   [Separate channel liveness from listener mute state](../conventions/separate-channel-liveness-from-listener-mute-state.md).
+2. The process is alive.
+3. The announced address in the startup log is the router's public address. A stale value
    is the most common silent failure: the candidates are well-formed and unreachable, and
    nothing errors anywhere. On a dynamic residential IP this is a DDNS problem.
-3. The guest link works from off the venue network — open it on mobile data. Silence there
+4. The guest link works from off the venue network — open it on mobile data. Silence there
    with audio on the LAN means the announced address is wrong.
-4. The number of `mediasoup-worker` processes matches the configured worker count. The
+5. The number of `mediasoup-worker` processes matches the configured worker count. The
    startup line prints the count against the detected core count; under Docker
    `os.cpus()` reports the host's cores rather than a `--cpus` quota, so a mismatch there
    is a misconfigured container.
-5. If only one event is affected, its listener count against the capacity guideline.
+6. If only one event is affected, its listener count against the capacity guideline.
 
 ## Capacity, and why the number is soft
 
