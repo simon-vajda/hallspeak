@@ -15,12 +15,15 @@ export async function createTestApi() {
   const { closeDb, db } = await import('../db');
   const { runMigrations } = await import('../db/migrate');
   runMigrations(db);
+  const { resetAuth, startAuth } = await import('../core/auth');
+  startAuth();
   const { apiRoutes } = await import('../http/routes');
 
   return {
     api: apiRoutes,
     db,
     cleanup: () => {
+      resetAuth();
       closeDb();
       rmSync(dir, { recursive: true, force: true });
     },
