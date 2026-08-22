@@ -1,25 +1,28 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestApi } from '../../../testing/api';
+import { type ApiRequest, createTestApi } from '../../../testing/api';
 
-let api: Awaited<ReturnType<typeof createTestApi>>['api'];
 let cleanup: () => void;
+// Every /admin route is behind requireAdmin; drop this and the whole file 401s.
+let request: ApiRequest;
 
 const post = (path: string, body?: unknown) =>
-  api.request(path, {
+  request(path, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
 const patch = (path: string, body: unknown) =>
-  api.request(path, {
+  request(path, {
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   });
 
 beforeAll(async () => {
-  ({ api, cleanup } = await createTestApi());
+  const created = await createTestApi();
+  ({ cleanup } = created);
+  request = await created.signInAsAdmin();
 });
 
 afterAll(() => {
@@ -58,7 +61,7 @@ describe('GET /admin/events', () => {
   };
 
   const list = async () => {
-    const res = await api.request('/admin/events');
+    const res = await request('/admin/events');
     expect(res.status).toBe(200);
     return (await res.json()) as ListedEvent[];
   };
@@ -109,14 +112,14 @@ describe('GET|PATCH|DELETE /admin/events/{id}', () => {
   });
 
   it('answers 404 for an unknown id on every verb', async () => {
-    expect((await api.request('/admin/events/999999')).status).toBe(404);
+    expect((await request('/admin/events/999999')).status).toBe(404);
     expect((await patch('/admin/events/999999', { name: 'x' })).status).toBe(404);
-    expect((await api.request('/admin/events/999999', { method: 'DELETE' })).status).toBe(404);
+    expect((await request('/admin/events/999999', { method: 'DELETE' })).status).toBe(404);
     expect((await post('/admin/events/999999/regenerate-pin')).status).toBe(404);
   });
 
   it('rejects a non-numeric id with 400', async () => {
-    expect((await api.request('/admin/events/abc')).status).toBe(400);
+    expect((await request('/admin/events/abc')).status).toBe(400);
   });
 
   it('deletes an event and its channels together', async () => {
@@ -127,8 +130,8 @@ describe('GET|PATCH|DELETE /admin/events/{id}', () => {
       await post(`/admin/events/${event.id}/channels`, { slug: 'english', name: 'English' })
     ).json()) as { id: number };
 
-    expect((await api.request(`/admin/events/${event.id}`, { method: 'DELETE' })).status).toBe(204);
-    expect((await api.request(`/admin/events/${event.id}`)).status).toBe(404);
+    expect((await request(`/admin/events/${event.id}`, { method: 'DELETE' })).status).toBe(204);
+    expect((await request(`/admin/events/${event.id}`)).status).toBe(404);
     expect((await patch(`/admin/channels/${channel.id}`, { name: 'x' })).status).toBe(404);
   });
 });

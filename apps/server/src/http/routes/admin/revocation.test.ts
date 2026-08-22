@@ -7,11 +7,12 @@ import type { Notification } from '../../../core/notifications';
 import { notifications } from '../../../core/notifications';
 import { presence } from '../../../core/presence';
 import type { Db } from '../../../db/client';
-import { createTestApi } from '../../../testing/api';
+import { type ApiRequest, createTestApi } from '../../../testing/api';
 
-let api: Awaited<ReturnType<typeof createTestApi>>['api'];
 let db: Db;
 let cleanup: () => void;
+// Every /admin route is behind requireAdmin; drop this and the whole file 401s.
+let request: ApiRequest;
 let stopMedia: () => Promise<void>;
 let published: Notification[];
 let unsubscribe: () => void;
@@ -23,7 +24,9 @@ let spanish: { id: number };
 // The test API opens the `db` singleton, so it is per-file: cleaning it up per test
 // would close that connection for every test after the first.
 beforeAll(async () => {
-  ({ api, db, cleanup } = await createTestApi());
+  const created = await createTestApi();
+  ({ db, cleanup } = created);
+  request = await created.signInAsAdmin();
 });
 
 afterAll(() => {
@@ -53,7 +56,7 @@ afterEach(async () => {
 });
 
 const patch = (path: string, body: unknown) =>
-  api.request(path, {
+  request(path, {
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
@@ -72,7 +75,7 @@ describe('regenerating a speaker code', () => {
   it('closes the producer, releases the claim and evicts that speaker', async () => {
     await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
 
-    const res = await api.request(`/admin/channels/${english.id}/regenerate-speaker-code`, {
+    const res = await request(`/admin/channels/${english.id}/regenerate-speaker-code`, {
       method: 'POST',
     });
 
@@ -86,7 +89,7 @@ describe('regenerating a speaker code', () => {
     await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
     await broadcast(spanish.id, 'spanish', 'speaker-b', 'code-spanish');
 
-    await api.request(`/admin/channels/${english.id}/regenerate-speaker-code`, { method: 'POST' });
+    await request(`/admin/channels/${english.id}/regenerate-speaker-code`, { method: 'POST' });
 
     expect(isOnline(eventId, spanish.id)).toBe(true);
     expect(presence.holder(spanish.id)).toBe('speaker-b');
@@ -95,7 +98,7 @@ describe('regenerating a speaker code', () => {
   it('revokes after the write, so the new code is already in the response', async () => {
     await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
 
-    const res = await api.request(`/admin/channels/${english.id}/regenerate-speaker-code`, {
+    const res = await request(`/admin/channels/${english.id}/regenerate-speaker-code`, {
       method: 'POST',
     });
     const body = (await res.json()) as { speakerCode: string };
@@ -137,7 +140,7 @@ describe('disabling and deleting a channel', () => {
   it('deleting closes that channel’s producer and evicts its speaker', async () => {
     await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
 
-    const res = await api.request(`/admin/channels/${english.id}`, { method: 'DELETE' });
+    const res = await request(`/admin/channels/${english.id}`, { method: 'DELETE' });
 
     expect(res.status).toBe(204);
     expect(isOnline(eventId, english.id)).toBe(false);
@@ -161,7 +164,7 @@ describe('regenerating a PIN', () => {
   it('publishes one room eviction rather than one per known peer', async () => {
     await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
 
-    const res = await api.request(`/admin/events/${eventId}/regenerate-pin`, { method: 'POST' });
+    const res = await request(`/admin/events/${eventId}/regenerate-pin`, { method: 'POST' });
 
     expect(res.status).toBe(200);
     expect(roomEvictions()).toEqual([{ type: 'room-evicted', eventId, reason: 'access_revoked' }]);
@@ -172,7 +175,7 @@ describe('regenerating a PIN', () => {
     await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
     await broadcast(spanish.id, 'spanish', 'speaker-b', 'code-spanish');
 
-    await api.request(`/admin/events/${eventId}/regenerate-pin`, { method: 'POST' });
+    await request(`/admin/events/${eventId}/regenerate-pin`, { method: 'POST' });
 
     expect(isOnline(eventId, english.id)).toBe(false);
     expect(isOnline(eventId, spanish.id)).toBe(false);
@@ -181,7 +184,7 @@ describe('regenerating a PIN', () => {
   });
 
   it('publishes even when nobody was live, because listeners still hold the old PIN', async () => {
-    await api.request(`/admin/events/${eventId}/regenerate-pin`, { method: 'POST' });
+    await request(`/admin/events/${eventId}/regenerate-pin`, { method: 'POST' });
 
     expect(roomEvictions()).toHaveLength(1);
   });
@@ -212,7 +215,7 @@ describe('disabling and deleting an event', () => {
   it('deleting closes the room and evicts everyone on it', async () => {
     await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
 
-    const res = await api.request(`/admin/events/${eventId}`, { method: 'DELETE' });
+    const res = await request(`/admin/events/${eventId}`, { method: 'DELETE' });
 
     expect(res.status).toBe(204);
     expect(isOnline(eventId, english.id)).toBe(false);
