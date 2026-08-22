@@ -15,6 +15,19 @@ const BaseEnvSchema = z.object({
   // and would be destroyed by every redeploy if it lived inside dist/.
   DATABASE_PATH: z.string().min(1).default('./data/linguacast.db'),
 
+  // The addresses a reverse proxy may reach us from. Unset means no X-Forwarded-For is
+  // ever believed: the app stays reachable at its own port on the LAN, so an unconditional
+  // trust would let anyone forge an address and walk past the throttle.
+  TRUSTED_PROXY_IPS: z
+    .string()
+    .default('')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0),
+    ),
+
   // What the workers bind. 0.0.0.0 is right behind a router doing the forwarding.
   MEDIA_LISTEN_IP: z.string().min(1).default('0.0.0.0'),
   // What goes into ICE candidates, so it must be the address a client can actually
