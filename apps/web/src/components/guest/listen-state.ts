@@ -31,9 +31,9 @@ export interface ListenInput {
 }
 
 /**
- * The three-way distinction R32 needs. Losing the socket, the media path failing under a
- * healthy socket, and nobody being live are different situations and read differently:
- * only one of them is about a person, and none of them asks the guest to do anything.
+ * Losing the socket, the media path failing under a healthy socket, and nobody being live
+ * are different situations and read differently: only one is about a person, and none
+ * asks the guest to do anything.
  */
 export function listenState(input: ListenInput): ListenState {
   // Failures outrank broadcast status, including a stale mute held through reconnect.

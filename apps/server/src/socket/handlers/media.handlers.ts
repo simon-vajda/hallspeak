@@ -24,8 +24,8 @@ function ctx(socket: MediaSocket, auth: SocketAuth): media.MediaContext {
 }
 
 /**
- * A speaker may bring a room into being; a listener may not. That is the whole of R6 at
- * this layer — a guest arming before anyone is live allocates nothing on either side.
+ * A speaker may bring a room into being; a listener may not. A guest arming before anyone
+ * is live allocates nothing on either side.
  */
 function mayCreateRoom(auth: SocketAuth): boolean {
   return auth.speakerChannelId !== null;

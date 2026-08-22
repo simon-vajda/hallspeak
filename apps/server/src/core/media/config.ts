@@ -50,9 +50,9 @@ export interface IceServer {
 }
 
 /**
- * One shared port per worker, on UDP and TCP alike, per KTD1: ports scale with worker
- * count rather than audience size, so the hosting guide can name a fixed number. TCP is
- * what keeps an institutional network that blocks UDP working at all.
+ * One shared port per worker, on UDP and TCP alike. Ports scale with worker count rather
+ * than audience size, so the hosting guide can name a fixed number. TCP is what keeps an
+ * institutional network that blocks UDP working at all.
  */
 export function listenInfosFor(
   net: MediaNetworkConfig,

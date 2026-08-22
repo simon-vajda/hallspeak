@@ -36,8 +36,8 @@ app.use('/auth/setup', signInRateLimit);
 
 function authenticated(c: Context): boolean {
   const token = readSessionCookie(c);
-  // KTD10: between a recovery restart and the finished wizard the table still holds rows
-  // that correspond to no account at all.
+  // Between a recovery restart and the finished wizard, the table still holds rows that
+  // correspond to no account at all.
   return isConfigured() && token !== undefined && lookupSession(db, token) !== 'unknown';
 }
 

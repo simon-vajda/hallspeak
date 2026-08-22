@@ -48,8 +48,8 @@ export class RoomRegistry {
   }
 
   /**
-   * The only path that creates a room, which is what keeps R6 true: nothing an admin or a
-   * guest does brings a router into existence, only a produce.
+   * The only path that creates a room: administrative and guest activity allocate no
+   * router; only a produce does.
    */
   async getOrCreate(eventId: number): Promise<Room> {
     this.cancelTeardown(eventId);
