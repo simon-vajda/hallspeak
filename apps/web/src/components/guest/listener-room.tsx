@@ -144,7 +144,7 @@ export function ListenerRoom({
       <ChannelStrip channels={channels} currentSlug={channel.slug} pin={pin} />
 
       {/* The phone's way back to the selector; from `lg` the channel strip is it. */}
-      <div className="flex items-center gap-3 px-gutter pt-4.5 lg:hidden">
+      <div className="mx-auto flex w-full max-w-shell items-center gap-3 px-gutter pt-4.5 lg:hidden">
         <Link
           to="/events/$pin"
           params={{ pin }}
@@ -158,26 +158,28 @@ export function ListenerRoom({
         <TempThemeToggle />
       </div>
 
-      <main className="flex flex-1 flex-col items-center justify-center px-8 text-center lg:px-10 lg:py-13">
+      <main className="mx-auto flex w-full max-w-shell flex-1 flex-col items-center justify-center px-8 text-center lg:px-10 lg:py-13">
         <LiveBadge live={onAir} label={badgeLabel(state)} />
 
         <h1 className={cn('mt-4 mb-10 lg:mt-4.5 lg:mb-10', TITLE)}>{channel.name}</h1>
 
         {/* Never disabled on `live`: arming before anyone is on air is the whole point. */}
-        <PlayTarget
-          icon={<PlayIcon state={actionState} />}
-          label={playTargetLabel(actionState)}
-          rings={showsRings(state)}
-          // Subdued while armed and waiting, so it does not read as an untapped control.
-          className={cn(actionState === 'waiting' && 'opacity-70')}
-          // Un-arming is enough to close the consumer: the plan above sees no armed
-          // channel and closes whatever is open.
-          disabled={actionState === 'ended'}
-          onClick={() => {
-            setArmed((wasArmed) => !wasArmed);
-            audio.current?.pause();
-          }}
-        />
+        <div className="py-10">
+          <PlayTarget
+            icon={<PlayIcon state={actionState} />}
+            label={playTargetLabel(actionState)}
+            rings={showsRings(state)}
+            // Subdued while armed and waiting, so it does not read as an untapped control.
+            className={cn(actionState === 'waiting' && 'opacity-70')}
+            // Un-arming is enough to close the consumer: the plan above sees no armed
+            // channel and closes whatever is open.
+            disabled={actionState === 'ended'}
+            onClick={() => {
+              setArmed((wasArmed) => !wasArmed);
+              audio.current?.pause();
+            }}
+          />
+        </div>
 
         {armed || socketError ? (
           <ConnectionLine
@@ -197,7 +199,7 @@ export function ListenerRoom({
         <audio ref={audio} autoPlay className="hidden" />
       </main>
 
-      <div className="mt-auto px-gutter pb-8.5 text-center lg:pb-16.5">
+      <div className="mx-auto mt-auto w-full max-w-shell px-gutter pb-8.5 text-center lg:pb-16.5">
         <Link
           to="/events/$pin"
           params={{ pin }}

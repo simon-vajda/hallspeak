@@ -274,7 +274,7 @@ export function SpeakerStudio({
         }
       />
 
-      <main className="flex flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
+      <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header>
           <div className="flex items-center justify-between gap-3">
             <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
@@ -401,7 +401,7 @@ function OnAir({
         }
       />
 
-      <main className="flex flex-1 flex-col px-gutter pt-6 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
+      <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-6 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header className="flex items-center justify-between gap-3 lg:justify-start">
           {/* `On air` is a claim about audio, so only a live producer earns it. */}
           <LiveBadge live={onAir} label={BADGE_LABEL[state]} />
@@ -520,7 +520,7 @@ function Displaced({ channelName, eventName }: { channelName: string; eventName:
         }
       />
 
-      <main className="flex flex-1 flex-col items-center justify-center px-gutter pb-16 text-center lg:px-10">
+      <main className="mx-auto flex w-full max-w-shell flex-1 flex-col items-center justify-center px-gutter pb-16 text-center lg:px-10">
         <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
           Interpreter · off air
         </span>

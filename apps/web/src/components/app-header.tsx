@@ -10,16 +10,13 @@ import { cn } from '@/lib/utils';
  */
 export function AppHeader({ right, className }: { right?: ReactNode; className?: string }) {
   return (
-    <header
-      className={cn(
-        'hidden items-center justify-between border-b border-border px-10 py-4 lg:flex',
-        className,
-      )}
-    >
-      <LogoLockup />
-      {/* The toggle is taller than the lockup, so it is pulled back into the line rather than
-          allowed to set the bar's height. */}
-      <div className="-my-1.5 flex items-center gap-3.5">{right}</div>
+    <header className={cn('hidden border-b border-border lg:block', className)}>
+      <div className="mx-auto flex w-full max-w-shell items-center justify-between px-10 py-4">
+        <LogoLockup />
+        {/* The toggle is taller than the lockup, so it is pulled back into the line rather than
+            allowed to set the bar's height. */}
+        <div className="-my-1.5 flex items-center gap-3.5">{right}</div>
+      </div>
     </header>
   );
 }
