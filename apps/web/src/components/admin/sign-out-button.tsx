@@ -1,7 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { $api } from '@/api/client';
-import { sessionKey } from '@/lib/auth-queries';
 
 export function SignOutButton() {
   const navigate = useNavigate();
@@ -9,10 +8,11 @@ export function SignOutButton() {
   const signOut = $api.useMutation('post', '/auth/logout', {
     onSettled: async () => {
       // Settled, not success: the cookie is cleared either way, so the screen must not stay
-      // on an admin page it can no longer load.
+      // on an admin page it can no longer load. Cleared rather than invalidated, so the
+      // sign-in guard refetches instead of reading an entry that still says signed in —
+      // and so no admin data outlives the session that fetched it.
       queryClient.clear();
       await navigate({ to: '/login' });
-      await queryClient.invalidateQueries({ queryKey: sessionKey() });
     },
   });
 
