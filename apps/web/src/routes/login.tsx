@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useId, useRef, useState } from 'react';
 import { $api } from '@/api/client';
-import { AuthCard } from '@/components/auth/auth-card';
+import { AUTH_FIELD, AUTH_LABEL, AuthCard } from '@/components/auth/auth-card';
 import { PasswordField } from '@/components/auth/password-field';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -20,10 +20,6 @@ export const Route = createFileRoute('/login')({
   },
   component: LoginPage,
 });
-
-const LABEL = 'text-label text-muted-foreground uppercase';
-const TEXT_FIELD =
-  'h-13 rounded-full border-2 border-transparent bg-secondary px-5 text-base focus-visible:border-primary focus-visible:bg-card focus-visible:ring-0';
 
 /** Saying which half was wrong tells an unwanted visitor half the answer. */
 const REFUSED = 'Username or password is incorrect.';
@@ -81,7 +77,7 @@ function LoginPage() {
         </p>
 
         <Field className="mb-5 gap-2">
-          <FieldLabel htmlFor={usernameId} className={LABEL}>
+          <FieldLabel htmlFor={usernameId} className={AUTH_LABEL}>
             Username
           </FieldLabel>
           <Input
@@ -93,12 +89,12 @@ function LoginPage() {
             spellCheck={false}
             placeholder="admin"
             aria-invalid={message !== undefined}
-            className={TEXT_FIELD}
+            className={AUTH_FIELD}
           />
         </Field>
 
         <Field className="gap-2">
-          <FieldLabel htmlFor={passwordId} className={LABEL}>
+          <FieldLabel htmlFor={passwordId} className={AUTH_LABEL}>
             Password
           </FieldLabel>
           <PasswordField
