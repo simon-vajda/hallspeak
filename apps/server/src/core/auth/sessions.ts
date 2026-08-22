@@ -31,15 +31,21 @@ export function createSession(db: Db, now: number = Date.now()): string {
   return token;
 }
 
-/** Expired rows are deleted where they are found, which is why no sweep is scheduled. */
-export function lookupSession(db: Db, token: string, now: number = Date.now()): boolean {
+export type SessionLookup = 'unknown' | 'valid' | 'renewed';
+
+/**
+ * Expired rows are deleted where they are found, which is why no sweep is scheduled.
+ * `renewed` is reported rather than swallowed: the row's new expiry is invisible to the
+ * browser until the caller re-sends the cookie with a matching Max-Age.
+ */
+export function lookupSession(db: Db, token: string, now: number = Date.now()): SessionLookup {
   const tokenHash = digest(token);
   const row = db.select().from(adminSessions).where(eq(adminSessions.tokenHash, tokenHash)).get();
-  if (!row) return false;
+  if (!row) return 'unknown';
 
   if (row.expiresAt <= now) {
     db.delete(adminSessions).where(eq(adminSessions.tokenHash, tokenHash)).run();
-    return false;
+    return 'unknown';
   }
 
   if (row.expiresAt - now < RENEW_WHEN_REMAINING_MS) {
@@ -47,9 +53,10 @@ export function lookupSession(db: Db, token: string, now: number = Date.now()): 
       .set({ expiresAt: now + SESSION_TTL_MS })
       .where(eq(adminSessions.tokenHash, tokenHash))
       .run();
+    return 'renewed';
   }
 
-  return true;
+  return 'valid';
 }
 
 export function deleteSession(db: Db, token: string): void {

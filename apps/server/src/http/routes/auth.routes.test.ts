@@ -1,12 +1,12 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { resetAuth } from '../../core/auth';
 import { createTestApi } from '../../testing/api';
 
 let api: Awaited<ReturnType<typeof createTestApi>>['api'];
 let cleanup: () => void;
+let resetAuth: () => void;
 
 beforeAll(async () => {
-  ({ api, cleanup } = await createTestApi());
+  ({ api, cleanup, resetAuth } = await createTestApi());
 });
 
 afterEach(() => {
@@ -143,8 +143,16 @@ describe('POST /auth/login', () => {
     const wrongPassword = await post('/auth/login', { username: 'admin', password: 'wrong1!x' });
     const unknownUser = await post('/auth/login', { username: 'nobody', password: 'wrong1!x' });
 
+    const wrongBody = await wrongPassword.json();
+    const unknownBody = await unknownUser.json();
     expect(wrongPassword.status).toBe(unknownUser.status);
-    expect(await wrongPassword.json()).toEqual(await unknownUser.json());
+    expect(wrongBody).toEqual(unknownBody);
+    // Anchored absolutely too, so the pair regressing together still fails.
+    expect(unknownUser.status).toBe(401);
+    expect(unknownBody).toEqual({
+      code: 'invalid_credentials',
+      message: 'Those credentials do not match.',
+    });
   });
 
   it('refuses on an unconfigured server', async () => {

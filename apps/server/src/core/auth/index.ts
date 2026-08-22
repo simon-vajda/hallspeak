@@ -6,5 +6,6 @@ export {
   deleteSession,
   lookupSession,
   SESSION_TTL_MS,
+  type SessionLookup,
   sweepExpired,
 } from './sessions';

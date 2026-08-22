@@ -417,7 +417,7 @@
             "type": "string",
             "minLength": 8,
             "maxLength": 128,
-            "pattern": "\\d"
+            "pattern": "^(?=.*\\d)(?=.*[^A-Za-z0-9])"
           }
         },
         "required": [
@@ -469,6 +469,16 @@
           },
           "400": {
             "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in first",
             "content": {
               "application/json": {
                 "schema": {
@@ -536,6 +546,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         }
       },
@@ -554,6 +574,16 @@
                   "items": {
                     "$ref": "#/components/schemas/AdminEventDetail"
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             }
@@ -581,6 +611,16 @@
         "responses": {
           "204": {
             "description": "Deleted"
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           },
           "404": {
             "description": "No such channel",
@@ -641,6 +681,16 @@
               }
             }
           },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
           "404": {
             "description": "No such channel",
             "content": {
@@ -674,6 +724,16 @@
         "responses": {
           "204": {
             "description": "Deleted"
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           },
           "404": {
             "description": "No such event",
@@ -710,6 +770,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminEventDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             }
@@ -773,6 +843,16 @@
               }
             }
           },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
           "404": {
             "description": "No such event",
             "content": {
@@ -805,6 +885,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         }
       }
@@ -833,6 +923,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminEvent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             }
@@ -874,6 +974,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminChannel"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             }
