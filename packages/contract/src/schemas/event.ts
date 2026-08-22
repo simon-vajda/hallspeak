@@ -61,6 +61,27 @@ export const AdminEventDetail = AdminEvent.extend({
   channels: z.array(AdminChannel),
 }).openapi('AdminEventDetail');
 
+// Live runtime state, deliberately outside the admin DTOs: a row is not a DTO, and the web
+// app patches those cached objects field by field, so a polled number folded in would have an
+// optimistic patch fight the poll.
+export const AdminLiveChannel = z
+  .object({
+    channelId: z.int().positive(),
+    slug: Slug,
+    // Always true in today's payload — the media facade enumerates live channels only. It is
+    // explicit so the events list reads a flag rather than inferring liveness from presence.
+    online: z.boolean(),
+    listeners: z.int().nonnegative(),
+  })
+  .openapi('AdminLiveChannel');
+
+export const AdminLiveEvent = z
+  .object({
+    eventId: z.int().positive(),
+    channels: z.array(AdminLiveChannel),
+  })
+  .openapi('AdminLiveEvent');
+
 export const CreateEventBody = z
   .object({
     name: z.string().min(1).max(120),

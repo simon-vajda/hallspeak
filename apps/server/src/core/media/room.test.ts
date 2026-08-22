@@ -5,7 +5,10 @@ import { Room } from './room';
 class FakeProducer extends EventEmitter {
   closed = false;
   paused = false;
-  constructor(readonly id: string) {
+  constructor(
+    readonly id: string,
+    readonly appData: Record<string, unknown> = {},
+  ) {
     super();
   }
   close = vi.fn(() => {
@@ -19,6 +22,29 @@ class FakeProducer extends EventEmitter {
     this.paused = false;
   });
   readonly observer = new EventEmitter();
+}
+
+class FakeConsumer extends EventEmitter {
+  closed = false;
+  /** Consumers are created paused, per the join-artefact discipline in the facade. */
+  paused = true;
+  readonly observer = new EventEmitter();
+  constructor(
+    readonly id: string,
+    readonly producerId: string,
+  ) {
+    super();
+  }
+  close = vi.fn(() => {
+    this.closed = true;
+    this.observer.emit('close');
+  });
+  resume = vi.fn(async () => {
+    this.paused = false;
+  });
+  pause = vi.fn(async () => {
+    this.paused = true;
+  });
 }
 
 class FakeRouter {
@@ -119,6 +145,140 @@ describe('Room producers', () => {
     const { room: r } = room();
     expect(() => r.closeProducer(99)).not.toThrow();
     expect(r.producerCount).toBe(0);
+  });
+});
+
+describe('Room.listenerCount', () => {
+  /**
+   * A listener is a guest holding an open, locally unpaused consumer — somebody actually
+   * receiving audio, not somebody with a page open. It is structurally zero until the
+   * interpreter goes live, and that is the intended reading.
+   */
+  const listen = async (r: Room, socketId: string, producerId: string, id: string) => {
+    const consumer = new FakeConsumer(id, producerId);
+    r.peerFor(socketId).addConsumer(as(consumer));
+    await consumer.resume();
+    return consumer;
+  };
+
+  it('is zero when no producer exists on the channel', () => {
+    const { room: r } = room();
+    expect(r.listenerCount(1)).toBe(0);
+  });
+
+  it('is zero for a producer nobody consumes', () => {
+    const { room: r } = room();
+    r.setProducer(1, as(new FakeProducer('p1')));
+    expect(r.listenerCount(1)).toBe(0);
+  });
+
+  it('excludes a consumer that has never been resumed', () => {
+    const { room: r } = room();
+    r.setProducer(1, as(new FakeProducer('p1')));
+    r.peerFor('socket-1').addConsumer(as(new FakeConsumer('c1', 'p1')));
+
+    expect(r.listenerCount(1)).toBe(0);
+  });
+
+  it('counts one peer per resumed consumer', async () => {
+    const { room: r } = room();
+    r.setProducer(1, as(new FakeProducer('p1')));
+
+    await listen(r, 'socket-1', 'p1', 'c1');
+    expect(r.listenerCount(1)).toBe(1);
+
+    await listen(r, 'socket-2', 'p1', 'c2');
+    expect(r.listenerCount(1)).toBe(2);
+  });
+
+  /**
+   * No client can reach this state today — the contract carries no pause-consumer event
+   * and the guest closes instead. The case pins the definition against one arriving.
+   */
+  it('excludes a resumed consumer that was locally paused again', async () => {
+    const { room: r } = room();
+    r.setProducer(1, as(new FakeProducer('p1')));
+    const consumer = await listen(r, 'socket-1', 'p1', 'c1');
+
+    await consumer.pause();
+
+    expect(r.listenerCount(1)).toBe(0);
+  });
+
+  it('is unchanged while the producer is paused, because a muted speaker still has listeners', async () => {
+    const { room: r } = room();
+    const producer = new FakeProducer('p1');
+    r.setProducer(1, as(producer));
+    await listen(r, 'socket-1', 'p1', 'c1');
+
+    await producer.pause();
+
+    expect(r.listenerCount(1)).toBe(1);
+  });
+
+  it('counts each channel separately', async () => {
+    const { room: r } = room();
+    r.setProducer(1, as(new FakeProducer('p1')));
+    r.setProducer(2, as(new FakeProducer('p2')));
+    await listen(r, 'socket-1', 'p1', 'c1');
+    await listen(r, 'socket-2', 'p2', 'c2');
+    await listen(r, 'socket-3', 'p2', 'c3');
+
+    expect(r.listenerCount(1)).toBe(1);
+    expect(r.listenerCount(2)).toBe(2);
+  });
+
+  it('drops a consumer that closes', async () => {
+    const { room: r } = room();
+    r.setProducer(1, as(new FakeProducer('p1')));
+    const consumer = await listen(r, 'socket-1', 'p1', 'c1');
+
+    consumer.close();
+
+    expect(r.listenerCount(1)).toBe(0);
+  });
+
+  it('drops a peer that closes', async () => {
+    const { room: r } = room();
+    r.setProducer(1, as(new FakeProducer('p1')));
+    await listen(r, 'socket-1', 'p1', 'c1');
+    await listen(r, 'socket-2', 'p1', 'c2');
+
+    r.closePeer('socket-1');
+
+    expect(r.listenerCount(1)).toBe(1);
+  });
+
+  it('is zero once the producer closes', async () => {
+    const { room: r } = room();
+    r.setProducer(1, as(new FakeProducer('p1')));
+    await listen(r, 'socket-1', 'p1', 'c1');
+
+    r.closeProducer(1);
+
+    expect(r.listenerCount(1)).toBe(0);
+  });
+});
+
+describe('Room.liveChannels', () => {
+  it('names each live channel and the slug its producer carries', () => {
+    const { room: r } = room();
+    r.setProducer(10, as(new FakeProducer('p1', { channelId: 10, slug: 'english' })));
+    r.setProducer(11, as(new FakeProducer('p2', { channelId: 11, slug: 'spanish' })));
+
+    expect(r.liveChannels()).toEqual([
+      { channelId: 10, slug: 'english' },
+      { channelId: 11, slug: 'spanish' },
+    ]);
+  });
+
+  it('is empty once every producer has gone', () => {
+    const { room: r } = room();
+    const producer = new FakeProducer('p1', { channelId: 10, slug: 'english' });
+    r.setProducer(10, as(producer));
+    producer.close();
+
+    expect(r.liveChannels()).toEqual([]);
   });
 });
 

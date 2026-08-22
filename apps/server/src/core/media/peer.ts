@@ -56,6 +56,16 @@ export class Peer {
     return id === undefined ? undefined : this.consumers.get(id);
   }
 
+  /**
+   * The listener definition, kept here rather than handing out the consumer map: open and
+   * *locally* unpaused. `producerPaused` mirrors the speaker's mute and is deliberately
+   * ignored — a muted interpreter still has an audience.
+   */
+  isListeningTo(producerId: string): boolean {
+    const consumer = this.consumerForProducer(producerId);
+    return consumer !== undefined && !consumer.closed && !consumer.paused;
+  }
+
   addConsumer(consumer: types.Consumer): void {
     if (this.closed) {
       throw new AppError('peer_closed', 'This session no longer holds media.');

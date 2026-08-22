@@ -3,6 +3,7 @@ import {
   AdminChannel,
   AdminEvent,
   AdminEventDetail,
+  AdminLiveEvent,
   CreateChannelBody,
   CreateEventBody,
   UpdateChannelBody,
@@ -81,6 +82,15 @@ export const adminRegeneratePin = createRoute({
   summary: 'Replace the event PIN, invalidating the old one immediately',
   request: { params: IdParam },
   responses: { 200: json(AdminEvent, 'OK'), 404: problem('No such event') },
+});
+
+// No path parameter: one poll covers the events list and an event detail page alike.
+export const adminGetLive = createRoute({
+  method: 'get',
+  path: '/admin/live',
+  tags: TAGS,
+  summary: 'Live channels across every event, with their listener counts',
+  responses: { 200: json(z.array(AdminLiveEvent), 'OK') },
 });
 
 export const adminCreateChannel = createRoute({

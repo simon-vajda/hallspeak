@@ -4,7 +4,11 @@ import { Server } from 'socket.io';
 import { notifications } from '../core/notifications';
 import { db } from '../db';
 import { joinChannel, leaveChannel } from './handlers/channels.handlers';
-import { applyNotification, releaseSocket } from './handlers/lifecycle.handlers';
+import {
+  applyNotification,
+  releaseSocket,
+  sendInitialListenerCount,
+} from './handlers/lifecycle.handlers';
 import {
   connectTransport,
   getCapabilities,
@@ -81,6 +85,20 @@ export function attachSocket(httpServer: ServerType): SocketServer {
     on(socket, 'media:close-consumer', (payload) => stopConsuming(socket, socket.data, payload));
 
     socket.on('disconnect', () => releaseSocket(socket, socket.data));
+
+    // Last, and guarded. It reads the database synchronously, and this runs in the raw
+    // connection listener rather than behind `handle`'s try/catch — so a throw here would
+    // escape an EventEmitter and take the whole single-process server down with it. Failing
+    // it costs one studio a number until the next change; failing loudly costs every event.
+    if (speakerChannelId !== null) {
+      try {
+        // Addressed to this socket alone, so a studio joining a channel already being
+        // listened to shows a number rather than a blank.
+        sendInitialListenerCount(db, socket, socket.data);
+      } catch (cause) {
+        console.error(`socket: could not send the initial listener count to ${socket.id}`, cause);
+      }
+    }
   });
 
   return io;

@@ -5,15 +5,20 @@ import { cn } from '@/lib/utils';
 const TICK_MS = 1000;
 
 /**
- * The design draws a listener count beside the timer; nothing reports one yet. The grid is
- * written for the pair, so the count arrives as a second child and no layout moves.
+ * A listener is a guest holding an open, unpaused consumer, so the count is structurally
+ * zero before the interpreter goes live — which is why this pair only exists on air. The
+ * tile is not gated on `live`: a muted interpreter still has listeners, and dropping it
+ * would move the grid.
  */
 export function OnAirStats({
   startedAt,
+  listeners,
   className,
 }: {
   /** `Date.now()` when the interpreter went live; null renders zero. */
   startedAt: number | null;
+  /** Guests currently receiving this channel's audio. */
+  listeners: number;
   className?: string;
 }) {
   const [now, setNow] = useState(() => Date.now());
@@ -31,6 +36,13 @@ export function OnAirStats({
           {formatElapsed(startedAt === null ? 0 : now - startedAt)}
         </div>
         <div className="mt-1.25 text-label text-muted-foreground uppercase">On air</div>
+      </div>
+
+      <div className="rounded-lg bg-secondary px-4.5 py-4 lg:px-5.5 lg:py-4.5">
+        <div className="text-[32px] leading-none font-semibold tracking-[-0.045em] lg:text-[36px]">
+          {listeners}
+        </div>
+        <div className="mt-1.25 text-label text-muted-foreground uppercase">Listeners</div>
       </div>
     </div>
   );

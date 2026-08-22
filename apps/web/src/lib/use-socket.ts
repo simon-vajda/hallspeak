@@ -14,6 +14,7 @@ export function useSocket(auth: SocketAuth | null) {
   const [status, setStatus] = useState<SocketStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [online, setOnline] = useState<Record<string, boolean>>({});
+  const [listeners, setListeners] = useState<Record<string, number>>({});
   const [socket, setSocket] = useState<SocketClient | null>(null);
 
   // Destructured so the effect depends on the values, not on a fresh object identity.
@@ -32,6 +33,10 @@ export function useSocket(auth: SocketAuth | null) {
       setError(null);
     });
     s.on('disconnect', (reason: string) => {
+      // Counts are the server's to report and it can no longer report them: held through the
+      // outage, the studio's tile would state an audience for a broadcast the server has
+      // already reaped. `sendInitialListenerCount` re-seeds the real number on reconnect.
+      setListeners({});
       // The server ends a session by disconnecting it and Socket.IO does not retry that,
       // so it is terminal, not a blip. Reported as such or the screen promises a recovery
       // that will never come.
@@ -49,6 +54,11 @@ export function useSocket(auth: SocketAuth | null) {
     s.on('channel:status', ({ slug, online: isOnline }) => {
       setOnline((prev) => ({ ...prev, [slug]: isOnline }));
     });
+    // Addressed to the speaker's socket alone, and sent once on connect, so a studio never
+    // holds the `?? 0` fallback waiting for the first arrival or departure.
+    s.on('channel:listeners', ({ slug, count }) => {
+      setListeners((prev) => ({ ...prev, [slug]: count }));
+    });
 
     return () => {
       s.removeAllListeners();
@@ -58,5 +68,5 @@ export function useSocket(auth: SocketAuth | null) {
     };
   }, [pin, speakerCode]);
 
-  return { status, error, online, socket };
+  return { status, error, online, listeners, socket };
 }

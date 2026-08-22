@@ -15,6 +15,13 @@ export type EvictionReason = 'worker_died' | 'access_revoked' | 'claim_taken_ove
 export type Notification =
   | { type: 'producer-opened'; eventId: number; channelId: number; slug: string }
   | { type: 'producer-closed'; eventId: number; channelId: number; slug: string }
+  | {
+      type: 'listeners-changed';
+      eventId: number;
+      channelId: number;
+      slug: string;
+      count: number;
+    }
   | { type: 'peer-evicted'; socketId: string; reason: EvictionReason }
   | { type: 'room-evicted'; eventId: number; reason: EvictionReason };
 
