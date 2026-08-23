@@ -1,4 +1,5 @@
 import type { Device, types } from 'mediasoup-client';
+import { watchTransport } from './diagnostics';
 import type { Signalling } from './signalling';
 
 /**
@@ -25,6 +26,8 @@ export async function openTransport(input: {
     input.direction === 'send'
       ? input.device.createSendTransport(options)
       : input.device.createRecvTransport(options);
+
+  watchTransport(transport, input.direction);
 
   transport.on('connect', ({ dtlsParameters }, callback, errback) => {
     input.api

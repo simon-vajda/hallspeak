@@ -10,6 +10,7 @@ import {
   mintTurnCredential,
   type TurnConfig,
 } from './config';
+import { watchConsumer, watchProducer } from './diagnostics';
 import { ListenerCountPublisher } from './listeners';
 import type { TransportDirection } from './peer';
 import { RoomRegistry } from './registry';
@@ -258,6 +259,7 @@ export async function produce(
   });
 
   room.setProducer(input.channelId, producer);
+  watchProducer(producer, ctx.eventId, input.slug);
   const closed = {
     type: 'producer-closed',
     eventId: ctx.eventId,
@@ -400,6 +402,7 @@ export async function resumeConsumer(ctx: MediaContext, consumerId: string): Pro
   await consumer.resume();
   // The other half of the count: a resume is the moment a guest starts hearing anything.
   const { channelId, slug } = consumerChannel(consumer);
+  watchConsumer(consumer, ctx.eventId, slug);
   if (channelId !== undefined) {
     scheduleRecount(ctx.eventId, channelId, slug);
   }

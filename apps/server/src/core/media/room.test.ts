@@ -63,6 +63,7 @@ class FakeRouter {
       closed: false,
       close: vi.fn(),
       appData: {},
+      ...transportDiagnostics(),
     };
     this.created.push(transport);
     return transport;
@@ -71,6 +72,17 @@ class FakeRouter {
   close = vi.fn(() => {
     this.closed = true;
   });
+}
+
+/** What `diagnostics.ts` reads off a transport; a stub without it cannot be watched. */
+function transportDiagnostics() {
+  return {
+    iceCandidates: [],
+    iceState: 'connected',
+    dtlsState: 'connected',
+    on: vi.fn(),
+    observer: new EventEmitter(),
+  };
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: the fakes stand in for mediasoup's types.

@@ -1,5 +1,6 @@
 import type { types } from 'mediasoup';
 import { AppError } from '../../lib/problem';
+import { watchTransport } from './diagnostics';
 import { Peer, type TransportDirection } from './peer';
 
 function slugOf(producer: types.Producer): string {
@@ -185,6 +186,7 @@ export class Room {
       transport.close();
       throw cause;
     }
+    watchTransport(transport, this.eventId, direction);
     return transport;
   }
 
