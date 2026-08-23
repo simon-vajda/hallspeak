@@ -32,9 +32,10 @@ const BaseEnvSchema = z.object({
 
   // What the workers bind. 0.0.0.0 is right behind a router doing the forwarding.
   MEDIA_LISTEN_IP: z.string().min(1).default('0.0.0.0'),
-  // What goes into ICE candidates, so it must be the address a client can actually
-  // reach. There is no safe default: a wrong value produces well-formed candidates
-  // nobody can connect to, with no error anywhere, so production refuses to boot without it.
+  // What goes into ICE candidates, so it must be an address a client can actually reach —
+  // a public hostname or a public IP. There is no safe default: a wrong value produces
+  // well-formed candidates nobody can connect to, with no error anywhere, so production
+  // refuses to boot without it.
   MEDIA_ANNOUNCED_IP: z.string().min(1).optional(),
   // Worker i binds base + i, on UDP and TCP. The operator forwards this many ports.
   MEDIA_RTC_PORT_BASE: z.coerce.number().int().min(1024).max(65_000).default(44400),
