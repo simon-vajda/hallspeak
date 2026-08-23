@@ -93,7 +93,7 @@ export function ConfirmDialog({
             disabled={pending}
             onClick={onConfirm}
             size="action"
-            className={cn(destructive && 'bg-destructive text-background hover:overlay')}
+            variant={destructive ? 'destructive-solid' : 'default'}
           >
             {confirmLabel}
           </Button>
