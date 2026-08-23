@@ -6,7 +6,6 @@ import { KeyRound, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { $api } from '@/api/client';
-import { ENABLED_TRACK } from '@/components/admin/enabled-switch';
 import {
   ConfirmDialog,
   DIALOG_ACTION,
@@ -197,7 +196,6 @@ function EventForm({
                 onCheckedChange={field.onChange}
                 aria-labelledby={switchLabelId}
                 aria-describedby={switchDescriptionId}
-                className={ENABLED_TRACK}
               />
             )}
           />
