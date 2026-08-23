@@ -9,6 +9,7 @@ import {
   initialMediaState,
   isCurrent,
   type MediaState,
+  mayAttachConsumerTrack,
   needsRebuild,
   producerOpened,
   transportId,
@@ -193,6 +194,35 @@ describe('consumerPlan', () => {
     const plan = consumerPlan({ consumers: listening, armedSlug: 'english', online: false });
 
     expect(plan.close).toEqual(['english']);
+  });
+});
+
+describe('mayAttachConsumerTrack', () => {
+  it('accepts the requested track after opening the consumer makes the consume plan complete', () => {
+    const opened = consumerOpened(initialMediaState, 'english', 'c1');
+
+    expect(
+      consumerPlan({ consumers: opened.consumers, armedSlug: 'english', online: true }).consume,
+    ).toBeNull();
+    expect(
+      mayAttachConsumerTrack({
+        requestedSlug: 'english',
+        armedSlug: 'english',
+        online: true,
+        trackEnded: false,
+      }),
+    ).toBe(true);
+  });
+
+  it('rejects a late track after un-arming, switching, going offline, or ending', () => {
+    const current = { requestedSlug: 'english', online: true, trackEnded: false };
+
+    expect(mayAttachConsumerTrack({ ...current, armedSlug: null })).toBe(false);
+    expect(mayAttachConsumerTrack({ ...current, armedSlug: 'spanish' })).toBe(false);
+    expect(mayAttachConsumerTrack({ ...current, armedSlug: 'english', online: false })).toBe(false);
+    expect(mayAttachConsumerTrack({ ...current, armedSlug: 'english', trackEnded: true })).toBe(
+      false,
+    );
   });
 });
 
