@@ -67,11 +67,13 @@ temp/
 
 # Project-specific
 # Plans, design handoffs and scratch material stay local; the compounded
-# learnings under docs/solutions are shared knowledge and belong in git.
+# learnings under docs/solutions and the operator's hosting guide are shared
+# knowledge and belong in git.
 # The directory itself must be re-included — git never descends into an
 # excluded directory, so `docs` + a negation for a child would not work.
 docs/*
 !docs/solutions/
+!docs/hosting.md
 
 # SQLite database, WAL and shared-memory sidecars. User data, never committed —
 # every fresh clone self-provisions on first boot.
