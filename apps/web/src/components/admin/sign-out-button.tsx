@@ -21,7 +21,7 @@ export function SignOutButton() {
       type="button"
       onClick={() => signOut.mutate({})}
       disabled={signOut.isPending}
-      className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground disabled:opacity-60"
+      className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground disabled:opacity-60 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
     >
       Sign out
     </button>

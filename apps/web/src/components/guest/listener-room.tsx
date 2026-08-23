@@ -223,7 +223,7 @@ export function ListenerRoom({
         <Link
           to="/events/$pin"
           params={{ pin }}
-          className="rounded-full text-note font-semibold text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4"
+          className="rounded-full text-note font-semibold text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
         >
           Switch channel
         </Link>
