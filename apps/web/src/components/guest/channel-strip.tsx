@@ -70,7 +70,7 @@ export function ChannelStrip({
               params={{ pin, slug: channel.slug }}
               className={cn(
                 PILL,
-                'bg-card transition-colors hover:bg-card/70',
+                'bg-card transition-colors hover:overlay',
                 'focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
               )}
             >

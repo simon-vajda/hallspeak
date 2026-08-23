@@ -114,9 +114,9 @@ export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'>
 
       <Button
         variant="ghost"
+        size="action-sm"
         onClick={() => setRegenerating(true)}
-        // The card already sits on `secondary`, which is what ghost's hover paints.
-        className="mt-2 h-8 gap-1.5 rounded-full px-3 font-semibold text-sm hover:bg-foreground/10 dark:hover:bg-foreground/15"
+        className="mt-2"
       >
         <RefreshCw />
         Regenerate PIN

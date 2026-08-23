@@ -21,6 +21,8 @@
   --color-destructive-muted: var(--destructive-muted);
   --color-destructive-border: var(--destructive-border);
 
+  --color-primary-hover: var(--primary-hover);
+
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -185,6 +187,16 @@
   --input: oklch(0.909 0.015 207.1);
   --ring: oklch(0.738 0.126 190.2);
 
+  /* Hover is a wash of the type colour over whatever the control already is, by a fixed
+     amount — never a drop in the element's own opacity, which would make the result depend
+     on the surface behind it. `strong` is for a control with no resting fill of its own,
+     where the overlay is the entire hover. */
+  --hover-overlay: oklch(from var(--foreground) l c h / 6%);
+  --hover-overlay-strong: oklch(from var(--foreground) l c h / 10%);
+
+  /* Hover always moves away from the background. In light mode that is darker. */
+  --primary-hover: color-mix(in oklch, var(--primary), black 8%);
+
   --live: oklch(0.777 0.142 168.5); /* #3AD3A6 */
   /* The live colour as type, on a muted surface — `live-muted` or `secondary`. Never on a
      `live` fill: in dark mode this token is `live` itself. */
@@ -219,6 +231,14 @@
   --input: oklch(0.365 0.051 246.4);
   --ring: oklch(0.738 0.126 190.2);
 
+  /* Larger in dark: the same delta reads as less against a dark ground. */
+  --hover-overlay: oklch(from var(--foreground) l c h / 10%);
+  --hover-overlay-strong: oklch(from var(--foreground) l c h / 15%);
+
+  /* Away from the background is *lighter* here. `primary/80` blends toward the page instead
+     and reads as disabled rather than hovered — the same class, the opposite meaning. */
+  --primary-hover: color-mix(in oklch, var(--primary), white 12%);
+
   --live: oklch(0.836 0.163 148.7); /* #74E68C */
   --live-on-muted: oklch(0.836 0.163 148.7); /* the mint itself: dark green would vanish here */
   --live-muted: oklch(0.339 0.044 188.5); /* #183F3C */
@@ -227,6 +247,19 @@
      tinted fill and a border one step above it. */
   --destructive-muted: oklch(0.34 0.055 28.2);
   --destructive-border: oklch(0.42 0.075 28.5);
+}
+
+/* Hover as a wash *over* the control's own fill rather than a replacement of it: a
+   translucent `bg-*` would drop `secondary`'s fill instead of tinting it, and the result
+   would depend on whatever is behind the button. Painted as a background image, so the
+   background colour underneath survives. Use `hover:overlay` on a control with a resting
+   fill and `hover:overlay-strong` on one without, where the wash is the entire hover. */
+@utility overlay {
+  background-image: linear-gradient(var(--hover-overlay), var(--hover-overlay));
+}
+
+@utility overlay-strong {
+  background-image: linear-gradient(var(--hover-overlay-strong), var(--hover-overlay-strong));
 }
 
 @keyframes pulse-live {

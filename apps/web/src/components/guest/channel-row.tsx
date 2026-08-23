@@ -31,7 +31,7 @@ export function ChannelRow({
         online
           ? // The design draws no hover; a wash of the row's own fill reads in both themes
             // without borrowing another role's colour.
-            'bg-card transition-colors hover:bg-card/70'
+            'bg-card transition-colors hover:overlay'
           : 'border border-dashed border-border',
       )}
     >
