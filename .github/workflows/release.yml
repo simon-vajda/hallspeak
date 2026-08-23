@@ -15,7 +15,28 @@ env:
   IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
+  # The Dockerfile's `pnpm build` catches a compile error and nothing else, so without
+  # this a red main still publishes a pullable image. `pnpm check` is deliberately not
+  # here yet: biome.json fails its own formatter on main and fixing that is not this
+  # workflow's job.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      # typecheck runs `pnpm gen` first, so a dirty tree here is generated-file drift:
+      # openapi.json or api.d.ts committed out of step with the schemas.
+      - run: git diff --exit-code
+      - run: pnpm test
+
   image:
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -60,7 +60,14 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /runtime/package.json ./
-RUN npm install --omit=dev --no-audit --no-fund
+# --ignore-scripts because neither package needs one and one of them would break the
+# build: better-sqlite3 has a binding.gyp and no install script, which makes npm infer
+# a node-gyp rebuild this base image has no toolchain for — the same inference
+# pnpm-workspace.yaml declines. Its npm tarball carries prebuilt N-API binaries, and
+# mediasoup's worker is fetched explicitly below. Today's npm happens to gate scripts
+# by default; NODE_IMAGE is a floating tag, so relying on that is a build break waiting
+# for a base-image bump.
+RUN npm install --omit=dev --ignore-scripts --no-audit --no-fund
 
 # Fetching the worker here rather than letting the postinstall do it is what makes the
 # image reproducible: the asset is chosen by the target architecture and the pinned
