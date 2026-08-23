@@ -10,7 +10,6 @@ import {
   ConfirmDialog,
   DIALOG_ACTION,
   DIALOG_BODY,
-  DIALOG_PANEL,
   DIALOG_TITLE,
   DialogActions,
 } from '@/components/confirm-dialog';
@@ -57,7 +56,7 @@ export function EventFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className={cn(DIALOG_PANEL, 'sm:max-w-105')}>
+      <DialogContent showCloseButton={false} className="sm:max-w-105">
         {/* A child so it unmounts with the portal: every open starts from current values. */}
         <EventForm
           mode={mode}

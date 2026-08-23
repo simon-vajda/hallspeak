@@ -7,7 +7,6 @@ import { $api } from '@/api/client';
 import {
   DIALOG_ACTION,
   DIALOG_BODY,
-  DIALOG_PANEL,
   DIALOG_TITLE,
   DialogActions,
 } from '@/components/confirm-dialog';
@@ -63,7 +62,7 @@ export function ChannelFormDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className={cn(DIALOG_PANEL, 'sm:max-w-105')}>
+      <DialogContent showCloseButton={false} className="sm:max-w-105">
         {/* A child so it unmounts with the portal: every open starts from current values. */}
         <ChannelForm eventId={eventId} channel={channel} onSaved={() => onOpenChange(false)} />
       </DialogContent>
