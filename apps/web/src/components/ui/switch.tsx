@@ -2,22 +2,30 @@ import { Switch as SwitchPrimitive } from '@base-ui/react/switch';
 
 import { cn } from '@/lib/utils';
 
-// CUSTOMISED (see AGENTS.md): an `lg` size, and `cursor-pointer` on every size, which
-// Tailwind v4 dropped. The lg padding and checked offset are written out because the
-// generated calc(100%-2px) only centres the thumb at the default size's proportions.
+// CUSTOMISED (see AGENTS.md): an `lg` size, `cursor-pointer` on every size, which
+// Tailwind v4 dropped, and a `foreground` checked track. The lg padding and checked offset
+// are written out because the generated calc(100%-2px) only centres the thumb at the
+// default size's proportions.
+//
+// `primary` marks what you can press and `live` that audio is moving, so neither may stand
+// in for "this is on" — every switch in the app is an enable control, so `foreground` is the
+// default and `tone="primary"` is the explicit opt-out.
 function Switch({
   className,
   size = 'default',
+  tone = 'default',
   ...props
 }: SwitchPrimitive.Root.Props & {
   size?: 'sm' | 'default' | 'lg';
+  tone?: 'default' | 'primary';
 }) {
   return (
     <SwitchPrimitive.Root
       data-slot="switch"
       data-size={size}
       className={cn(
-        'peer group/switch relative inline-flex shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] data-[size=lg]:h-6.75 data-[size=lg]:w-11.5 data-[size=lg]:p-0.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50',
+        'peer group/switch relative inline-flex shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] data-[size=lg]:h-6.75 data-[size=lg]:w-11.5 data-[size=lg]:p-0.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-foreground data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50',
+        tone === 'primary' && 'data-checked:bg-primary',
         className,
       )}
       {...props}

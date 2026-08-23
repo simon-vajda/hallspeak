@@ -15,10 +15,6 @@ import type { MicDevice } from '@/lib/audio/devices';
 import type { MicStatus } from '@/lib/audio/use-mic-capture';
 import { cn } from '@/lib/utils';
 
-// Settings, not liveness: `primary` marks what you can press and `live` that audio is moving,
-// so neither may stand in for "this preference is on".
-const SETTING_TRACK = 'data-checked:bg-foreground';
-
 const ROW = 'mt-3.5 flex items-center gap-3.5 border-t border-border pt-3.5';
 
 /**
@@ -170,13 +166,7 @@ function SettingRow({
         <div className="font-semibold text-sm">{title}</div>
         <p className="mt-0.5 text-meta font-normal text-muted-foreground">{description}</p>
       </div>
-      <Switch
-        size="lg"
-        checked={checked}
-        aria-label={title}
-        onCheckedChange={onCheckedChange}
-        className={SETTING_TRACK}
-      />
+      <Switch size="lg" checked={checked} aria-label={title} onCheckedChange={onCheckedChange} />
     </div>
   );
 }
