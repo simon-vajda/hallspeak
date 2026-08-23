@@ -1,0 +1,27 @@
+# data/ matters most: without it the build context carries a developer's SQLite
+# database and admin.json straight into the published image.
+data/
+
+node_modules
+**/node_modules
+dist
+**/dist
+.pnpm-store
+
+.git
+.gitignore
+.github
+docs
+Dockerfile
+.dockerignore
+compose.yaml
+
+.DS_Store
+.idea
+.vscode
+*.log
+*.local
+*.local.json
+.env
+.env.*
+coverage
