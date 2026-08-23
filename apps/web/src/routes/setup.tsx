@@ -4,7 +4,7 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Check } from 'lucide-react';
 import { useId, useState } from 'react';
 import { $api } from '@/api/client';
-import { AUTH_FIELD, AUTH_LABEL, AuthCard } from '@/components/auth/auth-card';
+import { AUTH_LABEL, AuthCard } from '@/components/auth/auth-card';
 import { PasswordChecklist } from '@/components/auth/password-checklist';
 import { PasswordField } from '@/components/auth/password-field';
 import { Button } from '@/components/ui/button';
@@ -130,7 +130,6 @@ function Credentials() {
           autoCapitalize="none"
           spellCheck={false}
           placeholder="admin"
-          className={AUTH_FIELD}
         />
       </Field>
 

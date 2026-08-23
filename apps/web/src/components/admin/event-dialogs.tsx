@@ -40,8 +40,6 @@ import { cn } from '@/lib/utils';
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
 const LABEL = 'text-label text-muted-foreground uppercase';
-const TEXT_INPUT = 'bg-secondary text-sm';
-
 /** Create and edit are the same dialog; pass an `event` to edit it. */
 export function EventFormDialog({
   open,
@@ -150,7 +148,6 @@ function EventForm({
             autoComplete="off"
             placeholder="Sunday Service"
             aria-invalid={errors.name ? true : undefined}
-            className={cn('h-11 rounded-full px-4', TEXT_INPUT)}
             {...register('name')}
           />
           <FieldError errors={[errors.name]} />
@@ -165,7 +162,7 @@ function EventForm({
             rows={3}
             placeholder="Morning gathering, main hall."
             aria-invalid={errors.description ? true : undefined}
-            className={cn('min-h-19 rounded-md px-4 py-3 leading-normal', TEXT_INPUT)}
+            className="min-h-19 rounded-md bg-secondary px-4 py-3 leading-normal"
             {...register('description')}
           />
           <FieldError errors={[errors.description]} />
