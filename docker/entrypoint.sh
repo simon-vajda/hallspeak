@@ -8,9 +8,20 @@ set -eu
 # written to. The image sets it; the default is for a `docker run` that does not.
 DATA_DIR="${DATA_DIR:-/data}"
 
-# Docker's own `user:` directive already chose the identity, and the ownership fix
-# is not reachable unprivileged. Failing here would break a deliberate choice.
+# Reported the same way from both branches: the alternative is better-sqlite3's stack
+# trace, which names database.js rather than the mount the operator has to fix.
+refuse_unwritable() {
+  echo "entrypoint: $DATA_DIR is not writable by $1." >&2
+  echo "entrypoint: check the mount is not read-only, and that this uid owns it —" >&2
+  echo "entrypoint: PUID/PGID, or chown on the host if you set Docker's user: yourself." >&2
+  exit 1
+}
+
+# Docker's own `user:` directive already chose the identity, and the ownership fix is
+# not reachable unprivileged. Failing here would break a deliberate choice — but the
+# directory still has to be writable, so that is checked rather than assumed.
 if [ "$(id -u)" -ne 0 ]; then
+  [ -w "$DATA_DIR" ] || refuse_unwritable "$(id -u):$(id -g)"
   exec "$@"
 fi
 
@@ -30,9 +41,7 @@ chown -R "$PUID:$PGID" "$DATA_DIR" 2>/dev/null || true
 # accepts neither, and the operator deserves the path in the message instead of a
 # stack trace out of the database driver.
 if ! setpriv --reuid "$PUID" --regid "$PGID" --clear-groups /usr/bin/test -w "$DATA_DIR"; then
-  echo "entrypoint: $DATA_DIR is not writable by ${PUID}:${PGID}." >&2
-  echo "entrypoint: check the bind mount is not read-only, or set PUID/PGID to an owner." >&2
-  exit 1
+  refuse_unwritable "${PUID}:${PGID}"
 fi
 
 # setpriv comes from util-linux, already in the Debian base. gosu or su-exec would

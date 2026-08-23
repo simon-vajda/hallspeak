@@ -101,6 +101,13 @@ Each proxy needs the same three things: TLS, WebSocket upgrades passed through f
 `/api/socket.io`, and the visitor's address appended so the sign-in throttle can tell
 callers apart.
 
+The Compose file publishes the HTTP port on loopback only, so a proxy on this host
+reaches `127.0.0.1:3000` and nothing else on the network reaches it at all. A proxy
+running as a container instead joins this service's network and uses `linguacast:3000`,
+needing no published port. Only a proxy on a *different* host needs the publication
+widened, and that host's firewall then becomes the thing standing between the internet
+and a cleartext setup wizard.
+
 **Caddy** — does all three unprompted:
 
 ```caddy
@@ -125,9 +132,11 @@ location / {
 }
 ```
 
-**Nginx Proxy Manager** — add a Proxy Host: scheme `http`, forward to the container's
-host and port `3000`, **Websockets Support on**. On the SSL tab, request a certificate
-and enable Force SSL. It appends `X-Forwarded-For` on its own.
+**Nginx Proxy Manager** — it runs as a container, so put it on this service's network
+(add `networks:` to `compose.yaml` naming the one NPM is already on) and add a Proxy
+Host: scheme `http`, Forward Hostname `linguacast`, Forward Port `3000`, **Websockets
+Support on**. On the SSL tab, request a certificate and enable Force SSL. It appends
+`X-Forwarded-For` on its own.
 
 ### `TRUSTED_PROXY_IPS`
 
@@ -141,7 +150,7 @@ the proxy's LAN address:
 
 | Where the proxy runs | What to set | How to find it |
 |---|---|---|
-| On the host, reaching a published port | The Compose network's gateway, e.g. `172.18.0.1` | `docker network inspect linguacast_default -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}'` |
+| On the host, reaching a published port | The Compose network's gateway, e.g. `172.18.0.1` | `docker inspect $(docker compose ps -q linguacast) -f '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}'` |
 | As a container on a shared Docker network | That container's address on the network | `docker inspect <proxy> -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}'` |
 
 Container addresses can move on recreate, so pin the proxy's address if you want this
@@ -177,7 +186,7 @@ docker compose stop && tar czf backup-$(date +%F).tar.gz data/ && docker compose
 |---|---|---|
 | Every screen loads, nobody hears anything | `MEDIA_ANNOUNCED_IP` is wrong, or the RTC ports are not forwarded | Confirm the announced address in the logs is your public hostname (or, without one, matches `curl -s https://api.ipify.org`); confirm the router forwards 44400–44403 on **both** UDP and TCP; confirm you did not remap the ports |
 | The studio cannot open the microphone; signing in does nothing | You are on plain HTTP | Use the proxy's HTTPS URL, not `http://<host>:3000` |
-| Container exits with `/data is not writable` | Read-only mount, or a `user:` uid that does not own it | Drop the `:ro`, or set `PUID`/`PGID` to the owner |
+| Container exits with `/data is not writable` | Read-only mount, or a uid that does not own the directory | Drop the `:ro`; set `PUID`/`PGID` to the owner, or `chown` it on the host if you set Docker's `user:` yourself |
 | A correct password is refused after a few tries | `TRUSTED_PROXY_IPS` unset behind a proxy | See the table above |
 | Only listeners on your own LAN hear nothing | Your router does not do NAT hairpinning | Split-horizon DNS on the LAN — a router problem, not a LinguaCast one |
 | Audio breaks for some listeners, not others | Not a deployment fault | [`docs/solutions/operations/diagnosing-live-audio-from-a-user-report.md`](solutions/operations/diagnosing-live-audio-from-a-user-report.md) |

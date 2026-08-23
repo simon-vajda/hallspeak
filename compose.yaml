@@ -16,9 +16,13 @@ services:
       MEDIA_ANNOUNCED_IP: ${MEDIA_ANNOUNCED_IP:?set this to your public hostname, e.g. linguacast.example.com}
 
     ports:
-      # HTTP: the SPA, the API and the Socket.IO endpoint. Only the reverse proxy should
-      # reach this; it is plain HTTP.
-      - '3000:3000'
+      # HTTP: the SPA, the API and the Socket.IO endpoint, in cleartext. Bound to
+      # loopback because a published port bypasses the host firewall, and anyone who
+      # reaches this before you do can claim the admin account through the setup wizard.
+      # Widen it to '3000:3000' only if your proxy runs on another host — and put a
+      # firewall in front of it if you do. A proxy in a container needs no publication
+      # at all: put it on this service's network and reach it as `linguacast:3000`.
+      - '127.0.0.1:3000:3000'
 
       # RTC: worker i binds MEDIA_RTC_PORT_BASE + i on UDP and TCP alike. The external and
       # internal numbers must match — a remapped port leaves signalling working and audio
