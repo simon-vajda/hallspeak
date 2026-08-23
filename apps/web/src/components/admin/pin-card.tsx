@@ -4,8 +4,9 @@ import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { memo, type RefObject, useRef, useState } from 'react';
 import { CopyButton } from '@/components/admin/copy-button';
 import { RegeneratePinDialog } from '@/components/admin/event-dialogs';
+import { MICRO_LABEL } from '@/components/micro-label';
+import { Pin } from '@/components/pin';
 import { Button } from '@/components/ui/button';
-import { formatPin } from '@/lib/format';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
@@ -68,9 +69,9 @@ export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'>
 
   return (
     <section className="rounded-lg bg-secondary p-5.5 text-center">
-      <h2 className="text-label text-muted-foreground uppercase">Listener PIN</h2>
-      <p className="mt-1.5 mb-3.5 font-semibold text-[38px] leading-none tracking-[-0.02em]">
-        {formatPin(event.pin)}
+      <h2 className={MICRO_LABEL}>Listener PIN</h2>
+      <p className="mt-1.5 mb-3.5 font-semibold text-[38px] leading-none">
+        <Pin pin={event.pin} />
       </p>
 
       {/* The plate inverts in dark mode so the code stays dark-on-light in both: scanners are

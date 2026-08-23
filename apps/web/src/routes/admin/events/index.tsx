@@ -6,9 +6,11 @@ import { $api } from '@/api/client';
 import { ChannelChips } from '@/components/admin/channel-chips';
 import { EventFormDialog } from '@/components/admin/event-dialogs';
 import { EventEnabledSwitch } from '@/components/admin/event-enabled-switch';
+import { MICRO_LABEL } from '@/components/micro-label';
+import { Pin } from '@/components/pin';
 import { Button } from '@/components/ui/button';
 import { useAdminLive } from '@/lib/admin-queries';
-import { eventStatusLabel, formatPin, plural } from '@/lib/format';
+import { eventStatusLabel, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin/events/')({ component: AdminEventsPage });
@@ -71,13 +73,7 @@ function AdminEventsPage() {
           <NewEventButton onClick={() => setCreating(true)} className="mt-8 w-full lg:hidden" />
 
           <div className="mt-6 hidden lg:block">
-            <div
-              aria-hidden="true"
-              className={cn(
-                'grid px-5 pb-2.5 text-label text-muted-foreground uppercase',
-                TABLE_COLUMNS,
-              )}
-            >
+            <div aria-hidden="true" className={cn('grid px-5 pb-2.5', MICRO_LABEL, TABLE_COLUMNS)}>
               <span>Event</span>
               <span>PIN</span>
               <span>Channels</span>
@@ -111,7 +107,7 @@ function EventRow({ event, onAir }: { event: AdminEventDetail; onAir: number }) 
           <p className="mt-0.5 text-[13px] text-muted-foreground">{event.description}</p>
         )}
       </div>
-      <p className={cn('font-semibold text-[16px] tracking-[0.04em]', dim)}>
+      <p className={cn('font-semibold text-[16px]', dim)}>
         <span className="sr-only">PIN </span>
         <ListenerEventLink event={event} />
       </p>
@@ -159,7 +155,7 @@ function ListenerEventLink({ event }: { event: AdminEventDetail }) {
       aria-label={`Open the listener page for ${event.name} in a new tab`}
       className="hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
     >
-      {formatPin(event.pin)}
+      <Pin pin={event.pin} />
     </Link>
   );
 }

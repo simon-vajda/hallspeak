@@ -5,6 +5,7 @@ import { useId, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { $api } from '@/api/client';
 import { DIALOG_BODY, DIALOG_TITLE, DialogActions } from '@/components/confirm-dialog';
+import { MICRO_LABEL } from '@/components/micro-label';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -30,7 +31,6 @@ import { cn } from '@/lib/utils';
 type AdminChannel = components['schemas']['AdminChannel'];
 type Problem = components['schemas']['Problem'];
 
-const LABEL = 'text-label text-muted-foreground uppercase';
 /**
  * The composite unique on (event_id, slug). A `catch` binding is `unknown` whatever the
  * mutation's error type says, hence the written-out narrowing.
@@ -149,7 +149,7 @@ function ChannelForm({
 
       <div className="flex flex-col gap-3.5">
         <Field className="gap-1.5">
-          <FieldLabel htmlFor={nameId} className={LABEL}>
+          <FieldLabel htmlFor={nameId} className={MICRO_LABEL}>
             Name
           </FieldLabel>
           <Input
@@ -169,7 +169,7 @@ function ChannelForm({
         </Field>
 
         <Field className="gap-1.5">
-          <FieldLabel htmlFor={slugId} className={LABEL}>
+          <FieldLabel htmlFor={slugId} className={MICRO_LABEL}>
             Slug
           </FieldLabel>
           {creating ? (

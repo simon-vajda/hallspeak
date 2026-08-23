@@ -3,6 +3,7 @@ import { $api } from '@/api/client';
 import { ChannelRow } from '@/components/guest/channel-row';
 import { EventHeader } from '@/components/guest/event-header';
 import { GuestMessage, GuestMessageAction, GuestShell } from '@/components/guest/guest-message';
+import { MICRO_LABEL } from '@/components/micro-label';
 import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useSocket } from '@/lib/use-socket';
 
@@ -48,7 +49,7 @@ function EventPage() {
         />
 
         <div className="flex flex-col gap-2.5 lg:gap-3">
-          <h2 className="text-label uppercase text-muted-foreground">Choose a channel</h2>
+          <h2 className={MICRO_LABEL}>Choose a channel</h2>
           {data.channels.map((channel) => (
             <ChannelRow
               key={channel.slug}

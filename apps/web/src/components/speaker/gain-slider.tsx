@@ -1,3 +1,4 @@
+import { MICRO_LABEL } from '@/components/micro-label';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { MAX_GAIN_SLIDER_VALUE } from './live-state';
@@ -21,7 +22,7 @@ export function GainSlider({
   return (
     <div className={className}>
       <div className="mb-2.5 flex items-baseline justify-between gap-3">
-        <span className="text-label text-muted-foreground uppercase">Gain</span>
+        <span className={MICRO_LABEL}>Gain</span>
         <span className="text-note font-semibold">{gain}%</span>
       </div>
       <Slider

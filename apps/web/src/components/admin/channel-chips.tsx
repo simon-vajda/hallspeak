@@ -5,8 +5,6 @@ import { cn } from '@/lib/utils';
 
 type AdminChannel = components['schemas']['AdminChannel'];
 
-const CHIP = 'h-6 rounded-full px-2.5 text-[11.5px] font-semibold';
-
 /** How many channels a `collapse` row shows before the rest become a `+N`. */
 const COLLAPSE_LIMIT = 3;
 
@@ -25,9 +23,9 @@ export function ChannelChip({
 }) {
   return (
     <Badge
+      size="sm"
       variant={enabled ? 'secondary' : 'outline'}
       className={cn(
-        CHIP,
         enabled
           ? 'bg-foreground/10 text-foreground dark:bg-foreground/15'
           : 'text-muted-foreground',
@@ -56,8 +54,9 @@ export function ChannelChips({
     return (
       <div className={cn('flex items-center', className)}>
         <Badge
+          size="sm"
           variant="outline"
-          className={cn(CHIP, 'border-dashed bg-transparent text-muted-foreground')}
+          className="border-dashed bg-transparent text-muted-foreground"
         >
           No channels yet
         </Badge>
@@ -84,7 +83,7 @@ export function ChannelChips({
       ))}
       {overflow > 0 && (
         // Not a link: channels are managed on the detail page.
-        <Badge variant="secondary" className={cn(CHIP, 'text-muted-foreground')}>
+        <Badge size="sm" variant="secondary" className="text-muted-foreground">
           +{overflow}
           <span className="sr-only"> more channels</span>
         </Badge>

@@ -4,9 +4,10 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Check } from 'lucide-react';
 import { useId, useState } from 'react';
 import { $api } from '@/api/client';
-import { AUTH_LABEL, AuthCard } from '@/components/auth/auth-card';
+import { AuthCard } from '@/components/auth/auth-card';
 import { PasswordChecklist } from '@/components/auth/password-checklist';
 import { PasswordField } from '@/components/auth/password-field';
+import { MICRO_LABEL } from '@/components/micro-label';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -47,7 +48,7 @@ function StepPips({ step }: { step: 1 | 2 }) {
     <div className="mb-6 flex items-center gap-2">
       <div className="h-1 w-5.5 rounded-full bg-primary" />
       <div className={cn('h-1 w-5.5 rounded-full', step === 2 ? 'bg-primary' : 'bg-border')} />
-      <span className={cn(AUTH_LABEL, 'ml-1')}>Step {step} of 2</span>
+      <span className={cn(MICRO_LABEL, 'ml-1')}>Step {step} of 2</span>
     </div>
   );
 }
@@ -119,7 +120,7 @@ function Credentials() {
       </p>
 
       <Field className="mb-5 gap-2">
-        <FieldLabel htmlFor={usernameId} className={AUTH_LABEL}>
+        <FieldLabel htmlFor={usernameId} className={MICRO_LABEL}>
           Username
         </FieldLabel>
         <Input
@@ -134,7 +135,7 @@ function Credentials() {
       </Field>
 
       <Field className="mb-5 gap-2">
-        <FieldLabel htmlFor={passwordId} className={AUTH_LABEL}>
+        <FieldLabel htmlFor={passwordId} className={MICRO_LABEL}>
           Password
         </FieldLabel>
         <PasswordField
@@ -148,7 +149,7 @@ function Credentials() {
       </Field>
 
       <Field className="mb-7 gap-2">
-        <FieldLabel htmlFor={confirmId} className={AUTH_LABEL}>
+        <FieldLabel htmlFor={confirmId} className={MICRO_LABEL}>
           Confirm password
         </FieldLabel>
         <PasswordField
