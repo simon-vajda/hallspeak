@@ -18,7 +18,7 @@ const STATUS_TEXT: Record<LevelStatus, string> = {
 
 const STATUS_TONE: Record<LevelStatus, string> = {
   quiet: 'text-muted-foreground',
-  good: 'text-live-foreground',
+  good: 'text-live-on-muted',
   peaking: 'text-destructive',
 };
 

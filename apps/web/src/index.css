@@ -16,7 +16,7 @@
      are near-identical in greyscale, shape and position carry the distinction: the
      round target is always the action, the meter and the dot are always the signal. */
   --color-live: var(--live);
-  --color-live-foreground: var(--live-foreground);
+  --color-live-on-muted: var(--live-on-muted);
   --color-live-muted: var(--live-muted);
   --color-destructive-muted: var(--destructive-muted);
   --color-destructive-border: var(--destructive-border);
@@ -131,7 +131,9 @@
   --ring: oklch(0.738 0.126 190.2);
 
   --live: oklch(0.777 0.142 168.5); /* #3AD3A6 */
-  --live-foreground: oklch(0.445 0.088 166.5); /* #0C6349 */
+  /* The live colour as type, on a muted surface — `live-muted` or `secondary`. Never on a
+     `live` fill: in dark mode this token is `live` itself. */
+  --live-on-muted: oklch(0.445 0.088 166.5); /* #0C6349 */
   --live-muted: oklch(0.943 0.03 172.9); /* #D9F3EA */
   --destructive-muted: oklch(0.942 0.02 28.9); /* #F9E7E4 */
   --destructive-border: oklch(0.883 0.032 29.8); /* #EDD1CC */
@@ -152,9 +154,8 @@
   --secondary-foreground: oklch(0.954 0.011 204.1);
   --muted: oklch(0.312 0.048 246.5);
   --muted-foreground: oklch(0.734 0.033 222.2); /* #93AEB8 */
-  /* The handoff gives dark `accent` the card value, but its only role is the
-     highlighted row inside a popover — on `popover`, which is that same value,
-     the highlight would be invisible. Lifted to the dark `border` step. */
+  /* `accent`'s only role is the highlighted row inside a popover, so it is one step up
+     from `popover` rather than equal to it, which would make the highlight invisible. */
   --accent: oklch(0.365 0.051 246.4); /* #274158 */
   --accent-foreground: oklch(0.954 0.011 204.1);
 
@@ -164,13 +165,11 @@
   --ring: oklch(0.738 0.126 190.2);
 
   --live: oklch(0.836 0.163 148.7); /* #74E68C */
-  --live-foreground: oklch(0.836 0.163 148.7); /* mint type on live-muted */
+  --live-on-muted: oklch(0.836 0.163 148.7); /* the mint itself: dark green would vanish here */
   --live-muted: oklch(0.339 0.044 188.5); /* #183F3C */
 
-  /* The handoff's dark block gives these the mint and the plain border values —
-     visibly a copy from the two lines above, since a destructive fill that reads
-     green is the one thing it cannot be. Rebuilt on the dark `destructive` hue,
-     the same way `live-muted` is built on `live`. */
+  /* Built on the dark `destructive` hue the same way `live-muted` is built on `live`: a
+     tinted fill and a border one step above it. */
   --destructive-muted: oklch(0.34 0.055 28.2);
   --destructive-border: oklch(0.42 0.075 28.5);
 }

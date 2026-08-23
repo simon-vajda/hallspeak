@@ -22,7 +22,7 @@ export function LiveBadge({
     <Badge
       className={cn(
         'uppercase',
-        live ? 'bg-live-muted text-live-foreground' : 'bg-secondary text-muted-foreground',
+        live ? 'bg-live-muted text-live-on-muted' : 'bg-secondary text-muted-foreground',
         className,
       )}
     >
