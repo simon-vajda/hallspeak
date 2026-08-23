@@ -102,12 +102,12 @@ function EventRow({ event, onAir }: { event: AdminEventDetail; onAir: number }) 
   return (
     <li className={cn('grid items-center border-t border-border px-5 py-4.5', TABLE_COLUMNS)}>
       <div className={dim}>
-        <EventNameLink event={event} className="text-[18px] tracking-[-0.025em]" />
+        <EventNameLink event={event} className="text-subtitle" />
         {event.description && (
-          <p className="mt-0.5 text-[13px] text-muted-foreground">{event.description}</p>
+          <p className="mt-0.5 text-note text-muted-foreground">{event.description}</p>
         )}
       </div>
-      <p className={cn('font-semibold text-[16px]', dim)}>
+      <p className={cn('font-semibold text-base', dim)}>
         <span className="sr-only">PIN </span>
         <ListenerEventLink event={event} />
       </p>
@@ -132,8 +132,8 @@ function EventCard({ event, onAir }: { event: AdminEventDetail; onAir: number })
     >
       <div className="flex items-start justify-between gap-3">
         <div className={dim}>
-          <EventNameLink event={event} className="text-[19px] tracking-[-0.025em]" />
-          <p className="mt-0.5 text-[13px] text-muted-foreground">
+          <EventNameLink event={event} className="text-subtitle" />
+          <p className="mt-0.5 text-note text-muted-foreground">
             PIN <ListenerEventLink event={event} />
           </p>
         </div>

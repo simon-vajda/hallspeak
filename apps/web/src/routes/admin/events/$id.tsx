@@ -105,7 +105,7 @@ function AdminEventPage() {
           <section className="flex items-center justify-between gap-4 rounded-lg border border-border px-5 py-4.5">
             <div>
               <h2 className="text-section">Event enabled</h2>
-              <p className="mt-0.5 text-[13px] text-muted-foreground">
+              <p className="mt-0.5 text-note text-muted-foreground">
                 {data.enabled
                   ? 'Guests can join right now'
                   : 'Guests cannot join while this is off'}

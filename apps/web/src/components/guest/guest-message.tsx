@@ -36,7 +36,7 @@ export function GuestMessage({
   return (
     <GuestShell>
       <h1 className="text-screen lg:max-w-117.5 lg:text-screen-lg">{title}</h1>
-      <p className="mt-2.5 max-w-115 text-sm leading-normal text-muted-foreground lg:text-[17px] lg:leading-[1.6]">
+      <p className="mt-2.5 max-w-115 text-sm leading-normal text-muted-foreground lg:text-body-lg">
         {body}
       </p>
       {children}

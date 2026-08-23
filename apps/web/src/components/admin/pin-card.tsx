@@ -70,7 +70,7 @@ export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'>
   return (
     <section className="rounded-lg bg-secondary p-5.5 text-center">
       <h2 className={MICRO_LABEL}>Listener PIN</h2>
-      <p className="mt-1.5 mb-3.5 font-semibold text-[38px] leading-none">
+      <p className="mt-1.5 mb-3.5 text-stat-lg">
         <Pin pin={event.pin} />
       </p>
 

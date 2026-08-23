@@ -86,7 +86,7 @@ function ChannelRow({
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2.5">
           {/* The name gives way, not the chip: a truncated name is still readable. */}
-          <h3 className="truncate font-semibold text-[18px] tracking-[-0.025em]">{channel.name}</h3>
+          <h3 className="truncate text-subtitle">{channel.name}</h3>
           <ChannelChip enabled={channel.enabled} className="shrink-0">
             {channel.enabled ? 'Enabled' : 'Disabled'}
           </ChannelChip>

@@ -96,12 +96,63 @@
   --text-note--line-height: 1.5;
   --text-note--font-weight: 400;
 
-  /* The screen title's desktop step, applied as `lg:text-screen-lg` over `text-screen`.
-     The Home route's title is a hair tighter at 1.02 and stays its own value. */
+  /* The screen title's desktop step, applied as `lg:text-screen-lg` over `text-screen`. */
   --text-screen-lg: 3.25rem;
   --text-screen-lg--line-height: 1.03;
   --text-screen-lg--letter-spacing: -0.045em;
   --text-screen-lg--font-weight: 600;
+
+  /* The title of a screen whose only subject is one name — the channel a guest is listening
+     to, the channel an interpreter is broadcasting on. Larger than `text-screen`, and the
+     `-lg` step pairs with it the way `text-screen-lg` pairs with `text-screen`. */
+  --text-hero: 2.5rem;
+  --text-hero--line-height: 1.03;
+  --text-hero--letter-spacing: -0.045em;
+  --text-hero--font-weight: 600;
+
+  --text-hero-lg: 2.875rem;
+  --text-hero-lg--line-height: 1.03;
+  --text-hero-lg--letter-spacing: -0.045em;
+  --text-hero-lg--font-weight: 600;
+
+  /* A number read at a glance: the on-air elapsed time, the listener count, the PIN on the
+     admin card. Line height 1 because the tile's padding sets its height. */
+  --text-stat: 2rem;
+  --text-stat--line-height: 1;
+  --text-stat--letter-spacing: -0.045em;
+  --text-stat--font-weight: 600;
+
+  --text-stat-lg: 2.25rem;
+  --text-stat-lg--line-height: 1;
+  --text-stat-lg--letter-spacing: -0.045em;
+  --text-stat-lg--font-weight: 600;
+
+  /* A dialog's title, and a channel name at `lg` — the step above a section title. */
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.25;
+  --text-title--letter-spacing: -0.03em;
+  --text-title--font-weight: 600;
+
+  /* A named row: a channel on a phone, an event in the admin list. */
+  --text-subtitle: 1.1875rem;
+  --text-subtitle--line-height: 1.25;
+  --text-subtitle--letter-spacing: -0.025em;
+  --text-subtitle--font-weight: 600;
+
+  /* Body copy's desktop step: the paragraph under a screen title. */
+  --text-body-lg: 1.0625rem;
+  --text-body-lg--line-height: 1.6;
+  --text-body-lg--font-weight: 400;
+
+  /* A PIN shown as digits — the home screen's entry boxes and the guest header's chip. Sized
+     to the box that holds it rather than to the body ramp. */
+  --text-pin: 1.3125rem;
+  --text-pin--line-height: 1;
+  --text-pin--font-weight: 600;
+
+  --text-pin-lg: 1.75rem;
+  --text-pin-lg--line-height: 1;
+  --text-pin-lg--font-weight: 600;
 }
 
 /* Hex values in the comments are the source of truth from the design file. */
