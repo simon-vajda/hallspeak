@@ -11,9 +11,11 @@ const BaseEnvSchema = z.object({
     .string()
     .min(1)
     .default(path.join(import.meta.dirname, 'public')),
-  // Resolved against the working directory, unlike WEB_ROOT: the database is user data
-  // and would be destroyed by every redeploy if it lived inside dist/.
-  DATABASE_PATH: z.string().min(1).default('./data/linguacast.db'),
+  // Everything the operator must keep: the SQLite database and admin.json both live here,
+  // so one mount and one variable cover the whole of it. Resolved against the working
+  // directory, unlike WEB_ROOT — user data would be destroyed by every redeploy if it
+  // lived inside dist/.
+  DATA_DIR: z.string().min(1).default('./data'),
 
   // The addresses a reverse proxy may reach us from. Unset means no X-Forwarded-For is
   // ever believed: the app stays reachable at its own port on the LAN, so an unconditional
@@ -30,16 +32,24 @@ const BaseEnvSchema = z.object({
 
   // What the workers bind. 0.0.0.0 is right behind a router doing the forwarding.
   MEDIA_LISTEN_IP: z.string().min(1).default('0.0.0.0'),
-  // What goes into ICE candidates, so it must be the address a client can actually
-  // reach. There is no safe default: a wrong value produces well-formed candidates
-  // nobody can connect to, with no error anywhere, so production refuses to boot without it.
+  // What goes into ICE candidates, so it must be an address a client can actually reach —
+  // a public hostname or a public IP. There is no safe default: a wrong value produces
+  // well-formed candidates nobody can connect to, with no error anywhere, so production
+  // refuses to boot without it.
   MEDIA_ANNOUNCED_IP: z.string().min(1).optional(),
   // Worker i binds base + i, on UDP and TCP. The operator forwards this many ports.
   MEDIA_RTC_PORT_BASE: z.coerce.number().int().min(1024).max(65_000).default(44400),
   MEDIA_MAX_WORKERS: z.coerce.number().int().positive().max(64).default(4),
   MEDIA_ROOM_IDLE_GRACE_MS: z.coerce.number().int().positive().optional(),
 
-  MEDIA_STUN_URL: z.string().min(1).optional(),
+  // Defaulted rather than left off: a guest behind a symmetric NAT needs one to discover
+  // the address to advertise, and a deployment shipping without it fails for exactly the
+  // guests least able to diagnose it. Set the variable empty to decline the default — a
+  // STUN server this reaches is a third party learning that a guest connected here.
+  MEDIA_STUN_URL: z
+    .string()
+    .default('stun:stun.l.google.com:19302')
+    .transform((value) => value.trim() || undefined),
   MEDIA_TURN_URL: z.string().min(1).optional(),
   // coturn's shared secret, used to mint short-lived per-session credentials. It is
   // never handed to a client; a standing credential given to every guest is a relay.

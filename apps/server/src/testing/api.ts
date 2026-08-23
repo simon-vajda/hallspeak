@@ -10,7 +10,7 @@ export type ApiRequest = (
 
 /**
  * The API sub-app, wired to a throwaway migrated database and a throwaway credential file.
- * Every import below is dynamic and DATABASE_PATH is set before them: env.ts parses
+ * Every import below is dynamic and DATA_DIR is set before them: env.ts parses
  * process.env at module load and db/index.ts opens a file at module scope, so one static
  * import anywhere in a test file's graph provisions the real ./data/ instead. That is why
  * the auth handles a test needs are returned from here rather than imported directly.
@@ -18,7 +18,7 @@ export type ApiRequest = (
  */
 export async function createTestApi() {
   const dir = mkdtempSync(join(tmpdir(), 'linguacast-api-'));
-  process.env.DATABASE_PATH = join(dir, 'test.db');
+  process.env.DATA_DIR = dir;
 
   const { closeDb, db } = await import('../db');
   const { runMigrations } = await import('../db/migrate');
@@ -27,8 +27,8 @@ export async function createTestApi() {
     '../core/auth'
   );
   // Explicit, never the env-derived default: credentialsPath() resolves against whatever
-  // DATABASE_PATH env.ts happened to parse first, which is the real one if anything loaded
-  // env before this function ran.
+  // DATA_DIR env.ts happened to parse first, which is the real one if anything loaded env
+  // before this function ran.
   startAuth(join(dir, 'admin.json'));
   const { apiRoutes } = await import('../http/routes');
 

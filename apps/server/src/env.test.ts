@@ -33,10 +33,30 @@ describe('EnvSchema media configuration', () => {
     expect(EnvSchema.safeParse({ MEDIA_RTC_PORT_BASE: '70000' }).success).toBe(false);
   });
 
-  it('leaves STUN and TURN unset, which is a deployment without coturn', () => {
+  it('leaves TURN unset, which is a deployment without coturn', () => {
     const result = EnvSchema.parse({});
-    expect(result.MEDIA_STUN_URL).toBeUndefined();
     expect(result.MEDIA_TURN_URL).toBeUndefined();
     expect(result.MEDIA_TURN_SECRET).toBeUndefined();
+  });
+
+  it('defaults STUN to a public server, since most deployments want one', () => {
+    expect(EnvSchema.parse({}).MEDIA_STUN_URL).toBe('stun:stun.l.google.com:19302');
+  });
+
+  it('reads an empty MEDIA_STUN_URL as off, so the default can be declined', () => {
+    expect(EnvSchema.parse({ MEDIA_STUN_URL: '' }).MEDIA_STUN_URL).toBeUndefined();
+    expect(EnvSchema.parse({ MEDIA_STUN_URL: '   ' }).MEDIA_STUN_URL).toBeUndefined();
+  });
+});
+
+describe('EnvSchema data directory', () => {
+  it('defaults to ./data, holding both the database and the credential file', () => {
+    expect(EnvSchema.parse({}).DATA_DIR).toBe('./data');
+  });
+
+  it('takes a configured directory verbatim', () => {
+    expect(EnvSchema.parse({ DATA_DIR: '/srv/linguacast/data' }).DATA_DIR).toBe(
+      '/srv/linguacast/data',
+    );
   });
 });
