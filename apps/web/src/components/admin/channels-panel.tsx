@@ -17,14 +17,9 @@ import {
   useOptimisticEventUpdate,
 } from '@/lib/admin-queries';
 import { channelLiveLabel, plural } from '@/lib/format';
-import { cn } from '@/lib/utils';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 type AdminChannel = components['schemas']['AdminChannel'];
-
-/** 44px below `lg`, where the controls sit under the row and must clear the hit target. */
-const ROW_ACTION =
-  "h-11 gap-1.5 rounded-full px-3.25 text-xs font-semibold [&_svg:not([class*='size-'])]:size-3.5 lg:h-8.25";
 
 function useChannelInvalidation(eventId: number) {
   const queryClient = useQueryClient();
@@ -39,10 +34,7 @@ export function ChannelsPanel({ event }: { event: AdminEventDetail }) {
     <section className="overflow-hidden rounded-lg bg-secondary">
       <div className="flex flex-wrap items-center justify-between gap-3 px-5.5 py-4.5">
         <h2 className="text-section">Channels</h2>
-        <Button
-          onClick={() => setAdding(true)}
-          className="h-9.5 gap-2 rounded-full px-4.25 font-semibold text-sm"
-        >
+        <Button onClick={() => setAdding(true)} size="action">
           <Plus />
           Add channel
         </Button>
@@ -121,13 +113,13 @@ function ChannelRow({
           value={speakerUrl}
           label="Copy speaker link"
           variant="outline"
-          className={ROW_ACTION}
+          size="action-sm"
         />
         <Button
           variant="outline"
           onClick={() => setRegenerating(true)}
           aria-label={`Regenerate the speaker code for ${channel.name}`}
-          className={ROW_ACTION}
+          size="action-sm"
         >
           <RefreshCw />
           Regenerate
@@ -136,7 +128,8 @@ function ChannelRow({
           variant="outline"
           onClick={() => setEditing(true)}
           aria-label={`Edit ${channel.name}`}
-          className={cn(ROW_ACTION, 'size-11 px-0 lg:size-8.25')}
+          size="action-sm"
+          className="size-11 px-0 lg:size-8.25"
         >
           <Pencil />
         </Button>
@@ -144,10 +137,8 @@ function ChannelRow({
           variant="outline"
           onClick={() => setDeleting(true)}
           aria-label={`Delete ${channel.name}`}
-          className={cn(
-            ROW_ACTION,
-            'size-11 px-0 text-destructive hover:bg-destructive-muted hover:text-destructive lg:size-8.25',
-          )}
+          size="action-sm"
+          className="size-11 px-0 text-destructive hover:bg-destructive-muted hover:text-destructive lg:size-8.25"
         >
           <Trash2 />
         </Button>

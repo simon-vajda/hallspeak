@@ -8,7 +8,6 @@ import { Controller, useForm } from 'react-hook-form';
 import { $api } from '@/api/client';
 import {
   ConfirmDialog,
-  DIALOG_ACTION,
   DIALOG_BODY,
   DIALOG_TITLE,
   DialogActions,
@@ -207,10 +206,8 @@ function EventForm({
       )}
 
       <DialogActions>
-        <DialogClose render={<Button variant="outline" className={DIALOG_ACTION} />}>
-          Cancel
-        </DialogClose>
-        <Button type="submit" disabled={isSubmitting} className={DIALOG_ACTION}>
+        <DialogClose render={<Button variant="outline" size="action" />}>Cancel</DialogClose>
+        <Button type="submit" size="action" disabled={isSubmitting}>
           {creating ? 'Create event' : 'Save changes'}
         </Button>
       </DialogActions>
