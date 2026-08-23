@@ -4,7 +4,9 @@
 # and the server writes both the database and admin.json into it.
 set -eu
 
-DATA_DIR=/data
+# The same variable the server reads, so the directory owned here is the directory
+# written to. The image sets it; the default is for a `docker run` that does not.
+DATA_DIR="${DATA_DIR:-/data}"
 
 # Docker's own `user:` directive already chose the identity, and the ownership fix
 # is not reachable unprivileged. Failing here would break a deliberate choice.
