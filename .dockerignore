@@ -2,9 +2,7 @@
 # database and admin.json straight into the published image.
 data/
 
-node_modules
 **/node_modules
-dist
 **/dist
 .pnpm-store
 
