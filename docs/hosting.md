@@ -34,29 +34,34 @@ flowchart LR
 
 - A reverse proxy terminating TLS for a hostname pointing at this server.
 - Router forwarding for **44400–44403, UDP and TCP**, to the host running the container —
-  one port per worker, which is four by default. See below if you change that.
+  one port per CPU core LinguaCast may use, which is four by default.
 - A public address stable enough to put in a config file, and a host on Linux kernel 6
   or newer.
 
 ## Deploy
 
-Make a directory, and put [`compose.yaml`](../compose.yaml) in it alongside
-[`.env.example`](../.env.example) copied to `.env`:
+Take [`compose.yaml`](../compose.yaml) and [`.env.example`](../.env.example) into
+wherever you keep your Compose stacks, rename the second one to `.env`, and set:
+
+- **`MEDIA_ANNOUNCED_IP`** — the public address guests reach this server at. The only
+  value you must fill in.
+- **`TRUSTED_PROXY_IPS`** — the address your reverse proxy reaches the container from.
+  See the proxy section below, and note it is rarely the address you expect.
+- **`MEDIA_MAX_WORKERS`** — how many events can run at once. See below.
+
+The Compose file mounts `./data` for the database and your admin account. Point it at
+wherever you keep persistent data instead if you prefer; nothing outside it has to
+survive.
 
 ```sh
-mkdir -p /srv/linguacast/data && cd /srv/linguacast
-```
+# Only while the package is private. This step disappears once it is published.
+docker login ghcr.io -u <your-github-username>
 
-Edit `.env`. Only `MEDIA_ANNOUNCED_IP` is mandatory — the public address guests reach
-this server at. Then:
-
-```sh
-docker login ghcr.io -u <your-github-username>   # while the package is private
 docker compose up -d && docker compose logs -f
 ```
 
-Look for the media line, and check the announced address against what the internet
-actually sees:
+Check the media line against what the internet actually sees — a wrong announced
+address is the one failure that produces no error anywhere:
 
 ```
 mediasoup: 4 worker(s) of 8 detected core(s) · ports 44400, 44401, 44402, 44403 (UDP and TCP) · announced 203.0.113.10 · TURN not configured
@@ -65,31 +70,29 @@ mediasoup: 4 worker(s) of 8 detected core(s) · ports 44400, 44401, 44402, 44403
 Configure your proxy (below), then open the HTTPS URL. The setup wizard claims the
 admin account for whoever reaches it first, so do this promptly.
 
-### How many RTC ports to forward
+### Cores, events, and how many ports to open
 
-That log line names them: forward exactly the ports it lists, on UDP and TCP, with no
-remapping.
+**One event runs on one CPU core, start to finish.** It is never spread across two, so
+`MEDIA_MAX_WORKERS` is really "how many cores LinguaCast may use", and each one it uses
+carries a different simultaneous event.
 
-The count comes from the worker layout. LinguaCast runs one mediasoup worker per CPU
-core, capped by `MEDIA_MAX_WORKERS`, and worker *i* binds `MEDIA_RTC_PORT_BASE + i`.
-So four workers means four ports — 44400 through 44403 by default — and the number
-scales with your worker count, never with how many people are listening.
+That makes it a concurrency setting, not a capacity one:
 
-Worker count is worth thinking about once, because raising it is not a performance
-knob:
+- Raising it lets parallel events genuinely run in parallel instead of sharing a core,
+  and it buys crash protection — if one core's process dies, it takes only the events
+  on that core with it.
+- It does nothing for the size of a single event. One event is capped at one core
+  however high you set this.
+- The effective value is the smaller of your setting and the host's core count, so
+  asking for more than you have just opens ports nothing listens on.
 
-- **An event lives entirely on one worker, and is never split across two.** One event
-  is therefore capped at one core no matter how many workers you allow. Adding workers
-  buys you *concurrent events on separate cores*, plus crash isolation — one worker
-  dying does not silence the others.
-- **So size it by how many events run at the same time**, not by audience or by core
-  count. If you will only ever run one event at a time, `MEDIA_MAX_WORKERS=1` is
-  honest and needs one forwarded port.
-- The effective count is the smaller of your setting and the host's cores, so asking
-  for more workers than you have cores just opens ports that nothing binds.
+If you will only ever run one event at a time, `MEDIA_MAX_WORKERS=1` is honest.
 
-If you change `MEDIA_MAX_WORKERS`, edit the port publications in `compose.yaml` by
-hand and re-forward on the router — Compose cannot derive a range from a variable.
+**Each core in use needs one forwarded port**, starting at `MEDIA_RTC_PORT_BASE` and
+counting up — four cores means 44400 through 44403. The startup line above names them
+exactly; forward those on your router, on UDP and TCP, with no remapping. If you change
+`MEDIA_MAX_WORKERS`, edit the port publications in `compose.yaml` by hand too: Compose
+cannot derive a range from a variable.
 
 ## Reverse proxy
 
@@ -198,8 +201,8 @@ default, and the last four rows are ones you should not normally need to touch.
 | `LINGUACAST_VERSION` | — | The image tag Compose runs. Edit it, pull, recreate: that is the upgrade. |
 | `MEDIA_ANNOUNCED_IP` | **required** | The public address that goes into ICE candidates. Wrong means every screen loads and no audio arrives. |
 | `TRUSTED_PROXY_IPS` | empty | Comma-separated addresses whose `X-Forwarded-For` is believed. Empty means none is, which behind a proxy shares one sign-in throttle bucket across every visitor. |
-| `MEDIA_MAX_WORKERS` | `4` | Concurrent events given their own core, capped by the host's core count. Each worker binds one RTC port. |
-| `MEDIA_RTC_PORT_BASE` | `44400` | The first RTC port. Worker *i* binds base + *i* on UDP and TCP. Change it and change the publications and the router forwarding. |
+| `MEDIA_MAX_WORKERS` | `4` | How many CPU cores LinguaCast may use, which is how many events can run at once. Capped by the host's core count; each core in use needs one RTC port. |
+| `MEDIA_RTC_PORT_BASE` | `44400` | The first RTC port; the rest count up from it, one per core in use, on UDP and TCP. Change it and change the publications and the router forwarding. |
 | `MEDIA_STUN_URL` | `stun:stun.l.google.com:19302` | Helps a guest behind a restrictive NAT discover the address to advertise. Empty uses none. |
 | `MEDIA_TURN_URL` | unset | A TURN relay that carries audio for guests whose network blocks the RTC ports. Needs the secret below to apply. |
 | `MEDIA_TURN_SECRET` | unset | The relay's shared secret. Per-session credentials are minted from it; it never reaches a client. |
@@ -207,4 +210,4 @@ default, and the last four rows are ones you should not normally need to touch.
 | `MEDIA_ROOM_IDLE_GRACE_MS` | `60000` | How long an event's router survives with nobody on it. Shorter renegotiates every guest during a handover between interpreters. |
 | `DATA_DIR` | `/data` | Where `linguacast.db` and `admin.json` live. Change the mount, not this. |
 | `PORT` | `3000` | The HTTP port inside the container. Publish a different one instead of changing this. |
-| `MEDIA_LISTEN_IP` | `0.0.0.0` | What the workers bind inside the container. |
+| `MEDIA_LISTEN_IP` | `0.0.0.0` | What the RTC ports bind to inside the container. |
