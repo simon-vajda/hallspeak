@@ -95,8 +95,7 @@ WORKDIR /app
 COPY --from=deps /runtime/package.json ./package.json
 COPY --from=deps /runtime/node_modules ./node_modules
 COPY --from=builder /build/apps/server/dist ./dist
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY --chmod=0755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # DATABASE_PATH resolves against the working directory, so leaving it unset would place
 # the database inside the image at /app/data. admin.json follows it, so this one
