@@ -1,0 +1,65 @@
+name: Release
+
+# The only triggers that publish an image. A pull request runs nothing here, so a
+# change to the Dockerfile is reviewed before it can reach the registry.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # QEMU is what lets one runner emit both architectures. It is only the small
+      # native-dependency stage that runs emulated: the application build is pinned to
+      # the build platform, so the slow half never sees QEMU.
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          # A v* tag cuts the stable channel; main cuts the edge channel. `latest` is
+          # enabled explicitly rather than by default branch, or every push to main
+          # would move the tag operators pin against.
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=edge,branch=main
+            type=sha,format=short,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Off so the published tag resolves to a two-entry manifest list. With
+          # attestations on, `docker manifest inspect` also lists unknown/unknown
+          # entries, which reads as a broken image to an operator checking their pull.
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
