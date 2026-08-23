@@ -36,8 +36,6 @@ type AdminChannel = components['schemas']['AdminChannel'];
 type Problem = components['schemas']['Problem'];
 
 const LABEL = 'text-label text-muted-foreground uppercase';
-const TEXT_INPUT = 'h-11 rounded-full bg-secondary px-4 text-sm';
-
 /**
  * The composite unique on (event_id, slug). A `catch` binding is `unknown` whatever the
  * mutation's error type says, hence the written-out narrowing.
@@ -164,7 +162,6 @@ function ChannelForm({
             autoComplete="off"
             placeholder="Español"
             aria-invalid={errors.name ? true : undefined}
-            className={TEXT_INPUT}
             {...nameField}
             onChange={(event) => {
               nameField.onChange(event);
@@ -188,7 +185,7 @@ function ChannelForm({
               placeholder="espanol"
               aria-invalid={errors.slug ? true : undefined}
               aria-describedby={slugNoteId}
-              className={cn(TEXT_INPUT, 'font-mono')}
+              className="font-mono"
               {...slugField}
               onChange={(event) => {
                 slugEdited.current = true;
@@ -201,7 +198,7 @@ function ChannelForm({
               readOnly
               value={channel.slug}
               aria-describedby={slugNoteId}
-              className={cn(TEXT_INPUT, 'font-mono text-muted-foreground')}
+              className="font-mono text-muted-foreground"
             />
           )}
           <FieldDescription id={slugNoteId} className="text-meta">

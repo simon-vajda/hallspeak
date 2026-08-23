@@ -3,11 +3,6 @@ import { LogoLockup } from '@/components/logo-lockup';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { cn } from '@/lib/utils';
 
-/** The pill field from `12g`, shared by both screens: 52px, filled at rest, a two-pixel
- * ring on focus — the same treatment as the PIN boxes on the home screen. */
-export const AUTH_FIELD =
-  'h-13 rounded-full border-2 border-transparent bg-secondary px-5 text-base focus-visible:border-primary focus-visible:bg-card focus-visible:ring-0 aria-invalid:border-destructive aria-invalid:ring-0';
-
 export const AUTH_LABEL = 'text-label text-muted-foreground uppercase';
 
 /**

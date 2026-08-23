@@ -1,6 +1,5 @@
 import { Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
-import { AUTH_FIELD } from '@/components/auth/auth-card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -14,11 +13,7 @@ export function PasswordField({
 
   return (
     <div className="relative">
-      <Input
-        {...props}
-        type={revealed ? 'text' : 'password'}
-        className={cn(AUTH_FIELD, 'pr-13', className)}
-      />
+      <Input {...props} type={revealed ? 'text' : 'password'} className={cn('pr-13', className)} />
       <button
         type="button"
         onClick={() => setRevealed((shown) => !shown)}

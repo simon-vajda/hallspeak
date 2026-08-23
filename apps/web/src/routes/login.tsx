@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useId, useRef, useState } from 'react';
 import { $api } from '@/api/client';
-import { AUTH_FIELD, AUTH_LABEL, AuthCard } from '@/components/auth/auth-card';
+import { AUTH_LABEL, AuthCard } from '@/components/auth/auth-card';
 import { PasswordField } from '@/components/auth/password-field';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -98,7 +98,6 @@ function LoginPage() {
             spellCheck={false}
             placeholder="admin"
             aria-invalid={message !== undefined}
-            className={AUTH_FIELD}
           />
         </Field>
 
