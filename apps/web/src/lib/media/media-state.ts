@@ -139,6 +139,16 @@ export interface ConsumerPlan {
   consume: string | null;
 }
 
+/** Opening a consumer completes its plan but does not cancel its pending playback handoff. */
+export function mayAttachConsumerTrack(input: {
+  requestedSlug: string;
+  armedSlug: string | null;
+  online: boolean;
+  trackEnded: boolean;
+}): boolean {
+  return input.online && !input.trackEnded && input.requestedSlug === input.armedSlug;
+}
+
 export function consumerPlan(input: {
   consumers: Record<string, string>;
   /** The channel the guest armed, or null while they have not. */

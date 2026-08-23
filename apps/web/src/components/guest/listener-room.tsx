@@ -1,7 +1,7 @@
 import type { components } from '@linguacast/contract/openapi';
 import { Link } from '@tanstack/react-router';
 import { ChevronLeft, Loader2, Pause, Play } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { ChannelStrip } from '@/components/guest/channel-strip';
@@ -9,7 +9,7 @@ import { LiveBadge } from '@/components/live-badge';
 import { PlayTarget } from '@/components/play-target';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { formatPin } from '@/lib/format';
-import { consumerPlan } from '@/lib/media/media-state';
+import { consumerPlan, mayAttachConsumerTrack } from '@/lib/media/media-state';
 import { connectionState } from '@/lib/media/stats';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
@@ -93,6 +93,10 @@ export function ListenerRoom({
   const consumers = media.state.consumers;
   const armedSlug = armed ? channel.slug : null;
   const online = live && connected;
+  const playbackIntentRef = useRef({ armedSlug, online });
+  useLayoutEffect(() => {
+    playbackIntentRef.current = { armedSlug, online };
+  }, [armedSlug, online]);
 
   useEffect(() => {
     const plan = consumerPlan({ consumers, armedSlug, online });
@@ -103,10 +107,16 @@ export function ListenerRoom({
       return;
     }
 
-    let cancelled = false;
-    void startConsuming(plan.consume)
+    const requestedSlug = plan.consume;
+    void startConsuming(requestedSlug)
       .then((track) => {
-        if (cancelled) {
+        if (
+          !mayAttachConsumerTrack({
+            requestedSlug,
+            ...playbackIntentRef.current,
+            trackEnded: track.readyState === 'ended',
+          })
+        ) {
           return;
         }
         const element = audio.current;
@@ -114,20 +124,20 @@ export function ListenerRoom({
           return;
         }
         element.srcObject = new MediaStream([track]);
-        // Started under the arming gesture's context, so this resolves rather than
-        // rejecting on autoplay policy.
-        void element.play().catch(() => {});
+        void element
+          .play()
+          .catch((cause) => console.error('media: could not start audio playback', cause));
       })
       .catch((cause) => {
         // Swallowed silently, a failed consume left the screen claiming it was waiting.
-        if (!cancelled && !isSuperseded(cause)) {
+        if (
+          playbackIntentRef.current.armedSlug === requestedSlug &&
+          playbackIntentRef.current.online &&
+          !isSuperseded(cause)
+        ) {
           console.error('media: could not listen', cause);
         }
       });
-
-    return () => {
-      cancelled = true;
-    };
   }, [consumers, armedSlug, online, startConsuming, stopConsuming]);
 
   const connection = connectionState({
