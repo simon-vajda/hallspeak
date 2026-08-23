@@ -9,8 +9,12 @@ import { cn } from '@/lib/utils';
 //
 // Neither shape sets a font size: the base is `text-base md:text-sm`, and below 16px iOS
 // Safari zooms the viewport when a field takes focus and never zooms back out.
+//
+// `pill` fills with `background` in dark mode rather than `secondary`: every surface a field
+// sits on — the auth card, a dialog's popover — is `secondary`'s own value there, so the
+// field would be invisible. In light mode those surfaces are white and `secondary` reads.
 const SHAPES = {
-  pill: 'h-touch rounded-full border-2 border-transparent bg-secondary px-4 focus-visible:border-primary focus-visible:bg-card focus-visible:ring-0 aria-invalid:border-destructive aria-invalid:ring-0 dark:aria-invalid:border-destructive/50',
+  pill: 'h-touch rounded-full border-2 border-transparent bg-secondary px-4 focus-visible:border-primary focus-visible:bg-card focus-visible:ring-0 aria-invalid:border-destructive aria-invalid:ring-0 dark:bg-background dark:focus-visible:bg-background dark:aria-invalid:border-destructive/50',
   box: 'h-8 rounded-lg border border-input bg-transparent px-2.5 py-1 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40',
 } as const;
 
