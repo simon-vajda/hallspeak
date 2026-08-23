@@ -87,7 +87,9 @@
   --text-section--letter-spacing: -0.03em;
   --text-section--font-weight: 600;
 
-  --text-label: 0.65625rem; /* uppercase label — pair with `uppercase` */
+  /* Same 12px as `text-meta`, deliberately: they differ in weight, line-height and the
+     tracking the uppercase needs, not in size. Do not collapse them. */
+  --text-label: 0.75rem; /* uppercase label — pair with `uppercase` */
   --text-label--line-height: 1.2;
   --text-label--letter-spacing: 0.08em;
   --text-label--font-weight: 600;
