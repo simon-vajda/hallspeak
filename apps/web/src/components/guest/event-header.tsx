@@ -1,5 +1,5 @@
 import { LiveBadge } from '@/components/live-badge';
-import { formatPin } from '@/lib/format';
+import { Pin } from '@/components/pin';
 
 /**
  * `live` is whether the guest's own socket is connected, not that anyone is speaking. Who is
@@ -32,10 +32,7 @@ export function EventHeader({
 
       <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-meta text-muted-foreground lg:gap-2.5 lg:px-4.5 lg:py-2.5 lg:text-note lg:font-medium">
         PIN
-        {/* Tracked out to stay readable as digits. */}
-        <span className="text-note font-semibold tracking-[0.04em] text-foreground lg:text-[20px]">
-          {formatPin(pin)}
-        </span>
+        <Pin pin={pin} className="text-note font-semibold text-foreground lg:text-[20px]" />
       </div>
     </div>
   );

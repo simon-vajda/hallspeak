@@ -3,8 +3,6 @@ import { LogoLockup } from '@/components/logo-lockup';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { cn } from '@/lib/utils';
 
-export const AUTH_LABEL = 'text-label text-muted-foreground uppercase';
-
 /**
  * The shell both auth screens share. The host line names the machine the installer typed
  * into, which is the only way either screen says which server this is.

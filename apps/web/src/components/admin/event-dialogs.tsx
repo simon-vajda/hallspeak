@@ -12,6 +12,7 @@ import {
   DIALOG_TITLE,
   DialogActions,
 } from '@/components/confirm-dialog';
+import { MICRO_LABEL } from '@/components/micro-label';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -38,7 +39,6 @@ import { cn } from '@/lib/utils';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
-const LABEL = 'text-label text-muted-foreground uppercase';
 /** Create and edit are the same dialog; pass an `event` to edit it. */
 export function EventFormDialog({
   open,
@@ -139,7 +139,7 @@ function EventForm({
 
       <div className="flex flex-col gap-3.5">
         <Field className="gap-1.5">
-          <FieldLabel htmlFor="event-name" className={LABEL}>
+          <FieldLabel htmlFor="event-name" className={MICRO_LABEL}>
             Name
           </FieldLabel>
           <Input
@@ -153,7 +153,7 @@ function EventForm({
         </Field>
 
         <Field className="gap-1.5">
-          <FieldLabel htmlFor="event-description" className={LABEL}>
+          <FieldLabel htmlFor="event-description" className={MICRO_LABEL}>
             Description
           </FieldLabel>
           <Textarea

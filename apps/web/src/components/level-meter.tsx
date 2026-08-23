@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { MICRO_LABEL } from '@/components/micro-label';
 import {
   holdPeak,
   type LevelStatus,
@@ -96,7 +97,7 @@ export function LevelMeter({
   return (
     <div ref={rootRef} data-peaking="false" className={cn('group flex flex-col', className)}>
       <div className="mb-3.5 flex items-baseline justify-between gap-3">
-        <span className="text-label text-muted-foreground uppercase">Input level</span>
+        <span className={MICRO_LABEL}>Input level</span>
         <span role="status" className={cn('text-meta font-semibold', STATUS_TONE[status])}>
           {STATUS_TEXT[status]}
         </span>

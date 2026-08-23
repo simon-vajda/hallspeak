@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MICRO_LABEL } from '@/components/micro-label';
 import { formatElapsed } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -35,14 +36,14 @@ export function OnAirStats({
         <div className="text-[32px] leading-none font-semibold tracking-[-0.045em] lg:text-[36px]">
           {formatElapsed(startedAt === null ? 0 : now - startedAt)}
         </div>
-        <div className="mt-1.25 text-label text-muted-foreground uppercase">On air</div>
+        <div className={cn('mt-1.25', MICRO_LABEL)}>On air</div>
       </div>
 
       <div className="rounded-lg bg-secondary px-4.5 py-4 lg:px-5.5 lg:py-4.5">
         <div className="text-[32px] leading-none font-semibold tracking-[-0.045em] lg:text-[36px]">
           {listeners}
         </div>
-        <div className="mt-1.25 text-label text-muted-foreground uppercase">Listeners</div>
+        <div className={cn('mt-1.25', MICRO_LABEL)}>Listeners</div>
       </div>
     </div>
   );

@@ -3,8 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useId, useRef, useState } from 'react';
 import { $api } from '@/api/client';
-import { AUTH_LABEL, AuthCard } from '@/components/auth/auth-card';
+import { AuthCard } from '@/components/auth/auth-card';
 import { PasswordField } from '@/components/auth/password-field';
+import { MICRO_LABEL } from '@/components/micro-label';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -86,7 +87,7 @@ function LoginPage() {
         </p>
 
         <Field className="mb-5 gap-2">
-          <FieldLabel htmlFor={usernameId} className={AUTH_LABEL}>
+          <FieldLabel htmlFor={usernameId} className={MICRO_LABEL}>
             Username
           </FieldLabel>
           <Input
@@ -102,7 +103,7 @@ function LoginPage() {
         </Field>
 
         <Field className="gap-2">
-          <FieldLabel htmlFor={passwordId} className={AUTH_LABEL}>
+          <FieldLabel htmlFor={passwordId} className={MICRO_LABEL}>
             Password
           </FieldLabel>
           <PasswordField

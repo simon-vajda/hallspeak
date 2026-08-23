@@ -311,9 +311,7 @@ export function SpeakerStudio({
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header>
           <div className="flex items-center justify-between gap-3">
-            <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
-              Interpreter · off air
-            </span>
+            <LiveBadge live={false} showDot={false} label="Interpreter · off air" />
             {/* Centred on the chip rather than floated over it; the bar does this from `lg`. */}
             <div className="-my-1 lg:hidden">
               <TempThemeToggle />
@@ -586,9 +584,7 @@ function Displaced({ channelName, eventName }: { channelName: string; eventName:
       />
 
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col items-center justify-center px-gutter pb-16 text-center lg:px-10">
-        <span className="inline-flex items-center rounded-full bg-secondary px-3.25 py-1.5 text-label text-muted-foreground uppercase">
-          Interpreter · off air
-        </span>
+        <LiveBadge live={false} showDot={false} label="Interpreter · off air" />
         {/* The wire carries no reason with the disconnect, so the copy names both causes
             rather than asserting the one it cannot tell apart. */}
         <h1 className="mt-4 mb-2 text-screen lg:text-screen-lg">{channelName} was handed over</h1>

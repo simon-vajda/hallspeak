@@ -1,5 +1,6 @@
 import { Mic } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { MICRO_LABEL } from '@/components/micro-label';
 import { GainSlider } from '@/components/speaker/gain-slider';
 import type { AudioPreferences } from '@/components/speaker/live-state';
 import { Button } from '@/components/ui/button';
@@ -64,7 +65,7 @@ export function MicPanel({
         className,
       )}
     >
-      <h2 className="text-label text-muted-foreground uppercase">Microphone</h2>
+      <h2 className={MICRO_LABEL}>Microphone</h2>
 
       {blocked || empty ? (
         <MicUnavailable
