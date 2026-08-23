@@ -43,8 +43,9 @@ flowchart LR
 Take [`compose.yaml`](../compose.yaml) and [`.env.example`](../.env.example) into
 wherever you keep your Compose stacks, rename the second one to `.env`, and set:
 
-- **`MEDIA_ANNOUNCED_IP`** — the public address guests reach this server at. The only
-  value you must fill in.
+- **`MEDIA_ANNOUNCED_IP`** — your public hostname, usually the same one your reverse
+  proxy serves: `linguacast.example.com`. A public IP address works too if you have no
+  hostname. The only value you must fill in.
 - **`TRUSTED_PROXY_IPS`** — the address your reverse proxy reaches the container from.
   See the proxy section below, and note it is rarely the address you expect.
 - **`MEDIA_MAX_WORKERS`** — how many events can run at once. See below.
@@ -174,7 +175,7 @@ docker compose stop && tar czf backup-$(date +%F).tar.gz data/ && docker compose
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Every screen loads, nobody hears anything | `MEDIA_ANNOUNCED_IP` is wrong, or the RTC ports are not forwarded | Compare the announced address in the logs with `curl -s https://api.ipify.org`; confirm the router forwards 44400–44403 on **both** UDP and TCP; confirm you did not remap the ports |
+| Every screen loads, nobody hears anything | `MEDIA_ANNOUNCED_IP` is wrong, or the RTC ports are not forwarded | Confirm the announced address in the logs is your public hostname (or, without one, matches `curl -s https://api.ipify.org`); confirm the router forwards 44400–44403 on **both** UDP and TCP; confirm you did not remap the ports |
 | The studio cannot open the microphone; signing in does nothing | You are on plain HTTP | Use the proxy's HTTPS URL, not `http://<host>:3000` |
 | Container exits with `/data is not writable` | Read-only mount, or a `user:` uid that does not own it | Drop the `:ro`, or set `PUID`/`PGID` to the owner |
 | A correct password is refused after a few tries | `TRUSTED_PROXY_IPS` unset behind a proxy | See the table above |
@@ -199,7 +200,7 @@ default, and the last four rows are ones you should not normally need to touch.
 | Variable | Default | What it does |
 |---|---|---|
 | `LINGUACAST_VERSION` | — | The image tag Compose runs. Edit it, pull, recreate: that is the upgrade. |
-| `MEDIA_ANNOUNCED_IP` | **required** | The public address that goes into ICE candidates. Wrong means every screen loads and no audio arrives. |
+| `MEDIA_ANNOUNCED_IP` | **required** | Your public hostname (`linguacast.example.com`) or public IP. It goes into the ICE candidates guests connect back on; wrong means every screen loads and no audio arrives. |
 | `TRUSTED_PROXY_IPS` | empty | Comma-separated addresses whose `X-Forwarded-For` is believed. Empty means none is, which behind a proxy shares one sign-in throttle bucket across every visitor. |
 | `MEDIA_MAX_WORKERS` | `4` | How many CPU cores LinguaCast may use, which is how many events can run at once. Capped by the host's core count; each core in use needs one RTC port. |
 | `MEDIA_RTC_PORT_BASE` | `44400` | The first RTC port; the rest count up from it, one per core in use, on UDP and TCP. Change it and change the publications and the router forwarding. |
