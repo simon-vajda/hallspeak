@@ -61,7 +61,7 @@ export function MicPanel({
         // Not a card inside the settings surface: nesting one there would inset these rows
         // further than the gain slider under them. `min-w-0` lets the device name truncate
         // rather than setting a min-content width the surface has to grow to.
-        inSettings ? 'min-w-0' : 'rounded-lg bg-secondary px-5 py-4.5 lg:p-5.5',
+        inSettings ? 'min-w-0' : 'rounded-lg bg-secondary px-5 py-4.5 lg:p-panel',
         className,
       )}
     >

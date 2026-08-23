@@ -28,17 +28,17 @@ const PIN_LENGTH = 6;
 // The design draws separated boxes; shadcn's default slot is one joined group, so most of this
 // is unpicking that. `[&>div>div]` is input-otp's fake caret, which no prop reaches.
 const SLOT_CLASS = cn(
-  'h-14 w-full rounded-[14px] border-2 border-transparent bg-secondary text-pin',
+  'h-14 w-full rounded-md border-2 border-transparent bg-secondary text-pin',
   'font-semibold text-foreground transition-colors dark:bg-secondary',
-  'first:rounded-[14px] first:border-2 last:rounded-[14px]',
+  'first:rounded-md first:border-2 last:rounded-md',
   // The dark: pair is repeated on the active state so it outranks dark:bg-secondary above.
   'data-[active=true]:border-primary data-[active=true]:ring-0',
   'data-[active=true]:bg-primary/10 dark:data-[active=true]:bg-primary/10',
   '[&>div>div]:h-5.5 [&>div>div]:w-0.5 [&>div>div]:bg-primary',
   // rounded-md, not rounded-2xl: this scale is derived from --radius (20px), so the
   // design's 16px box is 0.8 × radius, and rounded-2xl would be 36px.
-  'lg:h-18.5 lg:w-15.5 lg:rounded-md lg:text-pin-lg',
-  'lg:first:rounded-md lg:last:rounded-md lg:[&>div>div]:h-7',
+  'lg:h-18.5 lg:w-15.5 lg:text-pin-lg',
+  'lg:[&>div>div]:h-7',
 );
 
 function IndexPage() {

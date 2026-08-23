@@ -32,10 +32,10 @@ const buttonVariants = cva(
         // CUSTOMISED: the admin action scale. 38px from `lg`, 44px below it, because an
         // admin control sits in a cluster of siblings and has to clear the hit target on a
         // phone. `action-sm` is the denser control inside a list row.
-        action: 'h-11 gap-2 rounded-full px-4.25 text-sm font-semibold lg:h-9.5',
+        action: 'h-touch gap-2 rounded-full px-action-x text-sm font-semibold lg:h-action',
         'action-sm':
-          "h-11 gap-1.5 rounded-full px-3.25 text-xs font-semibold lg:h-8.25 [&_svg:not([class*='size-'])]:size-3.5",
-        'icon-action': 'size-11 rounded-full lg:size-9.5',
+          "h-touch gap-1.5 rounded-full px-3.25 text-xs font-semibold lg:h-8.25 [&_svg:not([class*='size-'])]:size-3.5",
+        'icon-action': 'size-touch rounded-full lg:size-action',
         icon: 'size-8',
         'icon-xs':
           "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",

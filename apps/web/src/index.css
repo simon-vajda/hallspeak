@@ -62,11 +62,18 @@
 /* The handoff's spacing and type ramp, as scale entries rather than call-site literals.
    Tailwind v4 derives the whole spacing scale from `--spacing`, so the design's off-scale
    values are already reachable as fractional steps — 26px is `6.5`, 18px is `4.5`, 1120px
-   is `280`. Only the two that are *semantic* — they name a thing, repeat on every screen
-   and change value at `lg` — are worth a name of their own. */
+   is `280`. Only the *semantic* ones get a name of their own — a value that names a thing,
+   repeats across screens, and would otherwise be re-derived by the next screen. */
 @theme {
   --spacing-gutter: 1.625rem; /* 26px screen gutter; 40px (px-10) from lg up */
   --spacing-shell: 70rem; /* 1120px application content cap */
+
+  /* The four values the controls and panels repeat. `touch` is the minimum hit target a
+     control bumps to below `lg`; `action` is the height it settles at from `lg`. */
+  --spacing-panel: 1.375rem; /* 22px panel inset */
+  --spacing-action-x: 1.0625rem; /* 17px, an action button's horizontal padding */
+  --spacing-action: 2.375rem; /* 38px */
+  --spacing-touch: 2.75rem; /* 44px */
 
   /* The ramp steps the design fixes size, weight and tracking for together.
      Body (14px/1.5) is Tailwind's own `text-sm`, so it stays that. */
