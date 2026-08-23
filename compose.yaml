@@ -1,0 +1,53 @@
+# LinguaCast — single-container deployment behind your own reverse proxy.
+#
+# Copy this file, set MEDIA_ANNOUNCED_IP, and read docs/hosting.md for the reverse
+# proxy, the router port forwarding and the HTTPS requirement. HTTPS is not optional:
+# microphone capture and the admin session cookie both require it.
+
+services:
+  linguacast:
+    # Pinned so an upgrade is a deliberate edit. Use :latest instead if you would
+    # rather every `docker compose pull` take the newest release.
+    image: ghcr.io/simon-vajda/linguacast:0.2.0
+    restart: unless-stopped
+
+    environment:
+      # The public address guests reach this server at, as it appears from the
+      # internet — an IP or a hostname. It goes straight into the ICE candidates, so
+      # a wrong value produces a deployment where everything loads and no audio ever
+      # arrives, with no error anywhere. Required: the `:?` form fails
+      # `docker compose up` by name rather than starting a container that cannot work.
+      MEDIA_ANNOUNCED_IP: ${MEDIA_ANNOUNCED_IP:?set this to the address guests reach this server at}
+
+      # The address your reverse proxy reaches the container from. Unset means no
+      # X-Forwarded-For header is ever believed, which behind a proxy collapses every
+      # visitor into one sign-in throttle bucket. docs/hosting.md gives the value for
+      # each proxy placement — it is not the proxy's LAN address when the proxy talks
+      # to a published port.
+      TRUSTED_PROXY_IPS: ''
+
+      # One mediasoup worker per value, capped by the host's core count. Raising it
+      # means publishing the matching extra RTC ports below, by hand.
+      MEDIA_MAX_WORKERS: 4
+
+      # The uid/gid the server runs as, and the owner the container gives ./data.
+      # Set these to your own if you want to read the database from the host.
+      PUID: 1000
+      PGID: 1000
+
+    ports:
+      # HTTP: the SPA, the API and the Socket.IO endpoint. Only the reverse proxy
+      # should reach this; it is plain HTTP.
+      - '3000:3000'
+
+      # RTC: worker i binds MEDIA_RTC_PORT_BASE + i on UDP and TCP alike. The external
+      # and internal numbers must match — a remapped port leaves signalling working
+      # and audio silently absent, because the port inside the ICE candidate is the
+      # one the worker bound. Forward these on your router too.
+      - '44400-44403:44400-44403/udp'
+      - '44400-44403:44400-44403/tcp'
+
+    volumes:
+      # The SQLite database and admin.json. This is the whole of your data — back it
+      # up, and it is what makes a container recreate survivable.
+      - ./data:/data
