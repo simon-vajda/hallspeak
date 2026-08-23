@@ -17,8 +17,6 @@ export const DIALOG_ACTION =
 export const DIALOG_TITLE = 'text-[22px] leading-tight font-semibold tracking-[-0.03em]';
 export const DIALOG_BODY = 'text-[13.5px] leading-[1.55]';
 
-export const DIALOG_PANEL = 'gap-0 rounded-lg p-gutter';
-
 /** `flex-col-reverse` puts the primary on top. */
 export function DialogActions({ children }: { children: ReactNode }) {
   return (
@@ -72,11 +70,7 @@ export function ConfirmDialog({
     >
       {/* No close cross: the two named buttons are the only ways out, so neither choice is
           made by accident. */}
-      <DialogContent
-        role="alertdialog"
-        showCloseButton={false}
-        className={cn(DIALOG_PANEL, 'sm:max-w-100')}
-      >
+      <DialogContent role="alertdialog" showCloseButton={false} className="sm:max-w-100">
         <div
           aria-hidden="true"
           className={cn(
