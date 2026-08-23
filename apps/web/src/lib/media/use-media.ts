@@ -2,6 +2,7 @@ import type { types } from 'mediasoup-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SocketClient } from '@/socket/client';
 import { loadDevice } from './device';
+import { watchConsumerTrack } from './diagnostics';
 import {
   afterConnect,
   beginRebuild,
@@ -397,6 +398,8 @@ export function useMedia(socket: SocketClient | null) {
         });
         active.consumers.set(slug, consumer);
         setState((prev) => consumerOpened(prev, slug, consumer.id));
+
+        watchConsumerTrack(consumer.track, slug);
 
         // Resumed only once the track is in hand, per the server creating it paused: RTP
         // arriving before the decoder is ready is the usual cause of artefacts at join.

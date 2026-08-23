@@ -15,7 +15,16 @@ class FakeRouter {
   });
   // biome-ignore lint/suspicious/noExplicitAny: a stand-in for mediasoup's Router.
   async createWebRtcTransport(_options: any): Promise<any> {
-    return { id: `t${Math.random()}`, closed: false, close: vi.fn() };
+    return {
+      id: `t${Math.random()}`,
+      closed: false,
+      close: vi.fn(),
+      iceCandidates: [],
+      iceState: 'connected',
+      dtlsState: 'connected',
+      on: vi.fn(),
+      observer: new EventEmitter(),
+    };
   }
 }
 

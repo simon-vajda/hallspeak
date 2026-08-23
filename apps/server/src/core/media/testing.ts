@@ -41,6 +41,7 @@ class FakeProducer extends EventEmitter {
     this.closed = true;
     this.observer.emit('close');
   };
+  getStats = async () => [];
   pause = async () => {
     if (fakeMediaControls.failPause) {
       throw new Error('pause failed');
@@ -78,22 +79,28 @@ class FakeConsumer extends EventEmitter {
     // makes that cleanup untestable.
     this.observer.emit('close');
   };
+  getStats = async () => [];
   resume = async () => {
     this.paused = false;
   };
 }
 
-class FakeTransport {
+class FakeTransport extends EventEmitter {
   closed = false;
   readonly iceParameters = { usernameFragment: 'u' };
   readonly iceCandidates = [{ foundation: 'udp' }];
   readonly dtlsParameters = { role: 'auto' };
+  readonly iceState = 'connected';
+  readonly dtlsState = 'connected';
+  readonly observer = new EventEmitter();
   private readonly children: Array<{ close: () => void }> = [];
 
   constructor(
     readonly id: string,
     private readonly router: FakeRouter,
-  ) {}
+  ) {
+    super();
+  }
 
   connect = async () => {};
 
@@ -102,6 +109,7 @@ class FakeTransport {
     for (const child of this.children) {
       child.close();
     }
+    this.observer.emit('close');
   };
 
   // mediasoup stores whatever appData it is handed on the producer, and `Room` reads the
