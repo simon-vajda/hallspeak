@@ -51,10 +51,8 @@
      `animate-pulse-live` is not a utility and the keyframes below are unreachable. */
   --animate-pulse-live: pulse-live 2s ease-in-out infinite;
 
-  /* The rings expanding out of the play target. The canvas is the source for all four
-     values — the README's prose (2s, scale 1.35) is an earlier figure it supersedes.
-     The second ring is the same animation with the delay baked in, so a call site adds
-     one class rather than restating the timing. */
+  /* The rings expanding out of the play target. The second ring is the same animation with
+     the delay baked in, so a call site adds one class rather than restating the timing. */
   --animate-ring: ring 2.6s ease-out infinite;
   --animate-ring-delayed: ring 2.6s ease-out 1.3s infinite;
 }
@@ -162,7 +160,6 @@
   --text-pin-lg--font-weight: 600;
 }
 
-/* Hex values in the comments are the source of truth from the design file. */
 :root {
   --radius: 1.25rem; /* rounded-lg = 20px = the card radius */
 

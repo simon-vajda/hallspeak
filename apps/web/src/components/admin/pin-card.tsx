@@ -43,7 +43,8 @@ const DownloadCanvas = memo(function DownloadCanvas({
 
 /**
  * Everything is derived from `event.pin`, so a regenerate that refetches the event redraws
- * the number and the code together. The design's Print action is not built.
+ * the number and the code together. There is no Print action: the PNG is what a print shop
+ * or a slide takes, and a browser print dialog adds nothing to it.
  */
 export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'> }) {
   const [regenerating, setRegenerating] = useState(false);
