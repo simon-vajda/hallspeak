@@ -60,7 +60,7 @@ export function AudioSettings({ className, ...props }: Props) {
         {/* Centred rather than anchored, and held to the width the settings body was drawn at. */}
         <DialogContent
           showCloseButton={false}
-          className="grid-cols-[minmax(0,1fr)] p-5.5 sm:max-w-100"
+          className="grid-cols-[minmax(0,1fr)] p-panel sm:max-w-100"
         >
           <div className="mb-3.5 flex items-baseline justify-between gap-3">
             <DialogTitle className="text-section">Audio</DialogTitle>
@@ -82,7 +82,7 @@ export function AudioSettings({ className, ...props }: Props) {
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="max-h-[85dvh] gap-0 overflow-y-auto rounded-t-xl px-5.5 pt-3.5 pb-6.5"
+        className="max-h-[85dvh] gap-0 overflow-y-auto rounded-t-xl px-panel pt-3.5 pb-6.5"
       >
         <span aria-hidden className="mx-auto mb-4.5 h-1 w-9.5 rounded-full bg-border" />
         <div className="mb-4 flex items-baseline justify-between gap-3">

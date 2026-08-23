@@ -32,7 +32,7 @@ export function ChannelsPanel({ event }: { event: AdminEventDetail }) {
 
   return (
     <section className="overflow-hidden rounded-lg bg-secondary">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5.5 py-4.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-panel py-4.5">
         <h2 className="text-section">Channels</h2>
         <Button onClick={() => setAdding(true)} size="action">
           <Plus />
@@ -41,7 +41,7 @@ export function ChannelsPanel({ event }: { event: AdminEventDetail }) {
       </div>
 
       {event.channels.length === 0 ? (
-        <p className="border-t border-border px-5.5 py-9 text-center text-sm text-muted-foreground">
+        <p className="border-t border-border px-panel py-9 text-center text-sm text-muted-foreground">
           No channels yet. A channel is one language a guest can pick, and it carries the speaker
           link an interpreter broadcasts from.
         </p>
@@ -82,7 +82,7 @@ function ChannelRow({
   const speakerUrl = `${window.location.origin}${listenerPath}?speaker_code=${encodeURIComponent(channel.speakerCode)}`;
 
   return (
-    <li className="flex flex-col gap-3.5 border-t border-border px-5.5 py-4.25 lg:flex-row lg:items-center lg:gap-4">
+    <li className="flex flex-col gap-3.5 border-t border-border px-panel py-4.25 lg:flex-row lg:items-center lg:gap-4">
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2.5">
           {/* The name gives way, not the chip: a truncated name is still readable. */}
