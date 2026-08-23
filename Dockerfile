@@ -97,15 +97,15 @@ COPY --from=deps /runtime/node_modules ./node_modules
 COPY --from=builder /build/apps/server/dist ./dist
 COPY --chmod=0755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
-# DATABASE_PATH resolves against the working directory, so leaving it unset would place
-# the database inside the image at /app/data. admin.json follows it, so this one
-# variable puts both on the mount.
+# DATA_DIR resolves against the working directory, so leaving it unset would put the
+# database and admin.json inside the image at /app/data — on the layer, not the mount.
+# The entrypoint reads the same variable when it takes ownership.
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000 \
     MEDIA_RTC_PORT_BASE=44400 \
     MEDIA_MAX_WORKERS=4 \
-    DATABASE_PATH=/data/linguacast.db
+    DATA_DIR=/data
 
 # Worker i binds MEDIA_RTC_PORT_BASE + i on UDP and TCP alike. These are the four
 # ports the default MEDIA_MAX_WORKERS uses; raising it means publishing more.
