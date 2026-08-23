@@ -33,7 +33,8 @@ flowchart LR
 ## Prerequisites
 
 - A reverse proxy terminating TLS for a hostname pointing at this server.
-- Router forwarding for **44400–44403, UDP and TCP**, to the host running the container.
+- Router forwarding for **44400–44403, UDP and TCP**, to the host running the container —
+  one port per worker, which is four by default. See below if you change that.
 - A public address stable enough to put in a config file, and a host on Linux kernel 6
   or newer.
 
@@ -63,6 +64,32 @@ mediasoup: 4 worker(s) of 8 detected core(s) · ports 44400, 44401, 44402, 44403
 
 Configure your proxy (below), then open the HTTPS URL. The setup wizard claims the
 admin account for whoever reaches it first, so do this promptly.
+
+### How many RTC ports to forward
+
+That log line names them: forward exactly the ports it lists, on UDP and TCP, with no
+remapping.
+
+The count comes from the worker layout. LinguaCast runs one mediasoup worker per CPU
+core, capped by `MEDIA_MAX_WORKERS`, and worker *i* binds `MEDIA_RTC_PORT_BASE + i`.
+So four workers means four ports — 44400 through 44403 by default — and the number
+scales with your worker count, never with how many people are listening.
+
+Worker count is worth thinking about once, because raising it is not a performance
+knob:
+
+- **An event lives entirely on one worker, and is never split across two.** One event
+  is therefore capped at one core no matter how many workers you allow. Adding workers
+  buys you *concurrent events on separate cores*, plus crash isolation — one worker
+  dying does not silence the others.
+- **So size it by how many events run at the same time**, not by audience or by core
+  count. If you will only ever run one event at a time, `MEDIA_MAX_WORKERS=1` is
+  honest and needs one forwarded port.
+- The effective count is the smaller of your setting and the host's cores, so asking
+  for more workers than you have cores just opens ports that nothing binds.
+
+If you change `MEDIA_MAX_WORKERS`, edit the port publications in `compose.yaml` by
+hand and re-forward on the router — Compose cannot derive a range from a variable.
 
 ## Reverse proxy
 
@@ -160,3 +187,24 @@ up is its own deployment and this guide does not cover it.
 
 `MEDIA_STUN_URL` defaults to a public server, which helps a guest behind a restrictive
 NAT discover the address to advertise. Set it empty to use none.
+
+## Every setting
+
+All of these go in `.env`. Everything except `MEDIA_ANNOUNCED_IP` has a working
+default, and the last four rows are ones you should not normally need to touch.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `LINGUACAST_VERSION` | — | The image tag Compose runs. Edit it, pull, recreate: that is the upgrade. |
+| `MEDIA_ANNOUNCED_IP` | **required** | The public address that goes into ICE candidates. Wrong means every screen loads and no audio arrives. |
+| `TRUSTED_PROXY_IPS` | empty | Comma-separated addresses whose `X-Forwarded-For` is believed. Empty means none is, which behind a proxy shares one sign-in throttle bucket across every visitor. |
+| `MEDIA_MAX_WORKERS` | `4` | Concurrent events given their own core, capped by the host's core count. Each worker binds one RTC port. |
+| `MEDIA_RTC_PORT_BASE` | `44400` | The first RTC port. Worker *i* binds base + *i* on UDP and TCP. Change it and change the publications and the router forwarding. |
+| `MEDIA_STUN_URL` | `stun:stun.l.google.com:19302` | Helps a guest behind a restrictive NAT discover the address to advertise. Empty uses none. |
+| `MEDIA_TURN_URL` | unset | A TURN relay that carries audio for guests whose network blocks the RTC ports. Needs the secret below to apply. |
+| `MEDIA_TURN_SECRET` | unset | The relay's shared secret. Per-session credentials are minted from it; it never reaches a client. |
+| `PUID` / `PGID` | `1000` | The uid/gid the server runs as, and the owner the container gives the data directory. |
+| `MEDIA_ROOM_IDLE_GRACE_MS` | `60000` | How long an event's router survives with nobody on it. Shorter renegotiates every guest during a handover between interpreters. |
+| `DATA_DIR` | `/data` | Where `linguacast.db` and `admin.json` live. Change the mount, not this. |
+| `PORT` | `3000` | The HTTP port inside the container. Publish a different one instead of changing this. |
+| `MEDIA_LISTEN_IP` | `0.0.0.0` | What the workers bind inside the container. |
