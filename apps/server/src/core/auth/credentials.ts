@@ -8,12 +8,12 @@ export interface StoredAccount {
 }
 
 /**
- * A sibling of the database, because that directory is the one the operator already
- * mounts — which is what makes "delete the file and restart" a thing they can do from a
- * file manager. No environment variable of its own, for the same reason.
+ * A sibling of the database in the one directory the operator already mounts — which is
+ * what makes "delete the file and restart" a thing they can do from a file manager. No
+ * environment variable of its own, for the same reason.
  */
 export function credentialsPath(): string {
-  return join(dirname(env.DATABASE_PATH), 'admin.json');
+  return join(env.DATA_DIR, 'admin.json');
 }
 
 /**
