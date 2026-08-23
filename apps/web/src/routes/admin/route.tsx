@@ -19,8 +19,8 @@ export const Route = createFileRoute('/admin')({
   component: AdminLayout,
 });
 
-// The design also draws a Settings tab. That surface does not exist, and a control that
-// cannot be used is a promise the app can't keep.
+// Events is the only tab: there is no settings surface, and a control that cannot be used is
+// a promise the app can't keep.
 function AdminLayout() {
   return (
     <div className="min-h-dvh">
