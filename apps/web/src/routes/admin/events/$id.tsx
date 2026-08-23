@@ -7,7 +7,6 @@ import { DeleteEventDialog, EventFormDialog } from '@/components/admin/event-dia
 import { EventEnabledSwitch } from '@/components/admin/event-enabled-switch';
 import { PinCard } from '@/components/admin/pin-card';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin/events/$id')({
   component: AdminEventPage,
@@ -27,8 +26,6 @@ export const Route = createFileRoute('/admin/events/$id')({
     stringify: ({ id }) => ({ id: String(id) }),
   },
 });
-
-const ACTION = 'h-9.5 flex-1 gap-2 rounded-full px-4.25 font-semibold text-sm lg:flex-none';
 
 function AdminEventPage() {
   const { id } = Route.useParams();
@@ -75,17 +72,20 @@ function AdminEventPage() {
           )}
         </div>
         <div className="flex gap-2.5 lg:flex-none">
-          <Button variant="outline" onClick={() => setEditing(true)} className={ACTION}>
+          <Button
+            variant="outline"
+            onClick={() => setEditing(true)}
+            size="action"
+            className="flex-1 lg:flex-none"
+          >
             <Pencil />
             Edit
           </Button>
           <Button
             variant="outline"
             onClick={() => setDeleting(true)}
-            className={cn(
-              ACTION,
-              'border-destructive-border text-destructive hover:bg-destructive-muted hover:text-destructive',
-            )}
+            size="action"
+            className="flex-1 border-destructive-border text-destructive hover:bg-destructive-muted hover:text-destructive lg:flex-none"
           >
             <Trash2 />
             Delete
@@ -141,7 +141,8 @@ function MissingEvent({ notFound }: { notFound: boolean }) {
         // Renders as an anchor, so Base UI must be told not to expect a native <button>.
         nativeButton={false}
         render={<Link to="/admin/events" />}
-        className="mt-8 h-9.5 rounded-full px-4.25 font-semibold text-sm"
+        size="action"
+        className="mt-8"
       >
         Back to events
       </Button>

@@ -4,7 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 // CUSTOMISED (see AGENTS.md): `cursor-pointer` on the base, which Tailwind v4 dropped,
-// and the `pill` size below.
+// and the `pill`, `action`, `action-sm` and `icon-action` sizes below.
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
@@ -29,6 +29,13 @@ const buttonVariants = cva(
         lg: 'h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
         // CUSTOMISED: the design system's primary action.
         pill: 'h-12 rounded-full px-6 text-base font-semibold',
+        // CUSTOMISED: the admin action scale. 38px from `lg`, 44px below it, because an
+        // admin control sits in a cluster of siblings and has to clear the hit target on a
+        // phone. `action-sm` is the denser control inside a list row.
+        action: 'h-11 gap-2 rounded-full px-4.25 text-sm font-semibold lg:h-9.5',
+        'action-sm':
+          "h-11 gap-1.5 rounded-full px-3.25 text-xs font-semibold lg:h-8.25 [&_svg:not([class*='size-'])]:size-3.5",
+        'icon-action': 'size-11 rounded-full lg:size-9.5',
         icon: 'size-8',
         'icon-xs':
           "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",

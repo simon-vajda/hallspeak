@@ -9,10 +9,6 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
-/** Full width and 44px below `lg`, so they clear the minimum hit target. */
-export const DIALOG_ACTION =
-  'h-11 w-full rounded-full px-4.25 text-sm font-semibold lg:h-9.5 lg:w-auto';
-
 /** The dialog type ramp, between the screen title and the section title. */
 export const DIALOG_TITLE = 'text-[22px] leading-tight font-semibold tracking-[-0.03em]';
 export const DIALOG_BODY = 'text-[13.5px] leading-[1.55]';
@@ -20,7 +16,7 @@ export const DIALOG_BODY = 'text-[13.5px] leading-[1.55]';
 /** `flex-col-reverse` puts the primary on top. */
 export function DialogActions({ children }: { children: ReactNode }) {
   return (
-    <div className="mt-5.5 flex flex-col-reverse gap-2.5 lg:flex-row lg:justify-end">
+    <div className="mt-5.5 flex flex-col-reverse gap-2.5 *:w-full lg:flex-row lg:justify-end lg:*:w-auto">
       {children}
     </div>
   );
@@ -94,18 +90,14 @@ export function ConfirmDialog({
         )}
 
         <DialogActions>
-          <DialogClose
-            render={<Button variant="outline" disabled={pending} className={DIALOG_ACTION} />}
-          >
+          <DialogClose render={<Button variant="outline" size="action" disabled={pending} />}>
             {cancelLabel}
           </DialogClose>
           <Button
             disabled={pending}
             onClick={onConfirm}
-            className={cn(
-              DIALOG_ACTION,
-              destructive && 'bg-destructive text-background hover:bg-destructive/90',
-            )}
+            size="action"
+            className={cn(destructive && 'bg-destructive text-background hover:bg-destructive/90')}
           >
             {confirmLabel}
           </Button>

@@ -47,9 +47,9 @@ function AdminEventsPage() {
           <p className="mt-1 text-sm text-muted-foreground">{summarise(data)}</p>
         </div>
         <NewEventButton
-          size="default"
+          size="action"
           onClick={() => setCreating(true)}
-          className="hidden h-9.5 rounded-full px-4.25 text-sm font-semibold lg:inline-flex"
+          className="hidden lg:inline-flex"
         />
       </header>
 
@@ -185,7 +185,7 @@ function NewEventButton({
   onClick,
 }: {
   className?: string;
-  size?: 'pill' | 'default';
+  size?: 'pill' | 'action';
   onClick: () => void;
 }) {
   return (

@@ -15,8 +15,6 @@ const QR_SIZE = 144;
 /** Big enough to print a poster from, small enough to email. */
 const QR_DOWNLOAD_SIZE = 1024;
 
-const ACTION = 'h-9.5 w-full rounded-full px-4.25 font-semibold text-sm';
-
 /**
  * Never displayed; it exists so the download has a raster to read, with the quiet zone baked
  * in for print. Memoised because qrcode.react redraws from an effect with no dependency
@@ -95,14 +93,14 @@ export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'>
         <CopyButton
           value={listenerUrl}
           label="Copy link"
-          className={ACTION}
+          className="w-full"
           wrapperClassName="flex-1"
         />
         <Button
           variant="outline"
           onClick={download}
           aria-label="Download the QR code as a PNG"
-          className="size-9.5 rounded-full px-0"
+          size="icon-action"
         >
           <Download />
         </Button>

@@ -1,5 +1,5 @@
 import { Check, Copy } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { type ComponentProps, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +14,7 @@ export function CopyButton({
   label,
   copiedLabel = 'Copied',
   variant = 'default',
+  size = 'action',
   className,
   wrapperClassName,
 }: {
@@ -21,6 +22,7 @@ export function CopyButton({
   label: string;
   copiedLabel?: string;
   variant?: 'default' | 'outline';
+  size?: ComponentProps<typeof Button>['size'];
   className?: string;
   wrapperClassName?: string;
 }) {
@@ -35,6 +37,7 @@ export function CopyButton({
     <div className={cn('flex flex-col gap-2', wrapperClassName)}>
       <Button
         variant={variant}
+        size={size}
         className={cn('gap-2', className)}
         onClick={async () => {
           clearTimeout(timer.current);

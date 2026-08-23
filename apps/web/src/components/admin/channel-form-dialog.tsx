@@ -4,12 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useId, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { $api } from '@/api/client';
-import {
-  DIALOG_ACTION,
-  DIALOG_BODY,
-  DIALOG_TITLE,
-  DialogActions,
-} from '@/components/confirm-dialog';
+import { DIALOG_BODY, DIALOG_TITLE, DialogActions } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -248,10 +243,8 @@ function ChannelForm({
       )}
 
       <DialogActions>
-        <DialogClose render={<Button variant="outline" className={DIALOG_ACTION} />}>
-          Cancel
-        </DialogClose>
-        <Button type="submit" disabled={isSubmitting} className={DIALOG_ACTION}>
+        <DialogClose render={<Button variant="outline" size="action" />}>Cancel</DialogClose>
+        <Button type="submit" size="action" disabled={isSubmitting}>
           {creating ? 'Add channel' : 'Save changes'}
         </Button>
       </DialogActions>
