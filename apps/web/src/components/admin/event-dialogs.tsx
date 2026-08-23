@@ -6,12 +6,7 @@ import { KeyRound, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { $api } from '@/api/client';
-import {
-  ConfirmDialog,
-  DIALOG_BODY,
-  DIALOG_TITLE,
-  DialogActions,
-} from '@/components/confirm-dialog';
+import { ConfirmDialog, DialogActions } from '@/components/confirm-dialog';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,7 +30,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { eventDetailKey, eventsListKey, invalidateAdminEvents } from '@/lib/admin-queries';
 import { type EventFormValues, eventFormSchema } from '@/lib/event-form';
 import { formatPin, plural } from '@/lib/format';
-import { cn } from '@/lib/utils';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
@@ -128,10 +122,8 @@ function EventForm({
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <DialogTitle className={cn('mb-1.5', DIALOG_TITLE)}>
-        {creating ? 'New event' : 'Edit event'}
-      </DialogTitle>
-      <DialogDescription className={cn('mb-5', DIALOG_BODY)}>
+      <DialogTitle className="mb-1.5">{creating ? 'New event' : 'Edit event'}</DialogTitle>
+      <DialogDescription className="mb-5">
         {creating
           ? 'A PIN is generated when you save. The event stays disabled until you switch it on.'
           : 'The PIN and the channels are untouched — only what is below changes.'}
@@ -175,7 +167,7 @@ function EventForm({
             <FieldTitle id={switchLabelId} className="text-sm font-semibold">
               {creating ? 'Enable straight away' : 'Enabled'}
             </FieldTitle>
-            <FieldDescription id={switchDescriptionId} className="text-[12.5px]">
+            <FieldDescription id={switchDescriptionId} className="text-note">
               {creating
                 ? 'Guests can join as soon as it exists'
                 : 'Guests can join while this is on'}

@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useId, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { $api } from '@/api/client';
-import { DIALOG_BODY, DIALOG_TITLE, DialogActions } from '@/components/confirm-dialog';
+import { DialogActions } from '@/components/confirm-dialog';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,7 +26,6 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { invalidateAdminEvents } from '@/lib/admin-queries';
 import { type ChannelFormValues, channelFormSchema, slugify } from '@/lib/channel-form';
-import { cn } from '@/lib/utils';
 
 type AdminChannel = components['schemas']['AdminChannel'];
 type Problem = components['schemas']['Problem'];
@@ -138,10 +137,8 @@ function ChannelForm({
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <DialogTitle className={cn('mb-1.5', DIALOG_TITLE)}>
-        {creating ? 'New channel' : 'Edit channel'}
-      </DialogTitle>
-      <DialogDescription className={cn('mb-5', DIALOG_BODY)}>
+      <DialogTitle className="mb-1.5">{creating ? 'New channel' : 'Edit channel'}</DialogTitle>
+      <DialogDescription className="mb-5">
         {creating
           ? 'A speaker code is generated when you save. The channel stays disabled until you switch it on.'
           : 'The speaker code and the listener link are untouched — only what is below changes.'}
@@ -212,7 +209,7 @@ function ChannelForm({
             <FieldTitle id={switchLabelId} className="text-sm font-semibold">
               {creating ? 'Enable straight away' : 'Enabled'}
             </FieldTitle>
-            <FieldDescription id={switchDescriptionId} className="text-[12.5px]">
+            <FieldDescription id={switchDescriptionId} className="text-note">
               {creating
                 ? 'Guests can pick it as soon as it exists'
                 : 'Guests can pick it while this is on'}

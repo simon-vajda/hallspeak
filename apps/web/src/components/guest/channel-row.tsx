@@ -9,7 +9,7 @@ type PublicChannel = components['schemas']['PublicChannel'];
 // One-offs of this screen: the ramp's section step would flatten the row against its own
 // metadata line.
 const ROW = 'flex items-center gap-3.5 rounded-lg px-5 py-4.25 lg:gap-4 lg:px-6 lg:py-5';
-const NAME = 'text-[19px] font-semibold tracking-[-0.025em] lg:text-[22px] lg:tracking-[-0.03em]';
+const NAME = 'text-subtitle lg:text-title';
 
 /** The play affordance is decorative, since the row itself is the link. */
 export function ChannelRow({
@@ -45,7 +45,7 @@ export function ChannelRow({
       {online && (
         <span
           aria-hidden
-          className="flex size-9 items-center justify-center gap-2.25 rounded-full bg-primary text-primary-foreground lg:h-11 lg:w-auto lg:px-6 lg:text-[15px] lg:font-semibold"
+          className="flex size-9 items-center justify-center gap-2.25 rounded-full bg-primary text-primary-foreground lg:h-11 lg:w-auto lg:px-6 lg:text-base lg:font-semibold"
         >
           <Play className="size-3.5 fill-current lg:size-3.75" />
           <span className="hidden lg:inline">Listen</span>

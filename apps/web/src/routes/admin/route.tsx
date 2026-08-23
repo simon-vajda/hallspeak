@@ -29,7 +29,7 @@ function AdminLayout() {
           <Link to="/admin/events">
             <LogoLockup />
           </Link>
-          <nav className="flex items-center gap-5.5 text-[13px] font-medium">
+          <nav className="flex items-center gap-5.5 text-note font-medium">
             <Link
               to="/admin/events"
               className="text-muted-foreground transition-colors hover:text-foreground focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 [&.active]:font-semibold [&.active]:text-foreground"

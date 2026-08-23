@@ -9,10 +9,6 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
-/** The dialog type ramp, between the screen title and the section title. */
-export const DIALOG_TITLE = 'text-[22px] leading-tight font-semibold tracking-[-0.03em]';
-export const DIALOG_BODY = 'text-[13.5px] leading-[1.55]';
-
 /** `flex-col-reverse` puts the primary on top. */
 export function DialogActions({ children }: { children: ReactNode }) {
   return (
@@ -77,9 +73,9 @@ export function ConfirmDialog({
           {icon}
         </div>
 
-        <DialogTitle className={cn('mb-1.5', DIALOG_TITLE)}>{title}</DialogTitle>
+        <DialogTitle className="mb-1.5">{title}</DialogTitle>
         {/* A div, not the default paragraph: callers pass more than one line. */}
-        <DialogDescription render={<div />} className={cn('flex flex-col gap-2', DIALOG_BODY)}>
+        <DialogDescription render={<div />} className="flex flex-col gap-2">
           {children}
         </DialogDescription>
 

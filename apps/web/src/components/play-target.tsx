@@ -54,7 +54,7 @@ export function PlayTarget({
         </>
       )}
       {icon}
-      <span className="text-[15px] leading-none font-semibold tracking-[-0.01em]">{label}</span>
+      <span className="text-base leading-none font-semibold tracking-[-0.01em]">{label}</span>
     </button>
   );
 }

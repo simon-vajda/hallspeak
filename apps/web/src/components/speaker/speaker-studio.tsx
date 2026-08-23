@@ -317,9 +317,7 @@ export function SpeakerStudio({
               <TempThemeToggle />
             </div>
           </div>
-          <h1 className="mt-4 mb-1 text-screen lg:text-[44px] lg:leading-[1.03] lg:tracking-[-0.045em]">
-            {channel.name}
-          </h1>
+          <h1 className="mt-4 mb-1 text-screen lg:text-hero-lg">{channel.name}</h1>
           <p className="text-sm text-muted-foreground lg:mb-8">{eventName}</p>
         </header>
 
@@ -358,7 +356,7 @@ export function SpeakerStudio({
                   void produce(false);
                 }}
                 // Larger than the shared `pill` size: it is the only action on the screen.
-                className="h-15.5 w-full gap-2.5 text-[18px] tracking-[-0.02em] shadow-[0_16px_40px] shadow-primary/35"
+                className="h-15.5 w-full gap-2.5 text-lg tracking-[-0.02em] shadow-[0_16px_40px] shadow-primary/35"
               >
                 <Mic className="size-5 stroke-[2.25]" />
                 Go live
@@ -448,9 +446,7 @@ function OnAir({
           </div>
         </header>
 
-        <h1 className="mt-4 text-screen lg:mt-3.5 lg:mb-7.5 lg:text-[40px] lg:leading-[1.03] lg:tracking-[-0.045em]">
-          {channel.name}
-        </h1>
+        <h1 className="mt-4 text-screen lg:mt-3.5 lg:mb-7.5 lg:text-hero">{channel.name}</h1>
 
         <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-0 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start lg:gap-x-8.5 lg:gap-y-4">
           <OnAirStats

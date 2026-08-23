@@ -27,8 +27,7 @@ import {
 type PublicChannel = components['schemas']['PublicChannel'];
 
 // Larger than `text-screen`: the channel name is the only thing on the page.
-const TITLE =
-  'text-[40px] leading-[1.05] font-semibold tracking-[-0.04em] lg:text-[46px] lg:leading-[1.02] lg:tracking-[-0.045em]';
+const TITLE = 'text-hero lg:text-hero-lg';
 
 /**
  * Armed is the guest's one gesture; everything after it is automatic. `isPlaying` means a
