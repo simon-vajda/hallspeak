@@ -88,8 +88,13 @@ A failure that produces no Problem is a bug in whatever produced it, not a case 
 ### Signalling
 The out-of-band exchange that negotiates a media connection before audio flows — capabilities, transport parameters, producers and consumers. It names a *role* played over the socket, not the socket itself: the transport is a socket, and signalling is one of the things carried on it alongside presence and room membership.
 
+### Worker
+An operating-system process that hosts Rooms, one of a fixed pool started at boot. A Room lives entirely on the Worker it was created on and nothing is piped between Workers, so one Event is bounded by one Worker no matter how many exist.
+
+That makes the pool size a concurrency limit across Events rather than a capacity limit within one: more Workers let simultaneous Events occupy separate cores, and they isolate failure, since a Worker dying takes only the Rooms that lived on it. A new Room is placed on whichever Worker currently holds the fewest. A Worker that cannot start at boot is fatal; one that dies later is not, because a single crash must not silence every concurrent Event.
+
 ### Room
-The media state for one Event: a single mediasoup router holding every producer on that Event's Channels, plus the transports and consumers of everyone connected to it. Distinct from a *socket room*, which is Socket.IO's fan-out group and exists whether or not any audio does.
+The media state for one Event: a single router on one Worker, holding every producer on that Event's Channels, plus the transports and consumers of everyone connected to it. Distinct from a *socket room*, which is Socket.IO's fan-out group and exists whether or not any audio does.
 
 A Room comes into being on the first go-live within its Event and on nothing else — not when the Event is enabled, and not when a Listener arms — and is destroyed once it has held no producers and no transports for a grace period. Its whole existence is in memory, so a restart simply removes it.
 
