@@ -32,18 +32,10 @@ const DEFAULT_METADATA: PageMetadata = {
   description: 'Listen to live interpretation in your language.',
 };
 
-const EVENT_NOT_FOUND: PageResponse = {
+const LINK_NOT_FOUND: PageResponse = {
   metadata: {
-    title: 'Event not found | LinguaCast',
-    description: 'This event link is no longer available.',
-  },
-  status: 404,
-};
-
-const CHANNEL_NOT_FOUND: PageResponse = {
-  metadata: {
-    title: 'Channel not found | LinguaCast',
-    description: 'This channel link is no longer available.',
+    title: 'Link not found | LinguaCast',
+    description: 'This link is no longer available.',
   },
   status: 404,
 };
@@ -99,20 +91,20 @@ function metadataForPath(path: string, speakerCode: string | undefined): PageRes
   if (channelMatch) {
     const [, pin, slug] = channelMatch;
     if (!pin || !PIN_PATTERN.test(pin)) {
-      return EVENT_NOT_FOUND;
+      return LINK_NOT_FOUND;
     }
 
     const event = findEnabledEventByPin(db, pin);
     if (!event) {
-      return EVENT_NOT_FOUND;
+      return LINK_NOT_FOUND;
     }
     if (!slug || !SLUG_PATTERN.test(slug)) {
-      return CHANNEL_NOT_FOUND;
+      return LINK_NOT_FOUND;
     }
 
     const channel = findEnabledChannelBySlug(db, event.id, slug);
     if (!channel) {
-      return CHANNEL_NOT_FOUND;
+      return LINK_NOT_FOUND;
     }
     if (speakerCode !== undefined && speakerCode !== channel.speakerCode) {
       return SPEAKER_LINK_EXPIRED;
@@ -135,12 +127,12 @@ function metadataForPath(path: string, speakerCode: string | undefined): PageRes
   if (eventMatch) {
     const pin = eventMatch[1];
     if (!pin || !PIN_PATTERN.test(pin)) {
-      return EVENT_NOT_FOUND;
+      return LINK_NOT_FOUND;
     }
 
     const event = findEnabledEventByPin(db, pin);
     if (!event) {
-      return EVENT_NOT_FOUND;
+      return LINK_NOT_FOUND;
     }
 
     return {

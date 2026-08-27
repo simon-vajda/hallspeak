@@ -51,6 +51,14 @@ export function SpeakerStudio({
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [displaced, setDisplaced] = useState(false);
   const [lastEnd, setLastEnd] = useState<BroadcastEnd | null>(null);
+  // Latest state applied to the local producer. Unlike the server snapshot, this updates
+  // synchronously when the interpreter clicks, so a drop cannot record the previous state.
+  const effectiveMutedRef = useRef(false);
+
+  const setEffectiveMuted = useCallback((muted: boolean) => {
+    effectiveMutedRef.current = muted;
+    setLocalMuted(muted);
+  }, []);
 
   const { preferences, setPreferences } = useAudioPreferences();
   const mic = useMicCapture(preferences);
@@ -144,9 +152,9 @@ export function SpeakerStudio({
       return;
     }
     if (status === 'lost' && wasConnected.current && goLivePressed && lastEnd === null) {
-      setLastEnd({ reason: 'dropped', muted: isMuted });
+      setLastEnd({ reason: 'dropped', muted: effectiveMutedRef.current });
     }
-  }, [status, goLivePressed, lastEnd, isMuted]);
+  }, [status, goLivePressed, lastEnd]);
 
   /**
    * After an involuntary drop the client rebuilds and re-produces in the same mute state.
@@ -167,13 +175,22 @@ export function SpeakerStudio({
       if (cancelled) {
         return;
       }
-      setLocalMuted(action.paused);
+      setEffectiveMuted(action.paused);
       setLastEnd(null);
     });
     return () => {
       cancelled = true;
     };
-  }, [status, hasProducer, outputTrack, goLivePressed, lastEnd, displaced, produce]);
+  }, [
+    status,
+    hasProducer,
+    outputTrack,
+    goLivePressed,
+    lastEnd,
+    displaced,
+    produce,
+    setEffectiveMuted,
+  ]);
   // Never cleared: the button must not flicker back to disabled during a pause between words.
   const [heardSomething, setHeardSomething] = useState(false);
 
@@ -238,7 +255,7 @@ export function SpeakerStudio({
             generation: media.state.generation,
             producerId: media.state.producerId,
           };
-          setLocalMuted(next);
+          setEffectiveMuted(next);
           void media.setProducerPaused(next).catch((cause) => {
             const rollbackMuted = rollbackMutedAfterFailure({
               requestedMuted: next,
@@ -248,7 +265,7 @@ export function SpeakerStudio({
             if (!media.setLocalProducerPaused(rollbackMuted, producerControl)) {
               return;
             }
-            setLocalMuted(rollbackMuted);
+            setEffectiveMuted(rollbackMuted);
             console.error('media: could not change mute', cause);
           });
         }}
@@ -256,7 +273,7 @@ export function SpeakerStudio({
           // Recorded before the close, so the reconnect effect cannot read it as a drop.
           setLastEnd({ reason: 'deliberate' });
           setGoLivePressed(false);
-          setLocalMuted(false);
+          setEffectiveMuted(false);
           setStartedAt(null);
           void media.stopProducing();
         }}
@@ -281,6 +298,7 @@ export function SpeakerStudio({
       onPreferencesChange={setPreferences}
       canGoLive={canGoLive}
       onGoLive={() => {
+        setEffectiveMuted(false);
         setGoLivePressed(true);
         setLastEnd(null);
         setStartedAt(Date.now());
