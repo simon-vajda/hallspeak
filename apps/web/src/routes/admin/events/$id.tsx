@@ -10,6 +10,7 @@ import { EventFormDialog } from '@/components/admin/event-form-dialog';
 import { PinCard } from '@/components/admin/pin-card';
 import { Button } from '@/components/ui/button';
 import { eventDetailQueryOptions } from '@/lib/admin-queries';
+import { shouldThrowSettledQueryError } from '@/lib/query-retry';
 
 export const Route = createFileRoute('/admin/events/$id')({
   // Typed at the route, not coerced in the component: a URL carrying anything but a positive
@@ -39,7 +40,11 @@ function AdminEventPage() {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const { data } = useSuspenseQuery(eventDetailQueryOptions(id));
+  const { data, error, isFetching } = useSuspenseQuery(eventDetailQueryOptions(id));
+
+  if (shouldThrowSettledQueryError(error, isFetching)) {
+    throw error;
+  }
 
   return (
     <div>
