@@ -56,6 +56,26 @@ describe('createRateLimit', () => {
     expect((await app.request('/miss', undefined, from('3.3.3.3'))).status).toBe(404);
   });
 
+  it('can render a transport-specific limited response', async () => {
+    const now = 0;
+    const app = new Hono();
+    app.use(
+      '*',
+      createRateLimit({
+        perIp: new TokenBucketLimiter({ capacity: 1, refillPerSecond: 1, now: () => now }),
+        onLimited: (c) => c.html('<title>Slow down</title>', 429),
+      }),
+    );
+    app.get('/miss', (c) => c.json({ code: 'not_found', message: 'Not found.' }, 404));
+
+    await app.request('/miss', undefined, from('3.3.3.4'));
+    const throttled = await app.request('/miss', undefined, from('3.3.3.4'));
+
+    expect(throttled.status).toBe(429);
+    expect(throttled.headers.get('Content-Type')).toContain('text/html');
+    expect(await throttled.text()).toBe('<title>Slow down</title>');
+  });
+
   it('throttles one address without touching another', async () => {
     const now = 0;
     const app = build(1, () => now);
