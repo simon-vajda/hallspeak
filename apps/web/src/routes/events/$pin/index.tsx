@@ -1,41 +1,32 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { $api } from '@/api/client';
+import { useSuspenseQuery } from '@tanstack/react-query';
+import { createFileRoute } from '@tanstack/react-router';
 import { ChannelRow } from '@/components/guest/channel-row';
 import { EventHeader } from '@/components/guest/event-header';
-import { GuestMessage, GuestMessageAction, GuestShell } from '@/components/guest/guest-message';
+import { EventRouteError } from '@/components/guest/event-route-error';
+import { GuestMessage, GuestShell } from '@/components/guest/guest-message';
 import { MICRO_LABEL } from '@/components/micro-label';
+import { publicEventQueryOptions } from '@/lib/public-queries';
 import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useSocket } from '@/lib/use-socket';
 
-export const Route = createFileRoute('/events/$pin/')({ component: EventPage });
+export const Route = createFileRoute('/events/$pin/')({
+  loader: ({ context, params }) =>
+    context.queryClient.ensureQueryData(publicEventQueryOptions(params.pin)),
+  pendingComponent: () => (
+    <GuestMessage title="Looking for your event" body="One moment — checking that PIN." />
+  ),
+  errorComponent: EventRouteError,
+  component: EventPage,
+});
 
 function EventPage() {
   const { pin } = Route.useParams();
-  const { data, isPending, error } = $api.useQuery('get', '/events/{pin}', {
-    params: { path: { pin } },
-  });
+  const { data } = useSuspenseQuery(publicEventQueryOptions(pin));
 
   // Only after the GET returns 200, never in parallel with it.
   const { status, online } = useSocket(data ? { pin } : null);
 
   useConnectionToast(status);
-
-  if (isPending) {
-    return <GuestMessage title="Looking for your event" body="One moment — checking that PIN." />;
-  }
-
-  if (error || !data) {
-    // 404 parity: a wrong PIN and an unopened event are the same answer, so the copy never
-    // guesses which one happened.
-    return (
-      <GuestMessage
-        title="No event with that PIN"
-        body="Check the six digits on the card at your seat. If they match, the event may not have started yet."
-      >
-        <GuestMessageAction link={<Link to="/" />}>Try another PIN</GuestMessageAction>
-      </GuestMessage>
-    );
-  }
 
   return (
     <GuestShell>

@@ -5,11 +5,19 @@ import { createRoot } from 'react-dom/client';
 import { setUnauthenticatedHandler } from './api/client';
 import { ThemeProvider } from './components/theme-provider';
 import { sessionKey } from './lib/auth-queries';
+import { shouldRetryApiQuery } from './lib/query-retry';
 import { routeTree } from './routeTree.gen';
 import './index.css';
 
-const queryClient = new QueryClient();
-const router = createRouter({ routeTree, context: { queryClient } });
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: shouldRetryApiQuery } },
+});
+const router = createRouter({
+  routeTree,
+  context: { queryClient },
+  // Query owns freshness; Router should always ask it when a preloaded route is entered.
+  defaultPreloadStaleTime: 0,
+});
 
 // A 401 from any admin call means the session died server-side. Removed rather than
 // invalidated: the guards read this entry through `ensureQueryData`, which hands back a

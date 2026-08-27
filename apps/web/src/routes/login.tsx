@@ -1,15 +1,19 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { PASSWORD_MAX_LENGTH } from '@linguacast/contract/patterns';
 import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
-import { useId, useRef, useState } from 'react';
+import { useId, useRef } from 'react';
+import { useForm } from 'react-hook-form';
 import { $api } from '@/api/client';
 import { AuthCard } from '@/components/auth/auth-card';
 import { PasswordField } from '@/components/auth/password-field';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { Button } from '@/components/ui/button';
-import { Field, FieldLabel } from '@/components/ui/field';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { type LoginFormValues, loginFormSchema } from '@/lib/auth-forms';
 import { internalPath, sessionKey, sessionQueryOptions } from '@/lib/auth-queries';
+import { apiProblemCode, apiProblemMessage } from '@/lib/query-retry';
 
 export const Route = createFileRoute('/login')({
   validateSearch: (search: Record<string, unknown>): { redirect?: string } => {
@@ -37,50 +41,55 @@ function LoginPage() {
   const queryClient = useQueryClient();
   const usernameId = useId();
   const passwordId = useId();
-
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState<string>();
   const failures = useRef(0);
+  const login = $api.useMutation('post', '/auth/login');
+  const {
+    register,
+    handleSubmit,
+    setError,
+    clearErrors,
+    resetField,
+    formState: { errors, isValid, isSubmitting },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginFormSchema),
+    defaultValues: { username: '', password: '' },
+    mode: 'onChange',
+  });
+  const usernameField = register('username');
+  const passwordField = register('password');
+  const serverMessage = errors.root?.server?.message;
 
-  const login = $api.useMutation('post', '/auth/login', {
-    // Seeded rather than invalidated, for the reason setup.tsx states: `ensureQueryData`
-    // returns the stale entry while a refetch is in flight, and the stale entry says
-    // signed out.
-    onSuccess: async (session) => {
+  const onSubmit = handleSubmit(async (values) => {
+    clearErrors('root.server');
+    try {
+      const session = await login.mutateAsync({ body: values });
       failures.current = 0;
       queryClient.setQueryData(sessionKey(), session);
-      // `href` rather than `to`: the attempted path is a string the guard put in the URL,
-      // already narrowed to an internal router path, and there is no route literal for it.
+      // The attempted path is already narrowed to an internal router path by validateSearch.
       if (target) {
         await navigate({ href: target });
       } else {
         await navigate({ to: '/admin/events' });
       }
-    },
-    onError: (error) => {
+    } catch (error) {
       failures.current += 1;
-      // The generic message for a refusal, and the server's own words for anything else —
-      // being throttled or unreachable is not a wrong password and must not read as one.
-      setMessage(error.code === 'invalid_credentials' ? REFUSED : (error.message ?? REFUSED));
-      // Both fields keep their value until then; only the password is cleared.
+      setError('root.server', {
+        message:
+          apiProblemCode(error) === 'invalid_credentials'
+            ? REFUSED
+            : (apiProblemMessage(error) ?? REFUSED),
+      });
       if (failures.current >= CLEAR_PASSWORD_AFTER) {
-        setPassword('');
+        resetField('password');
       }
-    },
+    }
   });
+
+  const clearServerError = () => clearErrors('root.server');
 
   return (
     <AuthCard className="lg:max-w-110">
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (username && password) {
-            login.mutate({ body: { username, password } });
-          }
-        }}
-        className="flex flex-col"
-      >
+      <form onSubmit={onSubmit} className="flex flex-col" noValidate>
         <h1 className="mb-2 text-section">Sign in</h1>
         <p className="mb-7 text-sm leading-normal text-muted-foreground">
           Administrator access. Joining an event does not need an account.
@@ -92,13 +101,16 @@ function LoginPage() {
           </FieldLabel>
           <Input
             id={usernameId}
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
             autoComplete="username"
             autoCapitalize="none"
             spellCheck={false}
             placeholder="admin"
-            aria-invalid={message !== undefined}
+            aria-invalid={errors.username || serverMessage ? true : undefined}
+            {...usernameField}
+            onChange={(event) => {
+              clearServerError();
+              usernameField.onChange(event);
+            }}
           />
         </Field>
 
@@ -108,26 +120,24 @@ function LoginPage() {
           </FieldLabel>
           <PasswordField
             id={passwordId}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
             maxLength={PASSWORD_MAX_LENGTH}
             placeholder="Password"
-            aria-invalid={message !== undefined}
+            aria-invalid={errors.password || serverMessage ? true : undefined}
+            {...passwordField}
+            onChange={(event) => {
+              clearServerError();
+              passwordField.onChange(event);
+            }}
           />
         </Field>
 
-        {/* One message under the pair, never on either field. */}
-        {message && (
-          <p role="alert" className="mt-3.5 text-sm text-destructive">
-            {message}
-          </p>
-        )}
+        <FieldError errors={[errors.root?.server]} className="mt-3.5" />
 
         <Button
           type="submit"
           size="pill"
-          disabled={login.isPending}
+          disabled={!isValid || isSubmitting}
           className="mt-7 w-full lg:w-fit"
         >
           Sign in
