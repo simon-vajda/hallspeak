@@ -1,3 +1,4 @@
+import { formatChannelPageTitle } from '@linguacast/contract/page-titles';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
@@ -8,6 +9,7 @@ import { SpeakerChannel } from '@/components/speaker/speaker-channel';
 import { loadPublicChannelRoute } from '@/lib/public-channel-route';
 import { publicChannelQueryOptions } from '@/lib/public-queries';
 import { shouldThrowSettledQueryError } from '@/lib/query-retry';
+import { useDocumentTitle } from '@/lib/use-document-title';
 
 // One route for both roles: removing speaker_code degrades a speaker URL into a listener URL.
 const SearchSchema = z.object({ speaker_code: z.string().optional() });
@@ -34,6 +36,7 @@ function ChannelPage() {
     error,
     isFetching,
   } = useSuspenseQuery(publicChannelQueryOptions(pin, slug, speakerCode));
+  useDocumentTitle(formatChannelPageTitle(view.event.name, view.channel.name));
 
   if (shouldThrowSettledQueryError(error, isFetching)) {
     throw error;
