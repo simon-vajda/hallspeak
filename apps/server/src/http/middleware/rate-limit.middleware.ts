@@ -50,6 +50,8 @@ export interface RateLimitOptions {
   reserve?: boolean;
   message?: string;
   trustedProxies?: readonly string[];
+  /** Lets HTML surfaces keep their document shell while API routes retain a JSON Problem. */
+  onLimited?: (c: Context) => Response | Promise<Response>;
 }
 
 export function createRateLimit(options: RateLimitOptions): MiddlewareHandler {
@@ -68,6 +70,9 @@ export function createRateLimit(options: RateLimitOptions): MiddlewareHandler {
 
     if (wait > 0) {
       c.header('Retry-After', String(wait));
+      if (options.onLimited) {
+        return options.onLimited(c);
+      }
       return c.json({ code: 'rate_limited', message }, 429);
     }
 
@@ -94,10 +99,21 @@ export function createRateLimit(options: RateLimitOptions): MiddlewareHandler {
  * while a guest who mistypes twice never notices. The shared budget behind it is for
  * botnets, which sidestep a per-IP limit entirely.
  */
-export const publicRateLimit = createRateLimit({
-  perIp: new TokenBucketLimiter({ capacity: 20, refillPerSecond: 1 }),
-  shared: new TokenBucketLimiter({ capacity: 200, refillPerSecond: 10 }),
-});
+const publicPerIp = new TokenBucketLimiter({ capacity: 20, refillPerSecond: 1 });
+const publicShared = new TokenBucketLimiter({ capacity: 200, refillPerSecond: 10 });
+
+/** Both public transports use these same buckets, so neither is an enumeration escape hatch. */
+export function createPublicRateLimit(
+  onLimited?: RateLimitOptions['onLimited'],
+): MiddlewareHandler {
+  return createRateLimit({
+    perIp: publicPerIp,
+    shared: publicShared,
+    onLimited,
+  });
+}
+
+export const publicRateLimit = createPublicRateLimit();
 
 /**
  * Ten wrong answers, then one a minute — an administrator mistyping twice never feels it
