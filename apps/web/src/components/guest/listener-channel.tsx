@@ -1,5 +1,5 @@
 import type { components } from '@linguacast/contract/openapi';
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { GuestMessage, GuestMessageAction } from '@/components/guest/guest-message';
@@ -14,7 +14,7 @@ type PublicChannelView = components['schemas']['PublicChannelView'];
 
 export function ListenerChannel({ view }: { view: PublicChannelView }) {
   const [joinFailed, setJoinFailed] = useState(false);
-  const { data: event } = useSuspenseQuery(publicEventQueryOptions(view.event.pin));
+  const { data: event } = useQuery(publicEventQueryOptions(view.event.pin));
   const { status, error, online, channelStatuses, socket, joinChannel, leaveChannel } = useSocket({
     pin: view.event.pin,
   });
@@ -61,7 +61,7 @@ export function ListenerChannel({ view }: { view: PublicChannelView }) {
       eventName={view.event.name}
       pin={view.event.pin}
       channel={view.channel}
-      channels={event.channels.map((channel) => ({
+      channels={(event?.channels ?? []).map((channel) => ({
         ...channel,
         online: online[channel.slug] ?? channel.online,
       }))}
