@@ -9,9 +9,8 @@ import { cn } from '@/lib/utils';
  * alongside it rather than being replaced by it: the bars carry no meaning to a screen
  * reader, and this line is precisely where the states worth announcing show up.
  *
- * `error` is already resolved to human copy by the route. "Reconnecting" is only true of a
- * connection that existed, which is the one thing the socket state does not tell apart
- * from a first attempt.
+ * `error` is already resolved to human copy by the route. `lost` covers the gap before
+ * Socket.IO starts its retry; "Reconnecting" is only true once that attempt begins.
  */
 export function ConnectionLine({
   status,
@@ -31,15 +30,17 @@ export function ConnectionLine({
   }
 
   const text =
-    status === 'error'
-      ? (error ?? 'Connection failed.')
-      : status !== 'connected'
-        ? hasConnected.current
-          ? 'Reconnecting…'
-          : 'Connecting…'
-        : connection
-          ? connectionLabel(connection)
-          : 'Connected';
+    status === 'lost'
+      ? 'Connection lost'
+      : status === 'error'
+        ? (error ?? 'Connection failed.')
+        : status !== 'connected'
+          ? hasConnected.current
+            ? 'Reconnecting…'
+            : 'Connecting…'
+          : connection
+            ? connectionLabel(connection)
+            : 'Connected';
 
   const filled = connection && status === 'connected' ? filledBars(connection) : 0;
 

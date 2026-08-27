@@ -1,5 +1,5 @@
 import { unwrap } from '@linguacast/contract/socket';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   applyJoinStatus,
   applyRealtimeStatus,
@@ -11,19 +11,22 @@ import {
   resetStatusOrdering,
 } from '@/lib/channel-status';
 import { connectSocket } from '@/lib/socket';
+import { initialSocketConnectionState, socketConnectionState } from '@/lib/socket-state';
 import type { SocketAuth, SocketClient } from '@/socket/client';
 
-export type SocketStatus = 'idle' | 'connecting' | 'connected' | 'error';
+export type { SocketStatus } from '@/lib/socket-state';
 
 /**
  * Callers pass `auth` only after their HTTP GET has returned 200, never in parallel with it:
  * in parallel, every mistyped PIN would open a socket and two error sources would race.
- * A connect_error here is therefore never a 404; it is version drift, channel_busy, or the
- * admin disabling the event in the gap.
+ * A first-connect error is therefore never a 404; it is version drift, channel_busy, or the
+ * admin disabling the event in the gap. Retry errors stay in the reconnecting phase.
  */
 export function useSocket(auth: SocketAuth | null) {
-  const [status, setStatus] = useState<SocketStatus>('idle');
-  const [error, setError] = useState<string | null>(null);
+  const [{ status, error }, dispatchConnection] = useReducer(
+    socketConnectionState,
+    initialSocketConnectionState,
+  );
   const [channelStatusState, setChannelStatusState] =
     useState<ChannelStatusState>(initialChannelStatuses);
   const [listeners, setListeners] = useState<Record<string, number>>({});
@@ -54,14 +57,13 @@ export function useSocket(auth: SocketAuth | null) {
     }
 
     updateChannelStatuses(resetStatusesForAuth);
-    setStatus('connecting');
+    dispatchConnection({ type: 'start' });
     const s = connectSocket(speakerCode === null ? { pin } : { pin, speakerCode });
     setSocket(s);
 
     s.on('connect', () => {
       updateChannelStatuses(resetStatusOrdering);
-      setStatus('connected');
-      setError(null);
+      dispatchConnection({ type: 'connect' });
     });
     s.on('disconnect', (reason: string) => {
       // Counts are the server's to report and it can no longer report them: held through the
@@ -72,16 +74,18 @@ export function useSocket(auth: SocketAuth | null) {
       // so it is terminal, not a blip. Reported as such or the screen promises a recovery
       // that will never come.
       if (reason === 'io server disconnect') {
-        setStatus('error');
-        setError('session_ended');
+        dispatchConnection({ type: 'disconnect', reason });
         return;
       }
-      setStatus('connecting');
+      dispatchConnection({ type: 'disconnect', reason });
     });
     s.on('connect_error', (err: Error) => {
-      setStatus('error');
-      setError(err.message);
+      // Socket.IO keeps `active` true for retryable transport failures. A handshake
+      // refusal destroys the socket and clears it, so promising another retry would lie.
+      dispatchConnection({ type: 'connect-error', message: err.message, retryable: s.active });
     });
+    const onReconnectAttempt = () => dispatchConnection({ type: 'reconnect-attempt' });
+    s.io.on('reconnect_attempt', onReconnectAttempt);
     s.on('channel:status', ({ slug, online: isOnline, muted }) => {
       updateChannelStatuses((current) =>
         applyRealtimeStatus(current, slug, { online: isOnline, muted }),
@@ -94,10 +98,11 @@ export function useSocket(auth: SocketAuth | null) {
     });
 
     return () => {
+      s.io.off('reconnect_attempt', onReconnectAttempt);
       s.removeAllListeners();
       s.disconnect();
       setSocket(null);
-      setStatus('idle');
+      dispatchConnection({ type: 'stop' });
     };
   }, [pin, speakerCode, updateChannelStatuses]);
 

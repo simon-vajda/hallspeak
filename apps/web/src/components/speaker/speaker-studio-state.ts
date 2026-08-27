@@ -7,25 +7,16 @@
  * `live` is derived from a producer existing, never set optimistically on the click: the
  * screen must not say On air before the server has one.
  *
- * `displaced` and `back-from-drop` are separate states rather than shades of muted,
- * because each asks the interpreter for something different — and `back-from-drop` asks
- * for the one action a plain muted screen does not prompt.
+ * `displaced` is terminal rather than a shade of muted because another session owns the
+ * speaker link and this one must not reclaim it.
  */
-export type BroadcastState =
-  | 'pre-flight'
-  | 'connecting'
-  | 'live'
-  | 'muted'
-  | 'back-from-drop'
-  | 'displaced';
+export type BroadcastState = 'pre-flight' | 'connecting' | 'live' | 'muted' | 'displaced';
 
 export interface BroadcastInput {
   goLivePressed: boolean;
   hasProducer: boolean;
   isMuted: boolean;
   displaced: boolean;
-  /** True from an involuntary drop until the interpreter unmutes. */
-  recoveredSilently: boolean;
 }
 
 export function broadcastState(input: BroadcastInput): BroadcastState {
@@ -39,9 +30,6 @@ export function broadcastState(input: BroadcastInput): BroadcastState {
   if (!input.hasProducer) {
     return 'connecting';
   }
-  if (input.recoveredSilently) {
-    return 'back-from-drop';
-  }
   return input.isMuted ? 'muted' : 'live';
 }
 
@@ -50,21 +38,21 @@ export function isBroadcasting(state: BroadcastState): boolean {
   return state === 'live';
 }
 
-/** Why the last broadcast stopped, which is the only thing distinguishing the two paths. */
-export type EndReason = 'deliberate' | 'dropped';
+/** Why the last broadcast stopped, including the state a dropped producer must restore. */
+export type BroadcastEnd = { reason: 'deliberate' } | { reason: 'dropped'; muted: boolean };
 
 export interface ReconnectInput {
   goLivePressed: boolean;
-  lastEnd: EndReason | null;
+  lastEnd: BroadcastEnd | null;
   displaced: boolean;
 }
 
-export type ReconnectAction = { type: 'none' } | { type: 're-produce'; paused: true };
+export type ReconnectAction = { type: 'none' } | { type: 're-produce'; paused: boolean };
 
 /**
- * After an involuntary drop the client rebuilds and re-produces on its own, paused, so
- * the interpreter's only action is to unmute. After a deliberate end it does nothing —
- * a broadcast somebody chose to stop must not restart itself because the Wi-Fi blinked.
+ * After an involuntary drop the client rebuilds and restores the producer's mute state.
+ * After a deliberate end it does nothing — a broadcast somebody chose to stop must not
+ * restart itself because the Wi-Fi blinked.
  *
  * A drop must be positively recorded, never inferred from the absence of one. Treating
  * `lastEnd: null` as "not deliberate, so re-produce" fires on the very first Go live —
@@ -78,8 +66,8 @@ export function onReconnect(input: ReconnectInput): ReconnectAction {
   if (!input.goLivePressed) {
     return { type: 'none' };
   }
-  if (input.lastEnd !== 'dropped') {
+  if (input.lastEnd?.reason !== 'dropped') {
     return { type: 'none' };
   }
-  return { type: 're-produce', paused: true };
+  return { type: 're-produce', paused: input.lastEnd.muted };
 }
