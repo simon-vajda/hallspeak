@@ -3,6 +3,7 @@ import {
   AUDIO_PREFERENCES_STORAGE_KEY,
   type AudioPreferences,
   DEFAULT_AUDIO_PREFERENCES,
+  effectiveGainNodeValue,
   gainNodeValue,
   MAX_GAIN_NODE_VALUE,
   MAX_GAIN_SLIDER_VALUE,
@@ -73,6 +74,23 @@ describe('gainNodeValue', () => {
   it('clamps a value from outside the slider’s range', () => {
     expect(gainNodeValue(-20)).toBe(0);
     expect(gainNodeValue(MAX_GAIN_SLIDER_VALUE + 20)).toBe(MAX_GAIN_NODE_VALUE);
+  });
+});
+
+describe('effectiveGainNodeValue', () => {
+  it('bypasses manual gain at unity while auto gain is enabled', () => {
+    expect(
+      [0, DEFAULT_AUDIO_PREFERENCES.gain, MAX_GAIN_SLIDER_VALUE].map((gain) =>
+        effectiveGainNodeValue({ autoGain: true, gain }),
+      ),
+    ).toEqual([1, 1, 1]);
+  });
+
+  it('restores the stored manual gain when auto gain is disabled', () => {
+    const gain = MAX_GAIN_SLIDER_VALUE;
+
+    expect(effectiveGainNodeValue({ autoGain: true, gain })).toBe(1);
+    expect(effectiveGainNodeValue({ autoGain: false, gain })).toBe(MAX_GAIN_NODE_VALUE);
   });
 });
 

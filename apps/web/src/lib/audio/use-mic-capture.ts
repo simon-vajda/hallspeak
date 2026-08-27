@@ -3,7 +3,7 @@ import { type MicDevice, resolveSelection, shapeDevices } from './devices';
 import {
   type AudioPreferences,
   DEFAULT_AUDIO_PREFERENCES,
-  gainNodeValue,
+  effectiveGainNodeValue,
   trackConstraints,
 } from './preferences';
 
@@ -106,7 +106,7 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
   const preferencesRef = useRef(preferences);
   preferencesRef.current = preferences;
 
-  const { noiseSuppression, autoGain, echoCancellation } = preferences;
+  const { noiseSuppression, autoGain, echoCancellation, gain } = preferences;
 
   /**
    * Re-opens on a processing preference as well as on a device change. `applyConstraints`
@@ -134,7 +134,7 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
           requested,
           trackConstraints({ noiseSuppression, autoGain, echoCancellation }),
         );
-        opened.gain.gain.value = gainNodeValue(preferencesRef.current.gain);
+        opened.gain.gain.value = effectiveGainNodeValue(preferencesRef.current);
         // Cleaned up while getUserMedia was resolving: the capture exists but nothing holds it.
         if (cancelled) {
           release(opened);
@@ -235,13 +235,14 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
     };
   }, [deviceId]);
 
-  // Applied to the live graph rather than by re-opening: the gain is one node's value.
+  // Applied to the live graph rather than by re-opening: auto gain bypasses this node at
+  // unity, while manual mode maps the stored slider value onto it.
   useEffect(() => {
     if (!capture) {
       return;
     }
-    capture.gain.gain.value = gainNodeValue(preferences.gain);
-  }, [capture, preferences.gain]);
+    capture.gain.gain.value = effectiveGainNodeValue({ autoGain, gain });
+  }, [capture, autoGain, gain]);
 
   const selectDevice = useCallback((next: string) => {
     setNotice(null);
