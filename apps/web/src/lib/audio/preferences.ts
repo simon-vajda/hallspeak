@@ -30,6 +30,17 @@ export function gainNodeValue(sliderValue: number): number {
 }
 
 /**
+ * Browser auto gain runs before the app's GainNode. Keeping the manual value there would
+ * attenuate or amplify the browser's result after it had been levelled, so auto mode bypasses
+ * that node at unity without discarding the stored slider value.
+ */
+export function effectiveGainNodeValue(
+  preferences: Pick<AudioPreferences, 'autoGain' | 'gain'>,
+): number {
+  return preferences.autoGain ? 1 : gainNodeValue(preferences.gain);
+}
+
+/**
  * The pure half of preference persistence, split from the hook so the cases a developer
  * never sees on their own machine — a half-written object, a value edited by hand, a key
  * left behind by an older build — are testable without a DOM or a stubbed storage.
