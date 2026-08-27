@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { type MicDevice, resolveSelection, shapeDevices } from './devices';
 import {
   type AudioPreferences,
+  DEFAULT_AUDIO_PREFERENCES,
   gainNodeValue,
   trackConstraints,
-} from '@/components/speaker/live-state';
-import { type MicDevice, resolveSelection, shapeDevices } from './devices';
-import { DEFAULT_AUDIO_PREFERENCES } from './preferences';
+} from './preferences';
 
 /**
  * Owns the capture graph and the one track a producer broadcasts. Web-only: React Native

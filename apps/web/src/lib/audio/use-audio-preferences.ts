@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AudioPreferences } from '@/components/speaker/live-state';
 import {
   AUDIO_PREFERENCES_STORAGE_KEY,
+  type AudioPreferences,
   DEFAULT_AUDIO_PREFERENCES,
   mergeStoredPreferences,
   parseStoredPreferences,

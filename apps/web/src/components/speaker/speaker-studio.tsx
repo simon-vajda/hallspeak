@@ -11,7 +11,7 @@ import { connectionState } from '@/lib/media/stats';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import type { SocketClient } from '@/socket/client';
-import { broadcastState, type EndReason, onReconnect } from './live-state';
+import { broadcastState, type EndReason, onReconnect } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 

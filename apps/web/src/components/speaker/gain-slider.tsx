@@ -1,7 +1,7 @@
 import { MICRO_LABEL } from '@/components/micro-label';
 import { Slider } from '@/components/ui/slider';
+import { MAX_GAIN_SLIDER_VALUE } from '@/lib/audio/preferences';
 import { cn } from '@/lib/utils';
-import { MAX_GAIN_SLIDER_VALUE } from './live-state';
 
 /**
  * Two callers place this differently, so the wrapper deciding where it shows is theirs. It

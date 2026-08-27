@@ -1,43 +1,7 @@
 /**
- * The speaker studio's decisions, kept out of the component so they can be tested without
- * a browser: what the preference toggles become, what the gain slider becomes, and which
- * of the broadcast states the screen is in.
+ * The speaker studio's decisions, kept out of the component so they can be tested without a
+ * browser.
  */
-
-export interface AudioPreferences {
-  noiseSuppression: boolean;
-  autoGain: boolean;
-  echoCancellation: boolean;
-  /** 0–200 on the slider, which is not what a GainNode takes. */
-  gain: number;
-}
-
-/**
- * Applied to the capture track rather than to the producer: the browser's own processing
- * runs before anything is encoded, so turning it off after the fact would achieve nothing.
- * Echo cancellation is offered but defaults off — the interpreter is told to wear headphones,
- * and cancelling against a PA the browser cannot hear does more harm than good. Stated as an
- * explicit `false` rather than omitted, since omission hands the decision back to the browser,
- * which turns it on.
- */
-export function trackConstraints(
-  preferences: Omit<AudioPreferences, 'gain'>,
-): MediaTrackConstraints {
-  return {
-    noiseSuppression: preferences.noiseSuppression,
-    autoGainControl: preferences.autoGain,
-    echoCancellation: preferences.echoCancellation,
-  };
-}
-
-/** Fifty slider points remain 1x, so existing stored values keep their current loudness. */
-export const MAX_GAIN_SLIDER_VALUE = 200;
-export const MAX_GAIN_NODE_VALUE = 4;
-
-export function gainNodeValue(sliderValue: number): number {
-  const clamped = Math.min(Math.max(sliderValue, 0), MAX_GAIN_SLIDER_VALUE);
-  return (clamped / MAX_GAIN_SLIDER_VALUE) * MAX_GAIN_NODE_VALUE;
-}
 
 /**
  * `live` is derived from a producer existing, never set optimistically on the click: the
@@ -86,7 +50,7 @@ export function isBroadcasting(state: BroadcastState): boolean {
   return state === 'live';
 }
 
-/** Why the last broadcast stopped, which is the only thing distinguishing the two. */
+/** Why the last broadcast stopped, which is the only thing distinguishing the two paths. */
 export type EndReason = 'deliberate' | 'dropped';
 
 export interface ReconnectInput {
