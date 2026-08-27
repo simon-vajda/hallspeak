@@ -1,6 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { serveStatic } from '@hono/node-server/serve-static';
+import {
+  DEFAULT_PAGE_TITLE,
+  formatChannelPageTitle,
+  formatEventPageTitle,
+} from '@linguacast/contract/page-titles';
 import { PIN_PATTERN, SLUG_PATTERN } from '@linguacast/contract/patterns';
 import { type Context, Hono } from 'hono';
 import { html } from 'hono/html';
@@ -23,7 +28,7 @@ interface PageResponse {
 }
 
 const DEFAULT_METADATA: PageMetadata = {
-  title: 'LinguaCast',
+  title: DEFAULT_PAGE_TITLE,
   description: 'Listen to live interpretation in your language.',
 };
 
@@ -113,7 +118,7 @@ function metadataForPath(path: string, speakerCode: string | undefined): PageRes
       return SPEAKER_LINK_EXPIRED;
     }
 
-    const title = `${event.name} - ${channel.name} | LinguaCast`;
+    const title = formatChannelPageTitle(event.name, channel.name);
     return {
       metadata: {
         title,
@@ -140,7 +145,7 @@ function metadataForPath(path: string, speakerCode: string | undefined): PageRes
 
     return {
       metadata: {
-        title: `${event.name} | LinguaCast`,
+        title: formatEventPageTitle(event.name),
         description: event.description ?? `Listen to ${event.name} live in your language.`,
       },
       status: 200,

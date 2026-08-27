@@ -9,6 +9,7 @@
     "./routes": "./src/routes/index.ts",
     "./socket": "./src/socket/index.ts",
     "./patterns": "./src/schemas/patterns.ts",
+    "./page-titles": "./src/page-titles.ts",
     "./openapi": "./src/generated/api.d.ts",
     "./openapi.json": "./openapi.json"
   },
