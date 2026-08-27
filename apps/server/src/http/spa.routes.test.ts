@@ -196,12 +196,12 @@ describe('public-link metadata', () => {
     expect(body).not.toContain(SPEAKER_CODE);
   });
 
-  it('returns specific generic metadata for missing resources and stale speaker links', async () => {
+  it('returns generic metadata for missing resources and stale speaker links', async () => {
     const cases = [
-      ['/events/000000', 404, 'Event not found | LinguaCast'],
-      ['/events/not-a-pin', 404, 'Event not found | LinguaCast'],
-      ['/events/123456/missing', 404, 'Channel not found | LinguaCast'],
-      ['/events/123456/INVALID', 404, 'Channel not found | LinguaCast'],
+      ['/events/000000', 404, 'Link not found | LinguaCast'],
+      ['/events/not-a-pin', 404, 'Link not found | LinguaCast'],
+      ['/events/123456/missing', 404, 'Link not found | LinguaCast'],
+      ['/events/123456/INVALID', 404, 'Link not found | LinguaCast'],
       ['/events/123456/english?speaker_code=wrong', 403, 'Speaker link expired | LinguaCast'],
     ] as const;
 
@@ -212,14 +212,19 @@ describe('public-link metadata', () => {
     }
   });
 
-  it('answers identically for disabled and nonexistent events or channels', async () => {
+  it('answers identically for every disabled or nonexistent event and channel', async () => {
     const missingEvent = await app.request('/events/000001', undefined, from('10.0.1.1'));
     const disabledEvent = await app.request('/events/123458', undefined, from('10.0.1.2'));
     const missingChannel = await app.request('/events/123456/missing', undefined, from('10.0.1.3'));
     const disabledChannel = await app.request('/events/123456/hidden', undefined, from('10.0.1.4'));
 
-    expect(await missingEvent.text()).toBe(await disabledEvent.text());
-    expect(await missingChannel.text()).toBe(await disabledChannel.text());
+    const bodies = await Promise.all(
+      [missingEvent, disabledEvent, missingChannel, disabledChannel].map((response) =>
+        response.text(),
+      ),
+    );
+
+    expect(new Set(bodies).size).toBe(1);
   });
 
   it('escapes event and channel content in text and attributes', async () => {
