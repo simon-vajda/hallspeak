@@ -10,6 +10,7 @@ import { MICRO_LABEL } from '@/components/micro-label';
 import { Button } from '@/components/ui/button';
 import { ADMIN_EVENT_TABLE_COLUMNS, summariseAdminEvents } from '@/lib/admin-event-list';
 import { eventsListQueryOptions, useAdminLive } from '@/lib/admin-queries';
+import { shouldThrowSettledQueryError } from '@/lib/query-retry';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin/events/')({
@@ -20,9 +21,13 @@ export const Route = createFileRoute('/admin/events/')({
 });
 
 function AdminEventsPage() {
-  const { data } = useSuspenseQuery(eventsListQueryOptions());
+  const { data, error, isFetching } = useSuspenseQuery(eventsListQueryOptions());
   const live = useAdminLive();
   const [creating, setCreating] = useState(false);
+
+  if (shouldThrowSettledQueryError(error, isFetching)) {
+    throw error;
+  }
 
   return (
     <div>

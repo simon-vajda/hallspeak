@@ -27,3 +27,8 @@ export function shouldRetryApiQuery(failureCount: number, error: unknown): boole
   const code = apiProblemCode(error);
   return code === undefined || RETRYABLE_CODES.has(code);
 }
+
+/** Surface terminal refetch failures that suspense queries otherwise hide behind cached data. */
+export function shouldThrowSettledQueryError(error: unknown, isFetching: boolean): boolean {
+  return error !== null && error !== undefined && !isFetching;
+}

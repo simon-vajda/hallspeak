@@ -6,6 +6,7 @@ import { EventRouteError } from '@/components/guest/event-route-error';
 import { GuestMessage, GuestShell } from '@/components/guest/guest-message';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { publicEventQueryOptions } from '@/lib/public-queries';
+import { shouldThrowSettledQueryError } from '@/lib/query-retry';
 import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useSocket } from '@/lib/use-socket';
 
@@ -21,12 +22,16 @@ export const Route = createFileRoute('/events/$pin/')({
 
 function EventPage() {
   const { pin } = Route.useParams();
-  const { data } = useSuspenseQuery(publicEventQueryOptions(pin));
+  const { data, error, isFetching } = useSuspenseQuery(publicEventQueryOptions(pin));
 
   // Only after the GET returns 200, never in parallel with it.
   const { status, online } = useSocket(data ? { pin } : null);
 
   useConnectionToast(status);
+
+  if (shouldThrowSettledQueryError(error, isFetching)) {
+    throw error;
+  }
 
   return (
     <GuestShell>
