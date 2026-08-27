@@ -83,14 +83,18 @@ describe('levelStatus', () => {
     expect(levelStatus(meterLevel(0.002))).toBe('quiet');
   });
 
-  it('calls a clipping level peaking', () => {
-    expect(levelStatus(0.9)).toBe('peaking');
+  it('keeps a level below the peak threshold good', () => {
+    expect(levelStatus(0.94)).toBe('good');
   });
 
-  // The tick is drawn at 85%, so the fill reaching it must already read as peaking.
+  it('calls a level above the peak threshold peaking', () => {
+    expect(levelStatus(0.96)).toBe('peaking');
+  });
+
+  // The tick is drawn at 95%, so the fill reaching it must already read as peaking.
   it('treats the threshold itself as peaking', () => {
     expect(levelStatus(PEAK_THRESHOLD)).toBe('peaking');
-    expect(PEAK_THRESHOLD).toBe(0.85);
+    expect(PEAK_THRESHOLD).toBe(0.95);
   });
 });
 

@@ -116,7 +116,11 @@ export function SpeakerOnAir({
             )}
           </div>
 
-          <InputLevelPanel analyser={mic.analyser} className="lg:col-start-2 lg:row-start-2" />
+          <InputLevelPanel
+            analyser={mic.analyser}
+            muted={isMuted}
+            className="lg:col-start-2 lg:row-start-2"
+          />
           <AudioSettings
             mic={mic}
             preferences={preferences}
