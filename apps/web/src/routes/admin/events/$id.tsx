@@ -1,18 +1,17 @@
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { $api } from '@/api/client';
 import { ChannelsPanel } from '@/components/admin/channels-panel';
-import { DeleteEventDialog, EventFormDialog } from '@/components/admin/event-dialogs';
+import { DeleteEventDialog } from '@/components/admin/delete-event-dialog';
+import { EventDetailRouteError } from '@/components/admin/event-detail-route-error';
 import { EventEnabledSwitch } from '@/components/admin/event-enabled-switch';
+import { EventFormDialog } from '@/components/admin/event-form-dialog';
 import { PinCard } from '@/components/admin/pin-card';
 import { Button } from '@/components/ui/button';
+import { eventDetailQueryOptions } from '@/lib/admin-queries';
 
 export const Route = createFileRoute('/admin/events/$id')({
-  component: AdminEventPage,
-  // A URL that cannot name an event is the same answer as one that names a deleted event,
-  // so it gets the same page rather than the router's error screen.
-  errorComponent: () => <MissingEvent notFound />,
   // Typed at the route, not coerced in the component: a URL carrying anything but a positive
   // integer never reaches the query, so it cannot spend three retries on a 400.
   params: {
@@ -25,6 +24,13 @@ export const Route = createFileRoute('/admin/events/$id')({
     },
     stringify: ({ id }) => ({ id: String(id) }),
   },
+  // A URL that cannot name an event is the same answer as one that names a deleted event,
+  // so it gets the same page rather than the router's error screen.
+  loader: ({ context, params }) =>
+    context.queryClient.ensureQueryData(eventDetailQueryOptions(params.id)),
+  pendingComponent: () => <p className="text-sm text-muted-foreground">Loading event…</p>,
+  errorComponent: EventDetailRouteError,
+  component: AdminEventPage,
 });
 
 function AdminEventPage() {
@@ -33,23 +39,7 @@ function AdminEventPage() {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const { data, isPending, error } = $api.useQuery(
-    'get',
-    '/admin/events/{id}',
-    { params: { path: { id } } },
-    // A deleted event will not come back, so retrying only holds the spinner for seconds.
-    { retry: (failureCount, err) => err?.code !== 'not_found' && failureCount < 3 },
-  );
-
-  if (isPending) {
-    return <p className="text-sm text-muted-foreground">Loading event…</p>;
-  }
-
-  // A stale link after a delete is an ordinary case, so it gets the same page as an id that
-  // never existed.
-  if (!data) {
-    return <MissingEvent notFound={error?.code === 'not_found'} />;
-  }
+  const { data } = useSuspenseQuery(eventDetailQueryOptions(id));
 
   return (
     <div>
@@ -123,29 +113,6 @@ function AdminEventPage() {
         onOpenChange={setDeleting}
         onDeleted={() => navigate({ to: '/admin/events' })}
       />
-    </div>
-  );
-}
-
-function MissingEvent({ notFound }: { notFound: boolean }) {
-  return (
-    <div>
-      <h1 className="text-screen">{notFound ? 'Event not found' : 'Could not load this event'}</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {notFound
-          ? 'It may have been deleted. Its PIN and channels went with it.'
-          : 'The request to the server failed. Reload to try again.'}
-      </p>
-      <Button
-        variant="outline"
-        // Renders as an anchor, so Base UI must be told not to expect a native <button>.
-        nativeButton={false}
-        render={<Link to="/admin/events" />}
-        size="action"
-        className="mt-8"
-      >
-        Back to events
-      </Button>
     </div>
   );
 }

@@ -12,14 +12,21 @@ type AdminEventSnapshot = {
   detail: AdminEventDetail | undefined;
 };
 
+export const eventsListQueryOptions = () => $api.queryOptions('get', '/admin/events');
+
+export const eventDetailQueryOptions = (id: number) =>
+  $api.queryOptions('get', '/admin/events/{id}', { params: { path: { id } } });
+
+export const adminLiveQueryOptions = () =>
+  $api.queryOptions('get', '/admin/live', {}, { refetchInterval: LIVE_POLL_MS });
+
 // Derived from the query options, not written out: a hand-written key can drift from the
 // query it refers to with nothing to compile against.
-export const eventsListKey = () => $api.queryOptions('get', '/admin/events').queryKey;
+export const eventsListKey = () => eventsListQueryOptions().queryKey;
 
-export const eventDetailKey = (id: number) =>
-  $api.queryOptions('get', '/admin/events/{id}', { params: { path: { id } } }).queryKey;
+export const eventDetailKey = (id: number) => eventDetailQueryOptions(id).queryKey;
 
-export const liveKey = () => $api.queryOptions('get', '/admin/live').queryKey;
+export const liveKey = () => adminLiveQueryOptions().queryKey;
 
 /** Media state is process memory and moves on its own; nothing invalidates it, so it polls. */
 const LIVE_POLL_MS = 5_000;

@@ -3,7 +3,7 @@ import { Download, RefreshCw } from 'lucide-react';
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { memo, type RefObject, useRef, useState } from 'react';
 import { CopyButton } from '@/components/admin/copy-button';
-import { RegeneratePinDialog } from '@/components/admin/event-dialogs';
+import { RegeneratePinDialog } from '@/components/admin/regenerate-pin-dialog';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { Pin } from '@/components/pin';
 import { Button } from '@/components/ui/button';
