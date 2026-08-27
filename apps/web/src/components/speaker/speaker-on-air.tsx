@@ -25,7 +25,6 @@ const BADGE_LABEL: Record<BroadcastState, string> = {
   connecting: 'Connecting…',
   live: 'On air',
   muted: 'Muted',
-  'back-from-drop': 'Back — but muted',
   displaced: 'Off air',
 };
 
@@ -34,7 +33,6 @@ const TARGET_LABEL: Record<BroadcastState, string> = {
   connecting: 'Connecting',
   live: 'Mute',
   muted: 'Muted',
-  'back-from-drop': 'Unmute',
   displaced: 'Mute',
 };
 
@@ -70,7 +68,7 @@ export function SpeakerOnAir({
   socketError: string | null;
 }) {
   const [confirming, setConfirming] = useState(false);
-  const isMuted = state === 'muted' || state === 'back-from-drop';
+  const isMuted = state === 'muted';
   const onAir = state === 'live';
 
   return (
@@ -109,11 +107,6 @@ export function SpeakerOnAir({
               rings={onAir}
               onClick={onToggleMute}
             />
-            {state === 'back-from-drop' && (
-              <p className="max-w-64 text-center text-meta font-normal text-muted-foreground">
-                Your connection dropped and came back. You are muted — unmute to carry on.
-              </p>
-            )}
           </div>
 
           <InputLevelPanel

@@ -11,7 +11,6 @@ const base: BroadcastInput = {
   hasProducer: true,
   isMuted: false,
   displaced: false,
-  recoveredSilently: false,
 };
 
 describe('broadcastState', () => {
@@ -42,13 +41,6 @@ describe('broadcastState', () => {
     expect(isBroadcasting(muted)).toBe(false);
   });
 
-  it('tells back-from-drop apart from a mute the interpreter chose', () => {
-    const recovered = broadcastState({ ...base, isMuted: true, recoveredSilently: true });
-
-    expect(recovered).toBe('back-from-drop');
-    expect(recovered).not.toBe(broadcastState({ ...base, isMuted: true }));
-  });
-
   it('is displaced above everything else, including a live producer', () => {
     expect(broadcastState({ ...base, displaced: true })).toBe('displaced');
     expect(broadcastState({ ...base, displaced: true, hasProducer: false })).toBe('displaced');
@@ -56,11 +48,24 @@ describe('broadcastState', () => {
 });
 
 describe('onReconnect', () => {
-  it('re-produces paused after an involuntary drop', () => {
-    expect(onReconnect({ goLivePressed: true, lastEnd: 'dropped', displaced: false })).toEqual({
-      type: 're-produce',
-      paused: true,
-    });
+  it('re-produces unmuted after an unmuted broadcast drops', () => {
+    expect(
+      onReconnect({
+        goLivePressed: true,
+        lastEnd: { reason: 'dropped', muted: false },
+        displaced: false,
+      }),
+    ).toEqual({ type: 're-produce', paused: false });
+  });
+
+  it('re-produces muted after a muted broadcast drops', () => {
+    expect(
+      onReconnect({
+        goLivePressed: true,
+        lastEnd: { reason: 'dropped', muted: true },
+        displaced: false,
+      }),
+    ).toEqual({ type: 're-produce', paused: true });
   });
 
   /**
@@ -74,9 +79,13 @@ describe('onReconnect', () => {
   });
 
   it('does nothing after a deliberate end', () => {
-    expect(onReconnect({ goLivePressed: true, lastEnd: 'deliberate', displaced: false })).toEqual({
-      type: 'none',
-    });
+    expect(
+      onReconnect({
+        goLivePressed: true,
+        lastEnd: { reason: 'deliberate' },
+        displaced: false,
+      }),
+    ).toEqual({ type: 'none' });
   });
 
   it('does nothing when Go live was never pressed', () => {
@@ -87,8 +96,12 @@ describe('onReconnect', () => {
 
   /** The alternation loop the visible takeover exists to prevent. */
   it('never reclaims after being displaced', () => {
-    expect(onReconnect({ goLivePressed: true, lastEnd: 'dropped', displaced: true })).toEqual({
-      type: 'none',
-    });
+    expect(
+      onReconnect({
+        goLivePressed: true,
+        lastEnd: { reason: 'dropped', muted: false },
+        displaced: true,
+      }),
+    ).toEqual({ type: 'none' });
   });
 });

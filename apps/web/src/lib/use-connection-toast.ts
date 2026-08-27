@@ -5,11 +5,12 @@ import type { SocketStatus } from '@/lib/use-socket';
 /** A fixed id, so a second call can only ever replace the toast, never stack another. */
 const TOAST_ID = 'socket-connection';
 
-/**
- * How long the socket may be away before it is worth telling anyone. A StrictMode remount and
- * a real network blip are both shorter than this, and a toast for either is noise.
- */
-const GRACE_MS = 700;
+export function connectionToastMessage(status: SocketStatus, hasConnected: boolean): string | null {
+  if (!hasConnected || status === 'idle' || status === 'connected') {
+    return null;
+  }
+  return status === 'connecting' ? 'Reconnecting…' : 'Connection lost';
+}
 
 /**
  * Silent until the socket has connected once: the gap before the first connection is the page
@@ -25,18 +26,15 @@ export function useConnectionToast(status: SocketStatus) {
       return;
     }
 
-    if (!hasConnected.current || status === 'idle') {
+    const message = connectionToastMessage(status, hasConnected.current);
+    if (!message) {
       return;
     }
 
-    const timer = setTimeout(() => {
-      toast.loading(status === 'error' ? 'Connection lost' : 'Reconnecting…', {
-        id: TOAST_ID,
-        duration: Number.POSITIVE_INFINITY,
-      });
-    }, GRACE_MS);
-
-    return () => clearTimeout(timer);
+    toast.loading(message, {
+      id: TOAST_ID,
+      duration: Number.POSITIVE_INFINITY,
+    });
   }, [status]);
 
   // A screen that unmounts while disconnected would otherwise leave the toast on the next

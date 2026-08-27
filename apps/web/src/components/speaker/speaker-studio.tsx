@@ -11,7 +11,7 @@ import { connectionState } from '@/lib/media/stats';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import type { SocketClient } from '@/socket/client';
-import { broadcastState, type EndReason, onReconnect } from './speaker-studio-state';
+import { type BroadcastEnd, broadcastState, onReconnect } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -50,8 +50,7 @@ export function SpeakerStudio({
   const [localMuted, setLocalMuted] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [displaced, setDisplaced] = useState(false);
-  const [lastEnd, setLastEnd] = useState<EndReason | null>(null);
-  const [recoveredSilently, setRecoveredSilently] = useState(false);
+  const [lastEnd, setLastEnd] = useState<BroadcastEnd | null>(null);
 
   const { preferences, setPreferences } = useAudioPreferences();
   const mic = useMicCapture(preferences);
@@ -67,7 +66,6 @@ export function SpeakerStudio({
     hasProducer,
     isMuted,
     displaced,
-    recoveredSilently,
   });
 
   const outputTrack = mic.outputTrack;
@@ -138,41 +136,38 @@ export function SpeakerStudio({
     };
   }, [socket]);
 
-  // Marks the drop, so the reconnect below can tell it from a broadcast we ended on purpose.
+  // Records the effective mute state before reset, so reconnect restores the same state.
   const wasConnected = useRef(false);
   useEffect(() => {
     if (status === 'connected') {
       wasConnected.current = true;
       return;
     }
-    if (status === 'connecting' && wasConnected.current && goLivePressed && lastEnd === null) {
-      setLastEnd('dropped');
+    if (status === 'lost' && wasConnected.current && goLivePressed && lastEnd === null) {
+      setLastEnd({ reason: 'dropped', muted: isMuted });
     }
-  }, [status, goLivePressed, lastEnd]);
+  }, [status, goLivePressed, lastEnd, isMuted]);
 
   /**
-   * After an involuntary drop the client rebuilds and re-produces on its own, but paused,
-   * so the interpreter's one action is to unmute. After a deliberate end it does nothing —
-   * a broadcast somebody chose to stop must not restart itself because the Wi-Fi blinked.
+   * After an involuntary drop the client rebuilds and re-produces in the same mute state.
+   * After a deliberate end it does nothing — a broadcast somebody chose to stop must not
+   * restart itself because the Wi-Fi blinked.
    */
   useEffect(() => {
     if (status !== 'connected' || hasProducer || !outputTrack) {
       return;
     }
-    if (onReconnect({ goLivePressed, lastEnd, displaced }).type !== 're-produce') {
+    const action = onReconnect({ goLivePressed, lastEnd, displaced });
+    if (action.type !== 're-produce') {
       return;
     }
 
     let cancelled = false;
-    void produce(true).then(() => {
+    void produce(action.paused).then(() => {
       if (cancelled) {
         return;
       }
-      setLocalMuted(true);
-      // Only a recovery reads as back-from-drop; the first Go live is an ordinary start.
-      if (lastEnd === 'dropped') {
-        setRecoveredSilently(true);
-      }
+      setLocalMuted(action.paused);
       setLastEnd(null);
     });
     return () => {
@@ -233,7 +228,7 @@ export function SpeakerStudio({
           socketConnected: status === 'connected',
           mediaTrouble: media.health === 'trouble',
           live: hasProducer,
-          paused: state === 'muted' || state === 'back-from-drop',
+          paused: state === 'muted',
           stats: media.stats,
         })}
         onToggleMute={() => {
@@ -244,7 +239,6 @@ export function SpeakerStudio({
             producerId: media.state.producerId,
           };
           setLocalMuted(next);
-          setRecoveredSilently(false);
           void media.setProducerPaused(next).catch((cause) => {
             const rollbackMuted = rollbackMutedAfterFailure({
               requestedMuted: next,
@@ -260,10 +254,9 @@ export function SpeakerStudio({
         }}
         onEnd={() => {
           // Recorded before the close, so the reconnect effect cannot read it as a drop.
-          setLastEnd('deliberate');
+          setLastEnd({ reason: 'deliberate' });
           setGoLivePressed(false);
           setLocalMuted(false);
-          setRecoveredSilently(false);
           setStartedAt(null);
           void media.stopProducing();
         }}
