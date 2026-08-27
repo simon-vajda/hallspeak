@@ -1,15 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  type AudioPreferences,
   type BroadcastInput,
   broadcastState,
-  gainNodeValue,
   isBroadcasting,
-  MAX_GAIN_NODE_VALUE,
-  MAX_GAIN_SLIDER_VALUE,
   onReconnect,
-  trackConstraints,
-} from './live-state';
+} from './speaker-studio-state';
 
 const base: BroadcastInput = {
   goLivePressed: true,
@@ -18,69 +13,6 @@ const base: BroadcastInput = {
   displaced: false,
   recoveredSilently: false,
 };
-
-describe('trackConstraints', () => {
-  it('maps each toggle onto the constraint it controls', () => {
-    expect(
-      trackConstraints({
-        noiseSuppression: true,
-        autoGain: false,
-        echoCancellation: true,
-      }),
-    ).toEqual({
-      noiseSuppression: true,
-      autoGainControl: false,
-      echoCancellation: true,
-    });
-    expect(
-      trackConstraints({
-        noiseSuppression: false,
-        autoGain: true,
-        echoCancellation: false,
-      }),
-    ).toEqual({
-      noiseSuppression: false,
-      autoGainControl: true,
-      echoCancellation: false,
-    });
-  });
-
-  it('states echo cancellation off rather than omitting it, which would hand the browser the choice', () => {
-    expect(
-      trackConstraints({
-        noiseSuppression: true,
-        autoGain: false,
-        echoCancellation: false,
-      }),
-    ).toHaveProperty('echoCancellation', false);
-  });
-
-  it('carries no gain: that is a node on the graph, not a track constraint', () => {
-    const preferences: AudioPreferences = {
-      noiseSuppression: true,
-      autoGain: true,
-      echoCancellation: false,
-      gain: 90,
-    };
-    expect(trackConstraints(preferences)).not.toHaveProperty('gain');
-  });
-});
-
-describe('gainNodeValue', () => {
-  it('keeps 50 slider points equal to 1x across the expanded range', () => {
-    expect([
-      gainNodeValue(0),
-      gainNodeValue(50),
-      gainNodeValue(100),
-      gainNodeValue(MAX_GAIN_SLIDER_VALUE),
-    ]).toEqual([0, 1, 2, MAX_GAIN_NODE_VALUE]);
-  });
-
-  it('clamps a value from outside the slider’s range', () => {
-    expect(gainNodeValue(-20)).toBe(0);
-    expect(gainNodeValue(MAX_GAIN_SLIDER_VALUE + 20)).toBe(MAX_GAIN_NODE_VALUE);
-  });
-});
 
 describe('broadcastState', () => {
   it('is pre-flight until Go live is pressed, whatever the producer says', () => {

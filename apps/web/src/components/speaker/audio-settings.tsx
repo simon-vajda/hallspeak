@@ -1,7 +1,6 @@
 import { ChevronDown, Mic } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { GainSlider } from '@/components/speaker/gain-slider';
-import type { AudioPreferences } from '@/components/speaker/live-state';
 import { MicPanel } from '@/components/speaker/mic-panel';
 import {
   Dialog,
@@ -11,6 +10,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { cn } from '@/lib/utils';
 

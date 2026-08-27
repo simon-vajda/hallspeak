@@ -2,7 +2,6 @@ import { Mic } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { GainSlider } from '@/components/speaker/gain-slider';
-import type { AudioPreferences } from '@/components/speaker/live-state';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -13,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import type { MicDevice } from '@/lib/audio/devices';
+import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { MicStatus } from '@/lib/audio/use-mic-capture';
 import { cn } from '@/lib/utils';
 

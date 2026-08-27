@@ -9,13 +9,14 @@ import { AudioSettings } from '@/components/speaker/audio-settings';
 import { EndBroadcastDialog } from '@/components/speaker/end-broadcast-dialog';
 import { InputLevelPanel } from '@/components/speaker/input-level-panel';
 import { ListenerPageLink } from '@/components/speaker/listener-page-link';
-import type { AudioPreferences, BroadcastState } from '@/components/speaker/live-state';
 import { OnAirStats } from '@/components/speaker/on-air-stats';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
+import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
 import type { ConnectionState } from '@/lib/media/stats';
 import type { SocketStatus } from '@/lib/use-socket';
+import type { BroadcastState } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
