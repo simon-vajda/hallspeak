@@ -10,8 +10,8 @@
  */
 export const METER_FLOOR_DB = -60;
 
-/** Above this the fill goes `destructive`, and the design draws its tick here. */
-export const PEAK_THRESHOLD = 0.85;
+/** At or above this the fill goes `destructive`, and the design draws its tick here. */
+export const PEAK_THRESHOLD = 0.95;
 
 /** Below this the mic is reading room noise at most, not enough to go live on. */
 export const SILENCE_THRESHOLD = 0.25;

@@ -5,6 +5,7 @@ import {
   type LevelStatus,
   levelStatus,
   meterLevel,
+  PEAK_THRESHOLD,
   rms,
   smoothLevel,
 } from '@/lib/audio/level';
@@ -33,9 +34,11 @@ const STATUS_TONE: Record<LevelStatus, string> = {
 export function LevelMeter({
   analyser,
   className,
+  muted = false,
 }: {
   analyser: AnalyserNode | null;
   className?: string;
+  muted?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
@@ -107,7 +110,10 @@ export function LevelMeter({
         <div className="h-full overflow-hidden rounded-full bg-border">
           <div
             ref={fillRef}
-            className="h-full w-0 rounded-full bg-live group-data-[peaking=true]:bg-destructive"
+            className={cn(
+              'h-full w-0 rounded-full',
+              muted ? 'bg-muted-foreground' : 'bg-live group-data-[peaking=true]:bg-destructive',
+            )}
           />
         </div>
         <div
@@ -115,7 +121,10 @@ export function LevelMeter({
           className="absolute inset-y-0 left-0 w-0.5 -translate-x-1/2 rounded-[1px] bg-foreground/60"
         />
         {/* The clip threshold, drawn at PEAK_THRESHOLD. */}
-        <div className="absolute -inset-y-1.25 left-[85%] w-0.5 rounded-[1px] bg-foreground/35" />
+        <div
+          className="absolute -inset-y-1.25 w-0.5 rounded-[1px] bg-foreground/35"
+          style={{ left: `${PEAK_THRESHOLD * 100}%` }}
+        />
       </div>
     </div>
   );
