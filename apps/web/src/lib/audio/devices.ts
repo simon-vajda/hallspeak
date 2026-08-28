@@ -1,7 +1,7 @@
 /**
- * The pure half of microphone selection, split from the hook so the two behaviours invisible
+ * The pure half of audio-device selection, split from the hooks so the behaviours invisible
  * on a developer's own machine are testable without a DOM: empty labels before permission,
- * and the same mic listed twice.
+ * and one physical device listed under multiple aliases.
  */
 
 /** Structural stand-in for `MediaDeviceInfo`, so callers and tests can pass plain objects. */
@@ -12,7 +12,7 @@ export type DeviceInfoLike = {
   groupId: string;
 };
 
-export type MicDevice = {
+export type AudioDevice = {
   deviceId: string;
   label: string;
   groupId: string;
@@ -25,16 +25,19 @@ const ALIAS_IDS = new Set(['default', 'communications']);
 const ALIAS_LABEL = /^(Default|Communications) - /;
 
 /**
- * Audio inputs only, one entry per physical device, every entry named. An alias keeps its
- * position (the browser lists the default first) but takes the id and label of the concrete
+ * One requested audio kind, one entry per physical device, every entry named. An alias keeps
+ * its position (the browser lists the default first) but takes the id and label of the concrete
  * entry it duplicates.
  */
-export function shapeDevices(devices: readonly DeviceInfoLike[]): MicDevice[] {
+export function shapeDevices(
+  devices: readonly DeviceInfoLike[],
+  kind: 'audioinput' | 'audiooutput',
+): AudioDevice[] {
   // The tuple type is what tells the compiler a group is never empty.
   const groups = new Map<string, [DeviceInfoLike, ...DeviceInfoLike[]]>();
 
   for (const device of devices) {
-    if (device.kind !== 'audioinput') {
+    if (device.kind !== kind) {
       continue;
     }
     // An empty groupId is Firefox saying "unknown", not "same device as the last unknown".
@@ -54,14 +57,16 @@ export function shapeDevices(devices: readonly DeviceInfoLike[]): MicDevice[] {
     return {
       deviceId: primary.deviceId,
       groupId: primary.groupId,
-      label: labels.find((label) => label !== '') ?? `Microphone ${index + 1}`,
+      label:
+        labels.find((label) => label !== '') ??
+        `${kind === 'audioinput' ? 'Microphone' : 'Audio output'} ${index + 1}`,
     };
   });
 }
 
 /** Falls back to the first in the list: that is where the browser puts the system default. */
 export function resolveSelection(
-  devices: readonly MicDevice[],
+  devices: readonly AudioDevice[],
   selected: string | null,
 ): string | null {
   if (selected !== null && devices.some((d) => d.deviceId === selected)) {
