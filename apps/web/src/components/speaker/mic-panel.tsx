@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import type { MicDevice } from '@/lib/audio/devices';
+import type { AudioDevice } from '@/lib/audio/devices';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { MicStatus } from '@/lib/audio/use-mic-capture';
 import { cn } from '@/lib/utils';
@@ -41,7 +41,7 @@ export function MicPanel({
   error: string | null;
   /** A fallback the hook already made, shown under a picker that still works. */
   notice: string | null;
-  devices: MicDevice[];
+  devices: AudioDevice[];
   deviceId: string | null;
   onSelectDevice: (deviceId: string) => void;
   onRetry: () => void;
