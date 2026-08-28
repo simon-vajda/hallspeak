@@ -28,7 +28,12 @@ export function supportsAudioOutputSelection(): boolean {
 
 /** An unpermissioned browser may expose one anonymous output, which is not a usable list. */
 export function hasNamedOutputs(devices: readonly AudioDevice[]): boolean {
-  return devices.some((device) => device.deviceId !== '');
+  return devices.some(
+    (device) =>
+      device.deviceId !== '' &&
+      device.deviceId !== 'default' &&
+      device.deviceId !== 'communications',
+  );
 }
 
 /** Missing stored choices follow the system default instead of selecting another explicit id. */
