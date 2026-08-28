@@ -41,5 +41,9 @@ export function resolveOutputSelection(
   devices: readonly AudioDevice[],
   stored: string | null,
 ): string | null {
+  const defaultDevice = devices.find((device) => device.isDefault) ?? devices[0];
+  if (stored === defaultDevice?.deviceId) {
+    return null;
+  }
   return stored !== null && devices.some((device) => device.deviceId === stored) ? stored : null;
 }

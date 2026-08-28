@@ -26,7 +26,9 @@ describe('shapeDevices', () => {
       [device({ deviceId: 'a', groupId: 'ga', label: 'Yeti Nano' })],
       'audioinput',
     );
-    expect(shaped).toEqual([{ deviceId: 'a', groupId: 'ga', label: 'Yeti Nano' }]);
+    expect(shaped).toEqual([
+      { deviceId: 'a', groupId: 'ga', isDefault: false, label: 'Yeti Nano' },
+    ]);
   });
 
   it('collapses the default alias into the real device it points at', () => {
@@ -40,8 +42,8 @@ describe('shapeDevices', () => {
     );
 
     expect(shaped).toEqual([
-      { deviceId: 'a', groupId: 'ga', label: 'Yeti Nano' },
-      { deviceId: 'b', groupId: 'gb', label: 'Built-in Microphone' },
+      { deviceId: 'a', groupId: 'ga', isDefault: true, label: 'Yeti Nano' },
+      { deviceId: 'b', groupId: 'gb', isDefault: false, label: 'Built-in Microphone' },
     ]);
   });
 
@@ -67,7 +69,9 @@ describe('shapeDevices', () => {
       'audioinput',
     );
 
-    expect(shaped).toEqual([{ deviceId: 'a', groupId: 'ga', label: 'Yeti Nano' }]);
+    expect(shaped).toEqual([
+      { deviceId: 'a', groupId: 'ga', isDefault: false, label: 'Yeti Nano' },
+    ]);
   });
 
   it('drops outputs and anything that is not an audio input', () => {
@@ -110,7 +114,7 @@ describe('shapeDevices', () => {
       'audiooutput',
     );
 
-    expect(shaped).toEqual([{ deviceId: 'o', groupId: 'go', label: 'Speakers' }]);
+    expect(shaped).toEqual([{ deviceId: 'o', groupId: 'go', isDefault: false, label: 'Speakers' }]);
   });
 
   it('collapses output aliases into their concrete devices', () => {
@@ -138,7 +142,9 @@ describe('shapeDevices', () => {
       'audiooutput',
     );
 
-    expect(shaped).toEqual([{ deviceId: 'o', groupId: 'go', label: 'Built-in Speakers' }]);
+    expect(shaped).toEqual([
+      { deviceId: 'o', groupId: 'go', isDefault: true, label: 'Built-in Speakers' },
+    ]);
   });
 
   it('drops output aliases until a concrete device is exposed', () => {
@@ -163,8 +169,8 @@ describe('shapeDevices', () => {
     );
 
     expect(shaped).toEqual([
-      { deviceId: 'a', groupId: '', label: 'Audio output 1' },
-      { deviceId: 'b', groupId: '', label: 'Audio output 2' },
+      { deviceId: 'a', groupId: '', isDefault: false, label: 'Audio output 1' },
+      { deviceId: 'b', groupId: '', isDefault: false, label: 'Audio output 2' },
     ]);
   });
 });

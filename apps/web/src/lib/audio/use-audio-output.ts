@@ -103,6 +103,8 @@ export function useAudioOutput() {
 
       setDevices(nextDevices);
       setStatus('ready');
+      // Older builds allowed pinning the physical device behind the default alias. Resolution
+      // normalizes that choice back to null so it follows operating-system route changes.
       const resolved = resolveOutputSelection(nextDevices, candidate);
       storedCandidate.current = null;
       if (resolved !== candidate) {
@@ -144,8 +146,12 @@ export function useAudioOutput() {
     };
   }, [supported, enumerate, commitDevices]);
 
+  // Registered whenever the browser can route at all, not only while a list is showing: a
+  // transient empty enumeration (a Bluetooth output dropping, a revoked permission) sends the
+  // hook back to `locked`, and a listener gated on `ready` would unsubscribe itself there and
+  // never see the device return.
   useEffect(() => {
-    if (!supported || status !== 'ready') {
+    if (!supported) {
       return;
     }
 
@@ -161,7 +167,7 @@ export function useAudioOutput() {
 
     navigator.mediaDevices.addEventListener('devicechange', onDeviceChange);
     return () => navigator.mediaDevices.removeEventListener('devicechange', onDeviceChange);
-  }, [supported, status, enumerate, commitDevices]);
+  }, [supported, enumerate, commitDevices]);
 
   const unlock = useCallback(async () => {
     if (!supported || status === 'unlocking') {
@@ -226,8 +232,12 @@ export function useAudioOutput() {
     devices,
     /** Null means follow the system default. */
     deviceId,
-    /** First item represents the physical device behind the system-default alias. */
-    currentDevice: devices.find((device) => device.deviceId === deviceId) ?? devices[0] ?? null,
+    systemDefaultDevice: devices.find((device) => device.isDefault) ?? devices[0] ?? null,
+    currentDevice:
+      devices.find((device) => device.deviceId === deviceId) ??
+      devices.find((device) => device.isDefault) ??
+      devices[0] ??
+      null,
     unlock,
     select,
     clearSelection,

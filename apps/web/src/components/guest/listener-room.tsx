@@ -5,12 +5,13 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { ChannelStrip } from '@/components/guest/channel-strip';
-import { OutputPicker } from '@/components/guest/output-picker';
+import { ListenerAudioSettings } from '@/components/guest/listener-audio-settings';
 import { LiveBadge } from '@/components/live-badge';
 import { PlayTarget } from '@/components/play-target';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { useAudioOutput } from '@/lib/audio/use-audio-output';
 import { useAudioSink } from '@/lib/audio/use-audio-sink';
+import { useAudioVolume } from '@/lib/audio/use-audio-volume';
 import { formatPin } from '@/lib/format';
 import { consumerPlan, mayAttachConsumerTrack } from '@/lib/media/media-state';
 import { connectionState } from '@/lib/media/stats';
@@ -64,6 +65,7 @@ export function ListenerRoom({
   const media = useMedia(socket);
   const audio = useRef<HTMLAudioElement | null>(null);
   const output = useAudioOutput();
+  const volume = useAudioVolume(audio);
   useAudioSink(audio, output.deviceId, output.clearSelection);
 
   const connected = status === 'connected';
@@ -224,7 +226,7 @@ export function ListenerRoom({
       </main>
 
       <div className="mx-auto mt-auto flex w-full max-w-shell flex-col items-center gap-5 px-gutter pb-8.5 text-center lg:pb-16.5">
-        <OutputPicker output={output} className="max-w-105" />
+        <ListenerAudioSettings output={output} volume={volume} className="max-w-105" />
         <Link
           to="/events/$pin"
           params={{ pin }}
