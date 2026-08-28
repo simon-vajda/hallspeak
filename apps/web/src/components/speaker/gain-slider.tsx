@@ -1,7 +1,6 @@
 import { MICRO_LABEL } from '@/components/micro-label';
 import { Slider } from '@/components/ui/slider';
 import { MAX_GAIN_SLIDER_VALUE } from '@/lib/audio/preferences';
-import { cn } from '@/lib/utils';
 
 /**
  * Two callers place this differently, so the wrapper deciding where it shows is theirs. It
@@ -35,11 +34,6 @@ export function GainSlider({
           onGainChange(typeof value === 'number' ? value : (value[0] ?? gain))
         }
         disabled={disabled}
-        className={cn(
-          '[&_[data-slot=slider-thumb]]:size-5.5 [&_[data-slot=slider-thumb]]:border-2',
-          '[&_[data-slot=slider-thumb]]:border-primary [&_[data-slot=slider-thumb]]:bg-background',
-          '[&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:bg-border',
-        )}
       />
     </div>
   );
