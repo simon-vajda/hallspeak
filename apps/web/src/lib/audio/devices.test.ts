@@ -141,6 +141,18 @@ describe('shapeDevices', () => {
     expect(shaped).toEqual([{ deviceId: 'o', groupId: 'go', label: 'Built-in Speakers' }]);
   });
 
+  it('drops output aliases until a concrete device is exposed', () => {
+    const shaped = shapeDevices(
+      [
+        device({ deviceId: 'default', groupId: '', kind: 'audiooutput' }),
+        device({ deviceId: 'communications', groupId: '', kind: 'audiooutput' }),
+      ],
+      'audiooutput',
+    );
+
+    expect(shaped).toEqual([]);
+  });
+
   it('keeps outputs with unknown groups separate and gives them fallback names', () => {
     const shaped = shapeDevices(
       [

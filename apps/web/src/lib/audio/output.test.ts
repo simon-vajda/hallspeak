@@ -47,6 +47,12 @@ describe('output capability', () => {
   it('requires at least one real device id for a named list', () => {
     expect(hasNamedOutputs([])).toBe(false);
     expect(hasNamedOutputs([{ deviceId: '', groupId: '', label: 'Audio output 1' }])).toBe(false);
+    expect(hasNamedOutputs([{ deviceId: 'default', groupId: '', label: 'Audio output 1' }])).toBe(
+      false,
+    );
+    expect(
+      hasNamedOutputs([{ deviceId: 'communications', groupId: '', label: 'Audio output 1' }]),
+    ).toBe(false);
     expect(hasNamedOutputs(outputs.slice(0, 1))).toBe(true);
   });
 });

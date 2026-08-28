@@ -12,8 +12,16 @@ import {
 export type AudioOutputStatus = 'unsupported' | 'locked' | 'unlocking' | 'denied' | 'ready';
 
 type OutputMediaDevices = MediaDevices & {
-  selectAudioOutput?: () => Promise<MediaDeviceInfo>;
+  selectAudioOutput?: (options?: { deviceId?: string }) => Promise<MediaDeviceInfo>;
 };
+
+function supportsExplicitOutputSelection(): boolean {
+  return (
+    typeof navigator !== 'undefined' &&
+    navigator.mediaDevices !== undefined &&
+    typeof (navigator.mediaDevices as OutputMediaDevices).selectAudioOutput === 'function'
+  );
+}
 
 function readStoredOutput(): string | null {
   try {
@@ -52,12 +60,18 @@ function unlockFailureMessage(error: unknown): string {
  */
 export function useAudioOutput() {
   const supported = useRef(supportsAudioOutputSelection()).current;
+  const [explicitSelection] = useState(() => supported && supportsExplicitOutputSelection());
+  const [initialStoredOutput] = useState(() => (supported ? readStoredOutput() : null));
+  // Kept separate from the applied id: `selectAudioOutput` browsers must authorize a
+  // remembered id from a new user gesture before `setSinkId` may use it.
+  const storedCandidate = useRef(initialStoredOutput);
+  const storedCandidateNeedsAuthorization = useRef(
+    explicitSelection && storedCandidate.current !== null,
+  );
   const [status, setStatus] = useState<AudioOutputStatus>(supported ? 'locked' : 'unsupported');
   const [error, setError] = useState<string | null>(null);
   const [devices, setDevices] = useState<AudioDevice[]>([]);
-  const [deviceId, setDeviceIdState] = useState<string | null>(() =>
-    supported ? readStoredOutput() : null,
-  );
+  const [deviceId, setDeviceIdState] = useState<string | null>(null);
   const deviceIdRef = useRef(deviceId);
   const mounted = useRef(true);
   const latestEnumeration = useRef(0);
@@ -71,8 +85,17 @@ export function useAudioOutput() {
   }, []);
 
   const commitDevices = useCallback(
-    (nextDevices: AudioDevice[], candidate = deviceIdRef.current, persistCandidate = false) => {
+    (
+      nextDevices: AudioDevice[],
+      candidate = storedCandidate.current ?? deviceIdRef.current,
+      persistCandidate = false,
+    ) => {
       if (!hasNamedOutputs(nextDevices)) {
+        setDevices([]);
+        setStatus('locked');
+        return;
+      }
+      if (storedCandidateNeedsAuthorization.current) {
         setDevices([]);
         setStatus('locked');
         return;
@@ -81,6 +104,7 @@ export function useAudioOutput() {
       setDevices(nextDevices);
       setStatus('ready');
       const resolved = resolveOutputSelection(nextDevices, candidate);
+      storedCandidate.current = null;
       if (resolved !== candidate) {
         setDeviceId(null, true);
       } else {
@@ -152,7 +176,14 @@ export function useAudioOutput() {
       let selectedByBrowser: string | null = null;
 
       if (typeof mediaDevices.selectAudioOutput === 'function') {
-        selectedByBrowser = (await mediaDevices.selectAudioOutput()).deviceId;
+        const remembered = storedCandidate.current;
+        selectedByBrowser = (
+          await mediaDevices.selectAudioOutput(
+            remembered === null ? undefined : { deviceId: remembered },
+          )
+        ).deviceId;
+        storedCandidate.current = selectedByBrowser;
+        storedCandidateNeedsAuthorization.current = false;
       } else {
         const stream = await mediaDevices.getUserMedia({ audio: true });
         // Release before enumeration or any state update: a listener page must never retain it.
@@ -163,7 +194,11 @@ export function useAudioOutput() {
 
       const next = await enumerate();
       if (next) {
-        commitDevices(next, selectedByBrowser ?? deviceIdRef.current, selectedByBrowser !== null);
+        if (selectedByBrowser === null) {
+          commitDevices(next);
+        } else {
+          commitDevices(next, selectedByBrowser, true);
+        }
       }
     } catch (cause) {
       if (!mounted.current) {

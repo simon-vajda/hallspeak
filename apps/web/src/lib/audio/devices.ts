@@ -50,18 +50,24 @@ export function shapeDevices(
     }
   }
 
-  return [...groups.values()].map((members, index) => {
-    const primary = members.find((d) => !ALIAS_IDS.has(d.deviceId)) ?? members[0];
-    const labels = [primary, ...members].map((d) => d.label.replace(ALIAS_LABEL, ''));
+  return (
+    [...groups.values()]
+      // An alias without its concrete output is the anonymous pre-permission default, not a
+      // usable device list. Inputs keep it because opening the default microphone is useful.
+      .filter((members) => kind === 'audioinput' || members.some((d) => !ALIAS_IDS.has(d.deviceId)))
+      .map((members, index) => {
+        const primary = members.find((d) => !ALIAS_IDS.has(d.deviceId)) ?? members[0];
+        const labels = [primary, ...members].map((d) => d.label.replace(ALIAS_LABEL, ''));
 
-    return {
-      deviceId: primary.deviceId,
-      groupId: primary.groupId,
-      label:
-        labels.find((label) => label !== '') ??
-        `${kind === 'audioinput' ? 'Microphone' : 'Audio output'} ${index + 1}`,
-    };
-  });
+        return {
+          deviceId: primary.deviceId,
+          groupId: primary.groupId,
+          label:
+            labels.find((label) => label !== '') ??
+            `${kind === 'audioinput' ? 'Microphone' : 'Audio output'} ${index + 1}`,
+        };
+      })
+  );
 }
 
 /** Falls back to the first in the list: that is where the browser puts the system default. */
