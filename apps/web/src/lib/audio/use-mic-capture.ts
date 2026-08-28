@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { type MicDevice, resolveSelection, shapeDevices } from './devices';
+import { type AudioDevice, resolveSelection, shapeDevices } from './devices';
 import {
   type AudioPreferences,
   DEFAULT_AUDIO_PREFERENCES,
@@ -91,7 +91,7 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
   const [error, setError] = useState<string | null>(null);
   // Never merged into `error`: a notice sits under the still-working picker, an error replaces it.
   const [notice, setNotice] = useState<string | null>(null);
-  const [devices, setDevices] = useState<MicDevice[]>([]);
+  const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   // null means the system default. Separate from `deviceId` so resolving the opened device
   // back into state cannot re-trigger the open.
@@ -144,7 +144,7 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
         setCapture(opened);
         setStatus('ready');
 
-        const shaped = shapeDevices(await navigator.mediaDevices.enumerateDevices());
+        const shaped = shapeDevices(await navigator.mediaDevices.enumerateDevices(), 'audioinput');
         if (cancelled) {
           return;
         }
@@ -206,9 +206,9 @@ export function useMicCapture(preferences: AudioPreferences = DEFAULT_AUDIO_PREF
 
     const onDeviceChange = async () => {
       const token = ++latest;
-      let shaped: MicDevice[];
+      let shaped: AudioDevice[];
       try {
-        shaped = shapeDevices(await navigator.mediaDevices.enumerateDevices());
+        shaped = shapeDevices(await navigator.mediaDevices.enumerateDevices(), 'audioinput');
       } catch {
         return;
       }
