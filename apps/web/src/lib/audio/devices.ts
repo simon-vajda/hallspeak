@@ -16,6 +16,8 @@ export type AudioDevice = {
   deviceId: string;
   label: string;
   groupId: string;
+  /** This physical device is also exposed through the browser's `default` alias. */
+  isDefault: boolean;
 };
 
 /** The browser lists the system default a second time under one of these ids. */
@@ -62,6 +64,7 @@ export function shapeDevices(
         return {
           deviceId: primary.deviceId,
           groupId: primary.groupId,
+          isDefault: members.some((device) => device.deviceId === 'default'),
           label:
             labels.find((label) => label !== '') ??
             `${kind === 'audioinput' ? 'Microphone' : 'Audio output'} ${index + 1}`,
