@@ -99,7 +99,7 @@ export function SpeakerPreflight({
                 Go live
               </Button>
 
-              <p className="mt-3 text-center text-meta font-normal text-muted-foreground">
+              <p className="mt-5 text-center text-meta font-normal text-muted-foreground">
                 {canGoLive
                   ? 'Wear headphones — without them the room’s speakers feed back into your mic.'
                   : mic.deviceId === null
@@ -110,7 +110,7 @@ export function SpeakerPreflight({
                 <br />
                 Speaker link · code ends {speakerCode.slice(-4)}
               </p>
-              <ListenerPageLink pin={pin} slug={channel.slug} className="mt-2" />
+              <ListenerPageLink pin={pin} slug={channel.slug} className="mt-4" />
             </div>
           </div>
         </div>

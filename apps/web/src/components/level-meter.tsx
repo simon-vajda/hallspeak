@@ -5,7 +5,6 @@ import {
   type LevelStatus,
   levelStatus,
   meterLevel,
-  PEAK_THRESHOLD,
   rms,
   smoothLevel,
 } from '@/lib/audio/level';
@@ -119,11 +118,6 @@ export function LevelMeter({
         <div
           ref={peakRef}
           className="absolute inset-y-0 left-0 w-0.5 -translate-x-1/2 rounded-[1px] bg-foreground/60"
-        />
-        {/* The clip threshold, drawn at PEAK_THRESHOLD. */}
-        <div
-          className="absolute -inset-y-1.25 w-0.5 rounded-[1px] bg-foreground/35"
-          style={{ left: `${PEAK_THRESHOLD * 100}%` }}
         />
       </div>
     </div>
