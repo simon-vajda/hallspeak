@@ -1,5 +1,4 @@
 import { Mic } from 'lucide-react';
-import type { ReactNode } from 'react';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { GainSlider } from '@/components/speaker/gain-slider';
 import { Button } from '@/components/ui/button';
@@ -124,24 +123,18 @@ export function MicPanel({
           />
           <SettingRow
             title="Auto gain control"
-            description={
-              <>
-                Off lets you set the gain by hand
-                {/* Only true where the slider is elsewhere; otherwise it sits directly below. */}
-                {!inSettings && <span className="lg:hidden">, in Audio settings</span>}.
-              </>
-            }
+            description="Off lets you set the gain by hand."
             checked={preferences.autoGain}
             onCheckedChange={(on) => onPreferencesChange({ autoGain: on })}
           />
 
-          {/* Desktop-only here: a phone reaches the slider through the audio-settings surface. */}
+          {/* The settings surface supplies its own copy directly below this panel. */}
           {!inSettings && (
             <GainSlider
               gain={preferences.gain}
               onGainChange={(gain) => onPreferencesChange({ gain })}
               disabled={preferences.autoGain}
-              className="mt-3.5 hidden border-t border-border pt-3.5 lg:block"
+              className="mt-3.5 border-t border-border pt-3.5"
             />
           )}
         </>
@@ -157,7 +150,7 @@ function SettingRow({
   onCheckedChange,
 }: {
   title: string;
-  description: ReactNode;
+  description: string;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
 }) {
