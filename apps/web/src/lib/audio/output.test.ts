@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AudioDevice } from './devices';
 import {
   hasNamedOutputs,
@@ -27,8 +27,21 @@ describe('stored output', () => {
 });
 
 describe('output capability', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it('is false outside a browser', () => {
     expect(supportsAudioOutputSelection()).toBe(false);
+  });
+
+  it('detects setSinkId on the media-element prototype', () => {
+    vi.stubGlobal(
+      'HTMLMediaElement',
+      class {
+        setSinkId() {}
+      },
+    );
+
+    expect(supportsAudioOutputSelection()).toBe(true);
   });
 
   it('requires at least one real device id for a named list', () => {

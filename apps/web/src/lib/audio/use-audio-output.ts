@@ -55,7 +55,9 @@ export function useAudioOutput() {
   const [status, setStatus] = useState<AudioOutputStatus>(supported ? 'locked' : 'unsupported');
   const [error, setError] = useState<string | null>(null);
   const [devices, setDevices] = useState<AudioDevice[]>([]);
-  const [deviceId, setDeviceIdState] = useState<string | null>(readStoredOutput);
+  const [deviceId, setDeviceIdState] = useState<string | null>(() =>
+    supported ? readStoredOutput() : null,
+  );
   const deviceIdRef = useRef(deviceId);
   const mounted = useRef(true);
   const latestEnumeration = useRef(0);
