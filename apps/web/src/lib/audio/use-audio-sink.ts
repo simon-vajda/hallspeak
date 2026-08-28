@@ -1,4 +1,4 @@
-import { type RefObject, useEffect } from 'react';
+import { type RefObject, useEffect, useRef } from 'react';
 
 type SinkAudioElement = HTMLAudioElement & {
   setSinkId(deviceId: string): Promise<void>;
@@ -20,9 +20,19 @@ export function useAudioSink(
   deviceId: string | null,
   onUnavailable: () => void,
 ) {
+  const lastDeviceId = useRef(deviceId);
+
   useEffect(() => {
     const element = audio.current as SinkAudioElement | null;
-    if (!element || deviceId === null) {
+    const previousDeviceId = lastDeviceId.current;
+    lastDeviceId.current = deviceId;
+    if (!element) {
+      return;
+    }
+    if (deviceId === null) {
+      if (previousDeviceId !== null) {
+        void element.setSinkId('').catch(() => {});
+      }
       return;
     }
 
@@ -42,6 +52,7 @@ export function useAudioSink(
         // repeating a forbidden explicit id on every reload cannot recover it.
         await element.setSinkId('').catch(() => {});
         if (!cancelled && token === latest) {
+          lastDeviceId.current = null;
           onUnavailable();
         }
       }
