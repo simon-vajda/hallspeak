@@ -21,6 +21,15 @@ describe('EnvSchema media configuration', () => {
     expect(result.MEDIA_ANNOUNCED_IP).toBe('203.0.113.10');
   });
 
+  it('resolves a configured hostname unless the operator declines it', () => {
+    expect(EnvSchema.parse({}).MEDIA_ANNOUNCE_HOSTNAME).toBe(false);
+    expect(EnvSchema.parse({ MEDIA_ANNOUNCE_HOSTNAME: 'true' }).MEDIA_ANNOUNCE_HOSTNAME).toBe(true);
+  });
+
+  it('reads the key written with no value as declining it, not as an error', () => {
+    expect(EnvSchema.parse({ MEDIA_ANNOUNCE_HOSTNAME: '' }).MEDIA_ANNOUNCE_HOSTNAME).toBe(false);
+  });
+
   it('defaults the port base and worker maximum', () => {
     const result = EnvSchema.parse({});
     expect(result.MEDIA_RTC_PORT_BASE).toBe(44400);

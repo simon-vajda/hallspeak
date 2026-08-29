@@ -68,7 +68,7 @@ function fakePool() {
         workerIndex: nextWorkerIndex,
       };
     },
-    onWorkerDied: (listener: (index: number) => void) => {
+    onWorkerLost: (listener: (index: number) => void) => {
       deathListeners.add(listener);
       return () => deathListeners.delete(listener);
     },

@@ -323,6 +323,18 @@ describe('applyNotification room eviction', () => {
       { room: eventRoom(EVENT), event: 'media:reset', payload: { reason: 'worker_died' } },
     ]);
   });
+
+  /** A moved announced address costs the media the same way, and nobody's access. */
+  it('resets rather than disconnects when the announced address moved', () => {
+    const { io, disconnectedRooms, emitted } = fakeIo();
+
+    applyNotification(io, { type: 'room-evicted', eventId: EVENT, reason: 'address_changed' });
+
+    expect(disconnectedRooms).toEqual([]);
+    expect(emitted).toEqual([
+      { room: eventRoom(EVENT), event: 'media:reset', payload: { reason: 'address_changed' } },
+    ]);
+  });
 });
 
 describe('applyNotification listener counts', () => {

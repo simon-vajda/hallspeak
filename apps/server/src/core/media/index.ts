@@ -2,6 +2,7 @@ import type { types } from 'mediasoup';
 import { AppError } from '../../lib/problem';
 import { type EvictionReason, notifications } from '../notifications';
 import { presence } from '../presence';
+import { type AddressResolver, AnnouncedAddress } from './announced-address';
 import {
   type IceServer,
   iceServersFor,
@@ -13,6 +14,7 @@ import {
 import { watchConsumer, watchProducer } from './diagnostics';
 import { ListenerCountPublisher } from './listeners';
 import type { TransportDirection } from './peer';
+import { discoverReflexiveAddress, reflexiveMismatch } from './reflexive-address';
 import { RoomRegistry } from './registry';
 import type { Room } from './room';
 import { type WorkerFactory, WorkerPool } from './workers';
@@ -31,6 +33,12 @@ export interface StartMediaOptions {
   graceMs?: number;
   hostCpuCount?: number;
   createWorker?: WorkerFactory;
+  /** Announce `net.announcedIp` verbatim even when it is a hostname. */
+  announceHostname?: boolean;
+  resolveAddress?: AddressResolver;
+  addressPollMs?: number;
+  /** Off by default so a test never sends a datagram; `index.ts` turns it on. */
+  probeReflexiveAddress?: boolean;
 }
 
 interface MediaState {
@@ -38,6 +46,7 @@ interface MediaState {
   registry: RoomRegistry;
   turn: TurnConfig;
   listeners: ListenerCountPublisher;
+  announced: AnnouncedAddress;
 }
 
 // A module singleton, like `db`: handlers and admin routes reach it by import rather than
@@ -53,14 +62,30 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
     throw new Error('startMedia called twice');
   }
 
+  // Before the pool, because the address is baked into every worker's listen infos: a
+  // hostname that cannot be resolved is a boot failure rather than a deployment that
+  // starts and carries no audio to half its guests.
+  const announced = new AnnouncedAddress({
+    configured: options.net.announcedIp,
+    announceHostname: options.announceHostname ?? false,
+    resolve: options.resolveAddress,
+    pollMs: options.addressPollMs,
+  });
+  const announcedIp = await announced.start();
+  if (announcedIp !== options.net.announcedIp) {
+    console.log(`mediasoup: ${options.net.announcedIp} resolved to ${announcedIp}`);
+  }
+  const net = { ...options.net, announcedIp };
+
   const turnConfigured = Boolean(options.turn.turnUrl && options.turn.turnSecret);
   const pool = new WorkerPool({
-    net: options.net,
+    net,
     turnConfigured,
     hostCpuCount: options.hostCpuCount,
     createWorker: options.createWorker,
   });
   await pool.start();
+  announced.onChange((next) => void pool.setAnnouncedAddress(next));
 
   const listeners = new ListenerCountPublisher({
     // A recount rather than a delta, and a room that has gone answers zero: the window is
@@ -75,19 +100,32 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
       // first real count of the next broadcast on the same channel.
       listeners.forgetEvent(room.eventId);
       // Idle and shutdown take nobody's access away, so nothing is evicted for them.
-      if (reason === 'worker_died') {
+      if (reason === 'worker_died' || reason === 'address_changed') {
         notifications.publish({ type: 'room-evicted', eventId: room.eventId, reason });
       }
     },
   });
 
-  state = { pool, registry, turn: options.turn, listeners };
+  state = { pool, registry, turn: options.turn, listeners, announced };
 
-  if (isUnroutableAnnouncedAddress(options.net.announcedIp)) {
+  if (isUnroutableAnnouncedAddress(announcedIp)) {
     console.warn(
-      `mediasoup: announced address ${options.net.announcedIp} is private or loopback; ` +
+      `mediasoup: announced address ${announcedIp} is private or loopback; ` +
         'clients off this machine will produce candidates nobody can reach',
     );
+    return;
+  }
+
+  // Never awaited: the answer is a log line and nothing reads it, so a STUN server that is
+  // slow or gone must not hold up the listener. Only worth asking when the address looks
+  // usable — the warning above already covers the case where it does not.
+  if (options.probeReflexiveAddress && options.turn.stunUrl) {
+    void discoverReflexiveAddress(options.turn.stunUrl).then((reflexive) => {
+      const mismatch = reflexiveMismatch(announcedIp, reflexive);
+      if (mismatch) {
+        console.warn(mismatch);
+      }
+    });
   }
 }
 
@@ -95,10 +133,11 @@ export async function stopMedia(): Promise<void> {
   if (!state) {
     return;
   }
-  const { pool, registry, listeners } = state;
+  const { pool, registry, listeners, announced } = state;
   // Nulled first, so every consumer closed inside closeAll() finds `scheduleRecount` inert
   // rather than arming a fresh window behind a drain that already ran.
   state = null;
+  announced.close();
   await registry.closeAll();
   listeners.close();
   await pool.close();

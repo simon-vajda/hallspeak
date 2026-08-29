@@ -114,5 +114,5 @@ export const MediaConsumerResponse = z.object({});
  * be too blunt for.
  */
 export const MediaReset = z.object({
-  reason: z.enum(['worker_died']),
+  reason: z.enum(['worker_died', 'address_changed']),
 });

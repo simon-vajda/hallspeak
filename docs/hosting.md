@@ -45,7 +45,9 @@ wherever you keep your Compose stacks, rename the second one to `.env`, and set:
 
 - **`MEDIA_ANNOUNCED_IP`** — your public hostname, usually the same one your reverse
   proxy serves: `linguacast.example.com`. A public IP address works too if you have no
-  hostname. The only value you must fill in.
+  hostname. The only value you must fill in. A hostname is resolved to an address at
+  startup and re-checked every minute, so a home connection whose public IP changes keeps
+  working on its own — see [dynamic IP addresses](#dynamic-ip-addresses).
 - **`TRUSTED_PROXY_IPS`** — the address your reverse proxy reaches the container from.
   See the proxy section below, and note it is rarely the address you expect.
 - **`MEDIA_MAX_WORKERS`** — how many events can run at once. See below.
@@ -180,6 +182,48 @@ capture a mid-transaction write:
 docker compose stop && tar czf backup-$(date +%F).tar.gz data/ && docker compose start
 ```
 
+## Dynamic IP addresses
+
+A home connection's public IP usually changes on an ISP reconnect, which is why
+`MEDIA_ANNOUNCED_IP` takes a hostname: point a dynamic-DNS record at your connection and
+put that name in `.env`.
+
+LinguaCast resolves that name itself rather than leaving it to the browser. It has to: an
+ICE candidate carries the address a guest connects back on, and Firefox
+([bug 1713128](https://bugzilla.mozilla.org/show_bug.cgi?id=1713128)) discards any
+candidate that names a host rather than an address. Chrome resolves them and connects, so
+an unresolved hostname is a deployment where Chrome works, Firefox is silent, and no error
+appears anywhere.
+
+The name is resolved at startup — the log line reads `mediasoup: home.example.org resolved
+to 203.0.113.10` — and re-checked every minute. When your IP moves, LinguaCast announces
+the new one and anyone connected reconnects within a few seconds; their audio was already
+gone, because the old address stopped working the moment it changed. A hostname that does
+not resolve at startup stops the server rather than letting it run with nothing usable to
+announce, and so does one that resolves only to a private address — inside a container
+that usually means the name is answered by a LAN resolver rather than the public one.
+
+A name with several A records is fine. LinguaCast keeps announcing whichever address it is
+already on while the name still answers with it, so a record that hands out its addresses
+in a different order each time is not mistaken for a move.
+
+At startup LinguaCast also asks a STUN server what address the internet sees this host as,
+and warns if that disagrees with what it is announcing:
+
+```
+mediasoup: announcing 203.0.113.10, but a STUN server sees this host as 198.51.100.7.
+```
+
+That is a hint, not a verdict, and it never changes what gets announced. The two differ
+legitimately when your router has more than one WAN link, when your connection is behind
+carrier-grade NAT, or when the forwarded address is not the one this server dials out
+through. But if guests cannot hear anything, this line is the first thing to read. It is
+skipped when `MEDIA_STUN_URL` is empty.
+
+`MEDIA_ANNOUNCE_HOSTNAME=true` turns the resolution off and announces the hostname as
+written. It exists for a deployment that needs the name to reach guests verbatim; the
+price is that no Firefox guest hears anything.
+
 ## When it doesn't work
 
 | Symptom | Cause | Fix |
@@ -188,7 +232,9 @@ docker compose stop && tar czf backup-$(date +%F).tar.gz data/ && docker compose
 | The studio cannot open the microphone; signing in does nothing | You are on plain HTTP | Use the proxy's HTTPS URL, not `http://<host>:3000` |
 | Container exits with `/data is not writable` | Read-only mount, or a uid that does not own the directory | Drop the `:ro`; set `PUID`/`PGID` to the owner, or `chown` it on the host if you set Docker's `user:` yourself |
 | A correct password is refused after a few tries | `TRUSTED_PROXY_IPS` unset behind a proxy | See the table above |
+| Nobody on Firefox hears anything; Chrome is fine | The hostname is going into the ICE candidates unresolved | Set `MEDIA_ANNOUNCE_HOSTNAME=false` (the default) — see [dynamic IP addresses](#dynamic-ip-addresses) |
 | Only listeners on your own LAN hear nothing | Your router does not do NAT hairpinning | Split-horizon DNS on the LAN — a router problem, not a LinguaCast one |
+| Container exits naming private or loopback addresses | The hostname is resolved by a LAN resolver, not the public one | Point `MEDIA_ANNOUNCED_IP` at the public address directly, or give the container a resolver that answers with it |
 | Audio breaks for some listeners, not others | Not a deployment fault | [`docs/solutions/operations/diagnosing-live-audio-from-a-user-report.md`](solutions/operations/diagnosing-live-audio-from-a-user-report.md) |
 
 ## What this deployment cannot serve
@@ -210,6 +256,7 @@ default, and the last four rows are ones you should not normally need to touch.
 |---|---|---|
 | `LINGUACAST_VERSION` | — | The image tag Compose runs. Edit it, pull, recreate: that is the upgrade. |
 | `MEDIA_ANNOUNCED_IP` | **required** | Your public hostname (`linguacast.example.com`) or public IP. It goes into the ICE candidates guests connect back on; wrong means every screen loads and no audio arrives. |
+| `MEDIA_ANNOUNCE_HOSTNAME` | `false` | Put the hostname itself into the ICE candidates instead of the address it resolves to. Firefox plays no audio at all when it is on. |
 | `TRUSTED_PROXY_IPS` | empty | Comma-separated addresses whose `X-Forwarded-For` is believed. Empty means none is, which behind a proxy shares one sign-in throttle bucket across every visitor. |
 | `MEDIA_MAX_WORKERS` | `4` | How many CPU cores LinguaCast may use, which is how many events can run at once. Capped by the host's core count; each core in use needs one RTC port. |
 | `MEDIA_RTC_PORT_BASE` | `44400` | The first RTC port; the rest count up from it, one per core in use, on UDP and TCP. Change it and change the publications and the router forwarding. |

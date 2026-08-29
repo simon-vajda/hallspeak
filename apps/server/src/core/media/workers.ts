@@ -21,6 +21,9 @@ export interface WorkerPoolOptions {
   now?: () => number;
 }
 
+/** Why the rooms on a worker index are gone: it died, or its address moved under it. */
+export type WorkerLossReason = 'worker_died' | 'address_changed';
+
 export interface RouterAllocation {
   router: types.Router;
   webRtcServer: types.WebRtcServer;
@@ -46,10 +49,11 @@ export class WorkerPool {
   private readonly slots = new Map<number, Slot>();
   private readonly deathsByIndex = new Map<number, number[]>();
   private readonly retries = new Map<number, NodeJS.Timeout>();
-  private readonly listeners = new Set<(index: number) => void>();
+  private addressChanges: Promise<void> = Promise.resolve();
+  private readonly listeners = new Set<(index: number, reason: WorkerLossReason) => void>();
   private closing = false;
 
-  private readonly net: MediaNetworkConfig;
+  private net: MediaNetworkConfig;
   private readonly turnConfigured: boolean;
   private readonly spawnWorker: WorkerFactory;
   private readonly hostCpuCount: number;
@@ -95,8 +99,35 @@ export class WorkerPool {
     ].join(' · ');
   }
 
-  /** The registry subscribes here to drop the rooms that lived on the dead index. */
-  onWorkerDied(listener: (index: number) => void): () => void {
+  /**
+   * A dynamic-IP deployment's address moved. The announced address is baked into each
+   * WebRtcServer's listen infos when it is created and cannot be changed afterwards, so
+   * every server is rebuilt on the new one and the rooms living on it are dropped — the
+   * same treatment a dead worker gets, and clients recover through the same reset. The
+   * sessions were dead regardless: when the public address changes, every NAT mapping
+   * behind it has already gone.
+   */
+  async setAnnouncedAddress(address: string): Promise<void> {
+    // Serialized: a second move arriving mid-pass would otherwise rewrite `this.net` under
+    // a rebuild loop still reading it, and leave half the pool on each address.
+    this.addressChanges = this.addressChanges
+      .catch(() => {})
+      .then(() => this.applyAnnouncedAddress(address));
+    return this.addressChanges;
+  }
+
+  private async applyAnnouncedAddress(address: string): Promise<void> {
+    if (this.closing || address === this.net.announcedIp) {
+      return;
+    }
+    this.net = { ...this.net, announcedIp: address };
+    for (const slot of [...this.slots.values()]) {
+      await this.rebuild(slot);
+    }
+  }
+
+  /** The registry subscribes here to drop the rooms that lived on a lost index. */
+  onWorkerLost(listener: (index: number, reason: WorkerLossReason) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
@@ -170,7 +201,7 @@ export class WorkerPool {
 
   private async handleDeath(slot: Slot): Promise<void> {
     // A death arriving after close(), or after this slot was already replaced, is stale.
-    if (this.closing || this.slots.get(slot.index) !== slot) {
+    if (!this.owns(slot)) {
       return;
     }
     this.slots.delete(slot.index);
@@ -183,7 +214,7 @@ export class WorkerPool {
 
     console.error(`mediasoup: worker ${slot.index} died; dropping its rooms`);
     for (const listener of this.listeners) {
-      listener(slot.index);
+      listener(slot.index, 'worker_died');
     }
 
     const recent = this.recordDeath(slot.index);
@@ -224,6 +255,67 @@ export class WorkerPool {
     }, REPLACEMENT_WINDOW_MS);
     timer.unref?.();
     this.retries.set(index, timer);
+  }
+
+  /**
+   * The old server has to be closed before the new one can bind: they want the same port.
+   * Rooms go first so nothing is handed a transport on a server about to disappear, and a
+   * port that does not come back leaves the slot unserviceable — so the worker is replaced
+   * wholesale rather than left holding a closed server nothing will ever rebuild.
+   */
+  /**
+   * Whether this slot is still the pool's. A death, a replacement or a close() landing
+   * across an await means whoever holds the index now owns its recovery, and acting again
+   * would delete a replacement or bind a port it is already holding.
+   */
+  private owns(slot: Slot): boolean {
+    return !this.closing && this.slots.get(slot.index) === slot;
+  }
+
+  private async rebuild(slot: Slot): Promise<void> {
+    if (!this.owns(slot)) {
+      return;
+    }
+    for (const listener of this.listeners) {
+      listener(slot.index, 'address_changed');
+    }
+    // A creation in flight holds this slot's server and would be handed one about to
+    // close, so it is failed here the way a death fails it.
+    const err = new Error(`mediasoup worker ${slot.index} is re-announcing`);
+    for (const reject of slot.pending) {
+      reject(err);
+    }
+    slot.pending.clear();
+    slot.webRtcServer.close();
+
+    let webRtcServer: types.WebRtcServer;
+    try {
+      webRtcServer = await slot.worker.createWebRtcServer({
+        listenInfos: listenInfosFor(this.net, slot.index),
+      });
+    } catch (cause) {
+      console.error(
+        `mediasoup: worker ${slot.index} could not rebind on ${this.net.announcedIp}`,
+        cause,
+      );
+      // A death or a close() during the await already owns this slot; recovering again
+      // would delete the replacement and bind a port it is holding.
+      if (!this.owns(slot)) {
+        slot.worker.close();
+        return;
+      }
+      this.slots.delete(slot.index);
+      slot.worker.close();
+      await this.replace(slot.index);
+      return;
+    }
+
+    if (!this.owns(slot)) {
+      webRtcServer.close();
+      return;
+    }
+    slot.webRtcServer = webRtcServer;
+    console.log(`mediasoup: worker ${slot.index} re-announced on ${this.net.announcedIp}`);
   }
 
   private async replace(index: number): Promise<void> {

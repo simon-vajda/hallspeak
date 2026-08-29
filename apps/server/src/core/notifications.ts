@@ -3,7 +3,11 @@
  * the domain entity. Two modules named around "events" with unrelated meanings is a trap.
  */
 
-export type EvictionReason = 'worker_died' | 'access_revoked' | 'claim_taken_over';
+export type EvictionReason =
+  | 'worker_died'
+  | 'address_changed'
+  | 'access_revoked'
+  | 'claim_taken_over';
 
 /**
  * Two eviction variants because they answer different questions. `peer-evicted` names a
