@@ -13,7 +13,7 @@ services:
     environment:
       # Declared again so an unfilled .env fails `docker compose up` by name, before a
       # container exists that could only ever load and stay silent.
-      MEDIA_ANNOUNCED_IP: ${MEDIA_ANNOUNCED_IP:?set this to your public hostname, e.g. linguacast.example.com}
+      PUBLIC_ADDRESS: ${PUBLIC_ADDRESS:?set this to your public hostname, e.g. linguacast.example.com}
 
     ports:
       # HTTP: the SPA, the API and the Socket.IO endpoint, in cleartext. Bound to

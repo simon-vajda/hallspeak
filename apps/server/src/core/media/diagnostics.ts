@@ -66,7 +66,7 @@ export function watchTransport(
     if (transport.iceState !== 'connected' && transport.iceState !== 'completed') {
       console.warn(
         `${tag} still ${transport.iceState}/${transport.dtlsState} after ${SILENCE_CHECK_MS}ms — ` +
-          'no ICE connectivity. Check MEDIA_ANNOUNCED_IP, that the RTC ports are published ' +
+          'no ICE connectivity. Check PUBLIC_ADDRESS, that the RTC ports are published ' +
           'one-to-one and open on UDP and TCP, and whether the client is suppressing candidates.',
       );
     }

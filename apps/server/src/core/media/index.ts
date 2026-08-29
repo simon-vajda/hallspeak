@@ -33,8 +33,6 @@ export interface StartMediaOptions {
   graceMs?: number;
   hostCpuCount?: number;
   createWorker?: WorkerFactory;
-  /** Announce `net.announcedIp` verbatim even when it is a hostname. */
-  announceHostname?: boolean;
   resolveAddress?: AddressResolver;
   addressPollMs?: number;
   /** Off by default so a test never sends a datagram; `index.ts` turns it on. */
@@ -67,7 +65,6 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
   // starts and carries no audio to half its guests.
   const announced = new AnnouncedAddress({
     configured: options.net.announcedIp,
-    announceHostname: options.announceHostname ?? false,
     resolve: options.resolveAddress,
     pollMs: options.addressPollMs,
   });
@@ -110,8 +107,8 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
 
   if (isUnroutableAnnouncedAddress(announcedIp)) {
     console.warn(
-      `mediasoup: announced address ${announcedIp} is private or loopback; ` +
-        'clients off this machine will produce candidates nobody can reach',
+      `mediasoup: guests are told to connect to ${announcedIp}, which is a private or ` +
+        'loopback address; nobody outside this machine can reach it. Set PUBLIC_ADDRESS.',
     );
     return;
   }

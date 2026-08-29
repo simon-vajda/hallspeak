@@ -12,7 +12,7 @@ symptoms:
   - "The server logs a transport still new/connecting after 5000ms for the Firefox session only"
   - "Every signalling call succeeds and no error appears on either side"
 applies_when:
-  - "MEDIA_ANNOUNCED_IP is a hostname rather than an IP address"
+  - "PUBLIC_ADDRESS is a hostname rather than an IP address"
   - "Deploying behind a dynamic-DNS name on a home connection"
 root_cause: browser_incompatibility
 resolution_type: code_fix
@@ -26,7 +26,7 @@ tags:
 
 ## Problem
 
-A deployment with `MEDIA_ANNOUNCED_IP` set to a DDNS hostname carried audio in Chrome on
+A deployment with `PUBLIC_ADDRESS` set to a DDNS hostname carried audio in Chrome on
 macOS and Android, including over mobile data, and carried none in Firefox. The only
 signal was the browser-side diagnostic: the receive transport had no nominated candidate
 pair after five seconds. Nothing threw, on either side.
@@ -50,7 +50,7 @@ and is indistinguishable from a blocked port or a privacy extension.
 ## Resolution
 
 The server resolves the name instead of the browser. `core/media/announced-address.ts`
-resolves `MEDIA_ANNOUNCED_IP` to an IPv4 address at startup, fatally if it cannot, and
+resolves `PUBLIC_ADDRESS` to an IPv4 address at startup, fatally if it cannot, and
 re-resolves it every minute. mediasoup only ever sees a literal address.
 
 A hostname stays the right thing to configure — that is what makes a changing public IP
@@ -62,7 +62,8 @@ rooms on that worker are dropped first and clients renegotiate through the exist
 `media:reset` path — the same recovery a dead worker gets. Those sessions were already
 dead: when a public address changes, every NAT mapping behind it has gone with it.
 
-`MEDIA_ANNOUNCE_HOSTNAME=true` declines the resolution and announces the name verbatim.
+There is no opt-out: announcing the name verbatim only helps when the client's resolver
+knows better than the server's, and it costs every Firefox guest their audio.
 
 ## Notes
 

@@ -42,7 +42,7 @@ if (env.TRUSTED_PROXY_IPS.length === 0) {
 await startMedia({
   net: {
     listenIp: env.MEDIA_LISTEN_IP,
-    announcedIp: env.MEDIA_ANNOUNCED_IP,
+    announcedIp: env.PUBLIC_ADDRESS,
     rtcPortBase: env.MEDIA_RTC_PORT_BASE,
     maxWorkers: env.MEDIA_MAX_WORKERS,
   },
@@ -52,7 +52,6 @@ await startMedia({
     turnSecret: env.MEDIA_TURN_SECRET,
   },
   graceMs: env.MEDIA_ROOM_IDLE_GRACE_MS,
-  announceHostname: env.MEDIA_ANNOUNCE_HOSTNAME,
   probeReflexiveAddress: true,
 });
 

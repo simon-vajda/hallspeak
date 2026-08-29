@@ -5,29 +5,20 @@ describe('EnvSchema media configuration', () => {
   it('requires an announced address in production', () => {
     const result = EnvSchema.safeParse({ NODE_ENV: 'production' });
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(['MEDIA_ANNOUNCED_IP']);
+    expect(result.error?.issues[0]?.path).toEqual(['PUBLIC_ADDRESS']);
   });
 
   it('accepts the same configuration in development, falling back to loopback', () => {
     const result = EnvSchema.parse({ NODE_ENV: 'development' });
-    expect(result.MEDIA_ANNOUNCED_IP).toBe('127.0.0.1');
+    expect(result.PUBLIC_ADDRESS).toBe('127.0.0.1');
   });
 
   it('keeps a configured announced address in production', () => {
     const result = EnvSchema.parse({
       NODE_ENV: 'production',
-      MEDIA_ANNOUNCED_IP: '203.0.113.10',
+      PUBLIC_ADDRESS: '203.0.113.10',
     });
-    expect(result.MEDIA_ANNOUNCED_IP).toBe('203.0.113.10');
-  });
-
-  it('resolves a configured hostname unless the operator declines it', () => {
-    expect(EnvSchema.parse({}).MEDIA_ANNOUNCE_HOSTNAME).toBe(false);
-    expect(EnvSchema.parse({ MEDIA_ANNOUNCE_HOSTNAME: 'true' }).MEDIA_ANNOUNCE_HOSTNAME).toBe(true);
-  });
-
-  it('reads the key written with no value as declining it, not as an error', () => {
-    expect(EnvSchema.parse({ MEDIA_ANNOUNCE_HOSTNAME: '' }).MEDIA_ANNOUNCE_HOSTNAME).toBe(false);
+    expect(result.PUBLIC_ADDRESS).toBe('203.0.113.10');
   });
 
   it('defaults the port base and worker maximum', () => {

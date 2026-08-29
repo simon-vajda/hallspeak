@@ -40,10 +40,8 @@ const resolveIpv4: AddressResolver = async (hostname) => {
 };
 
 export interface AnnouncedAddressOptions {
-  /** What the operator configured: an IP literal or a hostname. */
+  /** What the operator put in `PUBLIC_ADDRESS`: an IP literal or a hostname. */
   configured: string;
-  /** Announce a hostname verbatim and never resolve it. See `MEDIA_ANNOUNCE_HOSTNAME`. */
-  announceHostname: boolean;
   resolve?: AddressResolver;
   pollMs?: number;
 }
@@ -55,13 +53,11 @@ export class AnnouncedAddress {
   private readonly listeners = new Set<(address: string) => void>();
 
   private readonly configured: string;
-  private readonly announceHostname: boolean;
   private readonly resolve: AddressResolver;
   private readonly pollMs: number;
 
   constructor(options: AnnouncedAddressOptions) {
     this.configured = options.configured;
-    this.announceHostname = options.announceHostname;
     this.resolve = options.resolve ?? resolveIpv4;
     this.pollMs = options.pollMs ?? ANNOUNCED_ADDRESS_POLL_MS;
     this.value = options.configured;
@@ -80,7 +76,7 @@ export class AnnouncedAddress {
   /**
    * Fatal on failure, in the same class as a worker that cannot start: an unresolvable
    * hostname yields no address to announce at all, and every later symptom of that is
-   * silent. The operator can decline the resolution outright instead.
+   * silent.
    *
    * A name that answers only with private addresses is the same failure wearing a
    * different hat — split-horizon DNS inside a container resolves the public name to a LAN
@@ -88,7 +84,7 @@ export class AnnouncedAddress {
    * can reach. Refusing to boot is the only place that is visible.
    */
   async start(): Promise<string> {
-    if (this.announceHostname || isIP(this.configured) !== 0) {
+    if (isIP(this.configured) !== 0) {
       return this.value;
     }
 
@@ -104,10 +100,10 @@ export class AnnouncedAddress {
       throw new Error(
         answers.length === 0
           ? this.unresolvableMessage()
-          : `MEDIA_ANNOUNCED_IP is ${this.configured}, which resolves only to private or ` +
+          : `PUBLIC_ADDRESS is ${this.configured}, which resolves only to private or ` +
               `loopback addresses (${answers.join(', ')}). A guest off this machine cannot ` +
-              'reach any of them. Point the name at the public address, or set ' +
-              'MEDIA_ANNOUNCED_IP to that address directly.',
+              'reach any of them. Point the name at your public address, or set ' +
+              'PUBLIC_ADDRESS to that address directly.',
       );
     }
 
@@ -119,9 +115,8 @@ export class AnnouncedAddress {
 
   private unresolvableMessage(): string {
     return (
-      `MEDIA_ANNOUNCED_IP is ${this.configured}, which does not resolve to an IPv4 address. ` +
-      'Set it to an address, fix the DNS record, or set MEDIA_ANNOUNCE_HOSTNAME=true to ' +
-      'announce the hostname as-is (which Firefox cannot connect to).'
+      `PUBLIC_ADDRESS is ${this.configured}, which does not resolve to an IPv4 address. ` +
+      'Fix the DNS record, or set PUBLIC_ADDRESS to your public IP address instead.'
     );
   }
 
