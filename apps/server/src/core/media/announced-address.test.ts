@@ -6,23 +6,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function tracker(resolve: (hostname: string) => Promise<string[]>, announceHostname = false) {
-  return new AnnouncedAddress({
-    configured: 'home.example.org',
-    announceHostname,
-    resolve,
-    pollMs: 1000,
-  });
+function tracker(resolve: (hostname: string) => Promise<string[]>) {
+  return new AnnouncedAddress({ configured: 'home.example.org', resolve, pollMs: 1000 });
 }
 
 describe('AnnouncedAddress.start', () => {
   it('leaves a literal address alone and never polls for one', async () => {
     const resolve = vi.fn();
-    const announced = new AnnouncedAddress({
-      configured: '203.0.113.10',
-      announceHostname: false,
-      resolve,
-    });
+    const announced = new AnnouncedAddress({ configured: '203.0.113.10', resolve });
 
     expect(await announced.start()).toBe('203.0.113.10');
     expect(resolve).not.toHaveBeenCalled();
@@ -37,21 +28,12 @@ describe('AnnouncedAddress.start', () => {
     announced.close();
   });
 
-  it('announces the hostname untouched when the operator has opted out', async () => {
-    const resolve = vi.fn();
-    const announced = tracker(resolve, true);
-
-    expect(await announced.start()).toBe('home.example.org');
-    expect(resolve).not.toHaveBeenCalled();
-    expect(announced.isTracking).toBe(false);
-  });
-
   it('fails the boot rather than starting with nothing to announce', async () => {
     const announced = tracker(async () => {
       throw new Error('ENOTFOUND');
     });
 
-    await expect(announced.start()).rejects.toThrow(/MEDIA_ANNOUNCE_HOSTNAME/);
+    await expect(announced.start()).rejects.toThrow(/PUBLIC_ADDRESS/);
   });
 
   it('refuses to boot on a name that answers only with private addresses', async () => {

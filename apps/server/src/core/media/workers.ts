@@ -94,7 +94,7 @@ export class WorkerPool {
     return [
       `mediasoup: ${this.slots.size} worker(s) of ${this.hostCpuCount} detected core(s)`,
       `ports ${ports.join(', ')} (UDP and TCP)`,
-      `announced ${this.net.announcedIp}`,
+      `guests connect to ${this.net.announcedIp}`,
       `TURN ${this.turnConfigured ? 'configured' : 'not configured'}`,
     ].join(' · ');
   }

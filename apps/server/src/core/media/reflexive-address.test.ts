@@ -188,16 +188,11 @@ describe('reflexiveMismatch', () => {
     expect(reflexiveMismatch('203.0.113.10', null)).toBeNull();
   });
 
-  /** Only reached with MEDIA_ANNOUNCE_HOSTNAME on; comparing a name to an address is noise. */
-  it('says nothing about an announced hostname', () => {
-    expect(reflexiveMismatch('home.example.org', '203.0.113.10')).toBeNull();
-  });
-
   it('names both addresses and stays a warning, since the two may differ legitimately', () => {
     const message = reflexiveMismatch('203.0.113.10', '198.51.100.7');
 
     expect(message).toContain('203.0.113.10');
     expect(message).toContain('198.51.100.7');
-    expect(message).toContain('MEDIA_ANNOUNCED_IP');
+    expect(message).toContain('PUBLIC_ADDRESS');
   });
 });

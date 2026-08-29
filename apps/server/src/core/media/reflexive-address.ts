@@ -1,5 +1,4 @@
 import { createSocket } from 'node:dgram';
-import { isIP } from 'node:net';
 
 /**
  * What the internet sees this server as, asked of a STUN server at boot.
@@ -172,13 +171,13 @@ export function discoverReflexiveAddress(
  * nothing worth saying — the two agree, or the answer never came.
  */
 export function reflexiveMismatch(announced: string, reflexive: string | null): string | null {
-  if (reflexive === null || reflexive === announced || isIP(announced) === 0) {
+  if (reflexive === null || reflexive === announced) {
     return null;
   }
   return (
-    `mediasoup: announcing ${announced}, but a STUN server sees this host as ${reflexive}. ` +
-    'If guests cannot hear anything, MEDIA_ANNOUNCED_IP is the first thing to check — ' +
-    'though the two differ legitimately on a multi-WAN router, behind CGNAT, or when the ' +
-    'forwarded address is not the one this server dials out through.'
+    `mediasoup: guests are told to connect to ${announced}, but a STUN server sees this ` +
+    `host as ${reflexive}. If nobody can hear anything, PUBLIC_ADDRESS is the first thing ` +
+    'to check — though the two differ legitimately on a multi-WAN router, behind CGNAT, or ' +
+    'when the forwarded address is not the one this server dials out through.'
   );
 }

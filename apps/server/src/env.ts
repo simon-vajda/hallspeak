@@ -32,22 +32,12 @@ const BaseEnvSchema = z.object({
 
   // What the workers bind. 0.0.0.0 is right behind a router doing the forwarding.
   MEDIA_LISTEN_IP: z.string().min(1).default('0.0.0.0'),
-  // What goes into ICE candidates, so it must be an address a client can actually reach —
-  // a public hostname or a public IP. There is no safe default: a wrong value produces
-  // well-formed candidates nobody can connect to, with no error anywhere, so production
-  // refuses to boot without it.
-  MEDIA_ANNOUNCED_IP: z.string().min(1).optional(),
-  // A hostname in MEDIA_ANNOUNCED_IP is resolved to an IPv4 address here and re-resolved
-  // while the server runs, because an ICE candidate must carry a literal address: Firefox
-  // discards a candidate naming a hostname and then has nothing to connect to, while
-  // Chrome resolves it and works — one browser silently without audio. Set this to true to
-  // announce the hostname verbatim instead, which costs every Firefox guest their audio.
-  // Empty is the default rather than an error: an operator writing the key with no value
-  // is declining it, and failing the boot over that would be a hostile reading.
-  MEDIA_ANNOUNCE_HOSTNAME: z.preprocess(
-    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
-    z.stringbool().default(false),
-  ),
+  // Where guests reach this server for audio, which bypasses the reverse proxy entirely:
+  // a public hostname or a public IP. There is no safe default — a wrong value produces
+  // well-formed ICE candidates nobody can connect to, with no error anywhere, so
+  // production refuses to boot without it. A hostname is resolved by
+  // `core/media/announced-address.ts`; only a literal address is ever announced.
+  PUBLIC_ADDRESS: z.string().min(1).optional(),
   // Worker i binds base + i, on UDP and TCP. The operator forwards this many ports.
   MEDIA_RTC_PORT_BASE: z.coerce.number().int().min(1024).max(65_000).default(44400),
   MEDIA_MAX_WORKERS: z.coerce.number().int().positive().max(64).default(4),
@@ -68,14 +58,14 @@ const BaseEnvSchema = z.object({
 });
 
 export const EnvSchema = BaseEnvSchema.refine(
-  (env) => env.NODE_ENV !== 'production' || env.MEDIA_ANNOUNCED_IP !== undefined,
+  (env) => env.NODE_ENV !== 'production' || env.PUBLIC_ADDRESS !== undefined,
   {
-    path: ['MEDIA_ANNOUNCED_IP'],
-    message: 'Required in production: ICE candidates need an address a client can reach.',
+    path: ['PUBLIC_ADDRESS'],
+    message: 'Required in production: guests connect to this address directly for audio.',
   },
-  // Loopback is the only announced address that is honest when nothing was configured:
-  // it works for a browser on this machine and fails visibly anywhere else.
-).transform((env) => ({ ...env, MEDIA_ANNOUNCED_IP: env.MEDIA_ANNOUNCED_IP ?? '127.0.0.1' }));
+  // Loopback is the only address that is honest when nothing was configured: it works for
+  // a browser on this machine and fails visibly anywhere else.
+).transform((env) => ({ ...env, PUBLIC_ADDRESS: env.PUBLIC_ADDRESS ?? '127.0.0.1' }));
 
 const parsed = EnvSchema.safeParse(process.env);
 
