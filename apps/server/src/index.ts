@@ -52,6 +52,8 @@ await startMedia({
     turnSecret: env.MEDIA_TURN_SECRET,
   },
   graceMs: env.MEDIA_ROOM_IDLE_GRACE_MS,
+  announceHostname: env.MEDIA_ANNOUNCE_HOSTNAME,
+  probeReflexiveAddress: true,
 });
 
 const server = serve({ fetch: app.fetch, hostname: env.HOST, port: env.PORT }, (info) => {

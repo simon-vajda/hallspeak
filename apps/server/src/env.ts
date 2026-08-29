@@ -37,6 +37,17 @@ const BaseEnvSchema = z.object({
   // well-formed candidates nobody can connect to, with no error anywhere, so production
   // refuses to boot without it.
   MEDIA_ANNOUNCED_IP: z.string().min(1).optional(),
+  // A hostname in MEDIA_ANNOUNCED_IP is resolved to an IPv4 address here and re-resolved
+  // while the server runs, because an ICE candidate must carry a literal address: Firefox
+  // discards a candidate naming a hostname and then has nothing to connect to, while
+  // Chrome resolves it and works — one browser silently without audio. Set this to true to
+  // announce the hostname verbatim instead, which costs every Firefox guest their audio.
+  // Empty is the default rather than an error: an operator writing the key with no value
+  // is declining it, and failing the boot over that would be a hostile reading.
+  MEDIA_ANNOUNCE_HOSTNAME: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.stringbool().default(false),
+  ),
   // Worker i binds base + i, on UDP and TCP. The operator forwards this many ports.
   MEDIA_RTC_PORT_BASE: z.coerce.number().int().min(1024).max(65_000).default(44400),
   MEDIA_MAX_WORKERS: z.coerce.number().int().positive().max(64).default(4),

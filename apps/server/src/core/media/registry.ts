@@ -1,8 +1,8 @@
 import { ROOM_IDLE_GRACE_MS } from './config';
 import { Room } from './room';
-import type { WorkerPool } from './workers';
+import type { WorkerLossReason, WorkerPool } from './workers';
 
-export type RoomClosedReason = 'idle' | 'worker_died' | 'shutdown' | 'revoked';
+export type RoomClosedReason = WorkerLossReason | 'idle' | 'shutdown' | 'revoked';
 
 export interface RoomRegistryOptions {
   graceMs?: number;
@@ -31,7 +31,7 @@ export class RoomRegistry {
   ) {
     this.graceMs = options.graceMs ?? ROOM_IDLE_GRACE_MS;
     this.onRoomClosed = options.onRoomClosed;
-    this.pool.onWorkerDied((index) => this.evictWorker(index));
+    this.pool.onWorkerLost((index, reason) => this.evictWorker(index, reason));
   }
 
   get(eventId: number): Room | undefined {
@@ -96,11 +96,11 @@ export class RoomRegistry {
     this.teardowns.set(eventId, timer);
   }
 
-  /** A dead worker takes its rooms with it; rooms on other workers are untouched. */
-  evictWorker(index: number): void {
+  /** A lost worker takes its rooms with it; rooms on other workers are untouched. */
+  evictWorker(index: number, reason: WorkerLossReason = 'worker_died'): void {
     for (const [eventId, room] of this.rooms) {
       if (room.workerIndex === index) {
-        this.closeRoom(eventId, 'worker_died');
+        this.closeRoom(eventId, reason);
       }
     }
   }

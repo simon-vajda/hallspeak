@@ -13,7 +13,7 @@ export interface LifecycleServer {
       event: 'channel:status',
       payload: { slug: string; online: boolean; muted: boolean },
     ): unknown;
-    emit(event: 'media:reset', payload: { reason: 'worker_died' }): unknown;
+    emit(event: 'media:reset', payload: { reason: 'worker_died' | 'address_changed' }): unknown;
     emit(event: 'channel:listeners', payload: { slug: string; count: number }): unknown;
   };
   in(room: string): { disconnectSockets(close: boolean): unknown };
@@ -90,8 +90,11 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
 
     case 'room-evicted': {
       const room = eventRoom(notification.eventId);
-      if (notification.reason === 'worker_died') {
-        io.to(room).emit('media:reset', { reason: 'worker_died' });
+      const reason = notification.reason;
+      // The media under the socket went away but the caller's access did not: renegotiate
+      // rather than disconnect.
+      if (reason === 'worker_died' || reason === 'address_changed') {
+        io.to(room).emit('media:reset', { reason });
         return;
       }
       // Resolved against Socket.IO's own room membership, which is the only way to reach

@@ -144,6 +144,31 @@ export function SpeakerStudio({
     };
   }, [socket]);
 
+  const goLivePressedRef = useRef(goLivePressed);
+  goLivePressedRef.current = goLivePressed;
+
+  /**
+   * A reset takes the producer without taking the socket, so the drop below never sees a
+   * `lost` status and the broadcast would sit silent until somebody pressed Go live again.
+   * Recording it here is what makes `media:reset` recoverable rather than terminal — which
+   * is the whole reason the server prefers it to a disconnect.
+   */
+  useEffect(() => {
+    if (!socket) {
+      return;
+    }
+    const onReset = () => {
+      if (!goLivePressedRef.current) {
+        return;
+      }
+      setLastEnd((previous) => previous ?? { reason: 'dropped', muted: effectiveMutedRef.current });
+    };
+    socket.on('media:reset', onReset);
+    return () => {
+      socket.off('media:reset', onReset);
+    };
+  }, [socket]);
+
   // Records the effective mute state before reset, so reconnect restores the same state.
   const wasConnected = useRef(false);
   useEffect(() => {
