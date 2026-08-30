@@ -43,17 +43,21 @@ Actually receiving a Channel's audio: holding an open Consumer on its Producer t
 own side has not paused. This is what the listener counts on the Speaker studio and the admin
 Event detail report.
 
-Listening is narrower than Armed, which is the request, and narrower than having the page open,
-which allocates nothing at all. It is also downstream of Live: no Producer means no Consumers,
-so a Channel that is not Live has nobody Listening, and the count is structurally zero before an
-interpreter goes live rather than merely unknown. Muting does not change it — the Speaker's
-Producer pauses while every Consumer stays open, so a muted interpreter still has an audience.
+Listening is narrower than a playback hold, which preserves a prior request without receiving
+audio, and narrower than having the page open, which allocates nothing at all. It is also
+downstream of Live: no Producer means no Consumers, so a Channel that is not Live has nobody
+Listening, and the count is structurally zero before an interpreter goes live rather than merely
+unknown. Muting does not change it — the Speaker's Producer pauses while every Consumer stays
+open, so a muted interpreter still has an audience.
 
 Nothing here learns who is Listening. The count is a number, and Listener identity is outside
 this product.
 
-### Armed
-A Listener who has asked to hear a Channel and is waiting on audio rather than receiving it. Arming is the guest's one deliberate gesture; everything after it is automatic. An Armed Listener whose Speaker disappears stays Armed and resumes on their own when the Speaker returns, so a dropped connection mid-event never asks the guest to do anything.
+### Playback hold
+A bounded recovery state entered only when an unexpected Producer close interrupts a Listener
+who was receiving audio. The Listener keeps the request for 30 seconds, resumes automatically if
+the Producer returns before the stored deadline, and otherwise returns to idle. A deliberate end,
+an expired deadline, or a lost link clears the hold immediately.
 
 ### PIN
 The short numeric code that grants listening on one Event. A guest types it or receives it inside a Listener link. It is regenerable, which revokes every link and printed code carrying the old value.

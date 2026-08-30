@@ -71,6 +71,7 @@ export function ListenerChannel({ view }: { view: PublicChannelView }) {
       }))}
       live={currentStatus.online}
       muted={currentStatus.muted}
+      closeReason={currentStatus.reason}
       socket={socket}
       status={status}
       hasConnected={hasConnected}

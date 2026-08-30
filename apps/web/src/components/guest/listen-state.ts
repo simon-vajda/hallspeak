@@ -66,21 +66,75 @@ export function listenState(input: ListenInput): ListenState {
   return input.isPlaying ? 'playing' : 'waiting';
 }
 
-export type ListenActionState = 'idle' | 'waiting' | 'playing' | 'ended';
+export const HOLD_MS = 30_000;
 
-/** Broadcast status never changes the guest's armed gesture or their consumer ownership. */
-export function listenActionState(input: {
-  armed: boolean;
-  isPlaying: boolean;
-  terminal: boolean;
-}): ListenActionState {
-  if (input.terminal) {
-    return 'ended';
+export type ListenIntent = 'idle' | 'playing' | 'holding';
+
+export interface ListenIntentState {
+  intent: ListenIntent;
+  holdDeadline: number | null;
+}
+
+export interface ListenConditions {
+  live: boolean;
+  closeReason?: 'ended' | 'dropped';
+  linkConnected: boolean;
+  /** Consumer was open before this producer-close snapshot arrived. */
+  wasPlaying: boolean;
+  now: number;
+}
+
+const IDLE_INTENT: ListenIntentState = { intent: 'idle', holdDeadline: null };
+const PLAYING_INTENT: ListenIntentState = { intent: 'playing', holdDeadline: null };
+
+/**
+ * Reconciles external facts into playback intent. Hold time is an absolute deadline so a
+ * backgrounded phone cannot pause it by throttling timers.
+ */
+export function reconcileListenIntent(
+  state: ListenIntentState,
+  conditions: ListenConditions,
+): ListenIntentState {
+  if (!conditions.linkConnected || conditions.closeReason === 'ended') {
+    return IDLE_INTENT;
   }
-  if (!input.armed) {
-    return 'idle';
+  if (conditions.live) {
+    return state.intent === 'holding' ? PLAYING_INTENT : state;
   }
-  return input.isPlaying ? 'playing' : 'waiting';
+  if (state.intent === 'playing' && conditions.wasPlaying && conditions.closeReason === 'dropped') {
+    return { intent: 'holding', holdDeadline: conditions.now + HOLD_MS };
+  }
+  if (
+    state.intent === 'holding' &&
+    state.holdDeadline !== null &&
+    conditions.now < state.holdDeadline
+  ) {
+    return state;
+  }
+  return IDLE_INTENT;
+}
+
+export type ListenActionState = 'unavailable' | 'ready' | 'playing' | 'holding';
+
+/** Target answers only whether this guest can hear or is hearing this channel. */
+export function listenActionState(
+  input: ListenIntentState & {
+    live: boolean;
+    isPlaying: boolean;
+    linkConnected: boolean;
+    now: number;
+  },
+): ListenActionState {
+  if (!input.linkConnected) {
+    return 'unavailable';
+  }
+  if (input.live) {
+    return input.intent !== 'idle' && input.isPlaying ? 'playing' : 'ready';
+  }
+  if (input.intent === 'holding' && input.holdDeadline !== null && input.now < input.holdDeadline) {
+    return 'holding';
+  }
+  return 'unavailable';
 }
 
 /**
@@ -90,14 +144,13 @@ export function listenActionState(input: {
  */
 export function playTargetLabel(state: ListenActionState): string {
   switch (state) {
-    case 'idle':
-      return 'Tap to listen';
+    case 'unavailable':
+    case 'ready':
+      return 'Listen';
     case 'playing':
       return 'Pause';
-    case 'ended':
-      return 'Ended';
-    default:
-      return 'Waiting…';
+    case 'holding':
+      return 'Holding';
   }
 }
 
