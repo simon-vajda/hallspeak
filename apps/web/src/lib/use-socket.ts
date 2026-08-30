@@ -86,9 +86,13 @@ export function useSocket(auth: SocketAuth | null) {
     });
     const onReconnectAttempt = () => dispatchConnection({ type: 'reconnect-attempt' });
     s.io.on('reconnect_attempt', onReconnectAttempt);
-    s.on('channel:status', ({ slug, online: isOnline, muted }) => {
+    s.on('channel:status', ({ slug, online: isOnline, muted, reason }) => {
       updateChannelStatuses((current) =>
-        applyRealtimeStatus(current, slug, { online: isOnline, muted }),
+        applyRealtimeStatus(current, slug, {
+          online: isOnline,
+          muted,
+          ...(reason === undefined ? {} : { reason }),
+        }),
       );
     });
     // Addressed to the speaker's socket alone, and sent once on connect, so a studio never

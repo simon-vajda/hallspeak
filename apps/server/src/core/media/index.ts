@@ -296,14 +296,15 @@ export async function produce(
 
   room.setProducer(input.channelId, producer);
   watchProducer(producer, ctx.eventId, input.slug);
-  const closed = {
-    type: 'producer-closed',
-    eventId: ctx.eventId,
-    channelId: input.channelId,
-    slug: input.slug,
-  } as const;
   producer.observer.once('close', () => {
-    notifications.publish(closed);
+    const appData = producer.appData as { closeReason?: unknown };
+    notifications.publish({
+      type: 'producer-closed',
+      eventId: ctx.eventId,
+      channelId: input.channelId,
+      slug: input.slug,
+      reason: appData.closeReason === 'ended' ? 'ended' : 'dropped',
+    });
     // The room may now be idle; the grace timer decides whether the router survives.
     state?.registry.releaseIfIdle(ctx.eventId);
   });
@@ -358,6 +359,7 @@ export async function closeProducer(
   if (!producer || producer.id !== producerId) {
     return;
   }
+  (producer.appData as { closeReason?: 'ended' }).closeReason = 'ended';
   producer.close();
 }
 

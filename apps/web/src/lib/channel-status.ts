@@ -2,6 +2,7 @@
 export interface ChannelStatus {
   online: boolean;
   muted: boolean | null;
+  reason?: 'ended' | 'dropped';
 }
 
 export interface ChannelStatusEntry extends ChannelStatus {
@@ -40,8 +41,16 @@ export function channelStatusFromHttp(online: boolean): ChannelStatus {
   return { online, muted: online ? null : false };
 }
 
-function normalizeStatus(status: { online: boolean; muted: boolean }): ChannelStatus {
-  return { online: status.online, muted: status.online ? status.muted : false };
+function normalizeStatus(status: {
+  online: boolean;
+  muted: boolean;
+  reason?: 'ended' | 'dropped';
+}): ChannelStatus {
+  return {
+    online: status.online,
+    muted: status.online ? status.muted : false,
+    ...(status.reason === undefined ? {} : { reason: status.reason }),
+  };
 }
 
 /** Clears values as well as ordering when the PIN or speaker authority changes. */
@@ -58,10 +67,10 @@ export function resetStatusOrdering(state: ChannelStatusState): ChannelStatusSta
   return {
     connectionRevision: state.connectionRevision + 1,
     channels: Object.fromEntries(
-      Object.entries(state.channels).map(([slug, status]) => [
-        slug,
-        { ...status, ...channelStatusFromHttp(status.online), revision: 0 },
-      ]),
+      Object.entries(state.channels).map(([slug, status]) => {
+        const { reason: _, ...current } = status;
+        return [slug, { ...current, ...channelStatusFromHttp(status.online), revision: 0 }];
+      }),
     ),
   };
 }
@@ -91,7 +100,7 @@ export function beginChannelJoin(
 export function applyRealtimeStatus(
   state: ChannelStatusState,
   slug: string,
-  status: { online: boolean; muted: boolean },
+  status: { online: boolean; muted: boolean; reason?: 'ended' | 'dropped' },
 ): ChannelStatusState {
   const current = state.channels[slug];
   return {

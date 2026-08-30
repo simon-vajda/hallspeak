@@ -18,7 +18,13 @@ export type EvictionReason =
  */
 export type Notification =
   | { type: 'producer-opened'; eventId: number; channelId: number; slug: string }
-  | { type: 'producer-closed'; eventId: number; channelId: number; slug: string }
+  | {
+      type: 'producer-closed';
+      eventId: number;
+      channelId: number;
+      slug: string;
+      reason: 'ended' | 'dropped';
+    }
   | { type: 'producer-paused'; eventId: number; channelId: number; slug: string }
   | { type: 'producer-resumed'; eventId: number; channelId: number; slug: string }
   | {
