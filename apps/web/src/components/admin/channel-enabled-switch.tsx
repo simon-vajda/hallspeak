@@ -73,7 +73,7 @@ export function ChannelEnabledSwitch({
           disable();
         }}
       >
-        <LiveWarning>{warning}</LiveWarning>
+        {warning && <LiveWarning>{warning}</LiveWarning>}
         <p>Everyone listening is disconnected and no one can rejoin until it is enabled again.</p>
       </ConfirmDialog>
     </>

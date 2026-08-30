@@ -72,7 +72,7 @@ export function EventEnabledSwitch({
           mutate({ params: { path: { id: event.id } }, body: { enabled: false } });
         }}
       >
-        <LiveWarning>{warning}</LiveWarning>
+        {warning && <LiveWarning>{warning}</LiveWarning>}
         <p>Everyone listening is disconnected and no one can rejoin until it is enabled again.</p>
       </ConfirmDialog>
     </>
