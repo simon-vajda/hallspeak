@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { channelLiveLabel, eventStatusLabel, formatElapsed, formatPin, plural } from './format';
+import { channelBroadcast, eventStatusLabel, formatElapsed, formatPin, plural } from './format';
 
 describe('formatPin', () => {
   it('groups the six digits 3+3', () => {
@@ -52,49 +52,91 @@ describe('formatElapsed', () => {
 
 describe('eventStatusLabel', () => {
   it('reports enablement for a disabled event, whatever is on air', () => {
-    expect(eventStatusLabel({ enabled: false, channels: 3, onAir: 2 })).toBe('Disabled');
+    expect(eventStatusLabel({ enabled: false, channels: 3, onAir: 2, liveKnown: true }).label).toBe(
+      'Disabled',
+    );
+  });
+
+  it('still reports enablement for a disabled event while the poll is failing', () => {
+    const status = eventStatusLabel({ enabled: false, channels: 3, onAir: 0, liveKnown: false });
+    expect(status).toEqual({ label: 'Disabled', withheld: false });
   });
 
   it('reports the empty event rather than nobody being on air', () => {
-    expect(eventStatusLabel({ enabled: true, channels: 0, onAir: 0 })).toBe('No channels yet');
+    expect(eventStatusLabel({ enabled: true, channels: 0, onAir: 0, liveKnown: true }).label).toBe(
+      'No channels yet',
+    );
+  });
+
+  it('reports the empty event ahead of any live reading, poll or no poll', () => {
+    expect(eventStatusLabel({ enabled: true, channels: 0, onAir: 0, liveKnown: false })).toEqual({
+      label: 'No channels yet',
+      withheld: false,
+    });
   });
 
   it('says nobody is on air when every channel is idle', () => {
-    expect(eventStatusLabel({ enabled: true, channels: 3, onAir: 0 })).toBe('Nobody on air');
+    expect(eventStatusLabel({ enabled: true, channels: 3, onAir: 0, liveKnown: true }).label).toBe(
+      'Nobody on air',
+    );
   });
 
   it('counts the channels that are on air', () => {
-    expect(eventStatusLabel({ enabled: true, channels: 3, onAir: 1 })).toBe('1 on air');
-    expect(eventStatusLabel({ enabled: true, channels: 3, onAir: 2 })).toBe('2 on air');
+    expect(eventStatusLabel({ enabled: true, channels: 3, onAir: 1, liveKnown: true }).label).toBe(
+      '1 on air',
+    );
+    expect(eventStatusLabel({ enabled: true, channels: 3, onAir: 2, liveKnown: true }).label).toBe(
+      '2 on air',
+    );
+  });
+
+  it('withholds instead of printing nobody on air when the poll cannot answer', () => {
+    // An empty index and a quiet room look identical, so the dash is the whole message.
+    expect(eventStatusLabel({ enabled: true, channels: 3, onAir: 0, liveKnown: false })).toEqual({
+      label: '\u2014',
+      withheld: true,
+    });
   });
 
   it('treats an event absent from the live payload as none on air', () => {
     // Absence is zero, not an error: a caller indexes the payload and finds nothing.
     const live = new Map<number, number>();
-    expect(eventStatusLabel({ enabled: true, channels: 2, onAir: live.get(7) ?? 0 })).toBe(
-      'Nobody on air',
-    );
+    expect(
+      eventStatusLabel({ enabled: true, channels: 2, onAir: live.get(7) ?? 0, liveKnown: true })
+        .label,
+    ).toBe('Nobody on air');
   });
 });
 
-describe('channelLiveLabel', () => {
-  it('counts the listeners of a channel that is on air', () => {
-    expect(channelLiveLabel({ online: true, listeners: 37 })).toBe('On air · 37 listening');
+describe('channelBroadcast', () => {
+  it('separates the on-air state from its listener count', () => {
+    expect(channelBroadcast({ online: true, listeners: 37 }, true)).toEqual({
+      state: 'on-air',
+      listeners: 37,
+    });
   });
 
-  it('reads the same at one, because the participle does not agree', () => {
-    expect(channelLiveLabel({ online: true, listeners: 1 })).toBe('On air · 1 listening');
+  it('is still on air with nobody listening yet', () => {
+    expect(channelBroadcast({ online: true, listeners: 0 }, true)).toEqual({
+      state: 'on-air',
+      listeners: 0,
+    });
   });
 
-  it('still says on air with nobody listening yet', () => {
-    expect(channelLiveLabel({ online: true, listeners: 0 })).toBe('On air · 0 listening');
+  it('reports an idle channel as offline, with no count', () => {
+    expect(channelBroadcast({ online: false, listeners: 0 }, true)).toEqual({ state: 'offline' });
   });
 
-  it('says nobody is on air for an idle channel', () => {
-    expect(channelLiveLabel({ online: false, listeners: 0 })).toBe('Nobody on air');
+  it('reports a channel absent from a healthy payload as offline', () => {
+    expect(channelBroadcast(undefined, true)).toEqual({ state: 'offline' });
   });
 
-  it('says nobody is on air for a channel absent from the payload', () => {
-    expect(channelLiveLabel(undefined)).toBe('Nobody on air');
+  it('withholds rather than claiming offline while the poll cannot answer', () => {
+    expect(channelBroadcast(undefined, false)).toEqual({ state: 'withheld' });
+  });
+
+  it('withholds even where the last payload said the channel was on air', () => {
+    // A stale value is indistinguishable from a fresh one, so it is not offered as either.
+    expect(channelBroadcast({ online: true, listeners: 37 }, false)).toEqual({ state: 'withheld' });
   });
 });

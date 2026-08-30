@@ -5,8 +5,13 @@ type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
 export const ADMIN_EVENT_TABLE_COLUMNS = 'grid-cols-[1.8fr_0.85fr_1.9fr_0.95fr_110px]';
 
-export function adminEventStatusLabel(event: AdminEventDetail, onAir: number): string {
-  return eventStatusLabel({ enabled: event.enabled, channels: event.channels.length, onAir });
+export function adminEventStatusLabel(event: AdminEventDetail, onAir: number, liveKnown: boolean) {
+  return eventStatusLabel({
+    enabled: event.enabled,
+    channels: event.channels.length,
+    onAir,
+    liveKnown,
+  });
 }
 
 export function summariseAdminEvents(events: AdminEventDetail[]): string {
