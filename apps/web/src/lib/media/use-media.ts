@@ -133,6 +133,13 @@ export function useMedia(socket: SocketClient | null) {
       if (!transport || transport.closed) {
         return;
       }
+      // A paused producer sends nothing, so the remote report's loss fraction describes the
+      // mute rather than the line — and that report is used directly, not differenced, so
+      // clearing the sample history cannot undo it. Hold the last grade instead of grading
+      // the interpreter's own silence as a degraded connection.
+      if (active?.producer?.paused) {
+        return;
+      }
 
       const report = await transport.getStats().catch(() => null);
       if (!report) {
@@ -330,10 +337,10 @@ export function useMedia(socket: SocketClient | null) {
       if (!producer || !socket) {
         return;
       }
-      // Both directions discard the sample history. The readings either side of a mute
-      // describe different situations, and differencing across the gap would charge the
-      // silence to the line the moment audio came back.
-      setStats(null);
+      // Both directions discard the sample history, because differencing across the gap
+      // would charge the silence to the line the moment audio came back. The rendered grade
+      // is deliberately kept: muting is not a link event, so the last reading is still true
+      // until the next poll replaces it, and dropping it flashes the line out of its bars.
       previousSample.current = null;
 
       const api = signalling(socket);
@@ -357,7 +364,7 @@ export function useMedia(socket: SocketClient | null) {
       if (!producer || producer.id !== request.producerId) {
         return false;
       }
-      setStats(null);
+      // History only, for the reason given in `setProducerPaused`.
       previousSample.current = null;
       if (paused && !producer.paused) {
         producer.pause();
