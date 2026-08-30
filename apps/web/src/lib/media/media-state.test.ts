@@ -6,9 +6,11 @@ import {
   consumerOpened,
   consumerPlan,
   ICE_RECOVERY_DELAY_MS,
+  ICE_RECOVERY_MAX_DELAY_MS,
   iceRecoveryDelay,
   initialMediaState,
   isCurrent,
+  MAX_ICE_RESTARTS,
   type MediaState,
   mayAttachConsumerTrack,
   producerOpened,
@@ -59,14 +61,26 @@ describe('ICE recovery', () => {
     expect(iceRecoveryDelay('connecting')).toBe(ICE_RECOVERY_DELAY_MS);
     expect(iceRecoveryDelay('disconnected')).toBe(ICE_RECOVERY_DELAY_MS);
     expect(iceRecoveryDelay('failed')).toBe(0);
-    expect(iceRecoveryDelay('failed', true)).toBe(ICE_RECOVERY_DELAY_MS);
+    expect(iceRecoveryDelay('failed', 1)).toBe(ICE_RECOVERY_DELAY_MS * 2);
   });
 
   it('does not arm recovery for a connected or closed transport', () => {
     expect(iceRecoveryDelay('connected')).toBeNull();
-    expect(iceRecoveryDelay('connected', true)).toBeNull();
+    expect(iceRecoveryDelay('connected', 1)).toBeNull();
     expect(iceRecoveryDelay('closed')).toBeNull();
-    expect(iceRecoveryDelay('closed', true)).toBeNull();
+    expect(iceRecoveryDelay('closed', 1)).toBeNull();
+  });
+
+  it('backs off between attempts and caps the wait', () => {
+    expect(iceRecoveryDelay('new', 1)).toBe(ICE_RECOVERY_DELAY_MS * 2);
+    expect(iceRecoveryDelay('new', 2)).toBe(ICE_RECOVERY_DELAY_MS * 4);
+    expect(iceRecoveryDelay('new', 3)).toBe(ICE_RECOVERY_MAX_DELAY_MS);
+  });
+
+  it('gives up once the attempts are spent, whatever the state', () => {
+    expect(iceRecoveryDelay('new', MAX_ICE_RESTARTS)).toBeNull();
+    expect(iceRecoveryDelay('failed', MAX_ICE_RESTARTS)).toBeNull();
+    expect(iceRecoveryDelay('disconnected', MAX_ICE_RESTARTS + 1)).toBeNull();
   });
 });
 
