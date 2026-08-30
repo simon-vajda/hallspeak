@@ -6,13 +6,14 @@ import { logIceRecovery, reportTransportPath, watchConsumerTrack } from './diagn
 import type { MediaHealth } from './link-state';
 import {
   afterConnect,
+  beginRebuild,
   canRollbackProducerControl,
   consumerClosed,
   consumerOpened,
   iceRecoveryDelay,
+  iceRecoveryStep,
   initialMediaState,
   isCurrent,
-  MAX_ICE_RESTARTS,
   type MediaState,
   type ProducerControlIdentity,
   producerClosed,
@@ -49,6 +50,12 @@ interface Session {
    */
   pendingTransports: Partial<Record<TransportDirection, Promise<types.Transport>>>;
   pendingIceRestarts: Partial<Record<TransportDirection, Promise<void>>>;
+  /**
+   * Per direction rather than per transport, and cleared only by a transport reaching
+   * connected: a rebuild hands the direction a brand new transport, so a per-transport
+   * count would restart the ladder every time and rebuild forever.
+   */
+  iceRecoveryAttempts: Partial<Record<TransportDirection, number>>;
   iceRecoveryTimers: Partial<Record<TransportDirection, ReturnType<typeof setTimeout>>>;
   pendingConsumers: Map<string, Promise<MediaStreamTrack>>;
   pendingProducer?: Promise<types.Producer>;
@@ -191,6 +198,7 @@ export function useMedia(socket: SocketClient | null) {
           consumers: new Map(),
           pendingTransports: {},
           pendingIceRestarts: {},
+          iceRecoveryAttempts: {},
           iceRecoveryTimers: {},
           pendingConsumers: new Map(),
         };
@@ -242,9 +250,29 @@ export function useMedia(socket: SocketClient | null) {
         throw new Error(SUPERSEDED);
       }
 
-      // Per transport, so the console says which attempt a line belongs to.
-      let restarts = 0;
       let gaveUp = false;
+
+      /**
+       * A restart re-gathers on the peer connection this transport already owns. When that
+       * connection is the problem, only replacing it helps — so the transport is dropped
+       * on both sides and the effects that wanted media open a fresh one.
+       */
+      const rebuild = async (): Promise<void> => {
+        logIceRecovery(direction, `still ${transport.connectionState} — rebuilding the transport`);
+        transport.close();
+        if (active.transports[direction] === transport) {
+          delete active.transports[direction];
+        }
+        if (direction === 'send') {
+          active.producer = undefined;
+        } else {
+          active.consumers.clear();
+        }
+        setState((prev) => beginRebuild(prev, direction));
+        // Last, and unawaited by the caller's guards: the server has to release the
+        // direction before a fresh transport can be created on this socket.
+        await signalling(socket).closeTransport(transport.id);
+      };
 
       const armIceRecovery = (next: TransportConnectionState): void => {
         const armed = active.iceRecoveryTimers[direction];
@@ -255,20 +283,23 @@ export function useMedia(socket: SocketClient | null) {
         if (session.current !== active || transport.closed) {
           return;
         }
-        const delay = iceRecoveryDelay(next, restarts);
+        const attempts = active.iceRecoveryAttempts[direction] ?? 0;
+        const delay = iceRecoveryDelay(next, attempts);
         if (delay === null) {
           if (next === 'connected') {
+            // The path this direction was fighting for is up; a later handoff starts over.
+            active.iceRecoveryAttempts[direction] = 0;
             setHealth('connected');
             return;
           }
           setHealth('trouble');
-          if (restarts >= MAX_ICE_RESTARTS && !gaveUp) {
+          if (iceRecoveryStep(attempts) === 'give-up' && !gaveUp) {
             gaveUp = true;
             logIceRecovery(
               direction,
-              `gave up after ${restarts} ICE restarts, still ${next}. ` +
-                'Restarting again cannot help: the browser and the server have no candidate ' +
-                'they can pair — an address family or a port neither side shares.',
+              `gave up after ${attempts} recovery attempts, still ${next}. ` +
+                'Neither a restart nor a rebuild found a candidate the browser and the ' +
+                'server can pair — an address family or a port neither side shares.',
             );
           }
           return;
@@ -278,7 +309,7 @@ export function useMedia(socket: SocketClient | null) {
           setHealth('trouble');
           return;
         }
-        setHealth(next === 'failed' || restarts > 0 ? 'trouble' : 'connecting');
+        setHealth(next === 'failed' || attempts > 0 ? 'trouble' : 'connecting');
 
         active.iceRecoveryTimers[direction] = setTimeout(() => {
           delete active.iceRecoveryTimers[direction];
@@ -287,16 +318,23 @@ export function useMedia(socket: SocketClient | null) {
           }
 
           setHealth('trouble');
-          restarts += 1;
-          const attempt = restarts;
-          logIceRecovery(
-            direction,
-            `stuck in ${transport.connectionState} — restarting ICE (attempt ${attempt})`,
-          );
+          const taken = active.iceRecoveryAttempts[direction] ?? 0;
+          const step = iceRecoveryStep(taken);
+          const attempt = taken + 1;
+          active.iceRecoveryAttempts[direction] = attempt;
+
           const restart = (async () => {
-            // Snapshot before the restart, not after: what ICE was working with is the
-            // question, and a fresh restart has not had time to nominate anything.
+            // Snapshot before either recovery, not after: what ICE was working with is the
+            // question, and a fresh attempt has not had time to nominate anything.
             await reportTransportPath(transport, direction);
+            if (step === 'rebuild') {
+              await rebuild();
+              return;
+            }
+            logIceRecovery(
+              direction,
+              `stuck in ${transport.connectionState} — restarting ICE (attempt ${attempt})`,
+            );
             const { iceParameters } = await signalling(socket).restartIce(transport.id);
             const connectionState = transport.connectionState as TransportConnectionState;
             if (
@@ -317,7 +355,7 @@ export function useMedia(socket: SocketClient | null) {
           void restart
             .catch((cause) => {
               if (session.current === active && !transport.closed && !isSuperseded(cause)) {
-                console.error(`media: could not restart ICE (attempt ${attempt})`, cause);
+                console.error(`media: could not recover the transport (attempt ${attempt})`, cause);
               }
             })
             .finally(() => {

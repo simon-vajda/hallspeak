@@ -83,6 +83,10 @@ export const MediaConnectTransportResponse = z.object({});
 
 export const MediaRestartIcePayload = z.object({ transportId: MediaId });
 
+export const MediaCloseTransportPayload = z.object({ transportId: MediaId });
+
+export const MediaCloseTransportResponse = z.object({});
+
 export const MediaRestartIceResponse = z.object({ iceParameters: MediaParams });
 
 // Audio-only, as the product has always been; the literal is what rejects a video track.

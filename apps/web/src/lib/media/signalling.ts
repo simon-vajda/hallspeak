@@ -23,6 +23,7 @@ export interface Signalling {
   }>;
   connectTransport(transportId: string, dtlsParameters: Wire): Promise<void>;
   restartIce(transportId: string): Promise<{ iceParameters: Wire }>;
+  closeTransport(transportId: string): Promise<void>;
   produce(slug: string, rtpParameters: Wire, paused: boolean): Promise<{ producerId: string }>;
   pauseProducer(producerId: string): Promise<void>;
   resumeProducer(producerId: string): Promise<void>;
@@ -48,6 +49,10 @@ export function signalling(socket: SocketClient): Signalling {
 
     restartIce: async (transportId) =>
       unwrap(await socket.emitWithAck('media:restart-ice', { transportId })),
+
+    closeTransport: async (transportId) => {
+      unwrap(await socket.emitWithAck('media:close-transport', { transportId }));
+    },
 
     produce: async (slug, rtpParameters, paused) =>
       unwrap(

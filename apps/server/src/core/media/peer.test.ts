@@ -62,6 +62,30 @@ describe('Peer transports', () => {
     expect(peer.transportById('nope')).toBeUndefined();
   });
 
+  it('releases a direction so the same socket can rebuild it', () => {
+    const peer = new Peer('socket-1');
+    const first = fakeTransport('recv-1');
+    peer.addTransport('recv', asTransport(first));
+
+    peer.closeTransport('recv-1');
+
+    expect(first.close).toHaveBeenCalled();
+    expect(peer.transport('recv')).toBeUndefined();
+    expect(peer.transportById('recv-1')).toBeUndefined();
+    expect(() => peer.addTransport('recv', asTransport(fakeTransport('recv-2')))).not.toThrow();
+    expect(peer.transport('recv')?.id).toBe('recv-2');
+  });
+
+  it('ignores a close for a transport it does not hold', () => {
+    const peer = new Peer('socket-1');
+    const send = fakeTransport('send-1');
+    peer.addTransport('send', asTransport(send));
+
+    expect(() => peer.closeTransport('nope')).not.toThrow();
+    expect(send.close).not.toHaveBeenCalled();
+    expect(peer.transport('send')?.id).toBe('send-1');
+  });
+
   it('reports whether it holds any media at all', () => {
     const peer = new Peer('socket-1');
     expect(peer.isEmpty).toBe(true);

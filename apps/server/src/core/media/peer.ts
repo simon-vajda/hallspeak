@@ -53,6 +53,21 @@ export class Peer {
     this.transports.set(direction, transport);
   }
 
+  /**
+   * Releases one direction so the same socket may open it again. Unknown is a no-op: a
+   * client racing its own rebuild must not get an error for it. Closing the transport
+   * closes the consumers and producer riding on it, and their own close hooks forget them.
+   */
+  closeTransport(id: string): void {
+    for (const [direction, transport] of this.transports) {
+      if (transport.id === id) {
+        this.transports.delete(direction);
+        transport.close();
+        return;
+      }
+    }
+  }
+
   consumerForProducer(producerId: string): types.Consumer | undefined {
     const id = this.consumerByProducer.get(producerId);
     return id === undefined ? undefined : this.consumers.get(id);
