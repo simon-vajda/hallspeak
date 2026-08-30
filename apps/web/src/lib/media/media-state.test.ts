@@ -214,7 +214,7 @@ describe('mayAttachConsumerTrack', () => {
     ).toBe(true);
   });
 
-  it('rejects a late track after un-arming, switching, going offline, or ending', () => {
+  it('rejects a late track after stopping, switching, going offline, or ending', () => {
     const current = { requestedSlug: 'english', online: true, trackEnded: false };
 
     expect(mayAttachConsumerTrack({ ...current, activeSlug: null })).toBe(false);

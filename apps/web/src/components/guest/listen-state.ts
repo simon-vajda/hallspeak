@@ -1,71 +1,3 @@
-/**
- * What the listener screen is doing, kept out of the component so it can be tested without
- * a browser.
- *
- * Armed is the guest's one deliberate gesture and survives everything after it — the
- * interpreter dropping, a channel switch, a server restart. Playing does not.
- */
-export type ListenState =
-  | 'idle'
-  | 'waiting'
-  | 'playing'
-  | 'syncing'
-  | 'muted'
-  | 'interpreter-away'
-  | 'reconnecting'
-  | 'media-trouble'
-  | 'ended';
-
-export interface ListenInput {
-  /** The server ended this session; Socket.IO will not retry it. */
-  terminal?: boolean;
-  armed: boolean;
-  /** A resumed consumer exists, not that the button was tapped. */
-  isPlaying: boolean;
-  /** A producer exists on this channel. */
-  live: boolean;
-  /** Socket-authoritative producer pause; null while an online HTTP seed is reconciled. */
-  muted: boolean | null;
-  socketConnected: boolean;
-  mediaTrouble: boolean;
-}
-
-/**
- * Losing the socket, the media path failing under a healthy socket, and nobody being live
- * are different situations and read differently: only one is about a person, and none
- * asks the guest to do anything.
- */
-export function listenState(input: ListenInput): ListenState {
-  // Failures outrank broadcast status, including a stale mute held through reconnect.
-  if (input.terminal) {
-    return 'ended';
-  }
-  // Before the guest arms, only a connected producer's known or pending mute is useful.
-  // Initial connection and media plumbing stay behind the ordinary tap-to-listen state.
-  if (!input.armed && (!input.socketConnected || input.mediaTrouble || !input.live)) {
-    return 'idle';
-  }
-  if (!input.socketConnected) {
-    return 'reconnecting';
-  }
-  if (input.mediaTrouble) {
-    return 'media-trouble';
-  }
-  if (!input.live) {
-    return input.armed ? 'interpreter-away' : 'idle';
-  }
-  if (input.muted === null) {
-    return 'syncing';
-  }
-  if (input.muted) {
-    return 'muted';
-  }
-  if (!input.armed) {
-    return 'idle';
-  }
-  return input.isPlaying ? 'playing' : 'waiting';
-}
-
 export const HOLD_MS = 30_000;
 
 export type ListenIntent = 'idle' | 'playing' | 'holding';
@@ -137,11 +69,6 @@ export function listenActionState(
   return 'unavailable';
 }
 
-/**
- * Not-yet-armed, armed-and-waiting and playing are three rendered states, not two. Without
- * the middle one the control looks identical before and after the tap, which invites a
- * second press that does nothing.
- */
 export function playTargetLabel(state: ListenActionState): string {
   switch (state) {
     case 'unavailable':
@@ -154,62 +81,71 @@ export function playTargetLabel(state: ListenActionState): string {
   }
 }
 
-/**
- * The badge above the channel name. Takes the socket status as well, because a handshake
- * rejection is terminal — socket.io does not retry it — and that is the one distinction
- * `listenState` folds away, having no consequence for what the media layer should do.
- */
-export function badgeLabel(state: ListenState): string {
-  switch (state) {
-    case 'ended':
-      return 'Disconnected';
-    case 'reconnecting':
-      return 'Reconnecting…';
-    case 'idle':
-    case 'interpreter-away':
-      return 'Waiting for the interpreter';
-    case 'media-trouble':
-      return 'Reconnecting the audio';
-    case 'syncing':
-      return 'Checking interpreter status…';
+export interface ListenBadgeInput {
+  /** A Producer exists on this channel. */
+  live: boolean;
+  /** Socket-authoritative Producer pause; null while an HTTP seed is reconciled. */
+  muted: boolean | null;
+  /** Unexpected Producer close is inside its bounded recovery window. */
+  holding: boolean;
+  linkConnected: boolean;
+}
+
+type ListenBadgeState = 'offline' | 'on-air' | 'muted' | 'speaker-dropped-off';
+
+/** Broadcast state only. Link is a truth gate: stale broadcast facts never outlive it. */
+function listenBadgeState(input: ListenBadgeInput): ListenBadgeState {
+  if (!input.linkConnected) {
+    return 'offline';
+  }
+  if (input.live) {
+    return input.muted === true ? 'muted' : 'on-air';
+  }
+  return input.holding ? 'speaker-dropped-off' : 'offline';
+}
+
+export function badgeLabel(input: ListenBadgeInput): string {
+  switch (listenBadgeState(input)) {
+    case 'offline':
+      return 'Offline';
+    case 'on-air':
+      return 'On air';
     case 'muted':
-      return 'Interpreter muted';
-    case 'waiting':
-      return 'Interpreter on air';
-    case 'playing':
-      return 'Listening';
+      return 'Muted';
+    case 'speaker-dropped-off':
+      return 'Speaker dropped off';
   }
 }
 
-/** Rings mean samples are moving, so only one state earns them. */
-export function showsRings(state: ListenState): boolean {
-  return state === 'playing';
+/** Dot follows Producer ownership, including a paused Producer. */
+export function badgeHasLiveDot(input: ListenBadgeInput): boolean {
+  const state = listenBadgeState(input);
+  return state === 'on-air' || state === 'muted';
 }
 
-/**
- * Says what is happening and who is fixing it. The guest can do nothing about any of
- * these, so alarm is the one register the copy has to avoid — and media trouble reads as
- * the audio reconnecting while the interpreter is still there, not as their absence.
- */
-export function statusNote(state: ListenState): string | null {
-  switch (state) {
-    case 'idle':
-      return 'This channel starts on its own as soon as its interpreter connects.';
-    case 'waiting':
-      return 'Waiting for the interpreter. Audio starts by itself — you can put your phone away.';
-    case 'interpreter-away':
-      return 'The interpreter has dropped off. Audio resumes by itself when they are back.';
-    case 'media-trouble':
-      return 'The audio connection is re-establishing. The interpreter is still on air.';
-    case 'syncing':
-      return 'Checking whether the interpreter is sending audio.';
-    case 'muted':
-      return 'The interpreter is muted. Audio resumes automatically when they unmute.';
-    case 'reconnecting':
-      return 'Reconnecting. Nothing to do — this picks itself back up.';
-    case 'playing':
-      return 'Headphones recommended, so the room stays quiet for everyone else.';
-    case 'ended':
-      return 'This session has ended. The event may be over, or its PIN may have changed — ask the organiser for the current link.';
+export interface ListenNoteInput extends ListenBadgeInput {
+  /** A resumed Consumer exists, not that the button was tapped. */
+  isPlaying: boolean;
+  closeReason?: 'ended' | 'dropped';
+}
+
+/** Supporting copy without adding a fifth badge state or claiming playback without a Producer. */
+export function statusNote(input: ListenNoteInput): string | null {
+  if (!input.linkConnected) {
+    return 'Nothing to do — this picks itself back up.';
   }
+  if (input.holding) {
+    return 'Audio resumes by itself if they are straight back.';
+  }
+  if (!input.live) {
+    return input.closeReason === 'dropped'
+      ? 'This channel starts on its own as soon as its interpreter is back.'
+      : 'This channel starts on its own as soon as its interpreter connects.';
+  }
+  if (input.muted === true) {
+    return 'The interpreter is muted. Audio resumes automatically when they unmute.';
+  }
+  return input.isPlaying
+    ? 'Headphones recommended, so the room stays quiet for everyone else.'
+    : null;
 }

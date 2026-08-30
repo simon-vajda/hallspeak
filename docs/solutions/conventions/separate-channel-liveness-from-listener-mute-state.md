@@ -46,11 +46,11 @@ collapsed into one status:
 - **Muted** means that the existing Producer is paused. Pausing stops its audio without
   closing it, so the Channel remains Live (`CONCEPTS.md:91-94`,
   `apps/server/src/core/media/index.ts:272-299`).
-- **Armed** means a Listener has made the one deliberate request to hear a Channel and is
-  waiting for audio. **Listening** is narrower: the guest currently holds an open, locally
-  unpaused Consumer on the Channel's Producer (`CONCEPTS.md:36-51`,
-  `apps/server/src/core/media/peer.ts:59-67`). Producer pause is deliberately ignored by
-  listener counting, so a muted interpreter can still have Listeners.
+- A **playback hold** is a bounded recovery request entered only when an unexpected Producer
+  close interrupts active playback. **Listening** instead means that the guest currently
+  holds an open, locally unpaused Consumer on the Channel's Producer (`CONCEPTS.md`,
+  `apps/server/src/core/media/peer.ts`). Producer pause is deliberately ignored by listener
+  counting, so a muted interpreter can still have Listeners.
 
 Earlier design work correctly separated claim ownership, Producer existence, and Producer
 pause, but a later public-experience plan initially proposed carrying `muted` through the
@@ -127,17 +127,17 @@ the Producer and its Consumers through a mute (`apps/server/src/core/media/room.
 control action and preserves listener counts.
 
 Conversely, omitting mute from the actual Listener experience makes real silence ambiguous.
-A Listener cannot distinguish an intentional pause from a broken device or media path. The
-listener state machine keeps `muted`, `interpreter-away`, `reconnecting`, and `media-trouble`
-distinct and gives each different copy (`apps/web/src/components/guest/listen-state.ts:8-50`,
-`apps/web/src/components/guest/listen-state.ts:121-140`). Socket.IO is the appropriate
-boundary because this status changes during an active session and must arrive immediately;
-REST lists need only the stable operational question “does a Producer exist?”
+A joined Listener receives intentional Producer pause through Socket.IO, so the broadcast
+badge can explain silence as `Muted`. Link failures resolve separately through `LinkState`,
+and an unexpected Producer close enters the bounded playback hold
+(`apps/web/src/components/guest/listen-state.ts`). Socket.IO is the appropriate boundary
+because this status changes during an active session and must arrive immediately; REST lists
+need only the stable operational question “does a Producer exist?”
 
 The distinction also keeps authorization and runtime state honest. Enabled controls
 reachability, the claim controls who may produce, Producer existence controls Live/online,
-Producer pause controls Muted, arming records Listener intent, and an open locally unpaused
-Consumer controls Listening. Each state has one owner and one meaning.
+Producer pause controls Muted, the bounded hold records recovery intent, and an open locally
+unpaused Consumer controls Listening. Each state has one owner and one meaning.
 
 ## When to Apply
 
@@ -169,11 +169,11 @@ has not pressed Go live. The claim exists while no Producer exists, so `online` 
 join-handler test guards this distinction
 (`apps/server/src/socket/handlers/channels.handlers.test.ts:47-60`).
 
-**Armed before Live.** A guest taps to listen while `online` is false. Arming is retained, but
-no Consumer is opened until a Producer appears; the Listener computes its consumer plan from
-the armed Channel and `live && connected`
-(`apps/web/src/components/guest/listener-room.tsx:82-121`). When a Producer opens, Socket.IO
-changes the status to online and consumption starts automatically.
+**Producer before Listen.** The guest's target is disabled while `online` is false. A Producer
+appears independently of the guest's gesture, so gating the target on it cannot deadlock media
+setup. If an unexpected Producer close interrupts active playback, the Listener retains only a
+bounded 30-second playback intent and consumes a returning Producer automatically
+(`apps/web/src/components/guest/listener-room.tsx`).
 
 **Listener count during mute.** A guest has resumed their Consumer and is Listening. The
 Speaker pauses the Producer. The Consumer remains open and locally unpaused, so the count

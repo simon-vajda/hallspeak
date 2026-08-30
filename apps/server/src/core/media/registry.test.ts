@@ -207,7 +207,7 @@ describe('RoomRegistry.getOrCreate failure', () => {
 });
 
 describe('RoomRegistry idle teardown', () => {
-  it('arms teardown when the last producer closes, and closes the room after the grace period', async () => {
+  it('schedules teardown when the last producer closes, and closes the room after the grace period', async () => {
     vi.useFakeTimers();
     const { registry, closed } = harness();
     const room = await registry.getOrCreate(1);
@@ -255,7 +255,7 @@ describe('RoomRegistry idle teardown', () => {
     await registry.closeAll();
   });
 
-  it('does not arm teardown while a transport is still attached', async () => {
+  it('does not schedule teardown while a transport is still attached', async () => {
     vi.useFakeTimers();
     const { registry } = harness();
     const room = await registry.getOrCreate(1);
@@ -325,7 +325,7 @@ describe('RoomRegistry lifetime', () => {
     expect(first.router.closed).toBe(true);
     expect(second.router.closed).toBe(true);
     expect(registry.get(1)).toBeUndefined();
-    // The armed timer must not fire against rooms that are already gone.
+    // The scheduled timer must not fire against rooms that are already gone.
     await vi.advanceTimersByTimeAsync(GRACE_MS + 1);
     expect(registry.all()).toEqual([]);
     expect(first.router.close).toHaveBeenCalledTimes(1);

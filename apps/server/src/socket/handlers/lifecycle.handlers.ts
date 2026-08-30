@@ -110,7 +110,7 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
         return;
       }
       // Resolved against Socket.IO's own room membership, which is the only way to reach
-      // a listener who armed nothing and is therefore invisible to core/.
+      // a listener who owns no media and is therefore invisible to core/.
       io.in(room).disconnectSockets(true);
       return;
     }

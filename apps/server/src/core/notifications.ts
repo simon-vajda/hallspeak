@@ -13,7 +13,7 @@ export type EvictionReason =
  * Two eviction variants because they answer different questions. `peer-evicted` names a
  * socket `core/` already registered as a peer. `room-evicted` names an event and leaves
  * the subscriber to resolve it against Socket.IO's own room membership — the only way to
- * reach a listener who armed nothing and is therefore invisible here, which is precisely
+ * reach a listener who owns no media and is therefore invisible here, which is precisely
  * who a regenerated PIN must remove.
  */
 export type Notification =
