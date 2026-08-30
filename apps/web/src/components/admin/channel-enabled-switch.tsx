@@ -5,7 +5,7 @@ import { $api } from '@/api/client';
 import { EnabledSwitch } from '@/components/admin/enabled-switch';
 import { LiveWarning } from '@/components/admin/live-warning';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { channelLiveWarning } from '@/lib/admin-live-warning';
+import { channelLiveWarning, disableConfirmation } from '@/lib/admin-live-warning';
 import { eventScope, useOptimisticEventUpdate } from '@/lib/admin-queries';
 import type { ChannelBroadcast } from '@/lib/format';
 
@@ -22,6 +22,7 @@ export function ChannelEnabledSwitch({
   const [failed, setFailed] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const warning = channelLiveWarning({ enabled: channel.enabled, broadcast });
+  const notice = disableConfirmation({ warning, liveKnown: broadcast.state !== 'withheld' });
   const { mutate } = $api.useMutation('patch', '/admin/channels/{id}', {
     scope: { id: eventScope(channel.eventId) },
     onMutate: ({ body }) => {
@@ -51,9 +52,9 @@ export function ChannelEnabledSwitch({
         failed={failed}
         label={`Enable ${channel.name}`}
         onCheckedChange={(enabled) => {
-          // Only switching a live channel off asks: enabling never takes anything down, and an
-          // idle channel stays one press.
-          if (!enabled && warning) {
+          // Only switching off asks, and only when the channel may be live: enabling never
+          // takes anything down, and an idle channel under a healthy poll stays one press.
+          if (!enabled && notice) {
             setConfirming(true);
             return;
           }
@@ -73,7 +74,7 @@ export function ChannelEnabledSwitch({
           disable();
         }}
       >
-        {warning && <LiveWarning>{warning}</LiveWarning>}
+        {notice && <LiveWarning tone={notice.tone}>{notice.message}</LiveWarning>}
         <p>Everyone listening is disconnected and no one can rejoin until it is enabled again.</p>
       </ConfirmDialog>
     </>

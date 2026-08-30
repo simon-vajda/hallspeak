@@ -7,7 +7,7 @@ import { levelStatus, meterLevel, rms } from '@/lib/audio/level';
 import { useAudioPreferences } from '@/lib/audio/use-audio-preferences';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { type ChannelStatusEntry, rollbackMutedAfterFailure } from '@/lib/channel-status';
-import { resolveLinkState } from '@/lib/media/link-state';
+import { isLinkUp, resolveLinkState } from '@/lib/media/link-state';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import type { SocketClient } from '@/socket/client';
@@ -75,8 +75,14 @@ export function SpeakerStudio({
   channelStatusRef.current = channelStatus;
 
   const hasProducer = media.state.producerId !== null;
+  // The server snapshot wins only while the link is up. A snapshot that arrived before the
+  // socket dropped describes a channel nobody is updating any more, and preferring it would
+  // hide the interpreter's own mute back behind a stale `On air` — the one thing they pressed
+  // the target to stop.
   const isMuted =
-    channelStatus?.online && channelStatus.muted !== null ? channelStatus.muted : localMuted;
+    isLinkUp(link) && channelStatus?.online && channelStatus.muted !== null
+      ? channelStatus.muted
+      : localMuted;
   const state = broadcastState({
     goLivePressed,
     hasProducer,
@@ -283,9 +289,12 @@ export function SpeakerStudio({
             producerId: media.state.producerId,
           };
           setEffectiveMuted(next);
+          // `lastEnd` recorded the mute state at drop time, before this press existed. The
+          // reconnect re-produces from it, so a mute pressed during the outage has to land
+          // here too or coming back would put the interpreter on air against their last word.
+          setLastEnd((previous) => (previous ? { ...previous, muted: next } : previous));
           void media.setProducerPaused(next).catch((cause) => {
             const rollbackMuted = rollbackMutedAfterFailure({
-              requestedMuted: next,
               requestRevision,
               current: channelStatusRef.current,
             });
@@ -293,6 +302,7 @@ export function SpeakerStudio({
               return;
             }
             setEffectiveMuted(rollbackMuted);
+            setLastEnd((previous) => (previous ? { ...previous, muted: rollbackMuted } : previous));
             console.error('media: could not change mute', cause);
           });
         }}
