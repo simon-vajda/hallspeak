@@ -70,6 +70,14 @@ export async function connectTransport(
   return {};
 }
 
+export function restartTransport(
+  socket: MediaSocket,
+  auth: SocketAuth,
+  payload: { transportId: string },
+) {
+  return media.restartIce(ctx(socket, auth), payload.transportId);
+}
+
 export async function startProducing(
   db: Db,
   socket: MediaSocket,

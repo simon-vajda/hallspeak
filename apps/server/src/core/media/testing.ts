@@ -12,7 +12,7 @@ import type { WorkerFactory } from './workers';
  * Imports the facade, never the singleton's startup path in `index.ts` at the app root.
  */
 
-const seq = { producer: 0, consumer: 0, transport: 0 };
+const seq = { producer: 0, consumer: 0, transport: 0, iceRestart: 0 };
 
 /** Failure controls make post-success notification ordering observable in facade tests. */
 export const fakeMediaControls = { refuseConsume: false, failPause: false, failResume: false };
@@ -110,6 +110,8 @@ class FakeTransport extends EventEmitter {
   }
 
   connect = async () => {};
+
+  restartIce = async () => ({ usernameFragment: `restart-${++seq.iceRestart}` });
 
   close = () => {
     this.closed = true;
@@ -219,6 +221,7 @@ export async function startFakeMedia(options: FakeMediaOptions = {}): Promise<()
   seq.producer = 0;
   seq.consumer = 0;
   seq.transport = 0;
+  seq.iceRestart = 0;
   fakeMediaControls.refuseConsume = false;
   fakeMediaControls.failPause = false;
   fakeMediaControls.failResume = false;

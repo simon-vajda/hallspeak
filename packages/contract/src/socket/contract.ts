@@ -19,6 +19,8 @@ import {
   MediaProducerPayload,
   MediaProducerResponse,
   MediaReset,
+  MediaRestartIcePayload,
+  MediaRestartIceResponse,
   PingPayload,
   PingResponse,
 } from '../schemas/socket';
@@ -54,6 +56,10 @@ export const clientToServer = {
   'media:connect-transport': event({
     payload: MediaConnectTransportPayload,
     response: MediaConnectTransportResponse,
+  }),
+  'media:restart-ice': event({
+    payload: MediaRestartIcePayload,
+    response: MediaRestartIceResponse,
   }),
 
   'media:produce': event({ payload: MediaProducePayload, response: MediaProduceResponse }),

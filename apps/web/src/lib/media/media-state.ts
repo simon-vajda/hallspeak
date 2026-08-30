@@ -8,7 +8,7 @@ export type TransportDirection = 'send' | 'recv';
 
 /** What the client holds for one event. Every id in it is void after a reset. */
 export interface MediaState {
-  /** Bumped on every socket connect and on every rebuild, so a late reply can be dated. */
+  /** Bumped on every socket connect, so a late reply from the previous peer can be dated. */
   generation: number;
   deviceLoaded: boolean;
   sendTransportId: string | null;
@@ -16,7 +16,6 @@ export interface MediaState {
   producerId: string | null;
   /** Consumer id by channel slug; a guest holds at most one at a time. */
   consumers: Record<string, string>;
-  rebuilding: TransportDirection | null;
 }
 
 export const initialMediaState: MediaState = {
@@ -26,7 +25,6 @@ export const initialMediaState: MediaState = {
   recvTransportId: null,
   producerId: null,
   consumers: {},
-  rebuilding: null,
 };
 
 /**
@@ -47,28 +45,26 @@ export type TransportConnectionState =
   | 'closed';
 
 /**
- * Only `failed` is terminal. `disconnected` is ICE's ordinary blip and recovers on its
- * own; rebuilding on it would tear down a connection that was about to come back.
+ * Chrome can stay in `new`, `connecting` or `disconnected` forever after a network
+ * handoff. A deadline turns every non-terminal wait into an ICE restart; `failed` needs
+ * no grace because the browser has already declared that path dead.
  */
-export function needsRebuild(connectionState: TransportConnectionState): boolean {
-  return connectionState === 'failed';
-}
+export const ICE_RECOVERY_DELAY_MS = 5_000;
 
-export function beginRebuild(state: MediaState, direction: TransportDirection): MediaState {
-  return {
-    ...state,
-    generation: state.generation + 1,
-    rebuilding: direction,
-    ...(direction === 'send'
-      ? { sendTransportId: null, producerId: null }
-      : { recvTransportId: null, consumers: {} }),
-  };
+export function iceRecoveryDelay(
+  connectionState: TransportConnectionState,
+  retry = false,
+): number | null {
+  if (connectionState === 'connected' || connectionState === 'closed') {
+    return null;
+  }
+  return connectionState === 'failed' && !retry ? 0 : ICE_RECOVERY_DELAY_MS;
 }
 
 /**
  * A reply is adopted only if the state has not moved on since it was asked for. Transport
- * failure and socket loss are correlated on bad Wi-Fi rather than independent, so a
- * connect arriving mid-rebuild must win and the rebuild's late answer must be dropped.
+ * trouble and socket loss are correlated on bad Wi-Fi rather than independent, so a
+ * socket connect arriving during an ICE restart must win and its late answer must be dropped.
  */
 export function isCurrent(state: MediaState, generation: number): boolean {
   return state.generation === generation;
@@ -98,13 +94,8 @@ export function transportOpened(
 ): MediaState {
   return {
     ...state,
-    rebuilding: state.rebuilding === direction ? null : state.rebuilding,
     ...(direction === 'send' ? { sendTransportId: id } : { recvTransportId: id }),
   };
-}
-
-export function transportId(state: MediaState, direction: TransportDirection): string | null {
-  return direction === 'send' ? state.sendTransportId : state.recvTransportId;
 }
 
 export function producerOpened(state: MediaState, producerId: string): MediaState {

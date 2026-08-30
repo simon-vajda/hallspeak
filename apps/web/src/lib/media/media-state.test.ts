@@ -1,19 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   afterConnect,
-  beginRebuild,
   canRollbackProducerControl,
   consumerClosed,
   consumerOpened,
   consumerPlan,
+  ICE_RECOVERY_DELAY_MS,
+  iceRecoveryDelay,
   initialMediaState,
   isCurrent,
   type MediaState,
   mayAttachConsumerTrack,
-  needsRebuild,
   producerOpened,
-  transportId,
-  transportOpened,
 } from './media-state';
 
 const live: MediaState = {
@@ -23,7 +21,6 @@ const live: MediaState = {
   recvTransportId: 'recv-1',
   producerId: 'p1',
   consumers: { english: 'c1' },
-  rebuilding: null,
 };
 
 describe('afterConnect', () => {
@@ -56,62 +53,20 @@ describe('producer control rollback', () => {
   });
 });
 
-describe('needsRebuild', () => {
-  it('rebuilds on failed', () => {
-    expect(needsRebuild('failed')).toBe(true);
+describe('ICE recovery', () => {
+  it('restarts ICE when setup or a handoff stays unhealthy past the grace period', () => {
+    expect(iceRecoveryDelay('new')).toBe(ICE_RECOVERY_DELAY_MS);
+    expect(iceRecoveryDelay('connecting')).toBe(ICE_RECOVERY_DELAY_MS);
+    expect(iceRecoveryDelay('disconnected')).toBe(ICE_RECOVERY_DELAY_MS);
+    expect(iceRecoveryDelay('failed')).toBe(0);
+    expect(iceRecoveryDelay('failed', true)).toBe(ICE_RECOVERY_DELAY_MS);
   });
 
-  it('does not rebuild on a disconnected blip that recovers on its own', () => {
-    expect(needsRebuild('disconnected')).toBe(false);
-    expect(needsRebuild('connected')).toBe(false);
-    expect(needsRebuild('connecting')).toBe(false);
-    expect(needsRebuild('new')).toBe(false);
-    expect(needsRebuild('closed')).toBe(false);
-  });
-});
-
-describe('beginRebuild', () => {
-  it('drops the send transport and its producer, leaving the receive side alone', () => {
-    const rebuilding = beginRebuild(live, 'send');
-
-    expect(rebuilding.sendTransportId).toBeNull();
-    expect(rebuilding.producerId).toBeNull();
-    expect(rebuilding.recvTransportId).toBe('recv-1');
-    expect(rebuilding.consumers).toEqual({ english: 'c1' });
-    expect(rebuilding.rebuilding).toBe('send');
-  });
-
-  it('drops the receive transport and its consumers, leaving the send side alone', () => {
-    const rebuilding = beginRebuild(live, 'recv');
-
-    expect(rebuilding.recvTransportId).toBeNull();
-    expect(rebuilding.consumers).toEqual({});
-    expect(rebuilding.sendTransportId).toBe('send-1');
-    expect(rebuilding.producerId).toBe('p1');
-  });
-
-  it('lets a connect arriving during the rebuild supersede it', () => {
-    const rebuilding = beginRebuild(live, 'recv');
-    const reconnected = afterConnect(rebuilding);
-
-    // The rebuild's own reply is now stale and must be discarded rather than adopted.
-    expect(isCurrent(reconnected, rebuilding.generation)).toBe(false);
-    expect(reconnected.rebuilding).toBeNull();
-  });
-
-  it('clears the rebuilding flag when that direction’s transport comes back', () => {
-    const rebuilding = beginRebuild(live, 'recv');
-    const opened = transportOpened(rebuilding, 'recv', 'recv-2');
-
-    expect(opened.rebuilding).toBeNull();
-    expect(transportId(opened, 'recv')).toBe('recv-2');
-  });
-
-  it('leaves a rebuild in the other direction pending', () => {
-    const rebuilding = beginRebuild(live, 'send');
-    const opened = transportOpened(rebuilding, 'recv', 'recv-2');
-
-    expect(opened.rebuilding).toBe('send');
+  it('does not arm recovery for a connected or closed transport', () => {
+    expect(iceRecoveryDelay('connected')).toBeNull();
+    expect(iceRecoveryDelay('connected', true)).toBeNull();
+    expect(iceRecoveryDelay('closed')).toBeNull();
+    expect(iceRecoveryDelay('closed', true)).toBeNull();
   });
 });
 

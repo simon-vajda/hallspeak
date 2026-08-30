@@ -12,6 +12,8 @@ import {
   MediaProducePayload,
   MediaProducerPayload,
   MediaReset,
+  MediaRestartIcePayload,
+  MediaRestartIceResponse,
 } from './socket';
 
 const opaque = { codecs: [{ mimeType: 'audio/opus', channels: 1 }], headerExtensions: [] };
@@ -28,6 +30,18 @@ describe('media payload schemas', () => {
       MediaConnectTransportPayload.parse({ transportId: 't1', dtlsParameters: opaque }),
     ).toEqual({ transportId: 't1', dtlsParameters: opaque });
     expect(MediaConnectTransportPayload.safeParse({ dtlsParameters: opaque }).success).toBe(false);
+  });
+
+  it('carries fresh ICE parameters for an owned transport restart', () => {
+    expect(MediaRestartIcePayload.parse({ transportId: 't1' })).toEqual({ transportId: 't1' });
+    expect(MediaRestartIcePayload.safeParse({}).success).toBe(false);
+    expect(
+      MediaRestartIceResponse.parse({
+        iceParameters: { usernameFragment: 'fresh', password: 'secret', iceLite: true },
+      }),
+    ).toEqual({
+      iceParameters: { usernameFragment: 'fresh', password: 'secret', iceLite: true },
+    });
   });
 
   it('requires initial paused intent on a produce payload and rejects a non-audio kind', () => {

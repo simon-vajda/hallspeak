@@ -12,6 +12,7 @@ import {
   getCapabilities,
   openTransport,
   pauseProducing,
+  restartTransport,
   resumeConsuming,
   resumeProducing,
   startConsuming,
@@ -172,6 +173,24 @@ describe('connectTransport', () => {
         transportId: 'someone-elses',
         dtlsParameters: { fingerprints: [] },
       }),
+    ).rejects.toMatchObject({ code: 'no_transport' });
+  });
+});
+
+describe('restartTransport', () => {
+  it('returns fresh ICE parameters for this session transport', async () => {
+    const transport = await openTransport(socket('speaker-a'), speaker, { direction: 'send' });
+
+    await expect(
+      restartTransport(socket('speaker-a'), speaker, { transportId: transport.id }),
+    ).resolves.toEqual({ iceParameters: { usernameFragment: 'restart-1' } });
+  });
+
+  it('refuses a transport this session does not hold', async () => {
+    await openTransport(socket('speaker-a'), speaker, { direction: 'send' });
+
+    await expect(
+      restartTransport(socket('speaker-a'), speaker, { transportId: 'someone-elses' }),
     ).rejects.toMatchObject({ code: 'no_transport' });
   });
 });

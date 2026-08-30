@@ -6,14 +6,13 @@ import { watchConsumerTrack } from './diagnostics';
 import type { MediaHealth } from './link-state';
 import {
   afterConnect,
-  beginRebuild,
   canRollbackProducerControl,
   consumerClosed,
   consumerOpened,
+  iceRecoveryDelay,
   initialMediaState,
   isCurrent,
   type MediaState,
-  needsRebuild,
   type ProducerControlIdentity,
   producerClosed,
   producerOpened,
@@ -48,6 +47,8 @@ interface Session {
    * and both allocate, and the loser is a resource nothing can name again.
    */
   pendingTransports: Partial<Record<TransportDirection, Promise<types.Transport>>>;
+  pendingIceRestarts: Partial<Record<TransportDirection, Promise<void>>>;
+  iceRecoveryTimers: Partial<Record<TransportDirection, ReturnType<typeof setTimeout>>>;
   pendingConsumers: Map<string, Promise<MediaStreamTrack>>;
   pendingProducer?: Promise<types.Producer>;
 }
@@ -83,6 +84,9 @@ export function useMedia(socket: SocketClient | null) {
     // nothing will ever name again.
     for (const consumer of current.consumers.values()) {
       consumer.close();
+    }
+    for (const timer of Object.values(current.iceRecoveryTimers)) {
+      clearTimeout(timer);
     }
     current.producer?.close();
     for (const transport of Object.values(current.transports)) {
@@ -185,6 +189,8 @@ export function useMedia(socket: SocketClient | null) {
           transports: {},
           consumers: new Map(),
           pendingTransports: {},
+          pendingIceRestarts: {},
+          iceRecoveryTimers: {},
           pendingConsumers: new Map(),
         };
         session.current = created;
@@ -235,20 +241,71 @@ export function useMedia(socket: SocketClient | null) {
         throw new Error(SUPERSEDED);
       }
 
-      transport.on('connectionstatechange', (next: TransportConnectionState) => {
-        setHealth(
-          next === 'connected' ? 'connected' : needsRebuild(next) ? 'trouble' : 'connecting',
-        );
-        if (!needsRebuild(next)) {
+      const armIceRecovery = (next: TransportConnectionState, retry = false): void => {
+        const armed = active.iceRecoveryTimers[direction];
+        if (armed !== undefined) {
+          clearTimeout(armed);
+          delete active.iceRecoveryTimers[direction];
+        }
+        if (session.current !== active || transport.closed) {
           return;
         }
-        transport.close();
-        delete active.transports[direction];
-        setState((prev) => beginRebuild(prev, direction));
-      });
+        const delay = iceRecoveryDelay(next, retry);
+        if (delay === null) {
+          if (next === 'connected') {
+            setHealth('connected');
+          }
+          return;
+        }
+
+        if (active.pendingIceRestarts[direction]) {
+          setHealth('trouble');
+          return;
+        }
+        setHealth(next === 'failed' || retry ? 'trouble' : 'connecting');
+
+        active.iceRecoveryTimers[direction] = setTimeout(() => {
+          delete active.iceRecoveryTimers[direction];
+          if (session.current !== active || transport.closed) {
+            return;
+          }
+
+          setHealth('trouble');
+          const restart = (async () => {
+            const { iceParameters } = await signalling(socket).restartIce(transport.id);
+            const connectionState = transport.connectionState as TransportConnectionState;
+            if (
+              session.current !== active ||
+              transport.closed ||
+              iceRecoveryDelay(connectionState) === null
+            ) {
+              throw new Error(SUPERSEDED);
+            }
+            await transport.restartIce({ iceParameters });
+          })();
+          active.pendingIceRestarts[direction] = restart;
+          void restart
+            .catch((cause) => {
+              if (session.current === active && !transport.closed && !isSuperseded(cause)) {
+                console.error('media: could not restart ICE', cause);
+              }
+            })
+            .finally(() => {
+              if (active.pendingIceRestarts[direction] === restart) {
+                delete active.pendingIceRestarts[direction];
+              }
+              if (session.current === active && !transport.closed) {
+                armIceRecovery(transport.connectionState as TransportConnectionState, true);
+              }
+            });
+        }, delay);
+      };
+
+      transport.on('connectionstatechange', armIceRecovery);
 
       active.transports[direction] = transport;
       setState((prev) => transportOpened(prev, direction, transport.id));
+      armIceRecovery(transport.connectionState as TransportConnectionState);
       return transport;
     },
     [ensureSession, socket],
