@@ -6,6 +6,8 @@ import {
   ChannelStatus,
   MediaCapabilitiesPayload,
   MediaCapabilitiesResponse,
+  MediaCloseTransportPayload,
+  MediaCloseTransportResponse,
   MediaConnectTransportPayload,
   MediaConnectTransportResponse,
   MediaConsumePayload,
@@ -60,6 +62,18 @@ export const clientToServer = {
   'media:restart-ice': event({
     payload: MediaRestartIcePayload,
     response: MediaRestartIceResponse,
+  }),
+
+  /**
+   * Releases the direction so the client may open a fresh one on the same socket. An ICE
+   * restart re-gathers on the browser's existing peer connection, which after a network
+   * handoff can be holding a stale set of interfaces; only a new peer connection sees the
+   * network as it now is, and the one-per-direction cap makes that impossible until the
+   * old transport is gone.
+   */
+  'media:close-transport': event({
+    payload: MediaCloseTransportPayload,
+    response: MediaCloseTransportResponse,
   }),
 
   'media:produce': event({ payload: MediaProducePayload, response: MediaProduceResponse }),

@@ -12,6 +12,7 @@ import {
   getCapabilities,
   openTransport,
   pauseProducing,
+  releaseTransport,
   restartTransport,
   resumeConsuming,
   resumeProducing,
@@ -192,6 +193,29 @@ describe('restartTransport', () => {
     await expect(
       restartTransport(socket('speaker-a'), speaker, { transportId: 'someone-elses' }),
     ).rejects.toMatchObject({ code: 'no_transport' });
+  });
+});
+
+describe('releaseTransport', () => {
+  it('frees the direction so the same socket can open a fresh transport', async () => {
+    const first = await openTransport(socket('speaker-a'), speaker, { direction: 'recv' });
+
+    await expect(
+      openTransport(socket('speaker-a'), speaker, { direction: 'recv' }),
+    ).rejects.toMatchObject({ code: 'transport_exists' });
+
+    releaseTransport(socket('speaker-a'), speaker, { transportId: first.id });
+
+    const second = await openTransport(socket('speaker-a'), speaker, { direction: 'recv' });
+    expect(second.id).not.toBe(first.id);
+  });
+
+  it('ignores a transport this session does not hold', async () => {
+    await openTransport(socket('speaker-a'), speaker, { direction: 'recv' });
+
+    expect(() =>
+      releaseTransport(socket('speaker-a'), speaker, { transportId: 'someone-elses' }),
+    ).not.toThrow();
   });
 });
 

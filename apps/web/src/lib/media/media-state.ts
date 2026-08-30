@@ -52,32 +52,63 @@ export type TransportConnectionState =
 export const ICE_RECOVERY_DELAY_MS = 5_000;
 
 /**
- * Not every stuck transport is recoverable by restarting it. A handoff that leaves the
- * browser holding only IPv6 candidates against an IPv4-only server pairs nothing, and no
- * number of restarts changes that — so the attempts back off and then stop, rather than
- * holding the radio awake forever on a transport that cannot connect.
+ * Not every stuck transport is recoverable by restarting it. An ICE restart re-gathers on
+ * the browser's existing peer connection, and after a network handoff that connection can
+ * be holding the interfaces the device had at the moment it was created — on a phone
+ * leaving Wi-Fi, cellular IPv6 addresses alone, which pair with nothing an IPv4-only
+ * server announces. A new peer connection enumerates the network as it now is, which is
+ * why reloading the page recovers where any number of restarts does not.
  */
-export const MAX_ICE_RESTARTS = 4;
+export const MAX_ICE_RECOVERY_ATTEMPTS = 4;
 export const ICE_RECOVERY_MAX_DELAY_MS = 30_000;
 
 /**
- * How long to wait before the next restart, given how many have already been made. `null`
- * means arm nothing: the transport is settled, or the attempts are spent.
+ * How long to wait before the next recovery attempt, given how many have already been
+ * made. `null` means arm nothing: the transport is settled, or the attempts are spent.
  */
 export function iceRecoveryDelay(
   connectionState: TransportConnectionState,
-  restarts = 0,
+  attempts = 0,
 ): number | null {
   if (connectionState === 'connected' || connectionState === 'closed') {
     return null;
   }
-  if (restarts >= MAX_ICE_RESTARTS) {
+  if (attempts >= MAX_ICE_RECOVERY_ATTEMPTS) {
     return null;
   }
-  if (connectionState === 'failed' && restarts === 0) {
+  if (connectionState === 'failed' && attempts === 0) {
     return 0;
   }
-  return Math.min(ICE_RECOVERY_DELAY_MS * 2 ** restarts, ICE_RECOVERY_MAX_DELAY_MS);
+  return Math.min(ICE_RECOVERY_DELAY_MS * 2 ** attempts, ICE_RECOVERY_MAX_DELAY_MS);
+}
+
+export type IceRecoveryStep = 'restart' | 'rebuild' | 'give-up';
+
+/**
+ * Restart first: it is cheap, it keeps the consumers and the producer attached, and it is
+ * the right answer to an ordinary path change. Everything after that rebuilds, because a
+ * restart that did not work will not work twice for the same reason.
+ */
+export function iceRecoveryStep(attempts: number): IceRecoveryStep {
+  if (attempts >= MAX_ICE_RECOVERY_ATTEMPTS) {
+    return 'give-up';
+  }
+  return attempts === 0 ? 'restart' : 'rebuild';
+}
+
+/**
+ * Voids one direction so the effects that own it open it again from nothing. The
+ * generation bump is what dates out a reply already in flight for the transport being
+ * discarded.
+ */
+export function beginRebuild(state: MediaState, direction: TransportDirection): MediaState {
+  return {
+    ...state,
+    generation: state.generation + 1,
+    ...(direction === 'send'
+      ? { sendTransportId: null, producerId: null }
+      : { recvTransportId: null, consumers: {} }),
+  };
 }
 
 /**

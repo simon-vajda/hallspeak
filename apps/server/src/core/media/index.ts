@@ -274,6 +274,14 @@ export async function restartIce(
   return { iceParameters: await transportOrThrow(ctx, transportId).restartIce() };
 }
 
+/**
+ * The client rebuilding its peer connection after a network handoff. Unknown is a no-op,
+ * as everywhere a client releases something it may be racing.
+ */
+export function closeTransport(ctx: MediaContext, transportId: string): void {
+  state?.registry.get(ctx.eventId)?.peer(ctx.socketId)?.closeTransport(transportId);
+}
+
 function transportOrThrow(ctx: MediaContext, transportId: string): types.WebRtcTransport {
   const transport = peerOrThrow(ctx).transportById(transportId);
   if (!transport) {

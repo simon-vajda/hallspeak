@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   afterConnect,
+  beginRebuild,
   canRollbackProducerControl,
   consumerClosed,
   consumerOpened,
@@ -8,9 +9,10 @@ import {
   ICE_RECOVERY_DELAY_MS,
   ICE_RECOVERY_MAX_DELAY_MS,
   iceRecoveryDelay,
+  iceRecoveryStep,
   initialMediaState,
   isCurrent,
-  MAX_ICE_RESTARTS,
+  MAX_ICE_RECOVERY_ATTEMPTS,
   type MediaState,
   mayAttachConsumerTrack,
   producerOpened,
@@ -78,9 +80,40 @@ describe('ICE recovery', () => {
   });
 
   it('gives up once the attempts are spent, whatever the state', () => {
-    expect(iceRecoveryDelay('new', MAX_ICE_RESTARTS)).toBeNull();
-    expect(iceRecoveryDelay('failed', MAX_ICE_RESTARTS)).toBeNull();
-    expect(iceRecoveryDelay('disconnected', MAX_ICE_RESTARTS + 1)).toBeNull();
+    expect(iceRecoveryDelay('new', MAX_ICE_RECOVERY_ATTEMPTS)).toBeNull();
+    expect(iceRecoveryDelay('failed', MAX_ICE_RECOVERY_ATTEMPTS)).toBeNull();
+    expect(iceRecoveryDelay('disconnected', MAX_ICE_RECOVERY_ATTEMPTS + 1)).toBeNull();
+  });
+});
+
+describe('iceRecoveryStep', () => {
+  it('restarts first, then rebuilds, then gives up', () => {
+    expect(iceRecoveryStep(0)).toBe('restart');
+    expect(iceRecoveryStep(1)).toBe('rebuild');
+    expect(iceRecoveryStep(MAX_ICE_RECOVERY_ATTEMPTS - 1)).toBe('rebuild');
+    expect(iceRecoveryStep(MAX_ICE_RECOVERY_ATTEMPTS)).toBe('give-up');
+  });
+});
+
+describe('beginRebuild', () => {
+  it('voids the receive side and dates out replies in flight', () => {
+    const next = beginRebuild(live, 'recv');
+
+    expect(next.recvTransportId).toBeNull();
+    expect(next.consumers).toEqual({});
+    expect(next.generation).toBe(live.generation + 1);
+    expect(next.sendTransportId).toBe(live.sendTransportId);
+    expect(next.producerId).toBe(live.producerId);
+    expect(isCurrent(next, live.generation)).toBe(false);
+  });
+
+  it('voids the send side with its producer', () => {
+    const next = beginRebuild(live, 'send');
+
+    expect(next.sendTransportId).toBeNull();
+    expect(next.producerId).toBeNull();
+    expect(next.recvTransportId).toBe(live.recvTransportId);
+    expect(next.consumers).toBe(live.consumers);
   });
 });
 

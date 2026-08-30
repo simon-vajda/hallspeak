@@ -78,6 +78,15 @@ export function restartTransport(
   return media.restartIce(ctx(socket, auth), payload.transportId);
 }
 
+export function releaseTransport(
+  socket: MediaSocket,
+  auth: SocketAuth,
+  payload: { transportId: string },
+) {
+  media.closeTransport(ctx(socket, auth), payload.transportId);
+  return {};
+}
+
 export async function startProducing(
   db: Db,
   socket: MediaSocket,
