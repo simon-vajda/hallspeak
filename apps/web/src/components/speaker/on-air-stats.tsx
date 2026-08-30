@@ -31,7 +31,7 @@ export function OnAirStats({
   }, []);
 
   return (
-    <div className={cn('grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4', className)}>
+    <div className={cn('grid grid-cols-2 gap-3 lg:gap-4', className)}>
       <div className="rounded-lg bg-secondary px-4.5 py-4 lg:px-panel lg:py-4.5">
         <div className="text-stat lg:text-stat-lg">
           {formatElapsed(startedAt === null ? 0 : now - startedAt)}

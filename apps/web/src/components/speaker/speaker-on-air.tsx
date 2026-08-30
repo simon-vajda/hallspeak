@@ -21,9 +21,9 @@ type PublicChannel = components['schemas']['PublicChannel'];
 
 const BADGE_LABEL: Record<BroadcastState, string> = {
   'pre-flight': 'Off air',
-  connecting: 'Connecting…',
+  connecting: 'Going live…',
   live: 'On air',
-  muted: 'Muted',
+  muted: 'On air · muted',
   displaced: 'Off air',
 };
 
@@ -64,7 +64,8 @@ export function SpeakerOnAir({
 }) {
   const [confirming, setConfirming] = useState(false);
   const isMuted = state === 'muted';
-  const onAir = state === 'live';
+  const onAir = state === 'live' || state === 'muted';
+  const linkConnected = link.kind === 'connected' || link.kind === 'flowing';
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -92,14 +93,15 @@ export function SpeakerOnAir({
           <OnAirStats
             startedAt={startedAt}
             listeners={listeners}
-            className="lg:col-start-2 lg:row-start-1"
+            className="order-3 lg:order-none lg:col-start-2 lg:row-start-1"
           />
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 py-10 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
+          <div className="order-1 flex flex-1 flex-col items-center justify-center gap-4 py-10 lg:order-none lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
             <PlayTarget
               icon={isMuted ? <MicOff /> : <Mic />}
               label={TARGET_LABEL[state]}
               variant={isMuted ? 'danger' : 'live'}
               rings={onAir}
+              disabled={!linkConnected}
               onClick={onToggleMute}
             />
           </div>
@@ -107,25 +109,25 @@ export function SpeakerOnAir({
           <InputLevelPanel
             analyser={mic.analyser}
             muted={isMuted}
-            className="lg:col-start-2 lg:row-start-2"
+            className="order-4 lg:order-none lg:col-start-2 lg:row-start-2"
           />
           <AudioSettings
             mic={mic}
             preferences={preferences}
             onPreferencesChange={onPreferencesChange}
-            className="lg:col-start-2 lg:row-start-3"
+            className="order-5 lg:order-none lg:col-start-2 lg:row-start-3"
           />
 
-          <div className="mt-4 lg:col-start-1 lg:row-start-4 lg:mt-0">
-            <ConnectionLine link={link} className="mb-2" />
+          <div className="contents lg:order-none lg:col-start-1 lg:row-start-4 lg:block">
+            <ConnectionLine link={link} className="order-2 mb-2 lg:order-none" />
             <Button
               variant="ghost"
               onClick={() => setConfirming(true)}
-              className="h-10.5 w-full rounded-full text-sm font-semibold text-destructive hover:bg-destructive-muted hover:text-destructive"
+              className="order-6 mt-4 h-10.5 w-full rounded-full text-sm font-semibold text-destructive hover:bg-destructive-muted hover:text-destructive lg:mt-0"
             >
               End broadcast
             </Button>
-            <ListenerPageLink pin={pin} slug={channel.slug} className="mt-2" />
+            <ListenerPageLink pin={pin} slug={channel.slug} className="order-7 mt-2" />
           </div>
         </div>
       </main>
