@@ -18,7 +18,7 @@ export function ConnectionLine({ link, className }: { link: LinkState; className
     // The four shapes are 17px to 47px tall, so the slot is reserved rather than measured:
     // otherwise everything below the line jumps by 30px the moment audio starts flowing.
     <div className={cn('flex min-h-12 flex-col items-center justify-center gap-2', className)}>
-      {link.kind === 'idle' ? null : link.kind === 'flowing' ? (
+      {link.kind === 'idle' ? null : link.kind === 'flowing' || link.kind === 'connected' ? (
         <>
           <Bars filled={filledBars(link)} />
           <p aria-live="polite" className="text-meta text-muted-foreground">
@@ -36,16 +36,12 @@ export function ConnectionLine({ link, className }: { link: LinkState; className
           />
           {label}
         </p>
-      ) : link.kind === 'lost' ? (
+      ) : (
         <p
           aria-live="polite"
           className="flex items-center gap-2.25 rounded-full border border-destructive-border bg-destructive-muted px-4.75 py-3 text-sm font-semibold text-destructive"
         >
           <OctagonX aria-hidden className="size-4" />
-          {label}
-        </p>
-      ) : (
-        <p aria-live="polite" className="text-meta text-muted-foreground">
           {label}
         </p>
       )}

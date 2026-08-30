@@ -14,7 +14,7 @@ import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
-import type { LinkState } from '@/lib/media/link-state';
+import { isLinkUp, type LinkState } from '@/lib/media/link-state';
 import type { BroadcastState } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
@@ -64,7 +64,11 @@ export function SpeakerOnAir({
 }) {
   const [confirming, setConfirming] = useState(false);
   const isMuted = state === 'muted';
-  const onAir = state === 'live' || state === 'muted';
+  // A producer this screen still holds locally is not reaching anyone while signalling is
+  // down, so the badge falls back to the pre-producer wording rather than claiming the air.
+  const hasProducer = state === 'live' || state === 'muted';
+  const onAir = hasProducer && isLinkUp(link);
+  const badgeLabel = hasProducer && !onAir ? BADGE_LABEL.connecting : BADGE_LABEL[state];
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -79,7 +83,7 @@ export function SpeakerOnAir({
 
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-6 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header className="flex items-center justify-between gap-3 lg:justify-start">
-          <LiveBadge live={onAir} label={BADGE_LABEL[state]} />
+          <LiveBadge live={onAir} label={badgeLabel} />
           <div className="-my-1 flex min-w-0 items-center gap-3 lg:hidden">
             <span className="truncate text-meta text-muted-foreground">{eventName}</span>
             <TempThemeToggle />
