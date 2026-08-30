@@ -254,7 +254,7 @@ export function ListenerRoom({
         <TempThemeToggle />
       </div>
 
-      <main className="mx-auto flex w-full max-w-shell flex-1 flex-col items-center justify-center px-8 text-center lg:px-10 lg:py-13">
+      <main className="mx-auto flex w-full max-w-shell grow shrink-0 flex-col items-center justify-center px-8 text-center lg:px-10 lg:py-13">
         <LiveBadge live={badgeHasLiveDot(badgeInput)} label={badgeLabel(badgeInput)} />
 
         <h1 className={cn('mt-4 mb-10 lg:mt-4.5 lg:mb-10', TITLE)}>{channel.name}</h1>
