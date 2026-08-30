@@ -297,7 +297,11 @@ export function useMedia(socket: SocketClient | null) {
             setHealth('connected');
             return;
           }
-          setHealth('trouble');
+          if (iceRecoveryStep(attempts) === 'give-up') {
+            setHealth('failed');
+          } else {
+            setHealth('trouble');
+          }
           if (iceRecoveryStep(attempts) === 'give-up' && !gaveUp) {
             gaveUp = true;
             logIceRecovery(

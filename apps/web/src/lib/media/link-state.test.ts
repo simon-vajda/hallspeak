@@ -39,6 +39,14 @@ describe('resolveLinkState', () => {
     ).toEqual({ kind: 'lost' });
   });
 
+  it('resolves spent media recovery to lost, and only while media is wanted', () => {
+    expect(resolveLinkState({ ...connected, mediaHealth: 'failed' })).toEqual({ kind: 'lost' });
+    expect(isLinkUp(resolveLinkState({ ...connected, mediaHealth: 'failed' }))).toBe(false);
+    expect(resolveLinkState({ ...connected, mediaHealth: 'failed', mediaWanted: false })).toEqual({
+      kind: 'idle',
+    });
+  });
+
   it('resolves an unconnected first socket to connecting', () => {
     expect(
       resolveLinkState({ ...connected, socketStatus: 'connecting', hasConnected: false }),

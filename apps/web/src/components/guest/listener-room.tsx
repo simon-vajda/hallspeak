@@ -9,6 +9,7 @@ import { ListenerAudioSettings } from '@/components/guest/listener-audio-setting
 import { LiveBadge } from '@/components/live-badge';
 import { PlayTarget } from '@/components/play-target';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
+import { Button } from '@/components/ui/button';
 import { useAudioOutput } from '@/lib/audio/use-audio-output';
 import { useAudioSink } from '@/lib/audio/use-audio-sink';
 import { useAudioVolume } from '@/lib/audio/use-audio-volume';
@@ -284,6 +285,21 @@ export function ListenerRoom({
 
         <div className="flex flex-col items-center">
           <ConnectionLine link={link} />
+          {/* Chromium keeps one network view per page, so a connection it opened during a
+              Wi-Fi to cellular handoff can end up with candidates the server cannot pair
+              with — and every replacement this page builds inherits the same view. Loading
+              the page again is the only recovery, and it is one the listener has to be
+              offered rather than left to discover. */}
+          {link.kind === 'lost' && socketError === null ? (
+            <Button
+              size="pill"
+              variant="secondary"
+              className="mt-3.5"
+              onClick={() => window.location.reload()}
+            >
+              Reconnect
+            </Button>
+          ) : null}
           {/* The slot is held whether or not there is a note: this copy comes and goes with
               the broadcast, and an unreserved slot moves the badge and title every time. */}
           <p className="mt-3.5 flex min-h-11 max-w-80 items-start text-sm leading-normal text-muted-foreground">
