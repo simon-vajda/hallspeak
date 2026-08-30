@@ -11,7 +11,12 @@ import { isLinkUp, resolveLinkState } from '@/lib/media/link-state';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import type { SocketClient } from '@/socket/client';
-import { type BroadcastEnd, broadcastState, onReconnect } from './speaker-studio-state';
+import {
+  type BroadcastEnd,
+  broadcastState,
+  LINK_DROP_GRACE_MS,
+  onReconnect,
+} from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -157,6 +162,34 @@ export function SpeakerStudio({
       socket.off('disconnect', onDisconnect);
     };
   }, [socket]);
+
+  const { stopProducing } = media;
+  const endBroadcast = useCallback(
+    (reason: BroadcastEnd) => {
+      setLastEnd(reason);
+      setGoLivePressed(false);
+      setEffectiveMuted(false);
+      setStartedAt(null);
+      void stopProducing().catch(() => {
+        // The producer is closed locally either way; the server drops it with the socket.
+      });
+    },
+    [setEffectiveMuted, stopProducing],
+  );
+
+  /**
+   * An outage the client cannot recover inside the grace window is the channel going
+   * offline, not a longer wait: the studio returns to pre-flight rather than showing
+   * `Reconnecting…` over a broadcast nobody is receiving.
+   */
+  const linkUp = isLinkUp(link);
+  useEffect(() => {
+    if (!goLivePressed || linkUp || displaced) {
+      return;
+    }
+    const timer = setTimeout(() => endBroadcast({ reason: 'deliberate' }), LINK_DROP_GRACE_MS);
+    return () => clearTimeout(timer);
+  }, [goLivePressed, linkUp, displaced, endBroadcast]);
 
   const goLivePressedRef = useRef(goLivePressed);
   goLivePressedRef.current = goLivePressed;
@@ -306,14 +339,8 @@ export function SpeakerStudio({
             console.error('media: could not change mute', cause);
           });
         }}
-        onEnd={() => {
-          // Recorded before the close, so the reconnect effect cannot read it as a drop.
-          setLastEnd({ reason: 'deliberate' });
-          setGoLivePressed(false);
-          setEffectiveMuted(false);
-          setStartedAt(null);
-          void media.stopProducing();
-        }}
+        // Recorded before the close, so the reconnect effect cannot read it as a drop.
+        onEnd={() => endBroadcast({ reason: 'deliberate' })}
         preferences={preferences}
         onPreferencesChange={setPreferences}
       />

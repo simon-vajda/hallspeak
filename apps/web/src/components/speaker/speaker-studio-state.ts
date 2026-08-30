@@ -38,6 +38,13 @@ export function isBroadcasting(state: BroadcastState): boolean {
   return state === 'live';
 }
 
+/**
+ * How long a broadcast survives a link the client cannot re-establish. Socket.IO retries
+ * forever, so without a deadline the studio sits on `Reconnecting…` with nothing behind it;
+ * the same 30 seconds the listener holds for a dropped producer.
+ */
+export const LINK_DROP_GRACE_MS = 30_000;
+
 /** Why the last broadcast stopped, including the state a dropped producer must restore. */
 export type BroadcastEnd = { reason: 'deliberate' } | { reason: 'dropped'; muted: boolean };
 

@@ -254,13 +254,15 @@ export function ListenerRoom({
         <TempThemeToggle />
       </div>
 
-      <main className="mx-auto flex w-full max-w-shell grow shrink-0 flex-col items-center justify-center px-8 text-center lg:px-10 lg:py-13">
+      <main className="mx-auto flex w-full max-w-shell grow shrink-0 flex-col items-center justify-center gap-y-6 px-8 py-6 text-center lg:gap-y-8 lg:px-10 lg:py-10">
         <LiveBadge live={badgeHasLiveDot(badgeInput)} label={badgeLabel(badgeInput)} />
 
-        <h1 className={cn('mt-4 mb-10 lg:mt-4.5 lg:mb-10', TITLE)}>{channel.name}</h1>
+        <h1 className={cn(TITLE)}>{channel.name}</h1>
 
-        {/* A listener can start only while a Producer is available. */}
-        <div className="py-10">
+        {/* A listener can start only while a Producer is available. The padding is the
+            ripple's room: it peaks at 1.35 of a 196px target, so anything less lets the
+            ring cross the title and the connection line while it is still visible. */}
+        <div className="py-3 lg:py-5">
           <PlayTarget
             icon={<PlayIcon state={actionState} />}
             label={playTargetLabel(actionState)}
@@ -280,18 +282,21 @@ export function ListenerRoom({
           />
         </div>
 
-        <ConnectionLine link={link} className="mt-9.5 lg:mt-9" />
-
-        {note && (
-          <p className="mt-3.5 max-w-80 text-sm leading-normal text-muted-foreground">{note}</p>
-        )}
+        <div className="flex flex-col items-center">
+          <ConnectionLine link={link} />
+          {/* The slot is held whether or not there is a note: this copy comes and goes with
+              the broadcast, and an unreserved slot moves the badge and title every time. */}
+          <p className="mt-3.5 flex min-h-11 max-w-80 items-start text-sm leading-normal text-muted-foreground">
+            {note}
+          </p>
+        </div>
 
         {/* The element the consumer's track plays through; it renders nothing itself. */}
         {/* biome-ignore lint/a11y/useMediaCaption: interpreted speech has no track to caption. */}
         <audio ref={audio} autoPlay className="hidden" />
       </main>
 
-      <div className="mx-auto mt-auto flex w-full max-w-shell flex-col items-center gap-5 px-gutter pb-8.5 text-center lg:pb-16.5">
+      <div className="mx-auto mt-auto flex w-full max-w-shell shrink-0 flex-col items-center gap-5 px-gutter pb-8.5 text-center lg:pb-16.5">
         <ListenerAudioSettings output={output} volume={volume} className="max-w-105" />
         <Link
           to="/events/$pin"
