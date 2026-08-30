@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   badgeLabel,
+  HOLD_MS,
   type ListenInput,
   listenActionState,
   listenState,
   playTargetLabel,
+  reconcileListenIntent,
   showsRings,
   statusNote,
 } from './listen-state';
@@ -91,21 +93,165 @@ describe('listenState', () => {
   });
 });
 
-describe('the three rendered states', () => {
-  it('gives not-yet-armed, armed-and-waiting and playing distinct labels', () => {
-    const labels = [
-      playTargetLabel(listenActionState({ armed: false, isPlaying: false, terminal: false })),
-      playTargetLabel(listenActionState({ armed: true, isPlaying: false, terminal: false })),
-      playTargetLabel(listenActionState({ armed: true, isPlaying: true, terminal: false })),
-    ];
+describe('bounded playback intent', () => {
+  const now = 1_000_000;
+  const idle = { intent: 'idle', holdDeadline: null } as const;
+  const playingIntent = { intent: 'playing', holdDeadline: null } as const;
 
-    expect(new Set(labels).size).toBe(3);
+  it('disables the Listen target while no producer exists', () => {
+    const action = listenActionState({
+      ...idle,
+      live: false,
+      isPlaying: false,
+      linkConnected: true,
+      now,
+    });
+
+    expect(action).toBe('unavailable');
+    expect(playTargetLabel(action)).toBe('Listen');
   });
 
-  it('keeps Play/Pause action based on arming and consumer ownership while muted', () => {
-    expect(listenActionState({ armed: false, isPlaying: false, terminal: false })).toBe('idle');
-    expect(listenActionState({ armed: true, isPlaying: true, terminal: false })).toBe('playing');
-    expect(listenActionState({ armed: true, isPlaying: false, terminal: false })).toBe('waiting');
+  it('makes a producer ready to hear in one press', () => {
+    expect(
+      listenActionState({
+        ...idle,
+        live: true,
+        isPlaying: false,
+        linkConnected: true,
+        now,
+      }),
+    ).toBe('ready');
+  });
+
+  it('shows Pause and rings only while a consumer is playing', () => {
+    const action = listenActionState({
+      ...playingIntent,
+      live: true,
+      isPlaying: true,
+      linkConnected: true,
+      now,
+    });
+
+    expect(action).toBe('playing');
+    expect(playTargetLabel(action)).toBe('Pause');
+  });
+
+  it('enters a 30 second hold only when a dropped producer interrupts playback', () => {
+    const holding = reconcileListenIntent(playingIntent, {
+      live: false,
+      closeReason: 'dropped',
+      linkConnected: true,
+      wasPlaying: true,
+      now,
+    });
+
+    expect(holding).toEqual({ intent: 'holding', holdDeadline: now + HOLD_MS });
+    expect(
+      listenActionState({
+        ...holding,
+        live: false,
+        isPlaying: false,
+        linkConnected: true,
+        now,
+      }),
+    ).toBe('holding');
+    expect(playTargetLabel('holding')).toBe('Holding');
+  });
+
+  it('does not hold a dropped producer while playback was still starting', () => {
+    expect(
+      reconcileListenIntent(playingIntent, {
+        live: false,
+        closeReason: 'dropped',
+        linkConnected: true,
+        wasPlaying: false,
+        now,
+      }),
+    ).toEqual(idle);
+  });
+
+  it('ends deliberate closes immediately', () => {
+    expect(
+      reconcileListenIntent(playingIntent, {
+        live: false,
+        closeReason: 'ended',
+        linkConnected: true,
+        wasPlaying: true,
+        now,
+      }),
+    ).toEqual(idle);
+  });
+
+  it('resumes playing when the producer returns before the deadline', () => {
+    const holding = { intent: 'holding', holdDeadline: now + HOLD_MS } as const;
+    const resumed = reconcileListenIntent(holding, {
+      live: true,
+      linkConnected: true,
+      wasPlaying: false,
+      now: now + 12_000,
+    });
+
+    expect(resumed).toEqual(playingIntent);
+    expect(
+      listenActionState({
+        ...resumed,
+        live: true,
+        isPlaying: true,
+        linkConnected: true,
+        now: now + 12_000,
+      }),
+    ).toBe('playing');
+  });
+
+  it('expires against the stored deadline, not elapsed ticks', () => {
+    const holding = { intent: 'holding', holdDeadline: now + HOLD_MS } as const;
+
+    expect(
+      reconcileListenIntent(holding, {
+        live: false,
+        closeReason: 'dropped',
+        linkConnected: true,
+        wasPlaying: true,
+        now: now + HOLD_MS,
+      }),
+    ).toEqual(idle);
+    expect(
+      listenActionState({
+        ...holding,
+        live: false,
+        isPlaying: false,
+        linkConnected: true,
+        now: now + HOLD_MS,
+      }),
+    ).toBe('unavailable');
+  });
+
+  it('ends a hold as soon as the link is not connected', () => {
+    expect(
+      reconcileListenIntent(
+        { intent: 'holding', holdDeadline: now + HOLD_MS },
+        {
+          live: false,
+          closeReason: 'dropped',
+          linkConnected: false,
+          wasPlaying: true,
+          now: now + 1_000,
+        },
+      ),
+    ).toEqual(idle);
+  });
+
+  it('never shows a holding spinner without a future deadline', () => {
+    expect(
+      listenActionState({
+        intent: 'holding',
+        holdDeadline: null,
+        live: false,
+        isPlaying: false,
+        linkConnected: true,
+        now,
+      }),
+    ).toBe('unavailable');
   });
 
   it('rings only while samples are moving', () => {

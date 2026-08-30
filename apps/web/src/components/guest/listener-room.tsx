@@ -21,10 +21,11 @@ import { cn } from '@/lib/utils';
 import type { SocketClient } from '@/socket/client';
 import {
   badgeLabel,
+  type ListenIntentState,
   listenActionState,
   listenState,
   playTargetLabel,
-  showsRings,
+  reconcileListenIntent,
   statusNote,
 } from './listen-state';
 
@@ -34,9 +35,8 @@ type PublicChannel = components['schemas']['PublicChannel'];
 const TITLE = 'text-hero lg:text-hero-lg';
 
 /**
- * Armed is the guest's one gesture; everything after it is automatic. `isPlaying` means a
- * resumed consumer exists — samples are arriving — which is what `PlayTarget`'s rings
- * claim, so it is derived rather than toggled on the tap.
+ * `isPlaying` means a resumed consumer exists — samples are arriving — which is what
+ * `PlayTarget`'s rings claim, so it is derived rather than toggled on the tap.
  */
 export function ListenerRoom({
   eventName,
@@ -45,6 +45,7 @@ export function ListenerRoom({
   channels,
   live,
   muted,
+  closeReason,
   socket,
   status,
   hasConnected,
@@ -58,12 +59,16 @@ export function ListenerRoom({
   live: boolean;
   /** Socket-authoritative; null while an online REST seed is reconciled. */
   muted: boolean | null;
+  closeReason?: 'ended' | 'dropped';
   socket: SocketClient | null;
   status: SocketStatus;
   hasConnected: boolean;
   socketError: string | null;
 }) {
-  const [armed, setArmed] = useState(false);
+  const [playback, setPlayback] = useState<ListenIntentState>({
+    intent: 'idle',
+    holdDeadline: null,
+  });
   const media = useMedia(socket);
   const audio = useRef<HTMLAudioElement | null>(null);
   const output = useAudioOutput();
@@ -71,7 +76,29 @@ export function ListenerRoom({
   useAudioSink(audio, output.deviceId, output.clearSelection);
 
   const connected = status === 'connected';
+  const link = resolveLinkState({
+    socketStatus: status,
+    hasConnected,
+    mediaHealth: media.health,
+    stats: media.stats,
+  });
+  const linkConnected = link.kind === 'connected' || link.kind === 'flowing';
   const isPlaying = media.state.consumers[channel.slug] !== undefined;
+  const playingSnapshotRef = useRef({ slug: channel.slug, isPlaying });
+  const wasPlaying =
+    playingSnapshotRef.current.slug === channel.slug && playingSnapshotRef.current.isPlaying;
+  useLayoutEffect(() => {
+    playingSnapshotRef.current = { slug: channel.slug, isPlaying };
+  }, [channel.slug, isPlaying]);
+  const now = Date.now();
+  const resolvedPlayback = reconcileListenIntent(playback, {
+    live,
+    ...(closeReason === undefined ? {} : { closeReason }),
+    linkConnected,
+    wasPlaying,
+    now,
+  });
+  const armed = resolvedPlayback.intent !== 'idle';
   const state = listenState({
     terminal: status === 'error',
     armed,
@@ -82,32 +109,77 @@ export function ListenerRoom({
     mediaTrouble: media.health === 'trouble',
   });
   const actionState = listenActionState({
-    armed,
+    ...resolvedPlayback,
+    live,
     isPlaying,
-    terminal: status === 'error',
+    linkConnected,
+    now,
   });
 
+  useLayoutEffect(() => {
+    setPlayback((current) => {
+      const next = reconcileListenIntent(current, {
+        live,
+        ...(closeReason === undefined ? {} : { closeReason }),
+        linkConnected,
+        wasPlaying,
+        now: Date.now(),
+      });
+      return sameIntent(current, next) ? current : next;
+    });
+  }, [live, closeReason, linkConnected, wasPlaying]);
+
+  useEffect(() => {
+    if (playback.intent !== 'holding' || playback.holdDeadline === null) {
+      return;
+    }
+
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const now = Date.now();
+      const remaining = playback.holdDeadline === null ? 0 : playback.holdDeadline - now;
+      if (remaining > 0) {
+        timer = setTimeout(tick, remaining);
+        return;
+      }
+      setPlayback((current) => {
+        const next = reconcileListenIntent(current, {
+          live,
+          ...(closeReason === undefined ? {} : { closeReason }),
+          linkConnected,
+          wasPlaying,
+          now,
+        });
+        return sameIntent(current, next) ? current : next;
+      });
+    };
+    timer = setTimeout(tick, Math.max(0, playback.holdDeadline - Date.now()));
+    return () => clearTimeout(timer);
+  }, [playback.intent, playback.holdDeadline, live, closeReason, linkConnected, wasPlaying]);
+
   /**
-   * Arming creates nothing on either side; a producer's arrival is what starts the audio,
-   * whether that is now or an hour from now. The gate is the guest's own gesture and
-   * never a signal that only arrives once audio is already flowing — gating it on one is
-   * the deadlock recorded in docs/solutions/ui-bugs.
+   * Producer existence is safe to gate on because it arrives independently of the guest's
+   * gesture. This is not the deadlock where the signal can only arrive after the control
+   * has already been pressed.
    *
    * What to open and what to close is `consumerPlan`'s decision, not this effect's: a
-   * switch, an interpreter dropping and arming early overlap, and deciding them
+   * switch, an interpreter dropping and a hold overlap, and deciding them
    * separately here is how the previous channel's consumer gets left open.
    */
   const { startConsuming, stopConsuming } = media;
   const consumers = media.state.consumers;
-  const armedSlug = armed ? channel.slug : null;
-  const online = live && connected;
-  const playbackIntentRef = useRef({ armedSlug, online });
+  const activeSlug =
+    resolvedPlayback.intent === 'playing' || resolvedPlayback.intent === 'holding'
+      ? channel.slug
+      : null;
+  const online = live && linkConnected;
+  const playbackIntentRef = useRef({ activeSlug, online });
   useLayoutEffect(() => {
-    playbackIntentRef.current = { armedSlug, online };
-  }, [armedSlug, online]);
+    playbackIntentRef.current = { activeSlug, online };
+  }, [activeSlug, online]);
 
   useEffect(() => {
-    const plan = consumerPlan({ consumers, armedSlug, online });
+    const plan = consumerPlan({ consumers, activeSlug, online });
     for (const slug of plan.close) {
       void stopConsuming(slug);
     }
@@ -139,21 +211,14 @@ export function ListenerRoom({
       .catch((cause) => {
         // Swallowed silently, a failed consume left the screen claiming it was waiting.
         if (
-          playbackIntentRef.current.armedSlug === requestedSlug &&
+          playbackIntentRef.current.activeSlug === requestedSlug &&
           playbackIntentRef.current.online &&
           !isSuperseded(cause)
         ) {
           console.error('media: could not listen', cause);
         }
       });
-  }, [consumers, armedSlug, online, startConsuming, stopConsuming]);
-
-  const link = resolveLinkState({
-    socketStatus: status,
-    hasConnected,
-    mediaHealth: media.health,
-    stats: media.stats,
-  });
+  }, [consumers, activeSlug, online, startConsuming, stopConsuming]);
 
   const meta = `${eventName} · PIN ${formatPin(pin)}`;
   const onAir = live && connected && muted === false;
@@ -191,20 +256,23 @@ export function ListenerRoom({
 
         <h1 className={cn('mt-4 mb-10 lg:mt-4.5 lg:mb-10', TITLE)}>{channel.name}</h1>
 
-        {/* Never disabled on `live`: arming before anyone is on air is the whole point. */}
+        {/* A listener can start only while a Producer is available. */}
         <div className="py-10">
           <PlayTarget
             icon={<PlayIcon state={actionState} />}
             label={playTargetLabel(actionState)}
-            rings={showsRings(state)}
-            // Subdued while armed and waiting, so it does not read as an untapped control.
-            className={cn(actionState === 'waiting' && 'opacity-70')}
-            // Un-arming is enough to close the consumer: the plan above sees no armed
-            // channel and closes whatever is open.
-            disabled={actionState === 'ended'}
+            rings={actionState === 'playing'}
+            className={cn(actionState === 'holding' && 'disabled:opacity-100')}
+            disabled={actionState === 'unavailable' || actionState === 'holding'}
             onClick={() => {
-              setArmed((wasArmed) => !wasArmed);
-              audio.current?.pause();
+              if (actionState === 'ready') {
+                setPlayback({ intent: 'playing', holdDeadline: null });
+                return;
+              }
+              if (actionState === 'playing') {
+                setPlayback({ intent: 'idle', holdDeadline: null });
+                audio.current?.pause();
+              }
             }}
           />
         </div>
@@ -234,13 +302,16 @@ export function ListenerRoom({
   );
 }
 
-/** Waiting gets its own mark, so armed-and-waiting cannot be mistaken for untapped. */
 function PlayIcon({ state }: { state: ReturnType<typeof listenActionState> }) {
   if (state === 'playing') {
     return <Pause className="fill-current" />;
   }
-  if (state === 'idle') {
-    return <Play className="fill-current" />;
+  if (state === 'holding') {
+    return <Loader2 className="animate-spin motion-reduce:animate-none" />;
   }
-  return <Loader2 className="animate-spin motion-reduce:animate-none" />;
+  return <Play className="fill-current" />;
+}
+
+function sameIntent(left: ListenIntentState, right: ListenIntentState): boolean {
+  return left.intent === right.intent && left.holdDeadline === right.holdDeadline;
 }
