@@ -14,7 +14,7 @@ import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
-import type { LinkState } from '@/lib/media/link-state';
+import { isLinkUp, type LinkState } from '@/lib/media/link-state';
 import type { BroadcastState } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
@@ -65,7 +65,7 @@ export function SpeakerOnAir({
   const [confirming, setConfirming] = useState(false);
   const isMuted = state === 'muted';
   const onAir = state === 'live' || state === 'muted';
-  const linkConnected = link.kind === 'connected' || link.kind === 'flowing';
+  const linkConnected = isLinkUp(link);
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -100,8 +100,13 @@ export function SpeakerOnAir({
               icon={isMuted ? <MicOff /> : <Mic />}
               label={TARGET_LABEL[state]}
               variant={isMuted ? 'danger' : 'live'}
-              rings={onAir}
+              // Narrower than `onAir`: the rings mean samples are moving, which a muted
+              // producer is not doing. The badge dot is what widens to cover both.
+              rings={state === 'live'}
               disabled={!linkConnected}
+              // The dashed rim is this screen's affordance, not the shared primitive's, and
+              // the design leaves the fill at full strength behind it.
+              className="disabled:border-dashed disabled:border-border disabled:opacity-100"
               onClick={onToggleMute}
             />
           </div>

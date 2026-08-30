@@ -15,8 +15,10 @@ export function ConnectionLine({ link, className }: { link: LinkState; className
   const label = linkLabel(link);
 
   return (
-    <div className={cn('flex flex-col items-center gap-2', className)}>
-      {link.kind === 'flowing' ? (
+    // The four shapes are 17px to 47px tall, so the slot is reserved rather than measured:
+    // otherwise everything below the line jumps by 30px the moment audio starts flowing.
+    <div className={cn('flex min-h-12 flex-col items-center justify-center gap-2', className)}>
+      {link.kind === 'idle' ? null : link.kind === 'flowing' ? (
         <>
           <Bars filled={filledBars(link)} />
           <p aria-live="polite" className="text-meta text-muted-foreground">

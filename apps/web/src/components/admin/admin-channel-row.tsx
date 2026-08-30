@@ -125,11 +125,10 @@ function BroadcastBadge({ broadcast }: { broadcast: ChannelBroadcast }) {
   if (broadcast.state === 'withheld') {
     return (
       <Badge
-        size="sm"
         variant="outline"
-        className="shrink-0 border-dashed bg-transparent text-muted-foreground"
+        className="shrink-0 border-dashed bg-transparent text-muted-foreground uppercase"
       >
-        —<span className="sr-only">{STATUS_UNKNOWN}</span>
+        —<span className="sr-only normal-case">{STATUS_UNKNOWN}</span>
       </Badge>
     );
   }

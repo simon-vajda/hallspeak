@@ -1,6 +1,6 @@
 import type { components } from '@linguacast/contract/openapi';
 import { type QueryClient, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { $api } from '@/api/client';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
@@ -30,6 +30,28 @@ export const liveKey = () => adminLiveQueryOptions().queryKey;
 
 /** Media state is process memory and moves on its own; nothing invalidates it, so it polls. */
 const LIVE_POLL_MS = 5_000;
+
+/**
+ * How old the last answer may be before it stops counting as a reading. Three missed polls:
+ * long enough that one slow answer is not a blackout, short enough that an organiser does not
+ * act on a minute-old picture.
+ */
+const LIVE_STALE_AFTER_MS = LIVE_POLL_MS * 3;
+
+/**
+ * Whether the last answer can still be believed. Query status alone cannot say: a request the
+ * server accepts and never answers is neither a success nor an error, and `refetchInterval`
+ * starts no new poll while one is in flight — so a hung server would otherwise keep the last
+ * payload marked current forever, which is exactly the stale-reading-as-fresh case the
+ * withheld state exists to prevent.
+ */
+export function isLiveReadingFresh(
+  isSuccess: boolean,
+  dataUpdatedAt: number,
+  now: number,
+): boolean {
+  return isSuccess && now - dataUpdatedAt < LIVE_STALE_AFTER_MS;
+}
 
 type AdminLiveIndex = {
   /**
@@ -71,16 +93,23 @@ export function indexLive(events: AdminLiveEvent[] | undefined, known: boolean):
  * having no answer, and a caller must withhold rather than read it as nobody broadcasting.
  */
 export function useAdminLive(): AdminLiveIndex {
-  const { data, isSuccess } = $api.useQuery(
+  const { data, isSuccess, dataUpdatedAt } = $api.useQuery(
     'get',
     '/admin/live',
     {},
     { refetchInterval: LIVE_POLL_MS },
   );
 
-  // Held data outlives a failed refetch, so `isSuccess` — not the data — is what says the
-  // reading is current.
-  return useMemo(() => indexLive(isSuccess ? data : undefined, isSuccess), [data, isSuccess]);
+  // A hung poll produces no state change at all, so the clock is the only thing that can
+  // notice it: without this tick the last answer would keep re-rendering as current.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), LIVE_POLL_MS);
+    return () => clearInterval(timer);
+  }, []);
+
+  const known = isLiveReadingFresh(isSuccess, dataUpdatedAt, now);
+  return useMemo(() => indexLive(known ? data : undefined, known), [data, known]);
 }
 
 /** Both, always: the list's chips come from the same channels the detail page shows. */

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { eventDetailQueryOptions, eventsListQueryOptions, indexLive } from './admin-queries';
+import {
+  eventDetailQueryOptions,
+  eventsListQueryOptions,
+  indexLive,
+  isLiveReadingFresh,
+} from './admin-queries';
 
 describe('admin query options', () => {
   it('keeps list and detail keys separate', () => {
@@ -60,5 +65,31 @@ describe('indexLive', () => {
     expect(index.known).toBe(false);
     expect(index.channels.size).toBe(0);
     expect(index.onAir.size).toBe(0);
+  });
+});
+
+describe('isLiveReadingFresh', () => {
+  const answered = 1_000_000;
+
+  it('believes an answer that just landed', () => {
+    expect(isLiveReadingFresh(true, answered, answered + 1_000)).toBe(true);
+  });
+
+  it('still believes an answer across one missed poll', () => {
+    expect(isLiveReadingFresh(true, answered, answered + 9_000)).toBe(true);
+  });
+
+  it('stops believing an answer older than three polls', () => {
+    // The hung-server case: status stays success and the payload never changes, so age is
+    // the only thing that can notice nothing has answered since.
+    expect(isLiveReadingFresh(true, answered, answered + 15_000)).toBe(false);
+  });
+
+  it('does not believe a failed poll however recently it failed', () => {
+    expect(isLiveReadingFresh(false, answered, answered + 1)).toBe(false);
+  });
+
+  it('does not believe a poll that has never answered', () => {
+    expect(isLiveReadingFresh(false, 0, answered)).toBe(false);
   });
 });

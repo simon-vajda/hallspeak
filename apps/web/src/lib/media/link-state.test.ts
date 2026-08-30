@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { filledBars, type LinkStateInput, linkLabel, resolveLinkState } from './link-state';
+import {
+  filledBars,
+  isLinkUp,
+  type LinkStateInput,
+  linkLabel,
+  resolveLinkState,
+} from './link-state';
 import { BAR_COUNT, FAIR_LOSS, POOR_LOSS } from './stats';
 
 const connected: LinkStateInput = {
@@ -7,6 +13,7 @@ const connected: LinkStateInput = {
   hasConnected: true,
   mediaHealth: 'connected',
   stats: null,
+  mediaWanted: true,
 };
 
 describe('resolveLinkState', () => {
@@ -96,5 +103,57 @@ describe('link presentation', () => {
     expect(resolveLinkState({ ...connected, stats: { packetLoss: POOR_LOSS, jitter: 0 } })).toEqual(
       { kind: 'flowing', grade: 'poor' },
     );
+  });
+});
+
+describe('resolveLinkState without a media session', () => {
+  it('reports nothing when the socket is up and no audio was asked for', () => {
+    // An offline channel, or a guest who has not pressed play: the socket alone is not a link
+    // worth reporting, and "Connected" there answers a question nobody asked.
+    expect(resolveLinkState({ ...connected, mediaHealth: 'idle', mediaWanted: false })).toEqual({
+      kind: 'idle',
+    });
+  });
+
+  it('still reports a socket that has not connected yet', () => {
+    expect(
+      resolveLinkState({
+        ...connected,
+        socketStatus: 'connecting',
+        hasConnected: false,
+        mediaWanted: false,
+      }),
+    ).toEqual({ kind: 'connecting' });
+  });
+
+  it('still reports a terminal failure, which is worth saying with nothing playing', () => {
+    expect(resolveLinkState({ ...connected, socketStatus: 'error', mediaWanted: false })).toEqual({
+      kind: 'lost',
+    });
+  });
+
+  it('returns to reporting once audio is asked for', () => {
+    expect(resolveLinkState({ ...connected, mediaHealth: 'idle', mediaWanted: true })).toEqual({
+      kind: 'connected',
+    });
+  });
+});
+
+describe('isLinkUp', () => {
+  it('counts idle as up, because it is only reachable under a connected socket', () => {
+    // The listener badge gates on this: a guest on a live channel who has not pressed play
+    // must still read `On air`, not `Offline`.
+    expect(isLinkUp({ kind: 'idle' })).toBe(true);
+  });
+
+  it('counts connected and flowing as up', () => {
+    expect(isLinkUp({ kind: 'connected' })).toBe(true);
+    expect(isLinkUp({ kind: 'flowing', grade: 'good' })).toBe(true);
+  });
+
+  it('counts every in-progress or terminal state as not up', () => {
+    expect(isLinkUp({ kind: 'connecting' })).toBe(false);
+    expect(isLinkUp({ kind: 'reconnecting' })).toBe(false);
+    expect(isLinkUp({ kind: 'lost' })).toBe(false);
   });
 });
