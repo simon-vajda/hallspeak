@@ -31,6 +31,11 @@ The reversible state in which a Live Channel's Producer is paused, so its Listen
 
 Muting leaves the Channel Live, preserves its Consumers and Listener count, and is surfaced to active Listeners to explain silence rather than redefining the Channel's liveness.
 
+### Withheld
+A reading a surface cannot currently make, reported as its own outcome rather than as the negative one it resembles.
+
+Whether a Channel is on air is learned from a source that can be pending, failing, or stalled, and a source with nothing to say is indistinguishable from one that is not answering. A withheld reading is shown as an absence with the words "status unknown" available to a screen reader, never as nobody broadcasting. Configuration the reading has no bearing on — a disabled or empty Event — is still stated plainly. An action that would end a broadcast says that liveness could not be checked instead of confirming silently, so a withholding never becomes a quiet yes.
+
 ### Broadcast claim
 The exclusive right to speak on one Channel, held by whoever presented its Speaker code first. A Channel has one claim at a time; a second interpreter arriving with a different code is refused as busy.
 
