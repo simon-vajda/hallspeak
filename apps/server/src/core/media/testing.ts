@@ -17,6 +17,13 @@ const seq = { producer: 0, consumer: 0, transport: 0 };
 /** Failure controls make post-success notification ordering observable in facade tests. */
 export const fakeMediaControls = { refuseConsume: false, failPause: false, failResume: false };
 
+let currentWorker: FakeWorker | undefined;
+
+/** Simulates mediasoup losing its worker after startup. */
+export function failWorker(): void {
+  currentWorker?.die();
+}
+
 function nextId(kind: keyof typeof seq): string {
   seq[kind] += 1;
   return `${kind[0]}${seq[kind]}`;
@@ -191,10 +198,16 @@ class FakeWorker extends EventEmitter {
   close() {
     this.closed = true;
   }
+  die() {
+    this.emit('died', new Error('worker died'));
+  }
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: the fakes stand in for mediasoup's types.
-export const fakeWorkerFactory = (async () => new FakeWorker() as any) as WorkerFactory;
+export const fakeWorkerFactory = (async () => {
+  currentWorker = new FakeWorker();
+  // biome-ignore lint/suspicious/noExplicitAny: the fake stands in for mediasoup's type.
+  return currentWorker as any;
+}) as WorkerFactory;
 
 export interface FakeMediaOptions {
   graceMs?: number;
@@ -209,6 +222,7 @@ export async function startFakeMedia(options: FakeMediaOptions = {}): Promise<()
   fakeMediaControls.refuseConsume = false;
   fakeMediaControls.failPause = false;
   fakeMediaControls.failResume = false;
+  currentWorker = undefined;
   await startMedia({
     net: { listenIp: '0.0.0.0', announcedIp: '203.0.113.1', rtcPortBase: 44400, maxWorkers: 1 },
     turn: options.turn ?? {},

@@ -48,8 +48,28 @@ describe('channel status reconciliation', () => {
     });
 
     expect(
-      applyRealtimeStatus(muted, 'english', { online: false, muted: true }).channels.english,
-    ).toMatchObject({ online: false, muted: false });
+      applyRealtimeStatus(muted, 'english', {
+        online: false,
+        muted: true,
+        reason: 'ended',
+      }).channels.english,
+    ).toMatchObject({ online: false, muted: false, reason: 'ended' });
+  });
+
+  it('stores a close reason without changing the online projection', () => {
+    const closed = applyRealtimeStatus(initialChannelStatuses, 'english', {
+      online: false,
+      muted: false,
+      reason: 'dropped',
+    });
+
+    expect(closed.channels.english).toMatchObject({
+      online: false,
+      muted: false,
+      reason: 'dropped',
+      revision: 1,
+    });
+    expect(projectOnlineStatuses(closed.channels)).toEqual({ english: false });
   });
 
   it('projects selector liveness from the same status entries regardless of mute', () => {

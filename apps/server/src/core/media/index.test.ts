@@ -19,7 +19,7 @@ import {
   revokeEvent,
   stopMedia,
 } from './index';
-import { fakeMediaControls, goLive as goLiveOn, startFakeMedia } from './testing';
+import { failWorker, fakeMediaControls, goLive as goLiveOn, startFakeMedia } from './testing';
 
 const EVENT = 1;
 const ENGLISH = 10;
@@ -108,7 +108,7 @@ describe('produce', () => {
     });
   });
 
-  it('publishes producer-closed when the producer goes away', async () => {
+  it('publishes ended when the speaker deliberately closes the producer', async () => {
     const { producerId } = await goLive('speaker-a');
     published = [];
 
@@ -119,6 +119,24 @@ describe('produce', () => {
       eventId: EVENT,
       channelId: ENGLISH,
       slug: 'english',
+      reason: 'ended',
+    });
+  });
+
+  it('publishes dropped when the worker tears its room down', async () => {
+    await goLive('speaker-a');
+    published = [];
+
+    failWorker();
+
+    await vi.waitFor(() => {
+      expect(published).toContainEqual({
+        type: 'producer-closed',
+        eventId: EVENT,
+        channelId: ENGLISH,
+        slug: 'english',
+        reason: 'dropped',
+      });
     });
   });
 
@@ -417,6 +435,7 @@ describe('releasePeer', () => {
       eventId: EVENT,
       channelId: ENGLISH,
       slug: 'english',
+      reason: 'dropped',
     });
   });
 
