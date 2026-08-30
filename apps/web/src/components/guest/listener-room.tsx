@@ -157,6 +157,7 @@ export function ListenerRoom({
 
   const meta = `${eventName} · PIN ${formatPin(pin)}`;
   const onAir = live && connected && muted === false;
+  const note = socketError ?? (!armed ? statusNote(state) : null);
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -208,12 +209,10 @@ export function ListenerRoom({
           />
         </div>
 
-        {armed || socketError ? (
-          <ConnectionLine link={link} className="mt-9.5 lg:mt-9" />
-        ) : (
-          <p className="mt-9.5 max-w-80 text-sm leading-normal text-muted-foreground lg:mt-9">
-            {statusNote(state)}
-          </p>
+        <ConnectionLine link={link} className="mt-9.5 lg:mt-9" />
+
+        {note && (
+          <p className="mt-3.5 max-w-80 text-sm leading-normal text-muted-foreground">{note}</p>
         )}
 
         {/* The element the consumer's track plays through; it renders nothing itself. */}
