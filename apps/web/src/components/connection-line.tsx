@@ -1,7 +1,5 @@
-import { useRef } from 'react';
-import type { ConnectionState } from '@/lib/media/stats';
-import { BAR_COUNT, connectionLabel, filledBars } from '@/lib/media/stats';
-import type { SocketStatus } from '@/lib/use-socket';
+import { filledBars, type LinkState, linkLabel } from '@/lib/media/link-state';
+import { BAR_COUNT } from '@/lib/media/stats';
 import { cn } from '@/lib/utils';
 
 /**
@@ -9,62 +7,31 @@ import { cn } from '@/lib/utils';
  * alongside it rather than being replaced by it: the bars carry no meaning to a screen
  * reader, and this line is precisely where the states worth announcing show up.
  *
- * `error` is already resolved to human copy by the route. `lost` covers the gap before
- * Socket.IO starts its retry; "Reconnecting" is only true once that attempt begins.
+ * Socket and media health are already resolved before this component sees them, so one
+ * fixed vocabulary owns the line.
  */
-export function ConnectionLine({
-  status,
-  error,
-  connection,
-  className,
-}: {
-  status: SocketStatus;
-  error?: string | null;
-  /** Omitted where no media exists yet; the socket state is then the whole story. */
-  connection?: ConnectionState;
-  className?: string;
-}) {
-  const hasConnected = useRef(false);
-  if (status === 'connected') {
-    hasConnected.current = true;
-  }
-
-  const text =
-    status === 'lost'
-      ? 'Connection lost'
-      : status === 'error'
-        ? (error ?? 'Connection failed.')
-        : status !== 'connected'
-          ? hasConnected.current
-            ? 'Reconnecting…'
-            : 'Connecting…'
-          : connection
-            ? connectionLabel(connection)
-            : 'Connected';
-
-  const filled = connection && status === 'connected' ? filledBars(connection) : 0;
+export function ConnectionLine({ link, className }: { link: LinkState; className?: string }) {
+  const filled = filledBars(link);
 
   return (
     <div className={cn('flex flex-col items-center gap-2', className)}>
-      {connection && (
-        <div aria-hidden className="flex items-end gap-1">
-          {BARS.map((height, index) => (
-            <span
-              // Heights repeat by design (the shape is symmetric), so the index is the key.
-              // biome-ignore lint/suspicious/noArrayIndexKey: a fixed-length static bar row.
-              key={index}
-              className={cn(
-                'w-1 rounded-full transition-colors duration-300',
-                index < filled ? 'bg-primary' : 'bg-border',
-              )}
-              style={{ height }}
-            />
-          ))}
-        </div>
-      )}
+      <div aria-hidden className="flex items-end gap-1">
+        {BARS.map((height, index) => (
+          <span
+            // Heights repeat by design (the shape is symmetric), so the index is the key.
+            // biome-ignore lint/suspicious/noArrayIndexKey: a fixed-length static bar row.
+            key={index}
+            className={cn(
+              'w-1 rounded-full transition-colors duration-300',
+              index < filled ? 'bg-primary' : 'bg-border',
+            )}
+            style={{ height }}
+          />
+        ))}
+      </div>
       {/* Assertive would interrupt; this line changes on its own. */}
       <p aria-live="polite" className="text-meta text-muted-foreground">
-        {text}
+        {linkLabel(link)}
       </p>
     </div>
   );

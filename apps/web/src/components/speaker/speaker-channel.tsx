@@ -1,6 +1,5 @@
 import type { components } from '@linguacast/contract/openapi';
 import { SpeakerStudio } from '@/components/speaker/speaker-studio';
-import { socketMessage } from '@/lib/socket-message';
 import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useSocket } from '@/lib/use-socket';
 
@@ -13,7 +12,7 @@ export function SpeakerChannel({
   view: PublicChannelView;
   speakerCode: string;
 }) {
-  const { status, error, channelStatuses, listeners, socket } = useSocket({
+  const { status, hasConnected, channelStatuses, listeners, socket } = useSocket({
     pin: view.event.pin,
     speakerCode,
   });
@@ -28,7 +27,7 @@ export function SpeakerChannel({
       listeners={listeners[view.channel.slug] ?? 0}
       socket={socket}
       status={status}
-      socketError={error ? socketMessage(error) : null}
+      hasConnected={hasConnected}
       channelStatus={channelStatuses[view.channel.slug]}
     />
   );
