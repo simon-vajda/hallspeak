@@ -78,8 +78,12 @@ export function SpeakerPreflight({
 
           <div className="flex flex-1 flex-col gap-4 lg:flex-none lg:gap-4.5">
             <InputLevelPanel analyser={mic.analyser} />
-            <div className="mt-auto pt-8 lg:mt-0 lg:pt-0">
-              {link.kind !== 'connected' && link.kind !== 'flowing' && (
+            <div className="mt-6 lg:mt-0">
+              {/* Only while the line has something to report: pre-flight wants no media, so
+                  `idle` renders an empty reserved slot above Go live and nothing else. */}
+              {(link.kind === 'connecting' ||
+                link.kind === 'reconnecting' ||
+                link.kind === 'lost') && (
                 <ConnectionLine link={link} className="mb-3.5 text-center" />
               )}
 

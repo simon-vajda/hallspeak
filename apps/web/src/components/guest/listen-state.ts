@@ -27,8 +27,14 @@ export function reconcileListenIntent(
   state: ListenIntentState,
   conditions: ListenConditions,
 ): ListenIntentState {
-  if (!conditions.linkConnected || conditions.closeReason === 'ended') {
+  if (conditions.closeReason === 'ended') {
     return IDLE_INTENT;
+  }
+  // A dropped link is not a decision to stop listening. The intent outlives it so audio
+  // resumes by itself once the socket is back, rather than making the guest press Listen
+  // again for a channel that never stopped broadcasting.
+  if (!conditions.linkConnected) {
+    return state;
   }
   if (conditions.live) {
     return state.intent === 'holding' ? PLAYING_INTENT : state;
@@ -138,9 +144,11 @@ export function statusNote(input: ListenNoteInput): string | null {
     return 'Audio resumes by itself if they are straight back.';
   }
   if (!input.live) {
+    // Only the drop is worth a line: it explains something the guest just watched stop. A
+    // channel that was never on air needs no caption, and printing one moved the screen.
     return input.closeReason === 'dropped'
       ? 'This channel starts on its own as soon as its interpreter is back.'
-      : 'This channel starts on its own as soon as its interpreter connects.';
+      : null;
   }
   if (input.muted === true) {
     return 'The interpreter is muted. Audio resumes automatically when they unmute.';

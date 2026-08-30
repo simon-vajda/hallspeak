@@ -142,18 +142,37 @@ describe('bounded playback intent', () => {
     ).toBe('unavailable');
   });
 
-  it('ends a hold as soon as the link is not connected', () => {
+  it('keeps the intent across a dropped link so audio resumes without a second tap', () => {
+    const holding = { intent: 'holding', holdDeadline: now + HOLD_MS } as const;
+
     expect(
-      reconcileListenIntent(
-        { intent: 'holding', holdDeadline: now + HOLD_MS },
-        {
-          live: false,
-          closeReason: 'dropped',
-          linkConnected: false,
-          wasPlaying: true,
-          now: now + 1_000,
-        },
-      ),
+      reconcileListenIntent(holding, {
+        live: false,
+        closeReason: 'dropped',
+        linkConnected: false,
+        wasPlaying: true,
+        now: now + 1_000,
+      }),
+    ).toEqual(holding);
+    expect(
+      reconcileListenIntent(playingIntent, {
+        live: true,
+        linkConnected: false,
+        wasPlaying: true,
+        now: now + 1_000,
+      }),
+    ).toEqual(playingIntent);
+  });
+
+  it('drops the intent across a link outage only when the broadcast was ended', () => {
+    expect(
+      reconcileListenIntent(playingIntent, {
+        live: false,
+        closeReason: 'ended',
+        linkConnected: false,
+        wasPlaying: true,
+        now: now + 1_000,
+      }),
     ).toEqual(idle);
   });
 
@@ -221,9 +240,7 @@ describe('listener status note', () => {
   } as const;
 
   it('uses the brief copy for each reachable state', () => {
-    expect(statusNote(offline)).toBe(
-      'This channel starts on its own as soon as its interpreter connects.',
-    );
+    expect(statusNote(offline)).toBeNull();
     expect(statusNote({ ...offline, holding: true })).toBe(
       'Audio resumes by itself if they are straight back.',
     );
@@ -248,7 +265,7 @@ describe('listener status note', () => {
       { ...offline, closeReason: 'dropped' as const },
       { ...offline, linkConnected: false },
     ]) {
-      expect(statusNote(input)).not.toMatch(
+      expect(statusNote(input) ?? '').not.toMatch(
         /hearing|listening|audio is (playing|moving|reaching)/i,
       );
     }
