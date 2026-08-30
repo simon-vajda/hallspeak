@@ -38,10 +38,15 @@ export function ChannelStrip({
               >
                 {/* Not a LiveDot: `live` is a state colour and must not be repainted to sit
                     on `primary`. */}
-                {channel.online && (
-                  <span aria-hidden className="size-2 animate-pulse-live rounded-full bg-current" />
-                )}
+                <span
+                  aria-hidden
+                  className={cn(
+                    'size-2 rounded-full',
+                    channel.online ? 'animate-pulse-live bg-current' : 'bg-border',
+                  )}
+                />
                 {channel.name}
+                <span className="sr-only">, {channel.online ? 'On air' : 'Offline'}</span>
               </span>
             );
           }
@@ -52,12 +57,14 @@ export function ChannelStrip({
                 key={channel.slug}
                 to="/events/$pin/$slug"
                 params={{ pin, slug: channel.slug }}
+                aria-label={`${channel.name}, Offline`}
                 className={cn(
                   PILL,
                   'border border-dashed border-border text-muted-foreground',
                   'focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
                 )}
               >
+                <LiveDot size="sm" tone="offline" />
                 {channel.name}
               </Link>
             );
@@ -68,6 +75,7 @@ export function ChannelStrip({
               key={channel.slug}
               to="/events/$pin/$slug"
               params={{ pin, slug: channel.slug }}
+              aria-label={`${channel.name}, On air`}
               className={cn(
                 PILL,
                 'bg-card transition-colors hover:overlay',
