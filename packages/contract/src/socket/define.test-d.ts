@@ -17,6 +17,7 @@ type _Names = Expect<
     | 'media:capabilities'
     | 'media:create-transport'
     | 'media:connect-transport'
+    | 'media:restart-ice'
     | 'media:produce'
     | 'media:pause-producer'
     | 'media:resume-producer'

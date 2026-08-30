@@ -263,11 +263,23 @@ export async function connectTransport(
   transportId: string,
   dtlsParameters: types.DtlsParameters,
 ): Promise<void> {
+  const transport = transportOrThrow(ctx, transportId);
+  await transport.connect({ dtlsParameters });
+}
+
+export async function restartIce(
+  ctx: MediaContext,
+  transportId: string,
+): Promise<{ iceParameters: types.IceParameters }> {
+  return { iceParameters: await transportOrThrow(ctx, transportId).restartIce() };
+}
+
+function transportOrThrow(ctx: MediaContext, transportId: string): types.WebRtcTransport {
   const transport = peerOrThrow(ctx).transportById(transportId);
   if (!transport) {
     throw new AppError('no_transport', 'No such transport on this session.');
   }
-  await transport.connect({ dtlsParameters });
+  return transport;
 }
 
 export interface ProduceInput {

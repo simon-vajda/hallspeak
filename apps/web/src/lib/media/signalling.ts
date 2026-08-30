@@ -22,6 +22,7 @@ export interface Signalling {
     dtlsParameters: Wire;
   }>;
   connectTransport(transportId: string, dtlsParameters: Wire): Promise<void>;
+  restartIce(transportId: string): Promise<{ iceParameters: Wire }>;
   produce(slug: string, rtpParameters: Wire, paused: boolean): Promise<{ producerId: string }>;
   pauseProducer(producerId: string): Promise<void>;
   resumeProducer(producerId: string): Promise<void>;
@@ -44,6 +45,9 @@ export function signalling(socket: SocketClient): Signalling {
     connectTransport: async (transportId, dtlsParameters) => {
       unwrap(await socket.emitWithAck('media:connect-transport', { transportId, dtlsParameters }));
     },
+
+    restartIce: async (transportId) =>
+      unwrap(await socket.emitWithAck('media:restart-ice', { transportId })),
 
     produce: async (slug, rtpParameters, paused) =>
       unwrap(

@@ -1,4 +1,5 @@
 import type { types } from 'mediasoup-client';
+import { ICE_RECOVERY_DELAY_MS } from './media-state';
 
 /**
  * The browser half of the silent-failure telemetry the server carries in
@@ -7,9 +8,6 @@ import type { types } from 'mediasoup-client';
  * extension), an unreachable announced address, a blocked RTC port. Nothing throws for any
  * of them, so the console is the only place it can be seen.
  */
-
-/** Long enough that an ordinary ICE handshake has finished, short enough to still be watching. */
-const SILENCE_CHECK_MS = 5_000;
 
 function log(message: string, ...rest: unknown[]): void {
   console.info(`media: ${message}`, ...rest);
@@ -40,7 +38,7 @@ export function watchTransport(transport: types.Transport, direction: 'send' | '
       return;
     }
     void reportPath(transport, tag);
-  }, SILENCE_CHECK_MS);
+  }, ICE_RECOVERY_DELAY_MS);
 }
 
 async function reportPath(transport: types.Transport, tag: string): Promise<void> {
@@ -65,7 +63,7 @@ async function reportPath(transport: types.Transport, tag: string): Promise<void
 
   if (pair === null) {
     console.warn(
-      `media: ${tag} has no nominated candidate pair after ${SILENCE_CHECK_MS}ms — ` +
+      `media: ${tag} has no nominated candidate pair after ${ICE_RECOVERY_DELAY_MS}ms — ` +
         'ICE never connected. A browser shield or privacy extension suppressing WebRTC ' +
         'candidates, or a blocked RTC port, both look exactly like this.',
     );

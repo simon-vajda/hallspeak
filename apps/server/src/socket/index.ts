@@ -14,6 +14,7 @@ import {
   getCapabilities,
   openTransport,
   pauseProducing,
+  restartTransport,
   resumeConsuming,
   resumeProducing,
   startConsuming,
@@ -78,6 +79,7 @@ export function attachSocket(httpServer: ServerType): SocketServer {
     on(socket, 'media:connect-transport', (payload) =>
       connectTransport(socket, socket.data, payload),
     );
+    on(socket, 'media:restart-ice', (payload) => restartTransport(socket, socket.data, payload));
     on(socket, 'media:produce', (payload) => startProducing(db, socket, socket.data, payload));
     on(socket, 'media:pause-producer', (payload) => pauseProducing(socket, socket.data, payload));
     on(socket, 'media:resume-producer', (payload) => resumeProducing(socket, socket.data, payload));

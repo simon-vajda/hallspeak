@@ -13,6 +13,7 @@ import {
   pauseProducer,
   produce,
   releasePeer,
+  restartIce,
   resumeConsumer,
   resumeProducer,
   revokeChannel,
@@ -288,6 +289,19 @@ describe('createTransport', () => {
     await expect(
       createTransport({ eventId: EVENT, socketId: 'speaker-a' }, 'send', { create: true }),
     ).rejects.toMatchObject({ code: 'transport_exists' });
+  });
+
+  it('restarts ICE on an owned transport and refuses an unknown one', async () => {
+    const transport = await createTransport({ eventId: EVENT, socketId: 'speaker-a' }, 'send', {
+      create: true,
+    });
+
+    await expect(
+      restartIce({ eventId: EVENT, socketId: 'speaker-a' }, transport.id),
+    ).resolves.toEqual({ iceParameters: { usernameFragment: 'restart-1' } });
+    await expect(
+      restartIce({ eventId: EVENT, socketId: 'speaker-a' }, 'someone-elses'),
+    ).rejects.toMatchObject({ code: 'no_transport' });
   });
 });
 

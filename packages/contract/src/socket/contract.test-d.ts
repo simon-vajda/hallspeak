@@ -40,6 +40,8 @@ type ConsumeParams = Parameters<C2S['media:consume']>;
 
 export const _produceTakesAnAck: ProduceParams['length'] = 2;
 export const _closeConsumerTakesAnAck: Parameters<C2S['media:close-consumer']>['length'] = 2;
+export const _restartIceTakesAnAck: Parameters<C2S['media:restart-ice']>['length'] = 2;
+export const _restartIcePayload: Parameters<C2S['media:restart-ice']>[0] = { transportId: 't1' };
 
 export const _producePayload: ProduceParams[0] = {
   slug: 'english',
