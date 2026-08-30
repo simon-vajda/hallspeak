@@ -1,7 +1,11 @@
 import type { SocketStatus } from '@/lib/socket-state';
 import { BAR_COUNT, type ConnectionGrade, gradeStats, type MediaStats } from './stats';
 
-export type MediaHealth = 'idle' | 'connecting' | 'connected' | 'trouble';
+/**
+ * `trouble` is a session still being fought for; `failed` is one that has spent every
+ * recovery attempt and will not come back on its own.
+ */
+export type MediaHealth = 'idle' | 'connecting' | 'connected' | 'trouble' | 'failed';
 
 export type LinkState =
   | { kind: 'idle' }
@@ -28,6 +32,11 @@ export interface LinkStateInput {
 /** Resolves both connection legs once, with terminal and rebuilding states taking priority. */
 export function resolveLinkState(input: LinkStateInput): LinkState {
   if (input.socketStatus === 'error') {
+    return { kind: 'lost' };
+  }
+  // Terminal on the media leg alone: the socket is fine and the screen would otherwise
+  // claim to be reconnecting forever, which is the one thing a spent session is not doing.
+  if (input.mediaWanted && input.mediaHealth === 'failed') {
     return { kind: 'lost' };
   }
   // Only once the socket is up: before that, silence would mean "not yet" rather than
