@@ -12,6 +12,7 @@ import {
   iceRecoveryDelay,
   initialMediaState,
   isCurrent,
+  MAX_ICE_RESTARTS,
   type MediaState,
   type ProducerControlIdentity,
   producerClosed,
@@ -243,8 +244,9 @@ export function useMedia(socket: SocketClient | null) {
 
       // Per transport, so the console says which attempt a line belongs to.
       let restarts = 0;
+      let gaveUp = false;
 
-      const armIceRecovery = (next: TransportConnectionState, retry = false): void => {
+      const armIceRecovery = (next: TransportConnectionState): void => {
         const armed = active.iceRecoveryTimers[direction];
         if (armed !== undefined) {
           clearTimeout(armed);
@@ -253,10 +255,21 @@ export function useMedia(socket: SocketClient | null) {
         if (session.current !== active || transport.closed) {
           return;
         }
-        const delay = iceRecoveryDelay(next, retry);
+        const delay = iceRecoveryDelay(next, restarts);
         if (delay === null) {
           if (next === 'connected') {
             setHealth('connected');
+            return;
+          }
+          setHealth('trouble');
+          if (restarts >= MAX_ICE_RESTARTS && !gaveUp) {
+            gaveUp = true;
+            logIceRecovery(
+              direction,
+              `gave up after ${restarts} ICE restarts, still ${next}. ` +
+                'Restarting again cannot help: the browser and the server have no candidate ' +
+                'they can pair — an address family or a port neither side shares.',
+            );
           }
           return;
         }
@@ -265,7 +278,7 @@ export function useMedia(socket: SocketClient | null) {
           setHealth('trouble');
           return;
         }
-        setHealth(next === 'failed' || retry ? 'trouble' : 'connecting');
+        setHealth(next === 'failed' || restarts > 0 ? 'trouble' : 'connecting');
 
         active.iceRecoveryTimers[direction] = setTimeout(() => {
           delete active.iceRecoveryTimers[direction];
@@ -289,7 +302,8 @@ export function useMedia(socket: SocketClient | null) {
             if (
               session.current !== active ||
               transport.closed ||
-              iceRecoveryDelay(connectionState) === null
+              connectionState === 'connected' ||
+              connectionState === 'closed'
             ) {
               throw new Error(SUPERSEDED);
             }
@@ -311,7 +325,7 @@ export function useMedia(socket: SocketClient | null) {
                 delete active.pendingIceRestarts[direction];
               }
               if (session.current === active && !transport.closed) {
-                armIceRecovery(transport.connectionState as TransportConnectionState, true);
+                armIceRecovery(transport.connectionState as TransportConnectionState);
               }
             });
         }, delay);

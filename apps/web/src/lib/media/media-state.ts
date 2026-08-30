@@ -51,14 +51,33 @@ export type TransportConnectionState =
  */
 export const ICE_RECOVERY_DELAY_MS = 5_000;
 
+/**
+ * Not every stuck transport is recoverable by restarting it. A handoff that leaves the
+ * browser holding only IPv6 candidates against an IPv4-only server pairs nothing, and no
+ * number of restarts changes that — so the attempts back off and then stop, rather than
+ * holding the radio awake forever on a transport that cannot connect.
+ */
+export const MAX_ICE_RESTARTS = 4;
+export const ICE_RECOVERY_MAX_DELAY_MS = 30_000;
+
+/**
+ * How long to wait before the next restart, given how many have already been made. `null`
+ * means arm nothing: the transport is settled, or the attempts are spent.
+ */
 export function iceRecoveryDelay(
   connectionState: TransportConnectionState,
-  retry = false,
+  restarts = 0,
 ): number | null {
   if (connectionState === 'connected' || connectionState === 'closed') {
     return null;
   }
-  return connectionState === 'failed' && !retry ? 0 : ICE_RECOVERY_DELAY_MS;
+  if (restarts >= MAX_ICE_RESTARTS) {
+    return null;
+  }
+  if (connectionState === 'failed' && restarts === 0) {
+    return 0;
+  }
+  return Math.min(ICE_RECOVERY_DELAY_MS * 2 ** restarts, ICE_RECOVERY_MAX_DELAY_MS);
 }
 
 /**
