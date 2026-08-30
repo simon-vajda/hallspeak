@@ -41,6 +41,23 @@ export function watchTransport(transport: types.Transport, direction: 'send' | '
   }, ICE_RECOVERY_DELAY_MS);
 }
 
+/** Names a recovery step as it happens; without it a stuck transport leaves no trace of what was tried. */
+export function logIceRecovery(
+  direction: 'send' | 'recv',
+  message: string,
+  ...rest: unknown[]
+): void {
+  log(`${direction} transport ${message}`, ...rest);
+}
+
+/** The same snapshot the creation deadline takes, for a caller that has just tried a recovery. */
+export function reportTransportPath(
+  transport: types.Transport,
+  direction: 'send' | 'recv',
+): Promise<void> {
+  return reportPath(transport, `${direction} transport`);
+}
+
 async function reportPath(transport: types.Transport, tag: string): Promise<void> {
   const report = await transport.getStats().catch(() => null);
   if (!report) {
@@ -66,6 +83,7 @@ async function reportPath(transport: types.Transport, tag: string): Promise<void
       `media: ${tag} has no nominated candidate pair after ${ICE_RECOVERY_DELAY_MS}ms — ` +
         'ICE never connected. A browser shield or privacy extension suppressing WebRTC ' +
         'candidates, or a blocked RTC port, both look exactly like this.',
+      describeCandidates(report),
     );
     return;
   }
@@ -74,6 +92,33 @@ async function reportPath(transport: types.Transport, tag: string): Promise<void
     return;
   }
   log(`${tag} carrying RTP on ${pair} (${bytes} bytes)`);
+}
+
+/**
+ * What ICE had to work with. A handoff that leaves the browser gathering on an interface
+ * that is already gone reads as no local candidates at all, which is indistinguishable
+ * from a suppressed-candidate shield until the two sides are counted separately.
+ */
+function describeCandidates(report: RTCStatsReport): {
+  local: string[];
+  remote: string[];
+  pairs: string[];
+} {
+  const local: string[] = [];
+  const remote: string[] = [];
+  const pairs: string[] = [];
+  for (const entry of report.values()) {
+    if (entry.type === 'local-candidate' || entry.type === 'remote-candidate') {
+      const where = `${entry.candidateType}/${entry.protocol} ${entry.address ?? '?'}:${entry.port ?? '?'}`;
+      (entry.type === 'local-candidate' ? local : remote).push(
+        entry.networkType === undefined ? where : `${where} (${entry.networkType})`,
+      );
+    }
+    if (entry.type === 'candidate-pair') {
+      pairs.push(String(entry.state));
+    }
+  }
+  return { local, remote, pairs };
 }
 
 /** A receive track that never unmutes is the listener-side symptom of RTP not arriving. */
