@@ -2,7 +2,7 @@ import type { types } from 'mediasoup-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SocketClient } from '@/socket/client';
 import { loadDevice } from './device';
-import { watchConsumerTrack } from './diagnostics';
+import { logIceRecovery, reportTransportPath, watchConsumerTrack } from './diagnostics';
 import type { MediaHealth } from './link-state';
 import {
   afterConnect,
@@ -241,6 +241,9 @@ export function useMedia(socket: SocketClient | null) {
         throw new Error(SUPERSEDED);
       }
 
+      // Per transport, so the console says which attempt a line belongs to.
+      let restarts = 0;
+
       const armIceRecovery = (next: TransportConnectionState, retry = false): void => {
         const armed = active.iceRecoveryTimers[direction];
         if (armed !== undefined) {
@@ -271,7 +274,16 @@ export function useMedia(socket: SocketClient | null) {
           }
 
           setHealth('trouble');
+          restarts += 1;
+          const attempt = restarts;
+          logIceRecovery(
+            direction,
+            `stuck in ${transport.connectionState} — restarting ICE (attempt ${attempt})`,
+          );
           const restart = (async () => {
+            // Snapshot before the restart, not after: what ICE was working with is the
+            // question, and a fresh restart has not had time to nominate anything.
+            await reportTransportPath(transport, direction);
             const { iceParameters } = await signalling(socket).restartIce(transport.id);
             const connectionState = transport.connectionState as TransportConnectionState;
             if (
@@ -282,12 +294,16 @@ export function useMedia(socket: SocketClient | null) {
               throw new Error(SUPERSEDED);
             }
             await transport.restartIce({ iceParameters });
+            logIceRecovery(
+              direction,
+              `ICE restart ${attempt} applied, now ${transport.connectionState}`,
+            );
           })();
           active.pendingIceRestarts[direction] = restart;
           void restart
             .catch((cause) => {
               if (session.current === active && !transport.closed && !isSuperseded(cause)) {
-                console.error('media: could not restart ICE', cause);
+                console.error(`media: could not restart ICE (attempt ${attempt})`, cause);
               }
             })
             .finally(() => {
