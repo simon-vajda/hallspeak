@@ -104,12 +104,13 @@ distribution boundaries.
    to `{ online: true, muted: null }`, because REST cannot authoritatively say whether the
    Producer is paused (`apps/web/src/lib/channel-status.ts:38-45`). The Listener joins the
    Channel room and reconciles the acknowledgement with later realtime events
-   (`apps/web/src/routes/events/$pin/$slug.tsx:65-78`,
-   `apps/web/src/routes/events/$pin/$slug.tsx:107-123`). Until mute is known, the UI reports
-   that it is checking status; when muted, it explains that audio will resume automatically
-   (`apps/web/src/components/guest/listen-state.ts:38-50`,
-   `apps/web/src/components/guest/listen-state.ts:89-108`,
-   `apps/web/src/components/guest/listen-state.ts:121-140`).
+   (`apps/web/src/components/guest/listener-channel.tsx`,
+   `apps/web/src/components/guest/listener-room.tsx`). The badge carries mute as its own word
+   once it is known — `Muted`, beside `Offline`, `On air` and `Speaker dropped off` — and the
+   supporting copy explains that audio will resume automatically
+   (`apps/web/src/components/guest/listen-state.ts`, `badgeLabel` and `statusNote`). An unknown
+   mute is not a badge state: the badge falls back to the liveness seed's `On air` rather than
+   reporting that it is checking, because the link is the connection line's to report.
 
 Do not infer Live from presence, claim ownership, UI state, or a connected Socket.IO session.
 Do not end a Producer to implement mute. Do not add `muted` to public or admin REST schemas
@@ -178,8 +179,9 @@ bounded 30-second playback intent and consumes a returning Producer automaticall
 **Listener count during mute.** A guest has resumed their Consumer and is Listening. The
 Speaker pauses the Producer. The Consumer remains open and locally unpaused, so the count
 remains one; the regression test fixes that behavior
-(`apps/server/src/core/media/room.test.ts:226-235`). Admin can still report “On air · 1
-listening” without needing a mute field (`apps/web/src/lib/format.ts:37-45`).
+(`apps/server/src/core/media/room.test.ts:226-235`). Admin can still report `On air` with a
+separate `1 listening` count without needing a mute field
+(`apps/web/src/lib/format.ts`, `channelBroadcast`).
 
 **Regression checks.** Preserve tests at three boundaries:
 
