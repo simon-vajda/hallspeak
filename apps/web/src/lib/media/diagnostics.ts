@@ -99,11 +99,7 @@ async function reportPath(transport: types.Transport, tag: string): Promise<void
  * that is already gone reads as no local candidates at all, which is indistinguishable
  * from a suppressed-candidate shield until the two sides are counted separately.
  */
-function describeCandidates(report: RTCStatsReport): {
-  local: string[];
-  remote: string[];
-  pairs: string[];
-} {
+function describeCandidates(report: RTCStatsReport): string {
   const local: string[] = [];
   const remote: string[] = [];
   const pairs: string[] = [];
@@ -118,7 +114,14 @@ function describeCandidates(report: RTCStatsReport): {
       pairs.push(String(entry.state));
     }
   }
-  return { local, remote, pairs };
+  // Joined rather than returned as arrays: a mobile console collapses an object, and these
+  // strings are the whole diagnosis — an address family that cannot pair reads as nothing
+  // at all until the candidates themselves are on screen.
+  return (
+    `local [${local.join(', ') || 'none'}] ` +
+    `remote [${remote.join(', ') || 'none'}] ` +
+    `pairs [${pairs.join(', ') || 'none'}]`
+  );
 }
 
 /** A receive track that never unmutes is the listener-side symptom of RTP not arriving. */

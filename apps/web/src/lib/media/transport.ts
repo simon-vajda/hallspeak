@@ -1,5 +1,5 @@
 import type { Device, types } from 'mediasoup-client';
-import { watchTransport } from './diagnostics';
+import { logIceRecovery, watchTransport } from './diagnostics';
 import type { Signalling } from './signalling';
 
 /**
@@ -21,6 +21,9 @@ export async function openTransport(input: {
 }): Promise<types.Transport> {
   const params = await input.api.createTransport(input.direction);
   const options = { ...params, iceServers: input.iceServers };
+  // Serialized whole: the wire type is opaque here, and mediasoup has spelled the address
+  // field two ways across versions, so naming fields would risk printing `undefined`.
+  logIceRecovery(input.direction, `server offered ${JSON.stringify(params.iceCandidates)}`);
 
   const transport =
     input.direction === 'send'
