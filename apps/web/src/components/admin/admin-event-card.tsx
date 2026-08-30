@@ -3,12 +3,22 @@ import { EventNameLink, ListenerEventLink } from '@/components/admin/admin-event
 import { ChannelChips } from '@/components/admin/channel-chips';
 import { EventEnabledSwitch } from '@/components/admin/event-enabled-switch';
 import { adminEventStatusLabel } from '@/lib/admin-event-list';
+import { STATUS_UNKNOWN } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
-export function AdminEventCard({ event, onAir }: { event: AdminEventDetail; onAir: number }) {
+export function AdminEventCard({
+  event,
+  onAir,
+  liveKnown,
+}: {
+  event: AdminEventDetail;
+  onAir: number;
+  liveKnown: boolean;
+}) {
   const dim = event.enabled ? undefined : 'opacity-60';
+  const status = adminEventStatusLabel(event, onAir, liveKnown);
 
   return (
     <li
@@ -28,7 +38,8 @@ export function AdminEventCard({ event, onAir }: { event: AdminEventDetail; onAi
       </div>
       <ChannelChips channels={event.channels} variant="wrap" className={cn('mt-3', dim)} />
       <p className={cn('mt-3 text-meta text-muted-foreground', dim)}>
-        {adminEventStatusLabel(event, onAir)}
+        {status.label}
+        {status.withheld && <span className="sr-only">{STATUS_UNKNOWN}</span>}
       </p>
     </li>
   );

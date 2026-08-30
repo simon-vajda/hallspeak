@@ -32,14 +32,20 @@ export const liveKey = () => adminLiveQueryOptions().queryKey;
 const LIVE_POLL_MS = 5_000;
 
 type AdminLiveIndex = {
+  /**
+   * Whether the poll has an answer at all. False while the first poll is in flight and again
+   * once one fails: an absent channel then means "not known", not "idle", and a caller reading
+   * the maps without checking this would print a quiet room the media layer never reported.
+   */
+  known: boolean;
   /** Event id → how many of its channels have an interpreter producing. */
   onAir: Map<number, number>;
   /** Channel id → its live entry. */
   channels: Map<number, AdminLiveChannel>;
 };
 
-function indexLive(events: AdminLiveEvent[] | undefined): AdminLiveIndex {
-  const index: AdminLiveIndex = { onAir: new Map(), channels: new Map() };
+export function indexLive(events: AdminLiveEvent[] | undefined, known: boolean): AdminLiveIndex {
+  const index: AdminLiveIndex = { known, onAir: new Map(), channels: new Map() };
 
   for (const event of events ?? []) {
     let onAir = 0;
@@ -60,14 +66,21 @@ function indexLive(events: AdminLiveEvent[] | undefined): AdminLiveIndex {
  * a field on `AdminEventDetail`: the optimistic enable/disable helpers rewrite that entry, and a
  * poll landing mid-toggle would undo it.
  *
- * A pending or failed poll yields an empty index rather than an error — an absent event or
- * channel already means zero, so every caller degrades to its idle copy and the admin screens
- * still load with the media layer down.
+ * A pending or failed poll yields an empty index rather than an error, so the admin screens still
+ * load with the media layer down. It carries `known: false` with it: the emptiness is the poll
+ * having no answer, and a caller must withhold rather than read it as nobody broadcasting.
  */
 export function useAdminLive(): AdminLiveIndex {
-  const { data } = $api.useQuery('get', '/admin/live', {}, { refetchInterval: LIVE_POLL_MS });
+  const { data, isSuccess } = $api.useQuery(
+    'get',
+    '/admin/live',
+    {},
+    { refetchInterval: LIVE_POLL_MS },
+  );
 
-  return useMemo(() => indexLive(data), [data]);
+  // Held data outlives a failed refetch, so `isSuccess` — not the data — is what says the
+  // reading is current.
+  return useMemo(() => indexLive(isSuccess ? data : undefined, isSuccess), [data, isSuccess]);
 }
 
 /** Both, always: the list's chips come from the same channels the detail page shows. */

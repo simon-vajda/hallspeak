@@ -5,7 +5,7 @@ import { AdminChannelRow } from '@/components/admin/admin-channel-row';
 import { ChannelFormDialog } from '@/components/admin/channel-form-dialog';
 import { Button } from '@/components/ui/button';
 import { useAdminLive } from '@/lib/admin-queries';
-import { channelLiveLabel } from '@/lib/format';
+import { channelBroadcast } from '@/lib/format';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
@@ -35,7 +35,7 @@ export function ChannelsPanel({ event }: { event: AdminEventDetail }) {
               key={channel.id}
               event={event}
               channel={channel}
-              live={channelLiveLabel(live.channels.get(channel.id))}
+              broadcast={channelBroadcast(live.channels.get(channel.id), live.known)}
             />
           ))}
         </ul>
