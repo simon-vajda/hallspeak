@@ -97,20 +97,20 @@ describe('channel status reconciliation', () => {
 });
 
 describe('failed mute control reconciliation', () => {
-  it('restores local transmission when a pause is rejected without newer status', () => {
+  it('keeps an interpreter muted when their pause is rejected, rather than reopening the mic', () => {
+    // The local pause already stopped the audio and they believe they are muted. Undoing it
+    // is the one failure they cannot hear.
     expect(
       rollbackMutedAfterFailure({
-        requestedMuted: true,
         requestRevision: 4,
         current: { online: true, muted: false, revision: 4 },
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('restores the safe muted state when a resume is rejected without newer status', () => {
     expect(
       rollbackMutedAfterFailure({
-        requestedMuted: false,
         requestRevision: 4,
         current: { online: true, muted: true, revision: 4 },
       }),
@@ -120,7 +120,6 @@ describe('failed mute control reconciliation', () => {
   it('follows a newer authoritative status instead of undoing it', () => {
     expect(
       rollbackMutedAfterFailure({
-        requestedMuted: true,
         requestRevision: 4,
         current: { online: true, muted: true, revision: 5 },
       }),

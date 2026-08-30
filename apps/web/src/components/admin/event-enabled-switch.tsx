@@ -5,7 +5,7 @@ import { $api } from '@/api/client';
 import { EnabledSwitch } from '@/components/admin/enabled-switch';
 import { LiveWarning } from '@/components/admin/live-warning';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { eventLiveWarning } from '@/lib/admin-live-warning';
+import { disableConfirmation, eventLiveWarning } from '@/lib/admin-live-warning';
 import { eventScope, useAdminLive, useOptimisticEventUpdate } from '@/lib/admin-queries';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
@@ -26,6 +26,7 @@ export function EventEnabledSwitch({
     onAir: live.onAir.get(event.id) ?? 0,
     liveKnown: live.known,
   });
+  const notice = disableConfirmation({ warning, liveKnown: live.known });
 
   const { mutate } = $api.useMutation('patch', '/admin/events/{id}', {
     // Writes to one event run one at a time: toggled twice quickly, the first settle refetch
@@ -50,9 +51,9 @@ export function EventEnabledSwitch({
         label={`Enable ${event.name}`}
         className={className}
         onCheckedChange={(enabled) => {
-          // Only switching a live event off asks: enabling never takes anything down, and an
-          // idle event stays one press.
-          if (!enabled && warning) {
+          // Only switching off asks, and only when the event may be live: enabling never
+          // takes anything down, and an idle event under a healthy poll stays one press.
+          if (!enabled && notice) {
             setConfirming(true);
             return;
           }
@@ -72,7 +73,7 @@ export function EventEnabledSwitch({
           mutate({ params: { path: { id: event.id } }, body: { enabled: false } });
         }}
       >
-        {warning && <LiveWarning>{warning}</LiveWarning>}
+        {notice && <LiveWarning tone={notice.tone}>{notice.message}</LiveWarning>}
         <p>Everyone listening is disconnected and no one can rejoin until it is enabled again.</p>
       </ConfirmDialog>
     </>

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { channelLiveWarning, eventLiveWarning } from './admin-live-warning';
+import {
+  channelLiveWarning,
+  disableConfirmation,
+  eventLiveWarning,
+  LIVENESS_UNKNOWN,
+} from './admin-live-warning';
 
 describe('channelLiveWarning', () => {
   it('warns about a channel that is on air', () => {
@@ -55,5 +60,33 @@ describe('eventLiveWarning', () => {
 
   it('says nothing about a disabled event carrying a stale live entry', () => {
     expect(eventLiveWarning({ enabled: false, onAir: 2, liveKnown: true })).toBeUndefined();
+  });
+});
+
+describe('disableConfirmation', () => {
+  it('warns about a confirmed live target, in the destructive tone', () => {
+    expect(disableConfirmation({ warning: 'An interpreter is on air.', liveKnown: true })).toEqual({
+      tone: 'live',
+      message: 'An interpreter is on air.',
+    });
+  });
+
+  it('asks nothing about an idle target under a healthy poll, so it stays one press', () => {
+    expect(disableConfirmation({ warning: undefined, liveKnown: true })).toBeNull();
+  });
+
+  it('reports the gap when the poll cannot say, rather than acting as though it were idle', () => {
+    // The row beside this switch already shows a dash; the switch must not behave as though
+    // it knows what the row admits it does not.
+    expect(disableConfirmation({ warning: undefined, liveKnown: false })).toEqual({
+      tone: 'unknown',
+      message: LIVENESS_UNKNOWN,
+    });
+  });
+
+  it('never dresses an unknown reading as a confirmed broadcast', () => {
+    const notice = disableConfirmation({ warning: undefined, liveKnown: false });
+
+    expect(notice?.tone).not.toBe('live');
   });
 });

@@ -14,7 +14,7 @@ import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
-import { isLinkUp, type LinkState } from '@/lib/media/link-state';
+import type { LinkState } from '@/lib/media/link-state';
 import type { BroadcastState } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
@@ -65,7 +65,6 @@ export function SpeakerOnAir({
   const [confirming, setConfirming] = useState(false);
   const isMuted = state === 'muted';
   const onAir = state === 'live' || state === 'muted';
-  const linkConnected = isLinkUp(link);
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -103,7 +102,11 @@ export function SpeakerOnAir({
               // Narrower than `onAir`: the rings mean samples are moving, which a muted
               // producer is not doing. The badge dot is what widens to cover both.
               rings={state === 'live'}
-              disabled={!linkConnected}
+              // Only before a producer exists. A dropped socket must not take the mute with
+              // it: `producer.pause()` is local and stops the audio on its own, so an
+              // interpreter who needs to cut a hot mic can always do it, and the failed
+              // server call leaves them muted rather than undoing it.
+              disabled={state === 'connecting'}
               // The dashed rim is this screen's affordance, not the shared primitive's, and
               // the design leaves the fill at full strength behind it.
               className="disabled:border-dashed disabled:border-border disabled:opacity-100"

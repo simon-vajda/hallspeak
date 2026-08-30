@@ -138,11 +138,16 @@ export function applyJoinStatus(
 }
 
 /**
- * A failed request normally restores the state from before the optimistic local control.
- * If realtime advanced while it was in flight, that newer server snapshot wins instead.
+ * Where a failed mute control leaves the interpreter. If realtime advanced while the request
+ * was in flight, that newer server snapshot wins.
+ *
+ * Otherwise both directions fail safe to muted, rather than undoing what was asked. A failed
+ * pause must never put an interpreter back on air: the local `producer.pause()` has already
+ * stopped the audio, they believe they are muted, and resuming would be the one failure they
+ * cannot see. A failed resume is muted in effect anyway — the server still has every listener's
+ * consumer paused — so saying muted is what matches what the room can hear.
  */
 export function rollbackMutedAfterFailure(input: {
-  requestedMuted: boolean;
   requestRevision: number;
   current: ChannelStatusEntry | undefined;
 }): boolean {
@@ -153,5 +158,5 @@ export function rollbackMutedAfterFailure(input: {
   ) {
     return input.current.muted;
   }
-  return !input.requestedMuted;
+  return true;
 }
