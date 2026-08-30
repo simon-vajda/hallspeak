@@ -268,10 +268,15 @@ export function useMedia(socket: SocketClient | null) {
         } else {
           active.consumers.clear();
         }
-        setState((prev) => beginRebuild(prev, direction));
-        // Last, and unawaited by the caller's guards: the server has to release the
-        // direction before a fresh transport can be created on this socket.
+        // Before the state that re-opens it, not after: the server permits one transport
+        // per direction, so an effect reaching `createTransport` while it still holds this
+        // one is refused with `transport_exists` and the rebuild dies there.
         await signalling(socket).closeTransport(transport.id);
+        // Renegotiating, not in trouble. Left at `trouble` the link reads as down, `online`
+        // is false, and the effects that would open the replacement decline to — the
+        // rebuild would tear the transport down and nothing would ever ask for another.
+        setHealth('connecting');
+        setState((prev) => beginRebuild(prev, direction));
       };
 
       const armIceRecovery = (next: TransportConnectionState): void => {
