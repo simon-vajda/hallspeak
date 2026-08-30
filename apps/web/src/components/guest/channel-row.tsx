@@ -1,6 +1,6 @@
 import type { components } from '@linguacast/contract/openapi';
 import { Link } from '@tanstack/react-router';
-import { Play } from 'lucide-react';
+import { ChevronRight, Play } from 'lucide-react';
 import { LiveDot } from '@/components/live-dot';
 import { cn } from '@/lib/utils';
 
@@ -39,16 +39,20 @@ export function ChannelRow({
       <div className="flex-1">
         <div className={cn(NAME, !online && 'text-muted-foreground')}>{channel.name}</div>
         <div className="mt-px text-note text-muted-foreground lg:mt-0.5">
-          {online ? 'On air' : 'Waiting for the interpreter'}
+          {online ? 'On air' : 'Offline'}
         </div>
       </div>
-      {online && (
+      {online ? (
         <span
           aria-hidden
           className="flex size-9 items-center justify-center gap-2.25 rounded-full bg-primary text-primary-foreground lg:h-11 lg:w-auto lg:px-6 lg:text-base lg:font-semibold"
         >
           <Play className="size-3.5 fill-current lg:size-3.75" />
           <span className="hidden lg:inline">Listen</span>
+        </span>
+      ) : (
+        <span aria-hidden className="flex size-9 items-center justify-center lg:size-11">
+          <ChevronRight className="size-4.5 text-muted-foreground" />
         </span>
       )}
     </Link>

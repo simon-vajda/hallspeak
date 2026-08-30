@@ -86,7 +86,7 @@ export const adminEventRoutes = new OpenAPIHono({ defaultHook })
       return c.json(eventNotFound, 404);
     }
     // The old PIN is what those sockets connected with, so they have to go — including
-    // listeners who never armed and own no media for core/ to name.
+    // listeners who own no media for core/ to name.
     revokeAllAccess(updated.id);
     return c.json(toAdminEvent(updated), 200);
   })

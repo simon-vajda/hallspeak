@@ -2,6 +2,7 @@
 export interface ChannelStatus {
   online: boolean;
   muted: boolean | null;
+  reason?: 'ended' | 'dropped';
 }
 
 export interface ChannelStatusEntry extends ChannelStatus {
@@ -40,8 +41,16 @@ export function channelStatusFromHttp(online: boolean): ChannelStatus {
   return { online, muted: online ? null : false };
 }
 
-function normalizeStatus(status: { online: boolean; muted: boolean }): ChannelStatus {
-  return { online: status.online, muted: status.online ? status.muted : false };
+function normalizeStatus(status: {
+  online: boolean;
+  muted: boolean;
+  reason?: 'ended' | 'dropped';
+}): ChannelStatus {
+  return {
+    online: status.online,
+    muted: status.online ? status.muted : false,
+    ...(status.reason === undefined ? {} : { reason: status.reason }),
+  };
 }
 
 /** Clears values as well as ordering when the PIN or speaker authority changes. */
@@ -58,10 +67,10 @@ export function resetStatusOrdering(state: ChannelStatusState): ChannelStatusSta
   return {
     connectionRevision: state.connectionRevision + 1,
     channels: Object.fromEntries(
-      Object.entries(state.channels).map(([slug, status]) => [
-        slug,
-        { ...status, ...channelStatusFromHttp(status.online), revision: 0 },
-      ]),
+      Object.entries(state.channels).map(([slug, status]) => {
+        const { reason: _, ...current } = status;
+        return [slug, { ...current, ...channelStatusFromHttp(status.online), revision: 0 }];
+      }),
     ),
   };
 }
@@ -91,7 +100,7 @@ export function beginChannelJoin(
 export function applyRealtimeStatus(
   state: ChannelStatusState,
   slug: string,
-  status: { online: boolean; muted: boolean },
+  status: { online: boolean; muted: boolean; reason?: 'ended' | 'dropped' },
 ): ChannelStatusState {
   const current = state.channels[slug];
   return {
@@ -129,11 +138,16 @@ export function applyJoinStatus(
 }
 
 /**
- * A failed request normally restores the state from before the optimistic local control.
- * If realtime advanced while it was in flight, that newer server snapshot wins instead.
+ * Where a failed mute control leaves the interpreter. If realtime advanced while the request
+ * was in flight, that newer server snapshot wins.
+ *
+ * Otherwise both directions fail safe to muted, rather than undoing what was asked. A failed
+ * pause must never put an interpreter back on air: the local `producer.pause()` has already
+ * stopped the audio, they believe they are muted, and resuming would be the one failure they
+ * cannot see. A failed resume is muted in effect anyway — the server still has every listener's
+ * consumer paused — so saying muted is what matches what the room can hear.
  */
 export function rollbackMutedAfterFailure(input: {
-  requestedMuted: boolean;
   requestRevision: number;
   current: ChannelStatusEntry | undefined;
 }): boolean {
@@ -144,5 +158,5 @@ export function rollbackMutedAfterFailure(input: {
   ) {
     return input.current.muted;
   }
-  return !input.requestedMuted;
+  return true;
 }

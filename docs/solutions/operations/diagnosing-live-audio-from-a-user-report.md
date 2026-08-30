@@ -46,7 +46,8 @@ expected failure sequence rather than a set of unrelated faults.
 4. **"New people can't join but the ones already listening are fine."** Contention has
    reached the signalling thread and the 8s handler timeout is firing.
 5. **"Everyone dropped."** Process level. Recovery is a restart; clients renegotiate from
-   capabilities on their own and armed listeners stay armed.
+   capabilities on their own. Listener playback returns to idle because link loss clears its
+   bounded recovery hold.
 
 ## First things to check, in order
 

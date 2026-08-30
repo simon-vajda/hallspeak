@@ -3,20 +3,26 @@ import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { $api } from '@/api/client';
+import { LiveWarning } from '@/components/admin/live-warning';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { channelLiveWarning } from '@/lib/admin-live-warning';
 import { invalidateAdminEvents } from '@/lib/admin-queries';
+import type { ChannelBroadcast } from '@/lib/format';
 
 type AdminChannel = components['schemas']['AdminChannel'];
 
 export function RegenerateSpeakerCodeDialog({
   channel,
+  broadcast,
   open,
   onOpenChange,
 }: {
   channel: AdminChannel;
+  broadcast: ChannelBroadcast;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const warning = channelLiveWarning({ enabled: channel.enabled, broadcast });
   const queryClient = useQueryClient();
   const [failed, setFailed] = useState(false);
   const { mutate, isPending } = $api.useMutation(
@@ -52,6 +58,7 @@ export function RegenerateSpeakerCodeDialog({
         whoever interprets this channel.
       </p>
       <p>Listeners are unaffected — their link does not carry the code.</p>
+      {warning && <LiveWarning>{warning} They stay on air until they reload.</LiveWarning>}
     </ConfirmDialog>
   );
 }

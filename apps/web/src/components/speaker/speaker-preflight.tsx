@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { formatPin } from '@/lib/format';
-import type { SocketStatus } from '@/lib/use-socket';
+import type { LinkState } from '@/lib/media/link-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -25,8 +25,7 @@ export function SpeakerPreflight({
   onPreferencesChange,
   canGoLive,
   onGoLive,
-  status,
-  socketError,
+  link,
 }: {
   eventName: string;
   pin: string;
@@ -37,8 +36,7 @@ export function SpeakerPreflight({
   onPreferencesChange: (patch: Partial<AudioPreferences>) => void;
   canGoLive: boolean;
   onGoLive: () => void;
-  status: SocketStatus;
-  socketError: string | null;
+  link: LinkState;
 }) {
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -56,7 +54,7 @@ export function SpeakerPreflight({
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header>
           <div className="flex items-center justify-between gap-3">
-            <LiveBadge live={false} showDot={false} label="Interpreter · off air" />
+            <LiveBadge live={false} showDot={false} label="Off air" />
             <div className="-my-1 lg:hidden">
               <TempThemeToggle />
             </div>
@@ -81,12 +79,8 @@ export function SpeakerPreflight({
           <div className="flex flex-1 flex-col gap-4 lg:flex-none lg:gap-4.5">
             <InputLevelPanel analyser={mic.analyser} />
             <div className="mt-auto pt-8 lg:mt-0 lg:pt-0">
-              {(socketError || status !== 'connected') && (
-                <ConnectionLine
-                  status={status}
-                  error={socketError}
-                  className="mb-3.5 text-center"
-                />
+              {link.kind !== 'connected' && link.kind !== 'flowing' && (
+                <ConnectionLine link={link} className="mb-3.5 text-center" />
               )}
 
               <Button

@@ -11,7 +11,12 @@ export interface LifecycleServer {
   to(room: string): {
     emit(
       event: 'channel:status',
-      payload: { slug: string; online: boolean; muted: boolean },
+      payload: {
+        slug: string;
+        online: boolean;
+        muted: boolean;
+        reason?: 'ended' | 'dropped';
+      },
     ): unknown;
     emit(event: 'media:reset', payload: { reason: 'worker_died' | 'address_changed' }): unknown;
     emit(event: 'channel:listeners', payload: { slug: string; count: number }): unknown;
@@ -48,10 +53,17 @@ export function releaseSocket(socket: { id: string }, auth: SocketAuth): void {
 export function applyNotification(io: LifecycleServer, notification: Notification): void {
   switch (notification.type) {
     case 'producer-opened':
+      io.to(eventRoom(notification.eventId)).emit('channel:status', {
+        slug: notification.slug,
+        ...media.channelStatus(notification.eventId, notification.channelId),
+      });
+      return;
+
     case 'producer-closed':
       io.to(eventRoom(notification.eventId)).emit('channel:status', {
         slug: notification.slug,
         ...media.channelStatus(notification.eventId, notification.channelId),
+        reason: notification.reason,
       });
       return;
 
@@ -98,7 +110,7 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
         return;
       }
       // Resolved against Socket.IO's own room membership, which is the only way to reach
-      // a listener who armed nothing and is therefore invisible to core/.
+      // a listener who owns no media and is therefore invisible to core/.
       io.in(room).disconnectSockets(true);
       return;
     }

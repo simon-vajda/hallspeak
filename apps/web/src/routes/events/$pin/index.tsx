@@ -8,7 +8,6 @@ import { GuestMessage, GuestShell } from '@/components/guest/guest-message';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { publicEventQueryOptions } from '@/lib/public-queries';
 import { shouldThrowSettledQueryError } from '@/lib/query-retry';
-import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useDocumentTitle } from '@/lib/use-document-title';
 import { useSocket } from '@/lib/use-socket';
 
@@ -28,9 +27,7 @@ function EventPage() {
   useDocumentTitle(formatEventPageTitle(data.name));
 
   // Only after the GET returns 200, never in parallel with it.
-  const { status, online } = useSocket(data ? { pin } : null);
-
-  useConnectionToast(status);
+  const { online } = useSocket(data ? { pin } : null);
 
   if (shouldThrowSettledQueryError(error, isFetching)) {
     throw error;
@@ -43,7 +40,6 @@ function EventPage() {
           name={data.name}
           description={data.description}
           pin={data.pin}
-          live={status === 'connected'}
           className="lg:max-w-117.5"
         />
 

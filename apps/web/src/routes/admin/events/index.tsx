@@ -54,7 +54,12 @@ function AdminEventsPage() {
         <>
           <ul className="mt-5 flex flex-col gap-3 lg:hidden">
             {data.map((event) => (
-              <AdminEventCard key={event.id} event={event} onAir={live.onAir.get(event.id) ?? 0} />
+              <AdminEventCard
+                key={event.id}
+                event={event}
+                onAir={live.onAir.get(event.id) ?? 0}
+                liveKnown={live.known}
+              />
             ))}
           </ul>
 
@@ -73,7 +78,12 @@ function AdminEventsPage() {
             </div>
             <ul>
               {data.map((event) => (
-                <AdminEventRow key={event.id} event={event} onAir={live.onAir.get(event.id) ?? 0} />
+                <AdminEventRow
+                  key={event.id}
+                  event={event}
+                  onAir={live.onAir.get(event.id) ?? 0}
+                  liveKnown={live.known}
+                />
               ))}
             </ul>
           </div>

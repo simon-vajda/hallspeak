@@ -118,31 +118,31 @@ describe('beginRebuild', () => {
 describe('consumerPlan', () => {
   const listening = { english: 'c1' };
 
-  it('opens nothing at all while the guest has not armed', () => {
-    expect(consumerPlan({ consumers: {}, armedSlug: null, online: true })).toEqual({
+  it('opens nothing while the guest has no active playback intent', () => {
+    expect(consumerPlan({ consumers: {}, activeSlug: null, online: true })).toEqual({
       close: [],
       consume: null,
     });
   });
 
-  it('consumes when a producer appears on the armed channel', () => {
-    expect(consumerPlan({ consumers: {}, armedSlug: 'english', online: true })).toEqual({
+  it('consumes when a producer appears on the active channel', () => {
+    expect(consumerPlan({ consumers: {}, activeSlug: 'english', online: true })).toEqual({
       close: [],
       consume: 'english',
     });
   });
 
   it('does not consume twice when one is already open', () => {
-    expect(consumerPlan({ consumers: listening, armedSlug: 'english', online: true })).toEqual({
+    expect(consumerPlan({ consumers: listening, activeSlug: 'english', online: true })).toEqual({
       close: [],
       consume: null,
     });
   });
 
   it('keeps the same consumer plan when an online producer mutes and resumes', () => {
-    const beforeMute = consumerPlan({ consumers: listening, armedSlug: 'english', online: true });
-    const whileMuted = consumerPlan({ consumers: listening, armedSlug: 'english', online: true });
-    const afterResume = consumerPlan({ consumers: listening, armedSlug: 'english', online: true });
+    const beforeMute = consumerPlan({ consumers: listening, activeSlug: 'english', online: true });
+    const whileMuted = consumerPlan({ consumers: listening, activeSlug: 'english', online: true });
+    const afterResume = consumerPlan({ consumers: listening, activeSlug: 'english', online: true });
 
     expect(whileMuted).toEqual(beforeMute);
     expect(afterResume).toEqual(beforeMute);
@@ -150,14 +150,14 @@ describe('consumerPlan', () => {
   });
 
   it('closes the consumer when the interpreter goes away, and asks for nothing', () => {
-    expect(consumerPlan({ consumers: listening, armedSlug: 'english', online: false })).toEqual({
+    expect(consumerPlan({ consumers: listening, activeSlug: 'english', online: false })).toEqual({
       close: ['english'],
       consume: null,
     });
   });
 
   it('does nothing when the interpreter goes away and nothing was open', () => {
-    expect(consumerPlan({ consumers: {}, armedSlug: 'english', online: false })).toEqual({
+    expect(consumerPlan({ consumers: {}, activeSlug: 'english', online: false })).toEqual({
       close: [],
       consume: null,
     });
@@ -165,33 +165,33 @@ describe('consumerPlan', () => {
 
   /** Closing the old consumer prevents its audio continuing after the channel switch. */
   it('closes the previous channel and opens the new one on a switch', () => {
-    expect(consumerPlan({ consumers: listening, armedSlug: 'spanish', online: true })).toEqual({
+    expect(consumerPlan({ consumers: listening, activeSlug: 'spanish', online: true })).toEqual({
       close: ['english'],
       consume: 'spanish',
     });
   });
 
   it('never asks for a transport rebuild on a switch', () => {
-    const plan = consumerPlan({ consumers: listening, armedSlug: 'spanish', online: true });
+    const plan = consumerPlan({ consumers: listening, activeSlug: 'spanish', online: true });
 
     expect(JSON.stringify(plan)).not.toContain('transport');
   });
 
   it('closes a switched-away channel even when the new one is offline', () => {
-    expect(consumerPlan({ consumers: listening, armedSlug: 'spanish', online: false })).toEqual({
+    expect(consumerPlan({ consumers: listening, activeSlug: 'spanish', online: false })).toEqual({
       close: ['english'],
       consume: null,
     });
   });
 
-  it('closes everything left over when the guest un-arms', () => {
+  it('closes everything left over when playback intent clears', () => {
     expect(
-      consumerPlan({ consumers: { english: 'c1', spanish: 'c2' }, armedSlug: null, online: true }),
+      consumerPlan({ consumers: { english: 'c1', spanish: 'c2' }, activeSlug: null, online: true }),
     ).toEqual({ close: ['english', 'spanish'], consume: null });
   });
 
-  it('never lists the armed channel twice when it is also the one to close', () => {
-    const plan = consumerPlan({ consumers: listening, armedSlug: 'english', online: false });
+  it('never lists the active channel twice when it is also the one to close', () => {
+    const plan = consumerPlan({ consumers: listening, activeSlug: 'english', online: false });
 
     expect(plan.close).toEqual(['english']);
   });
@@ -202,25 +202,27 @@ describe('mayAttachConsumerTrack', () => {
     const opened = consumerOpened(initialMediaState, 'english', 'c1');
 
     expect(
-      consumerPlan({ consumers: opened.consumers, armedSlug: 'english', online: true }).consume,
+      consumerPlan({ consumers: opened.consumers, activeSlug: 'english', online: true }).consume,
     ).toBeNull();
     expect(
       mayAttachConsumerTrack({
         requestedSlug: 'english',
-        armedSlug: 'english',
+        activeSlug: 'english',
         online: true,
         trackEnded: false,
       }),
     ).toBe(true);
   });
 
-  it('rejects a late track after un-arming, switching, going offline, or ending', () => {
+  it('rejects a late track after stopping, switching, going offline, or ending', () => {
     const current = { requestedSlug: 'english', online: true, trackEnded: false };
 
-    expect(mayAttachConsumerTrack({ ...current, armedSlug: null })).toBe(false);
-    expect(mayAttachConsumerTrack({ ...current, armedSlug: 'spanish' })).toBe(false);
-    expect(mayAttachConsumerTrack({ ...current, armedSlug: 'english', online: false })).toBe(false);
-    expect(mayAttachConsumerTrack({ ...current, armedSlug: 'english', trackEnded: true })).toBe(
+    expect(mayAttachConsumerTrack({ ...current, activeSlug: null })).toBe(false);
+    expect(mayAttachConsumerTrack({ ...current, activeSlug: 'spanish' })).toBe(false);
+    expect(mayAttachConsumerTrack({ ...current, activeSlug: 'english', online: false })).toBe(
+      false,
+    );
+    expect(mayAttachConsumerTrack({ ...current, activeSlug: 'english', trackEnded: true })).toBe(
       false,
     );
   });

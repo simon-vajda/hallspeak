@@ -14,17 +14,16 @@ import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
-import type { ConnectionState } from '@/lib/media/stats';
-import type { SocketStatus } from '@/lib/use-socket';
+import { isLinkUp, type LinkState } from '@/lib/media/link-state';
 import type { BroadcastState } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
 const BADGE_LABEL: Record<BroadcastState, string> = {
   'pre-flight': 'Off air',
-  connecting: 'Connecting…',
+  connecting: 'Going live…',
   live: 'On air',
-  muted: 'Muted',
+  muted: 'On air · muted',
   displaced: 'Off air',
 };
 
@@ -44,13 +43,11 @@ export function SpeakerOnAir({
   startedAt,
   listeners,
   state,
-  connection,
+  link,
   onToggleMute,
   onEnd,
   preferences,
   onPreferencesChange,
-  status,
-  socketError,
 }: {
   channel: PublicChannel;
   eventName: string;
@@ -59,17 +56,19 @@ export function SpeakerOnAir({
   startedAt: number | null;
   listeners: number;
   state: BroadcastState;
-  connection: ConnectionState;
+  link: LinkState;
   onToggleMute: () => void;
   onEnd: () => void;
   preferences: AudioPreferences;
   onPreferencesChange: (patch: Partial<AudioPreferences>) => void;
-  status: SocketStatus;
-  socketError: string | null;
 }) {
   const [confirming, setConfirming] = useState(false);
   const isMuted = state === 'muted';
-  const onAir = state === 'live';
+  // A producer this screen still holds locally is not reaching anyone while signalling is
+  // down, so the badge falls back to the pre-producer wording rather than claiming the air.
+  const hasProducer = state === 'live' || state === 'muted';
+  const onAir = hasProducer && isLinkUp(link);
+  const badgeLabel = hasProducer && !onAir ? BADGE_LABEL.connecting : BADGE_LABEL[state];
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -84,7 +83,7 @@ export function SpeakerOnAir({
 
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-6 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header className="flex items-center justify-between gap-3 lg:justify-start">
-          <LiveBadge live={onAir} label={BADGE_LABEL[state]} />
+          <LiveBadge live={onAir} label={badgeLabel} />
           <div className="-my-1 flex min-w-0 items-center gap-3 lg:hidden">
             <span className="truncate text-meta text-muted-foreground">{eventName}</span>
             <TempThemeToggle />
@@ -97,14 +96,24 @@ export function SpeakerOnAir({
           <OnAirStats
             startedAt={startedAt}
             listeners={listeners}
-            className="lg:col-start-2 lg:row-start-1"
+            className="order-3 lg:order-none lg:col-start-2 lg:row-start-1"
           />
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 py-10 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
+          <div className="order-1 flex flex-1 flex-col items-center justify-center gap-4 py-10 lg:order-none lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
             <PlayTarget
               icon={isMuted ? <MicOff /> : <Mic />}
               label={TARGET_LABEL[state]}
               variant={isMuted ? 'danger' : 'live'}
-              rings={onAir}
+              // Narrower than `onAir`: the rings mean samples are moving, which a muted
+              // producer is not doing. The badge dot is what widens to cover both.
+              rings={state === 'live'}
+              // Only before a producer exists. A dropped socket must not take the mute with
+              // it: `producer.pause()` is local and stops the audio on its own, so an
+              // interpreter who needs to cut a hot mic can always do it, and the failed
+              // server call leaves them muted rather than undoing it.
+              disabled={state === 'connecting'}
+              // The dashed rim is this screen's affordance, not the shared primitive's, and
+              // the design leaves the fill at full strength behind it.
+              className="disabled:border-dashed disabled:border-border disabled:opacity-100"
               onClick={onToggleMute}
             />
           </div>
@@ -112,30 +121,25 @@ export function SpeakerOnAir({
           <InputLevelPanel
             analyser={mic.analyser}
             muted={isMuted}
-            className="lg:col-start-2 lg:row-start-2"
+            className="order-4 lg:order-none lg:col-start-2 lg:row-start-2"
           />
           <AudioSettings
             mic={mic}
             preferences={preferences}
             onPreferencesChange={onPreferencesChange}
-            className="lg:col-start-2 lg:row-start-3"
+            className="order-5 lg:order-none lg:col-start-2 lg:row-start-3"
           />
 
-          <div className="mt-4 lg:col-start-1 lg:row-start-4 lg:mt-0">
-            <ConnectionLine
-              status={status}
-              error={socketError}
-              connection={connection}
-              className="mb-2"
-            />
+          <div className="contents lg:order-none lg:col-start-1 lg:row-start-4 lg:block">
+            <ConnectionLine link={link} className="order-2 mb-2 lg:order-none" />
             <Button
               variant="ghost"
               onClick={() => setConfirming(true)}
-              className="h-10.5 w-full rounded-full text-sm font-semibold text-destructive hover:bg-destructive-muted hover:text-destructive"
+              className="order-6 mt-4 h-10.5 w-full rounded-full text-sm font-semibold text-destructive hover:bg-destructive-muted hover:text-destructive lg:mt-0"
             >
               End broadcast
             </Button>
-            <ListenerPageLink pin={pin} slug={channel.slug} className="mt-2" />
+            <ListenerPageLink pin={pin} slug={channel.slug} className="order-7 mt-2" />
           </div>
         </div>
       </main>

@@ -19,11 +19,23 @@ describe('NotificationHub', () => {
     hub.subscribe((n) => seen.push(n));
 
     hub.publish(opened);
-    hub.publish({ type: 'producer-closed', eventId: 1, channelId: 10, slug: 'english' });
+    hub.publish({
+      type: 'producer-closed',
+      eventId: 1,
+      channelId: 10,
+      slug: 'english',
+      reason: 'dropped',
+    });
 
     expect(seen).toEqual([
       { type: 'producer-opened', eventId: 1, channelId: 10, slug: 'english' },
-      { type: 'producer-closed', eventId: 1, channelId: 10, slug: 'english' },
+      {
+        type: 'producer-closed',
+        eventId: 1,
+        channelId: 10,
+        slug: 'english',
+        reason: 'dropped',
+      },
     ]);
   });
 

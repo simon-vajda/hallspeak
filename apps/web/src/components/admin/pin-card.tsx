@@ -46,7 +46,7 @@ const DownloadCanvas = memo(function DownloadCanvas({
  * the number and the code together. There is no Print action: the PNG is what a print shop
  * or a slide takes, and a browser print dialog adds nothing to it.
  */
-export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin'> }) {
+export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin' | 'enabled'> }) {
   const [regenerating, setRegenerating] = useState(false);
   const downloadRef = useRef<HTMLCanvasElement>(null);
   const listenerUrl = `${window.location.origin}/events/${event.pin}`;
