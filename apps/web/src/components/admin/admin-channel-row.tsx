@@ -89,7 +89,7 @@ export function AdminChannelRow({
         >
           <Trash2 />
         </Button>
-        <ChannelEnabledSwitch channel={channel} />
+        <ChannelEnabledSwitch channel={channel} broadcast={broadcast} />
       </fieldset>
 
       <ChannelFormDialog
@@ -100,11 +100,13 @@ export function AdminChannelRow({
       />
       <RegenerateSpeakerCodeDialog
         channel={channel}
+        broadcast={broadcast}
         open={regenerating}
         onOpenChange={setRegenerating}
       />
       <DeleteChannelDialog
         channel={channel}
+        broadcast={broadcast}
         remaining={event.channels.length - 1}
         open={deleting}
         onOpenChange={setDeleting}

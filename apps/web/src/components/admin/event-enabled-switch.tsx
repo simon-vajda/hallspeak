@@ -1,8 +1,12 @@
 import type { components } from '@linguacast/contract/openapi';
+import { PowerOff } from 'lucide-react';
 import { useState } from 'react';
 import { $api } from '@/api/client';
 import { EnabledSwitch } from '@/components/admin/enabled-switch';
-import { eventScope, useOptimisticEventUpdate } from '@/lib/admin-queries';
+import { LiveWarning } from '@/components/admin/live-warning';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { eventLiveWarning } from '@/lib/admin-live-warning';
+import { eventScope, useAdminLive, useOptimisticEventUpdate } from '@/lib/admin-queries';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 
@@ -14,7 +18,14 @@ export function EventEnabledSwitch({
   className?: string;
 }) {
   const cache = useOptimisticEventUpdate(event.id);
+  const live = useAdminLive();
   const [failed, setFailed] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const warning = eventLiveWarning({
+    enabled: event.enabled,
+    onAir: live.onAir.get(event.id) ?? 0,
+    liveKnown: live.known,
+  });
 
   const { mutate } = $api.useMutation('patch', '/admin/events/{id}', {
     // Writes to one event run one at a time: toggled twice quickly, the first settle refetch
@@ -32,14 +43,38 @@ export function EventEnabledSwitch({
   });
 
   return (
-    <EnabledSwitch
-      checked={event.enabled}
-      failed={failed}
-      label={`Enable ${event.name}`}
-      className={className}
-      onCheckedChange={(enabled) => {
-        mutate({ params: { path: { id: event.id } }, body: { enabled } });
-      }}
-    />
+    <>
+      <EnabledSwitch
+        checked={event.enabled}
+        failed={failed}
+        label={`Enable ${event.name}`}
+        className={className}
+        onCheckedChange={(enabled) => {
+          // Only switching a live event off asks: enabling never takes anything down, and an
+          // idle event stays one press.
+          if (!enabled && warning) {
+            setConfirming(true);
+            return;
+          }
+          mutate({ params: { path: { id: event.id } }, body: { enabled } });
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        icon={<PowerOff className="size-5" />}
+        title={`Disable ${event.name}?`}
+        confirmLabel="Disable anyway"
+        cancelLabel="Leave it on"
+        onConfirm={() => {
+          setConfirming(false);
+          mutate({ params: { path: { id: event.id } }, body: { enabled: false } });
+        }}
+      >
+        <LiveWarning>{warning}</LiveWarning>
+        <p>Everyone listening is disconnected and no one can rejoin until it is enabled again.</p>
+      </ConfirmDialog>
+    </>
   );
 }

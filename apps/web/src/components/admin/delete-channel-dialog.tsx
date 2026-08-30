@@ -3,23 +3,28 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { $api } from '@/api/client';
+import { LiveWarning } from '@/components/admin/live-warning';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { channelLiveWarning } from '@/lib/admin-live-warning';
 import { invalidateAdminEvents } from '@/lib/admin-queries';
-import { plural } from '@/lib/format';
+import { type ChannelBroadcast, plural } from '@/lib/format';
 
 type AdminChannel = components['schemas']['AdminChannel'];
 
 export function DeleteChannelDialog({
   channel,
+  broadcast,
   remaining,
   open,
   onOpenChange,
 }: {
   channel: AdminChannel;
+  broadcast: ChannelBroadcast;
   remaining: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const warning = channelLiveWarning({ enabled: channel.enabled, broadcast });
   const queryClient = useQueryClient();
   const [failed, setFailed] = useState(false);
   const { mutate, isPending } = $api.useMutation('delete', '/admin/channels/{id}', {
@@ -52,6 +57,7 @@ export function DeleteChannelDialog({
         .
       </p>
       <p>This cannot be undone. A channel added again later gets a different speaker code.</p>
+      {warning && <LiveWarning>{warning}</LiveWarning>}
     </ConfirmDialog>
   );
 }
