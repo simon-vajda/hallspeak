@@ -13,7 +13,7 @@ import { useAudioOutput } from '@/lib/audio/use-audio-output';
 import { useAudioSink } from '@/lib/audio/use-audio-sink';
 import { useAudioVolume } from '@/lib/audio/use-audio-volume';
 import { formatPin } from '@/lib/format';
-import { resolveLinkState } from '@/lib/media/link-state';
+import { isLinkUp, resolveLinkState } from '@/lib/media/link-state';
 import { consumerPlan, mayAttachConsumerTrack } from '@/lib/media/media-state';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
@@ -80,8 +80,11 @@ export function ListenerRoom({
     hasConnected,
     mediaHealth: media.health,
     stats: media.stats,
+    // The guest's own stored request, not the reconciled one: reconciling needs the link, and
+    // a guest who has not asked for audio has no media leg for the line to report on.
+    mediaWanted: playback.intent !== 'idle',
   });
-  const linkConnected = link.kind === 'connected' || link.kind === 'flowing';
+  const linkConnected = isLinkUp(link);
   const isPlaying = media.state.consumers[channel.slug] !== undefined;
   const playingSnapshotRef = useRef({ slug: channel.slug, isPlaying });
   const wasPlaying =

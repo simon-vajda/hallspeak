@@ -68,6 +68,8 @@ export function SpeakerStudio({
     hasConnected,
     mediaHealth: media.health,
     stats: media.stats,
+    // True from the press onwards: the studio only shows the line once it is broadcasting.
+    mediaWanted: goLivePressed || media.state.producerId !== null,
   });
   const channelStatusRef = useRef(channelStatus);
   channelStatusRef.current = channelStatus;
