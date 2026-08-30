@@ -23,7 +23,7 @@ export type { SocketStatus } from '@/lib/socket-state';
  * admin disabling the event in the gap. Retry errors stay in the reconnecting phase.
  */
 export function useSocket(auth: SocketAuth | null) {
-  const [{ status, error }, dispatchConnection] = useReducer(
+  const [{ status, error, hasConnected }, dispatchConnection] = useReducer(
     socketConnectionState,
     initialSocketConnectionState,
   );
@@ -136,6 +136,7 @@ export function useSocket(auth: SocketAuth | null) {
   return {
     status,
     error,
+    hasConnected,
     online,
     channelStatuses: channelStatusState.channels,
     listeners,

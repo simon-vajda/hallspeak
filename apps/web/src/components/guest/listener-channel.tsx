@@ -15,9 +15,16 @@ type PublicChannelView = components['schemas']['PublicChannelView'];
 export function ListenerChannel({ view }: { view: PublicChannelView }) {
   const [joinFailed, setJoinFailed] = useState(false);
   const { data: event } = useQuery(publicEventQueryOptions(view.event.pin));
-  const { status, error, online, channelStatuses, socket, joinChannel, leaveChannel } = useSocket({
-    pin: view.event.pin,
-  });
+  const {
+    status,
+    error,
+    hasConnected,
+    online,
+    channelStatuses,
+    socket,
+    joinChannel,
+    leaveChannel,
+  } = useSocket({ pin: view.event.pin });
   useConnectionToast(status);
 
   const slug = view.channel.slug;
@@ -69,6 +76,7 @@ export function ListenerChannel({ view }: { view: PublicChannelView }) {
       muted={currentStatus.muted}
       socket={socket}
       status={status}
+      hasConnected={hasConnected}
       socketError={error ? socketMessage(error) : null}
     />
   );

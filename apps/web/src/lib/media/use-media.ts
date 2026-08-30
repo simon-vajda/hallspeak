@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SocketClient } from '@/socket/client';
 import { loadDevice } from './device';
 import { watchConsumerTrack } from './diagnostics';
+import type { MediaHealth } from './link-state';
 import {
   afterConnect,
   beginRebuild,
@@ -23,9 +24,6 @@ import {
 import { signalling } from './signalling';
 import { type MediaStats, type StatsSample, summarise } from './stats';
 import { openTransport } from './transport';
-
-/** Media trouble is its own state: neither the socket being down nor nobody being live. */
-export type MediaHealth = 'idle' | 'connecting' | 'connected' | 'trouble';
 
 /**
  * A reset landed while this call was in flight, so its answer is stale. An expected

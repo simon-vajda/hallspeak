@@ -14,8 +14,7 @@ import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
-import type { ConnectionState } from '@/lib/media/stats';
-import type { SocketStatus } from '@/lib/use-socket';
+import type { LinkState } from '@/lib/media/link-state';
 import type { BroadcastState } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
@@ -44,13 +43,11 @@ export function SpeakerOnAir({
   startedAt,
   listeners,
   state,
-  connection,
+  link,
   onToggleMute,
   onEnd,
   preferences,
   onPreferencesChange,
-  status,
-  socketError,
 }: {
   channel: PublicChannel;
   eventName: string;
@@ -59,13 +56,11 @@ export function SpeakerOnAir({
   startedAt: number | null;
   listeners: number;
   state: BroadcastState;
-  connection: ConnectionState;
+  link: LinkState;
   onToggleMute: () => void;
   onEnd: () => void;
   preferences: AudioPreferences;
   onPreferencesChange: (patch: Partial<AudioPreferences>) => void;
-  status: SocketStatus;
-  socketError: string | null;
 }) {
   const [confirming, setConfirming] = useState(false);
   const isMuted = state === 'muted';
@@ -122,12 +117,7 @@ export function SpeakerOnAir({
           />
 
           <div className="mt-4 lg:col-start-1 lg:row-start-4 lg:mt-0">
-            <ConnectionLine
-              status={status}
-              error={socketError}
-              connection={connection}
-              className="mb-2"
-            />
+            <ConnectionLine link={link} className="mb-2" />
             <Button
               variant="ghost"
               onClick={() => setConfirming(true)}

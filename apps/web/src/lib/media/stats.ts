@@ -14,21 +14,6 @@ export const FAIR_JITTER = 0.03;
 
 export type ConnectionGrade = 'good' | 'fair' | 'poor';
 
-/**
- * The whole situation, not just the media path. `offline` is nobody being live and is not
- * a fault; `trouble` is the media path failing under a socket that is fine; `reconnecting`
- * is the socket itself. Keeping them apart is the point — only one is about a person, and
- * none of them is the guest's to fix.
- */
-export type ConnectionState =
-  | { kind: 'idle' }
-  | { kind: 'reconnecting' }
-  | { kind: 'trouble' }
-  | { kind: 'offline' }
-  | { kind: 'syncing' }
-  | { kind: 'paused' }
-  | { kind: 'flowing'; grade: ConnectionGrade };
-
 export interface MediaStats {
   /** Fraction of packets lost, 0–1. */
   packetLoss: number;
@@ -46,86 +31,8 @@ export function gradeStats(stats: MediaStats): ConnectionGrade {
   return 'good';
 }
 
-export interface ConnectionInput {
-  socketConnected: boolean;
-  /** The transport's own connection state has failed, or a rebuild is under way. */
-  mediaTrouble: boolean;
-  /** A producer exists on the channel in question. */
-  live: boolean;
-  /** This speaker muted: the producer is paused and sending nothing. */
-  paused?: boolean | null;
-  /** Present only while samples are actually moving. */
-  stats: MediaStats | null;
-}
-
-export function connectionState(input: ConnectionInput): ConnectionState {
-  // The socket first: without it, nothing else the client believes is current.
-  if (!input.socketConnected) {
-    return { kind: 'reconnecting' };
-  }
-  if (input.mediaTrouble) {
-    return { kind: 'trouble' };
-  }
-  if (!input.live) {
-    return { kind: 'offline' };
-  }
-  if (input.paused === null) {
-    return { kind: 'syncing' };
-  }
-  /**
-   * A paused producer sends nothing, so there is nothing to grade. Graded anyway, the
-   * report covering the moment of the mute reads the stopped stream's tail as loss — and
-   * because no fresher report can arrive while nothing is being sent, that reading
-   * freezes and the line blames the network for the speaker's own mute.
-   */
-  if (input.paused) {
-    return { kind: 'paused' };
-  }
-  if (!input.stats) {
-    return { kind: 'idle' };
-  }
-  return { kind: 'flowing', grade: gradeStats(input.stats) };
-}
-
 /** The design's nine bars, filled in proportion to the grade. */
 export const BAR_COUNT = 9;
-
-export function filledBars(state: ConnectionState): number {
-  if (state.kind !== 'flowing') {
-    return 0;
-  }
-  if (state.grade === 'good') {
-    return BAR_COUNT;
-  }
-  return state.grade === 'fair' ? 6 : 3;
-}
-
-/**
- * The text equivalent, which is also what a screen reader gets: replacing this line with
- * bars alone would remove any notice of precisely the states this adds.
- */
-export function connectionLabel(state: ConnectionState): string {
-  switch (state.kind) {
-    case 'reconnecting':
-      return 'Reconnecting…';
-    case 'trouble':
-      return 'Audio connection re-establishing';
-    case 'offline':
-      return 'Waiting for the interpreter';
-    case 'syncing':
-      return 'Checking interpreter status…';
-    case 'paused':
-      return 'Muted — nothing is being sent';
-    case 'idle':
-      return 'Connected';
-    case 'flowing':
-      return state.grade === 'good'
-        ? 'Good connection'
-        : state.grade === 'fair'
-          ? 'Connection is a little unsteady'
-          : 'Poor connection';
-  }
-}
 
 export interface StatsSample {
   /** Cumulative since the connection began, which is why a delta is needed. */

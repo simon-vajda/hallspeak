@@ -13,8 +13,8 @@ import { useAudioOutput } from '@/lib/audio/use-audio-output';
 import { useAudioSink } from '@/lib/audio/use-audio-sink';
 import { useAudioVolume } from '@/lib/audio/use-audio-volume';
 import { formatPin } from '@/lib/format';
+import { resolveLinkState } from '@/lib/media/link-state';
 import { consumerPlan, mayAttachConsumerTrack } from '@/lib/media/media-state';
-import { connectionState } from '@/lib/media/stats';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import { cn } from '@/lib/utils';
@@ -47,6 +47,7 @@ export function ListenerRoom({
   muted,
   socket,
   status,
+  hasConnected,
   socketError,
 }: {
   eventName: string;
@@ -59,6 +60,7 @@ export function ListenerRoom({
   muted: boolean | null;
   socket: SocketClient | null;
   status: SocketStatus;
+  hasConnected: boolean;
   socketError: string | null;
 }) {
   const [armed, setArmed] = useState(false);
@@ -146,11 +148,10 @@ export function ListenerRoom({
       });
   }, [consumers, armedSlug, online, startConsuming, stopConsuming]);
 
-  const connection = connectionState({
-    socketConnected: connected,
-    mediaTrouble: media.health === 'trouble',
-    live,
-    paused: muted,
+  const link = resolveLinkState({
+    socketStatus: status,
+    hasConnected,
+    mediaHealth: media.health,
     stats: media.stats,
   });
 
@@ -208,12 +209,7 @@ export function ListenerRoom({
         </div>
 
         {armed || socketError ? (
-          <ConnectionLine
-            status={status}
-            error={socketError}
-            connection={connection}
-            className="mt-9.5 lg:mt-9"
-          />
+          <ConnectionLine link={link} className="mt-9.5 lg:mt-9" />
         ) : (
           <p className="mt-9.5 max-w-80 text-sm leading-normal text-muted-foreground lg:mt-9">
             {statusNote(state)}

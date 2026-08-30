@@ -7,7 +7,7 @@ import { levelStatus, meterLevel, rms } from '@/lib/audio/level';
 import { useAudioPreferences } from '@/lib/audio/use-audio-preferences';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { type ChannelStatusEntry, rollbackMutedAfterFailure } from '@/lib/channel-status';
-import { connectionState } from '@/lib/media/stats';
+import { resolveLinkState } from '@/lib/media/link-state';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import type { SocketStatus } from '@/lib/use-socket';
 import type { SocketClient } from '@/socket/client';
@@ -30,7 +30,7 @@ export function SpeakerStudio({
   listeners,
   socket,
   status,
-  socketError,
+  hasConnected,
   channelStatus,
 }: {
   eventName: string;
@@ -41,7 +41,7 @@ export function SpeakerStudio({
   listeners: number;
   socket: SocketClient | null;
   status: SocketStatus;
-  socketError: string | null;
+  hasConnected: boolean;
   /** Current Socket.IO snapshot; REST deliberately carries liveness only. */
   channelStatus: ChannelStatusEntry | undefined;
 }) {
@@ -63,6 +63,12 @@ export function SpeakerStudio({
   const { preferences, setPreferences } = useAudioPreferences();
   const mic = useMicCapture(preferences);
   const media = useMedia(socket);
+  const link = resolveLinkState({
+    socketStatus: status,
+    hasConnected,
+    mediaHealth: media.health,
+    stats: media.stats,
+  });
   const channelStatusRef = useRef(channelStatus);
   channelStatusRef.current = channelStatus;
 
@@ -266,13 +272,7 @@ export function SpeakerStudio({
         startedAt={startedAt}
         listeners={listeners}
         state={state}
-        connection={connectionState({
-          socketConnected: status === 'connected',
-          mediaTrouble: media.health === 'trouble',
-          live: hasProducer,
-          paused: state === 'muted',
-          stats: media.stats,
-        })}
+        link={link}
         onToggleMute={() => {
           const next = !isMuted;
           const requestRevision = channelStatus?.revision ?? 0;
@@ -304,8 +304,6 @@ export function SpeakerStudio({
         }}
         preferences={preferences}
         onPreferencesChange={setPreferences}
-        status={status}
-        socketError={socketError}
       />
     );
   }
@@ -329,8 +327,7 @@ export function SpeakerStudio({
         setStartedAt(Date.now());
         void produce(false);
       }}
-      status={status}
-      socketError={socketError}
+      link={link}
     />
   );
 }
