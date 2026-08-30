@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * `label` is a prop, not derived: each screen's state ladder is its own. `showDot={false}` is
- * the same chip carrying a name rather than a state — the dot means audio is moving, so a
- * chip that is not reporting liveness must not show one.
+ * the same chip carrying a name rather than a state — the dot means an interpreter is
+ * connected to the channel, so a chip that is not reporting liveness must not show one.
  */
 export function LiveBadge({
   live,

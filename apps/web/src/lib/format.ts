@@ -23,33 +23,62 @@ export function plural(n: number, noun: string) {
   return `${n} ${noun}${n === 1 ? '' : 's'}`;
 }
 
+/** The dash is the whole message when the poll cannot answer; a screen reader needs the words. */
+export const STATUS_UNKNOWN = 'Status unknown';
+
+const WITHHELD = { label: '\u2014', withheld: true } as const;
+
 /**
  * The admin status column: enablement while there is nothing to be live about, liveness once
  * there is. `onAir` is how many of the event's channels have an interpreter producing; an event
  * absent from the live payload has none, which is a count of zero rather than a missing answer.
+ *
+ * `liveKnown` is false while the live poll is pending or failing. Configuration outranks it —
+ * a disabled or empty event is a fact the poll has no bearing on — but no live reading is
+ * printed without one, because an empty index and a quiet room look identical.
  */
-export function eventStatusLabel(event: { enabled: boolean; channels: number; onAir: number }) {
+export function eventStatusLabel(event: {
+  enabled: boolean;
+  channels: number;
+  onAir: number;
+  liveKnown: boolean;
+}): { label: string; withheld: boolean } {
   if (!event.enabled) {
-    return 'Disabled';
+    return { label: 'Disabled', withheld: false };
   }
   if (event.channels === 0) {
-    return 'No channels yet';
+    return { label: 'No channels yet', withheld: false };
+  }
+  if (!event.liveKnown) {
+    return WITHHELD;
   }
   if (event.onAir === 0) {
-    return 'Nobody on air';
+    return { label: 'Nobody on air', withheld: false };
   }
 
-  return `${event.onAir} on air`;
+  return { label: `${event.onAir} on air`, withheld: false };
 }
 
 /**
- * A channel's live line. `undefined` is a channel the live payload does not mention: idle.
- * `listening` is a participle, so it counts without agreeing — no pluralisation to get wrong.
+ * A channel's broadcast axis, kept apart from its audience: the badge renders the state and the
+ * count is its own line, so neither redraws to say the other changed. `undefined` is a channel
+ * the live payload does not mention, which is idle — but only once the payload can be believed.
  */
-export function channelLiveLabel(live: { online: boolean; listeners: number } | undefined) {
+export type ChannelBroadcast =
+  | { state: 'withheld' }
+  | { state: 'offline' }
+  | { state: 'on-air'; listeners: number };
+
+export function channelBroadcast(
+  live: { online: boolean; listeners: number } | undefined,
+  liveKnown: boolean,
+): ChannelBroadcast {
+  if (!liveKnown) {
+    return { state: 'withheld' };
+  }
   if (!live?.online) {
-    return 'Nobody on air';
+    return { state: 'offline' };
   }
 
-  return `On air · ${live.listeners} listening`;
+  return { state: 'on-air', listeners: live.listeners };
 }

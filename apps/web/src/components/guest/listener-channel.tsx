@@ -7,7 +7,6 @@ import { ListenerRoom } from '@/components/guest/listener-room';
 import { channelStatusFromHttp } from '@/lib/channel-status';
 import { publicEventQueryOptions } from '@/lib/public-queries';
 import { socketMessage } from '@/lib/socket-message';
-import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useSocket } from '@/lib/use-socket';
 
 type PublicChannelView = components['schemas']['PublicChannelView'];
@@ -15,11 +14,16 @@ type PublicChannelView = components['schemas']['PublicChannelView'];
 export function ListenerChannel({ view }: { view: PublicChannelView }) {
   const [joinFailed, setJoinFailed] = useState(false);
   const { data: event } = useQuery(publicEventQueryOptions(view.event.pin));
-  const { status, error, online, channelStatuses, socket, joinChannel, leaveChannel } = useSocket({
-    pin: view.event.pin,
-  });
-  useConnectionToast(status);
-
+  const {
+    status,
+    error,
+    hasConnected,
+    online,
+    channelStatuses,
+    socket,
+    joinChannel,
+    leaveChannel,
+  } = useSocket({ pin: view.event.pin });
   const slug = view.channel.slug;
 
   // A speaker is already in its channel room from the handshake; a listener has to ask.
@@ -67,8 +71,10 @@ export function ListenerChannel({ view }: { view: PublicChannelView }) {
       }))}
       live={currentStatus.online}
       muted={currentStatus.muted}
+      closeReason={currentStatus.reason}
       socket={socket}
       status={status}
+      hasConnected={hasConnected}
       socketError={error ? socketMessage(error) : null}
     />
   );

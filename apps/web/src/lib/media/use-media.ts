@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SocketClient } from '@/socket/client';
 import { loadDevice } from './device';
 import { watchConsumerTrack } from './diagnostics';
+import type { MediaHealth } from './link-state';
 import {
   afterConnect,
   beginRebuild,
@@ -23,9 +24,6 @@ import {
 import { signalling } from './signalling';
 import { type MediaStats, type StatsSample, summarise } from './stats';
 import { openTransport } from './transport';
-
-/** Media trouble is its own state: neither the socket being down nor nobody being live. */
-export type MediaHealth = 'idle' | 'connecting' | 'connected' | 'trouble';
 
 /**
  * A reset landed while this call was in flight, so its answer is stale. An expected
@@ -133,6 +131,13 @@ export function useMedia(socket: SocketClient | null) {
       const active = session.current;
       const transport = active?.transports.recv ?? active?.transports.send;
       if (!transport || transport.closed) {
+        return;
+      }
+      // A paused producer sends nothing, so the remote report's loss fraction describes the
+      // mute rather than the line — and that report is used directly, not differenced, so
+      // clearing the sample history cannot undo it. Hold the last grade instead of grading
+      // the interpreter's own silence as a degraded connection.
+      if (active?.producer?.paused) {
         return;
       }
 
@@ -332,10 +337,10 @@ export function useMedia(socket: SocketClient | null) {
       if (!producer || !socket) {
         return;
       }
-      // Both directions discard the sample history. The readings either side of a mute
-      // describe different situations, and differencing across the gap would charge the
-      // silence to the line the moment audio came back.
-      setStats(null);
+      // Both directions discard the sample history, because differencing across the gap
+      // would charge the silence to the line the moment audio came back. The rendered grade
+      // is deliberately kept: muting is not a link event, so the last reading is still true
+      // until the next poll replaces it, and dropping it flashes the line out of its bars.
       previousSample.current = null;
 
       const api = signalling(socket);
@@ -359,7 +364,7 @@ export function useMedia(socket: SocketClient | null) {
       if (!producer || producer.id !== request.producerId) {
         return false;
       }
-      setStats(null);
+      // History only, for the reason given in `setProducerPaused`.
       previousSample.current = null;
       if (paused && !producer.paused) {
         producer.pause();

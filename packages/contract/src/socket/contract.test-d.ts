@@ -19,6 +19,18 @@ export const _status: Parameters<S2C['channel:status']>[0] = {
   online: true,
   muted: false,
 };
+export const _closedStatus: Parameters<S2C['channel:status']>[0] = {
+  slug: 'english',
+  online: false,
+  muted: false,
+  reason: 'dropped',
+};
+
+export const _joinResponseWithReason: JoinAck = {
+  ok: true,
+  // @ts-expect-error — join acknowledgements describe current state, not a close.
+  data: { online: false, muted: false, reason: 'ended' },
+};
 
 // @ts-expect-error — the payload is checked against the event's schema.
 export const _wrongJoinPayload: JoinParams[0] = { channel: 'english' };

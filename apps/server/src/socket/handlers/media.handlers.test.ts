@@ -4,6 +4,7 @@ import { createChannel } from '../../core/channels.service';
 import { createEvent } from '../../core/events.service';
 import { channelStatus, isOnline } from '../../core/media';
 import { fakeMediaControls, startFakeMedia } from '../../core/media/testing';
+import { type Notification, notifications } from '../../core/notifications';
 import type { Db } from '../../db/client';
 import { createTestDb } from '../../db/testing';
 import {
@@ -264,9 +265,24 @@ describe('pause and resume producing', () => {
 
   it('closing a producer takes the channel offline', async () => {
     const { producerId } = await goLive();
+    const published: Notification[] = [];
+    const unsubscribe = notifications.subscribe((notification) => published.push(notification));
 
-    await expect(stopProducing(socket('speaker-a'), speaker, { producerId })).resolves.toEqual({});
+    try {
+      await expect(stopProducing(socket('speaker-a'), speaker, { producerId })).resolves.toEqual(
+        {},
+      );
+    } finally {
+      unsubscribe();
+    }
     expect(isOnline(eventId, englishId)).toBe(false);
+    expect(published).toContainEqual({
+      type: 'producer-closed',
+      eventId,
+      channelId: englishId,
+      slug: 'english',
+      reason: 'ended',
+    });
   });
 
   it('closing a producer that is already gone acks rather than throwing', async () => {

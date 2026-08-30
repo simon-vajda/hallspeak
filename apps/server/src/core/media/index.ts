@@ -132,7 +132,7 @@ export async function stopMedia(): Promise<void> {
   }
   const { pool, registry, listeners, announced } = state;
   // Nulled first, so every consumer closed inside closeAll() finds `scheduleRecount` inert
-  // rather than arming a fresh window behind a drain that already ran.
+  // rather than scheduling a fresh window behind a drain that already ran.
   state = null;
   announced.close();
   await registry.closeAll();
@@ -140,7 +140,7 @@ export async function stopMedia(): Promise<void> {
   await pool.close();
 }
 
-/** Cancels an armed teardown for a room that is being reused rather than created. */
+/** Cancels a scheduled teardown for a room that is being reused rather than created. */
 function keepAlive(eventId: number): void {
   state?.registry.touch(eventId);
 }
@@ -206,7 +206,7 @@ export function listenerCounts(): EventListenerCounts[] {
 
 /**
  * The one poke every change goes through. Inert once the media layer has stopped, which is
- * what keeps the shutdown path from arming a window nothing will ever clear.
+ * what keeps the shutdown path from scheduling a window nothing will ever clear.
  */
 function scheduleRecount(eventId: number, channelId: number, slug: string): void {
   state?.listeners.schedule(eventId, channelId, slug);
@@ -216,8 +216,8 @@ function scheduleRecount(eventId: number, channelId: number, slug: string): void
 
 /**
  * `create` is what keeps a room from existing before anyone has gone live: only a caller
- * holding the broadcast claim may bring a router into being, so a guest arming early
- * allocates nothing on either side.
+ * holding the broadcast claim may bring a router into being, so a guest waiting on an
+ * offline Channel allocates nothing on either side.
  */
 export async function capabilities(
   ctx: MediaContext,
@@ -296,14 +296,15 @@ export async function produce(
 
   room.setProducer(input.channelId, producer);
   watchProducer(producer, ctx.eventId, input.slug);
-  const closed = {
-    type: 'producer-closed',
-    eventId: ctx.eventId,
-    channelId: input.channelId,
-    slug: input.slug,
-  } as const;
   producer.observer.once('close', () => {
-    notifications.publish(closed);
+    const appData = producer.appData as { closeReason?: unknown };
+    notifications.publish({
+      type: 'producer-closed',
+      eventId: ctx.eventId,
+      channelId: input.channelId,
+      slug: input.slug,
+      reason: appData.closeReason === 'ended' ? 'ended' : 'dropped',
+    });
     // The room may now be idle; the grace timer decides whether the router survives.
     state?.registry.releaseIfIdle(ctx.eventId);
   });
@@ -358,6 +359,7 @@ export async function closeProducer(
   if (!producer || producer.id !== producerId) {
     return;
   }
+  (producer.appData as { closeReason?: 'ended' }).closeReason = 'ended';
   producer.close();
 }
 
@@ -416,7 +418,7 @@ export async function consume(
     appData: { channelId: input.channelId, slug },
   });
   peer.addConsumer(consumer);
-  // One hook covers un-arming, a language switch, a disconnect, a peer eviction, a dead
+  // One hook covers stopping playback, a language switch, a disconnect, a peer eviction, a dead
   // worker and the producer closing alike: mediasoup closes the consumer for all of them.
   // Registered here and not on the early-return path above, which hands back a consumer
   // that already has one.
@@ -478,7 +480,7 @@ export function revokeChannel(eventId: number, channelId: number, reason: Evicti
 /**
  * Event-scoped: disabling an event or regenerating its PIN. Published once as a room fact
  * rather than as one eviction per known peer, because `core/` can only name a socket it
- * registered — and a listener who armed nothing is invisible here, which is exactly who a
+ * registered — and a listener who owns no media is invisible here, which is exactly who a
  * regenerated PIN must remove.
  */
 export function revokeEvent(eventId: number, channelIds: number[], reason: EvictionReason): void {

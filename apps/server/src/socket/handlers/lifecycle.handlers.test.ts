@@ -203,9 +203,15 @@ describe('applyNotification producer lifecycle', () => {
       eventId: EVENT,
       channelId: ENGLISH,
       slug: 'english',
+      reason: 'ended',
     });
 
-    expect(emitted[0]?.payload).toEqual({ slug: 'english', online: false, muted: false });
+    expect(emitted[0]?.payload).toEqual({
+      slug: 'english',
+      online: false,
+      muted: false,
+      reason: 'ended',
+    });
     expect(emitted[0]?.room).toBe(eventRoom(EVENT));
   });
 

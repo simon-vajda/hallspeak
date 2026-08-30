@@ -31,6 +31,11 @@ The reversible state in which a Live Channel's Producer is paused, so its Listen
 
 Muting leaves the Channel Live, preserves its Consumers and Listener count, and is surfaced to active Listeners to explain silence rather than redefining the Channel's liveness.
 
+### Withheld
+A reading a surface cannot currently make, reported as its own outcome rather than as the negative one it resembles.
+
+Whether a Channel is on air is learned from a source that can be pending, failing, or stalled, and a source with nothing to say is indistinguishable from one that is not answering. A withheld reading is shown as an absence with the words "status unknown" available to a screen reader, never as nobody broadcasting. Configuration the reading has no bearing on — a disabled or empty Event — is still stated plainly. An action that would end a broadcast says that liveness could not be checked instead of confirming silently, so a withholding never becomes a quiet yes.
+
 ### Broadcast claim
 The exclusive right to speak on one Channel, held by whoever presented its Speaker code first. A Channel has one claim at a time; a second interpreter arriving with a different code is refused as busy.
 
@@ -43,17 +48,21 @@ Actually receiving a Channel's audio: holding an open Consumer on its Producer t
 own side has not paused. This is what the listener counts on the Speaker studio and the admin
 Event detail report.
 
-Listening is narrower than Armed, which is the request, and narrower than having the page open,
-which allocates nothing at all. It is also downstream of Live: no Producer means no Consumers,
-so a Channel that is not Live has nobody Listening, and the count is structurally zero before an
-interpreter goes live rather than merely unknown. Muting does not change it — the Speaker's
-Producer pauses while every Consumer stays open, so a muted interpreter still has an audience.
+Listening is narrower than a playback hold, which preserves a prior request without receiving
+audio, and narrower than having the page open, which allocates nothing at all. It is also
+downstream of Live: no Producer means no Consumers, so a Channel that is not Live has nobody
+Listening, and the count is structurally zero before an interpreter goes live rather than merely
+unknown. Muting does not change it — the Speaker's Producer pauses while every Consumer stays
+open, so a muted interpreter still has an audience.
 
 Nothing here learns who is Listening. The count is a number, and Listener identity is outside
 this product.
 
-### Armed
-A Listener who has asked to hear a Channel and is waiting on audio rather than receiving it. Arming is the guest's one deliberate gesture; everything after it is automatic. An Armed Listener whose Speaker disappears stays Armed and resumes on their own when the Speaker returns, so a dropped connection mid-event never asks the guest to do anything.
+### Playback hold
+A bounded recovery state entered only when an unexpected Producer close interrupts a Listener
+who was receiving audio. The Listener keeps the request for 30 seconds, resumes automatically if
+the Producer returns before the stored deadline, and otherwise returns to idle. A deliberate end,
+an expired deadline, or a lost link clears the hold immediately.
 
 ### PIN
 The short numeric code that grants listening on one Event. A guest types it or receives it inside a Listener link. It is regenerable, which revokes every link and printed code carrying the old value.
@@ -111,4 +120,4 @@ A Consumer is created paused and begins only once the Listener confirms it is re
 ### Eviction
 Ending a session from the server's side, rather than waiting for the client to notice. It is what makes an admin's write true of what is audible and not only of what the API reports: disabling, deleting, or regenerating a code evicts whoever that write took access from.
 
-Eviction is scoped either to one peer, named by its connection, or to a whole Event. The second exists because a Listener who never armed owns no media and so cannot be named individually — and that Listener is exactly who a regenerated PIN has to remove.
+Eviction is scoped either to one peer, named by its connection, or to a whole Event. The second exists because a Listener who owns no media cannot be named individually — and that Listener is exactly who a regenerated PIN has to remove.

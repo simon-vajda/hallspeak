@@ -3,8 +3,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { $api } from '@/api/client';
+import { LiveWarning } from '@/components/admin/live-warning';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { eventDetailKey, eventsListKey } from '@/lib/admin-queries';
+import { eventLiveWarning } from '@/lib/admin-live-warning';
+import { eventDetailKey, eventsListKey, useAdminLive } from '@/lib/admin-queries';
 import { formatPin, plural } from '@/lib/format';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
@@ -21,6 +23,7 @@ export function DeleteEventDialog({
   onDeleted?: () => void | Promise<void>;
 }) {
   const queryClient = useQueryClient();
+  const live = useAdminLive();
   const [failed, setFailed] = useState(false);
   const { mutate, isPending } = $api.useMutation('delete', '/admin/events/{id}', {
     onMutate: () => setFailed(false),
@@ -33,6 +36,11 @@ export function DeleteEventDialog({
     onError: () => setFailed(true),
   });
   const channels = event.channels.length;
+  const warning = eventLiveWarning({
+    enabled: event.enabled,
+    onAir: live.onAir.get(event.id) ?? 0,
+    liveKnown: live.known,
+  });
 
   return (
     <ConfirmDialog
@@ -52,6 +60,7 @@ export function DeleteEventDialog({
         disconnected.
       </p>
       <p>This cannot be undone.</p>
+      {warning && <LiveWarning>{warning}</LiveWarning>}
     </ConfirmDialog>
   );
 }

@@ -2,13 +2,15 @@ import type { components } from '@linguacast/contract/openapi';
 import { Link } from '@tanstack/react-router';
 import { Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { ChannelChip } from '@/components/admin/channel-chips';
 import { ChannelEnabledSwitch } from '@/components/admin/channel-enabled-switch';
 import { ChannelFormDialog } from '@/components/admin/channel-form-dialog';
 import { CopyButton } from '@/components/admin/copy-button';
 import { DeleteChannelDialog } from '@/components/admin/delete-channel-dialog';
 import { RegenerateSpeakerCodeDialog } from '@/components/admin/regenerate-speaker-code-dialog';
+import { LiveBadge } from '@/components/live-badge';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { type ChannelBroadcast, STATUS_UNKNOWN } from '@/lib/format';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];
 type AdminChannel = components['schemas']['AdminChannel'];
@@ -16,11 +18,11 @@ type AdminChannel = components['schemas']['AdminChannel'];
 export function AdminChannelRow({
   event,
   channel,
-  live,
+  broadcast,
 }: {
   event: AdminEventDetail;
   channel: AdminChannel;
-  live: string;
+  broadcast: ChannelBroadcast;
 }) {
   const [editing, setEditing] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -33,9 +35,7 @@ export function AdminChannelRow({
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2.5">
           <h3 className="truncate text-subtitle">{channel.name}</h3>
-          <ChannelChip enabled={channel.enabled} className="shrink-0">
-            {channel.enabled ? 'Enabled' : 'Disabled'}
-          </ChannelChip>
+          <BroadcastBadge broadcast={broadcast} />
         </div>
         <Link
           to="/events/$pin/$slug"
@@ -47,7 +47,9 @@ export function AdminChannelRow({
         >
           {listenerPath}
         </Link>
-        <p className="mt-1 text-meta text-muted-foreground">{live}</p>
+        {broadcast.state === 'on-air' && (
+          <p className="mt-1 text-meta text-muted-foreground">{broadcast.listeners} listening</p>
+        )}
       </div>
 
       <fieldset
@@ -87,7 +89,7 @@ export function AdminChannelRow({
         >
           <Trash2 />
         </Button>
-        <ChannelEnabledSwitch channel={channel} />
+        <ChannelEnabledSwitch channel={channel} broadcast={broadcast} />
       </fieldset>
 
       <ChannelFormDialog
@@ -98,15 +100,44 @@ export function AdminChannelRow({
       />
       <RegenerateSpeakerCodeDialog
         channel={channel}
+        broadcast={broadcast}
         open={regenerating}
         onOpenChange={setRegenerating}
       />
       <DeleteChannelDialog
         channel={channel}
+        broadcast={broadcast}
         remaining={event.channels.length - 1}
         open={deleting}
         onOpenChange={setDeleting}
       />
     </li>
+  );
+}
+
+/**
+ * The broadcast axis alone: whether an interpreter is on this channel. Enablement is the
+ * switch's to print, and the listener count is its own line — a badge that carried either would
+ * have to redraw to say the other changed. The withheld dash is a withholding rather than a
+ * relabelling: a dead poll says nothing about the world, so it makes no claim and carries no dot.
+ */
+function BroadcastBadge({ broadcast }: { broadcast: ChannelBroadcast }) {
+  if (broadcast.state === 'withheld') {
+    return (
+      <Badge
+        variant="outline"
+        className="shrink-0 border-dashed bg-transparent text-muted-foreground uppercase"
+      >
+        —<span className="sr-only normal-case">{STATUS_UNKNOWN}</span>
+      </Badge>
+    );
+  }
+
+  return (
+    <LiveBadge
+      live={broadcast.state === 'on-air'}
+      label={broadcast.state === 'on-air' ? 'On air' : 'Offline'}
+      className="shrink-0"
+    />
   );
 }

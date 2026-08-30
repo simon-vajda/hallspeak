@@ -52,6 +52,27 @@ describe('media payload schemas', () => {
     expect(ChannelStatus.safeParse({ slug: 'english', online: true }).success).toBe(false);
   });
 
+  it('carries a close reason only on channel status payloads', () => {
+    expect(
+      ChannelStatus.parse({ slug: 'english', online: false, muted: false, reason: 'ended' }),
+    ).toEqual({ slug: 'english', online: false, muted: false, reason: 'ended' });
+    expect(
+      ChannelStatus.parse({ slug: 'english', online: false, muted: false, reason: 'dropped' }),
+    ).toEqual({ slug: 'english', online: false, muted: false, reason: 'dropped' });
+    expect(
+      ChannelStatus.safeParse({
+        slug: 'english',
+        online: false,
+        muted: false,
+        reason: 'unknown',
+      }).success,
+    ).toBe(false);
+    expect(ChannelJoinResponse.parse({ online: false, muted: false, reason: 'ended' })).toEqual({
+      online: false,
+      muted: false,
+    });
+  });
+
   it('accepts a consume payload and rejects one missing capabilities', () => {
     expect(MediaConsumePayload.parse({ slug: 'english', rtpCapabilities: opaque })).toEqual({
       slug: 'english',

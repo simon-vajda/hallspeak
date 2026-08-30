@@ -128,7 +128,7 @@ export function consumerClosed(state: MediaState, slug: string): MediaState {
  * What the current situation calls for: which consumers to close, and which channel to
  * open one for. One plan rather than an event-by-event rule, because the cases overlap —
  * a channel switch is a close plus a consume, an interpreter dropping is a close alone,
- * and arming before anyone is live is neither.
+ * and a bounded playback hold keeps intent without keeping a dead Consumer.
  *
  * Closing the channels the guest is no longer on is what makes a switch a consumer swap
  * on the one transport. Otherwise, the old consumer stays open and its audio keeps
@@ -142,29 +142,29 @@ export interface ConsumerPlan {
 /** Opening a consumer completes its plan but does not cancel its pending playback handoff. */
 export function mayAttachConsumerTrack(input: {
   requestedSlug: string;
-  armedSlug: string | null;
+  activeSlug: string | null;
   online: boolean;
   trackEnded: boolean;
 }): boolean {
-  return input.online && !input.trackEnded && input.requestedSlug === input.armedSlug;
+  return input.online && !input.trackEnded && input.requestedSlug === input.activeSlug;
 }
 
 export function consumerPlan(input: {
   consumers: Record<string, string>;
-  /** The channel the guest armed, or null while they have not. */
-  armedSlug: string | null;
-  /** A producer exists on the armed channel. */
+  /** Channel being played or held for automatic recovery. */
+  activeSlug: string | null;
+  /** A producer exists on the active channel. */
   online: boolean;
 }): ConsumerPlan {
-  const close = Object.keys(input.consumers).filter((slug) => slug !== input.armedSlug);
-  if (input.armedSlug === null) {
+  const close = Object.keys(input.consumers).filter((slug) => slug !== input.activeSlug);
+  if (input.activeSlug === null) {
     return { close, consume: null };
   }
 
-  const open = input.consumers[input.armedSlug] !== undefined;
+  const open = input.consumers[input.activeSlug] !== undefined;
   if (!input.online) {
-    // Armed survives; the consumer does not. The guest is never asked to act again.
-    return { close: open ? [...close, input.armedSlug] : close, consume: null };
+    // A hold keeps intent, not a dead consumer. A returned producer gets a fresh one.
+    return { close: open ? [...close, input.activeSlug] : close, consume: null };
   }
-  return { close, consume: open ? null : input.armedSlug };
+  return { close, consume: open ? null : input.activeSlug };
 }

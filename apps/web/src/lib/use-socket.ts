@@ -23,7 +23,7 @@ export type { SocketStatus } from '@/lib/socket-state';
  * admin disabling the event in the gap. Retry errors stay in the reconnecting phase.
  */
 export function useSocket(auth: SocketAuth | null) {
-  const [{ status, error }, dispatchConnection] = useReducer(
+  const [{ status, error, hasConnected }, dispatchConnection] = useReducer(
     socketConnectionState,
     initialSocketConnectionState,
   );
@@ -86,9 +86,13 @@ export function useSocket(auth: SocketAuth | null) {
     });
     const onReconnectAttempt = () => dispatchConnection({ type: 'reconnect-attempt' });
     s.io.on('reconnect_attempt', onReconnectAttempt);
-    s.on('channel:status', ({ slug, online: isOnline, muted }) => {
+    s.on('channel:status', ({ slug, online: isOnline, muted, reason }) => {
       updateChannelStatuses((current) =>
-        applyRealtimeStatus(current, slug, { online: isOnline, muted }),
+        applyRealtimeStatus(current, slug, {
+          online: isOnline,
+          muted,
+          ...(reason === undefined ? {} : { reason }),
+        }),
       );
     });
     // Addressed to the speaker's socket alone, and sent once on connect, so a studio never
@@ -132,6 +136,7 @@ export function useSocket(auth: SocketAuth | null) {
   return {
     status,
     error,
+    hasConnected,
     online,
     channelStatuses: channelStatusState.channels,
     listeners,
