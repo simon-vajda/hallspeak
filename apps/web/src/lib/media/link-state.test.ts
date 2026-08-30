@@ -17,6 +17,17 @@ const connected: LinkStateInput = {
 };
 
 describe('resolveLinkState', () => {
+  /**
+   * What a transport rebuild depends on. The rebuild drops the transport and waits for the
+   * effects that wanted media to open another, and those gate on `isLinkUp` — so a session
+   * mid-rebuild has to read as up. `trouble` would deadlock it: the link reads down, nothing
+   * re-consumes, and the transport is never replaced.
+   */
+  it('reads a renegotiating session as up, and a troubled one as down', () => {
+    expect(isLinkUp(resolveLinkState({ ...connected, mediaHealth: 'connecting' }))).toBe(true);
+    expect(isLinkUp(resolveLinkState({ ...connected, mediaHealth: 'trouble' }))).toBe(false);
+  });
+
   it('resolves a terminal socket error to lost regardless of media health', () => {
     expect(
       resolveLinkState({
