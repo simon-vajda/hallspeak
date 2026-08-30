@@ -54,7 +54,7 @@ export function SpeakerPreflight({
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header>
           <div className="flex items-center justify-between gap-3">
-            <LiveBadge live={false} showDot={false} label="Interpreter · off air" />
+            <LiveBadge live={false} showDot={false} label="Off air" />
             <div className="-my-1 lg:hidden">
               <TempThemeToggle />
             </div>

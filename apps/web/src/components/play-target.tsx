@@ -35,7 +35,7 @@ export function PlayTarget({
         'relative flex size-46 cursor-pointer flex-col items-center justify-center gap-2 rounded-full lg:size-49',
         // Sized here, so callers pass a bare lucide icon.
         '[&_svg]:pointer-events-none [&_svg]:size-9.75 [&_svg]:stroke-[2.4]',
-        'transition-transform duration-120 active:scale-96 disabled:pointer-events-none disabled:opacity-50',
+        'transition-transform duration-120 active:scale-96 disabled:pointer-events-none disabled:border-dashed disabled:border-border disabled:opacity-50',
         VARIANTS[variant],
         className,
       )}
