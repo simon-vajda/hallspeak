@@ -1,3 +1,4 @@
+import { Loader2, OctagonX } from 'lucide-react';
 import { filledBars, type LinkState, linkLabel } from '@/lib/media/link-state';
 import { BAR_COUNT } from '@/lib/media/stats';
 import { cn } from '@/lib/utils';
@@ -11,28 +12,60 @@ import { cn } from '@/lib/utils';
  * fixed vocabulary owns the line.
  */
 export function ConnectionLine({ link, className }: { link: LinkState; className?: string }) {
-  const filled = filledBars(link);
+  const label = linkLabel(link);
 
   return (
     <div className={cn('flex flex-col items-center gap-2', className)}>
-      <div aria-hidden className="flex items-end gap-1">
-        {BARS.map((height, index) => (
-          <span
-            // Heights repeat by design (the shape is symmetric), so the index is the key.
-            // biome-ignore lint/suspicious/noArrayIndexKey: a fixed-length static bar row.
-            key={index}
-            className={cn(
-              'w-1 rounded-full transition-colors duration-300',
-              index < filled ? 'bg-primary' : 'bg-border',
-            )}
-            style={{ height }}
+      {link.kind === 'flowing' ? (
+        <>
+          <Bars filled={filledBars(link)} />
+          <p aria-live="polite" className="text-meta text-muted-foreground">
+            {label}
+          </p>
+        </>
+      ) : link.kind === 'connecting' || link.kind === 'reconnecting' ? (
+        <p
+          aria-live="polite"
+          className="flex items-center gap-2.25 rounded-full bg-primary/12 px-4.75 py-3 text-sm font-semibold"
+        >
+          <Loader2
+            aria-hidden
+            className="size-4 animate-spin text-primary motion-reduce:animate-none"
           />
-        ))}
-      </div>
-      {/* Assertive would interrupt; this line changes on its own. */}
-      <p aria-live="polite" className="text-meta text-muted-foreground">
-        {linkLabel(link)}
-      </p>
+          {label}
+        </p>
+      ) : link.kind === 'lost' ? (
+        <p
+          aria-live="polite"
+          className="flex items-center gap-2.25 rounded-full border border-destructive-border bg-destructive-muted px-4.75 py-3 text-sm font-semibold text-destructive"
+        >
+          <OctagonX aria-hidden className="size-4" />
+          {label}
+        </p>
+      ) : (
+        <p aria-live="polite" className="text-meta text-muted-foreground">
+          {label}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Bars({ filled }: { filled: number }) {
+  return (
+    <div aria-hidden className="flex items-end gap-1">
+      {BARS.map((height, index) => (
+        <span
+          // Heights repeat by design (the shape is symmetric), so the index is the key.
+          // biome-ignore lint/suspicious/noArrayIndexKey: a fixed-length static bar row.
+          key={index}
+          className={cn(
+            'w-1 rounded-full transition-colors duration-300',
+            index < filled ? 'bg-primary' : 'bg-border',
+          )}
+          style={{ height }}
+        />
+      ))}
     </div>
   );
 }

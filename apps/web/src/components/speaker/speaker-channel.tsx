@@ -1,6 +1,5 @@
 import type { components } from '@linguacast/contract/openapi';
 import { SpeakerStudio } from '@/components/speaker/speaker-studio';
-import { useConnectionToast } from '@/lib/use-connection-toast';
 import { useSocket } from '@/lib/use-socket';
 
 type PublicChannelView = components['schemas']['PublicChannelView'];
@@ -16,8 +15,6 @@ export function SpeakerChannel({
     pin: view.event.pin,
     speakerCode,
   });
-  useConnectionToast(status);
-
   return (
     <SpeakerStudio
       eventName={view.event.name}
