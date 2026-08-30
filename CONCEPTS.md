@@ -115,4 +115,4 @@ A Consumer is created paused and begins only once the Listener confirms it is re
 ### Eviction
 Ending a session from the server's side, rather than waiting for the client to notice. It is what makes an admin's write true of what is audible and not only of what the API reports: disabling, deleting, or regenerating a code evicts whoever that write took access from.
 
-Eviction is scoped either to one peer, named by its connection, or to a whole Event. The second exists because a Listener who never armed owns no media and so cannot be named individually — and that Listener is exactly who a regenerated PIN has to remove.
+Eviction is scoped either to one peer, named by its connection, or to a whole Event. The second exists because a Listener who owns no media cannot be named individually — and that Listener is exactly who a regenerated PIN has to remove.

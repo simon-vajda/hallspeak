@@ -20,10 +20,10 @@ import type { SocketStatus } from '@/lib/use-socket';
 import { cn } from '@/lib/utils';
 import type { SocketClient } from '@/socket/client';
 import {
+  badgeHasLiveDot,
   badgeLabel,
   type ListenIntentState,
   listenActionState,
-  listenState,
   playTargetLabel,
   reconcileListenIntent,
   statusNote,
@@ -75,7 +75,6 @@ export function ListenerRoom({
   const volume = useAudioVolume(audio);
   useAudioSink(audio, output.deviceId, output.clearSelection);
 
-  const connected = status === 'connected';
   const link = resolveLinkState({
     socketStatus: status,
     hasConnected,
@@ -98,16 +97,12 @@ export function ListenerRoom({
     wasPlaying,
     now,
   });
-  const armed = resolvedPlayback.intent !== 'idle';
-  const state = listenState({
-    terminal: status === 'error',
-    armed,
-    isPlaying,
+  const badgeInput = {
     live,
     muted,
-    socketConnected: connected,
-    mediaTrouble: media.health === 'trouble',
-  });
+    holding: resolvedPlayback.intent === 'holding',
+    linkConnected,
+  };
   const actionState = listenActionState({
     ...resolvedPlayback,
     live,
@@ -221,8 +216,13 @@ export function ListenerRoom({
   }, [consumers, activeSlug, online, startConsuming, stopConsuming]);
 
   const meta = `${eventName} · PIN ${formatPin(pin)}`;
-  const onAir = live && connected && muted === false;
-  const note = socketError ?? (!armed ? statusNote(state) : null);
+  const note =
+    socketError ??
+    statusNote({
+      ...badgeInput,
+      isPlaying,
+      ...(closeReason === undefined ? {} : { closeReason }),
+    });
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -252,7 +252,7 @@ export function ListenerRoom({
       </div>
 
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col items-center justify-center px-8 text-center lg:px-10 lg:py-13">
-        <LiveBadge live={onAir} label={badgeLabel(state)} />
+        <LiveBadge live={badgeHasLiveDot(badgeInput)} label={badgeLabel(badgeInput)} />
 
         <h1 className={cn('mt-4 mb-10 lg:mt-4.5 lg:mb-10', TITLE)}>{channel.name}</h1>
 
