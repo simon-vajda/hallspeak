@@ -56,8 +56,8 @@ re-resolves it every minute.
 The literal is **added** to the candidate list rather than substituted for the name.
 mediasoup announces `PUBLIC_ADDRESS` verbatim, and `augmentCandidates` in
 `core/media/config.ts` derives a literal-addressed twin of every candidate — same
-protocol, port and TCP type, its own foundation, and a priority one step above its source
-so a client that can use either tries the literal first. `createTransport` applies it, so
+protocol, port and TCP type, its own foundation, and a priority lifted clear of every
+hostname candidate so a client that can use either tries the literal first. `createTransport` applies it, so
 the append is a media-domain decision and costs no extra port.
 
 Substituting the literal, which is what this write-up originally described, cost the
