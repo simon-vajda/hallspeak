@@ -81,18 +81,27 @@ export function augmentCandidates(
   candidates: types.IceCandidate[],
   address: string,
 ): types.IceCandidate[] {
-  const twins = candidates
-    .filter((candidate) => candidate.address !== address && candidate.ip !== address)
-    .map((candidate) => ({
-      ...candidate,
-      // A foundation is 1*32 ice-char (ALPHA / DIGIT / "+" / "/"), so no separator.
-      foundation: `${candidate.foundation}2`,
-      // Above its source, so a client that can use either spends its first check on the
-      // literal rather than on the name it may have to resolve.
-      priority: candidate.priority + 1,
-      ip: address,
-      address,
-    }));
+  const sources = candidates.filter(
+    (candidate) => candidate.address !== address && candidate.ip !== address,
+  );
+  if (sources.length === 0) {
+    return candidates;
+  }
+
+  // Lifted clear of every source rather than one step above each: mediasoup gives a
+  // worker's UDP and TCP candidates adjacent priorities, so a per-candidate increment
+  // would tie the TCP twin with the UDP source instead of outranking it. The span keeps
+  // the sources' order among the twins while putting all of them above all of the names.
+  const priorities = candidates.map((candidate) => candidate.priority);
+  const lift = Math.max(...priorities) - Math.min(...priorities) + 1;
+  const twins = sources.map((candidate) => ({
+    ...candidate,
+    // A foundation is 1*32 ice-char (ALPHA / DIGIT / "+" / "/"), so no separator.
+    foundation: `${candidate.foundation}2`,
+    priority: candidate.priority + lift,
+    ip: address,
+    address,
+  }));
   return [...candidates, ...twins];
 }
 

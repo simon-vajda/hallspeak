@@ -1,5 +1,5 @@
 ---
-title: Announce a resolved address, because Firefox drops hostname ICE candidates
+title: Offer both address forms, because Firefox drops hostname ICE candidates and IPv6-only carriers need them
 date: 2026-08-29
 category: integration-issues
 module: apps/server

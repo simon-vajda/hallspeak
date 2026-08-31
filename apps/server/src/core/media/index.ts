@@ -260,6 +260,9 @@ export async function createTransport(
   direction: TransportDirection,
   options: { create: boolean },
 ): Promise<TransportDescription> {
+  // Taken before the awaits: a shutdown landing in that window would otherwise throw
+  // `media_unavailable` at a caller whose transport was already created.
+  const { announced } = require_();
   const room = await roomFor(ctx.eventId, options.create);
   const transport = await room.createTransport(ctx.socketId, direction);
   return {
@@ -267,7 +270,7 @@ export async function createTransport(
     iceParameters: transport.iceParameters,
     // Both address forms: mediasoup announced the configured one, and the literal it
     // currently resolves to is added here. See `augmentCandidates`.
-    iceCandidates: augmentCandidates(transport.iceCandidates, require_().announced.current),
+    iceCandidates: augmentCandidates(transport.iceCandidates, announced.current),
     dtlsParameters: transport.dtlsParameters,
   };
 }

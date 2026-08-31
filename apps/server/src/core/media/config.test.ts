@@ -98,6 +98,28 @@ describe('augmentCandidates', () => {
     expect(new Set(foundations).size).toBe(4);
   });
 
+  it('ranks every literal above every name, with no two candidates tied', () => {
+    const candidates = augmentCandidates(hostname(), '203.0.113.7');
+    const names = candidates.filter((c) => c.address === 'media.example.org');
+    const literals = candidates.filter((c) => c.address === '203.0.113.7');
+    const highestName = Math.max(...names.map((c) => c.priority));
+    expect(literals.every((c) => c.priority > highestName)).toBe(true);
+    expect(new Set(candidates.map((c) => c.priority)).size).toBe(candidates.length);
+  });
+
+  it('twins only the candidates that are not already at the literal', () => {
+    const [name, tcp] = hostname();
+    if (!name || !tcp) {
+      throw new Error('fixture');
+    }
+    const mixed = [name, { ...tcp, ip: '203.0.113.7', address: '203.0.113.7' }];
+
+    const candidates = augmentCandidates(mixed, '203.0.113.7');
+
+    expect(candidates).toHaveLength(3);
+    expect(candidates.filter((c) => c.protocol === 'tcp')).toHaveLength(1);
+  });
+
   it('ranks the literal above the name it was derived from', () => {
     const [udpName, tcpName, udpLiteral, tcpLiteral] = augmentCandidates(hostname(), '203.0.113.7');
     expect(udpLiteral?.priority).toBeGreaterThan(udpName?.priority ?? 0);
