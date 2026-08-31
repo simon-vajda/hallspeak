@@ -1,6 +1,8 @@
+import type { types } from 'mediasoup';
 import { describe, expect, it } from 'vitest';
 import {
   AUDIO_CODECS,
+  augmentCandidates,
   iceServersFor,
   isUnroutableAnnouncedAddress,
   listenInfosFor,
@@ -33,6 +35,89 @@ describe('listenInfosFor', () => {
       expect(info.ip).toBe('0.0.0.0');
       expect(info.announcedAddress).toBe('203.0.113.10');
     }
+  });
+});
+
+describe('augmentCandidates', () => {
+  const hostname = (): types.IceCandidate[] => [
+    {
+      foundation: 'udpcandidate',
+      priority: 1076302079,
+      ip: 'media.example.org',
+      address: 'media.example.org',
+      protocol: 'udp',
+      port: 44400,
+      type: 'host',
+    },
+    {
+      foundation: 'tcpcandidate',
+      priority: 1076302078,
+      ip: 'media.example.org',
+      address: 'media.example.org',
+      protocol: 'tcp',
+      port: 44400,
+      type: 'host',
+      tcpType: 'passive',
+    },
+  ];
+
+  it('offers both address forms, so Firefox and an IPv6-only carrier each find one', () => {
+    const candidates = augmentCandidates(hostname(), '203.0.113.7');
+    expect(candidates).toHaveLength(4);
+    expect(candidates.map((candidate) => candidate.address)).toEqual([
+      'media.example.org',
+      'media.example.org',
+      '203.0.113.7',
+      '203.0.113.7',
+    ]);
+  });
+
+  it('carries the source protocol and TCP type onto its twin', () => {
+    const [, , udp, tcp] = augmentCandidates(hostname(), '203.0.113.7');
+    expect(udp?.protocol).toBe('udp');
+    expect(udp?.tcpType).toBeUndefined();
+    expect(tcp?.protocol).toBe('tcp');
+    expect(tcp?.tcpType).toBe('passive');
+  });
+
+  it('names the port the worker actually bound', () => {
+    for (const candidate of augmentCandidates(hostname(), '203.0.113.7')) {
+      expect(candidate.port).toBe(44400);
+    }
+  });
+
+  it('sets both address and ip to the literal, which mediasoup carries separately', () => {
+    for (const candidate of augmentCandidates(hostname(), '203.0.113.7').slice(2)) {
+      expect(candidate.ip).toBe('203.0.113.7');
+      expect(candidate.address).toBe('203.0.113.7');
+    }
+  });
+
+  it('gives every appended candidate a foundation of its own', () => {
+    const foundations = augmentCandidates(hostname(), '203.0.113.7').map((c) => c.foundation);
+    expect(new Set(foundations).size).toBe(4);
+  });
+
+  it('ranks the literal above the name it was derived from', () => {
+    const [udpName, tcpName, udpLiteral, tcpLiteral] = augmentCandidates(
+      hostname(),
+      '203.0.113.7',
+    );
+    expect(udpLiteral?.priority).toBeGreaterThan(udpName?.priority ?? 0);
+    expect(tcpLiteral?.priority).toBeGreaterThan(tcpName?.priority ?? 0);
+  });
+
+  it('returns a literal-announcing list unchanged rather than duplicating it', () => {
+    const literal = hostname().map((candidate) => ({
+      ...candidate,
+      ip: '203.0.113.7',
+      address: '203.0.113.7',
+    }));
+    expect(augmentCandidates(literal, '203.0.113.7')).toEqual(literal);
+  });
+
+  it('returns an empty list rather than throwing', () => {
+    expect(augmentCandidates([], '203.0.113.7')).toEqual([]);
   });
 });
 

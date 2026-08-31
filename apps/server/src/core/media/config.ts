@@ -68,6 +68,35 @@ export function listenInfosFor(
 }
 
 /**
+ * Both address forms in one candidate list. mediasoup announces whatever `PUBLIC_ADDRESS`
+ * says, so a DDNS deployment's candidates name a host; Firefox discards those (Mozilla bug
+ * 1713128) and needs the literal, while a phone on an IPv6-only carrier needs the name so
+ * its resolver can synthesize a NAT64 address through DNS64. One field cannot be both, so
+ * the literal is added here rather than substituted.
+ *
+ * The twin names the same socket the worker actually bound, so protocol, port and TCP type
+ * are copied; only the address, the foundation and the priority differ.
+ */
+export function augmentCandidates(
+  candidates: types.IceCandidate[],
+  address: string,
+): types.IceCandidate[] {
+  const twins = candidates
+    .filter((candidate) => candidate.address !== address && candidate.ip !== address)
+    .map((candidate) => ({
+      ...candidate,
+      // A foundation is 1*32 ice-char (ALPHA / DIGIT / "+" / "/"), so no separator.
+      foundation: `${candidate.foundation}2`,
+      // Above its source, so a client that can use either spends its first check on the
+      // literal rather than on the name it may have to resolve.
+      priority: candidate.priority + 1,
+      ip: address,
+      address,
+    }));
+  return [...candidates, ...twins];
+}
+
+/**
  * A worker earns its keep only when another concurrent event exists, so the maximum means
  * "simultaneous events given their own process"; the floor against core count stops
  * workers contending. Under Docker the floor is weaker than it looks — `os.cpus()` reports
