@@ -81,20 +81,25 @@ export class WorkerPool {
     for (let index = 0; index < count; index += 1) {
       await this.spawn(index);
     }
-    console.log(this.startupSummary());
   }
 
   /**
    * The one line that makes a misconfigured host diagnosable without instrumentation.
    * Both counts, because `os.cpus()` reports the host's cores and not a cgroup quota:
    * an operator running under `--cpus` sees the mismatch here or nowhere.
+   *
+   * Names the resolved address alongside the configured one: what the workers announce is
+   * `PUBLIC_ADDRESS` verbatim, which may be a name, and the operator would otherwise lose
+   * sight of the address guests actually reach.
    */
-  startupSummary(): string {
+  startupSummary(resolvedAddress?: string): string {
     const ports = [...this.slots.keys()].sort((a, b) => a - b).map((i) => this.net.rtcPortBase + i);
     return [
       `mediasoup: ${this.slots.size} worker(s) of ${this.hostCpuCount} detected core(s)`,
       `ports ${ports.join(', ')} (UDP and TCP)`,
-      `guests connect to ${this.net.announcedIp}`,
+      resolvedAddress && resolvedAddress !== this.net.announcedIp
+        ? `guests connect to ${this.net.announcedIp} (${resolvedAddress})`
+        : `guests connect to ${this.net.announcedIp}`,
       `TURN ${this.turnConfigured ? 'configured' : 'not configured'}`,
     ].join(' · ');
   }

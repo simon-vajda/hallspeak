@@ -20,7 +20,13 @@ import {
   revokeEvent,
   stopMedia,
 } from './index';
-import { failWorker, fakeMediaControls, goLive as goLiveOn, startFakeMedia } from './testing';
+import {
+  failWorker,
+  fakeListenInfos,
+  fakeMediaControls,
+  goLive as goLiveOn,
+  startFakeMedia,
+} from './testing';
 
 const EVENT = 1;
 const ENGLISH = 10;
@@ -289,6 +295,121 @@ describe('createTransport', () => {
     await expect(
       createTransport({ eventId: EVENT, socketId: 'speaker-a' }, 'send', { create: true }),
     ).rejects.toMatchObject({ code: 'transport_exists' });
+  });
+
+  it('offers both the announced hostname and the address it resolved to', async () => {
+    await stopMedia();
+    await startFakeMedia({
+      announcedIp: 'media.example.org',
+      resolveAddress: async () => ['203.0.113.7'],
+    });
+
+    const { iceCandidates } = await createTransport(
+      { eventId: EVENT, socketId: 'speaker-a' },
+      'send',
+      { create: true },
+    );
+
+    expect(new Set(iceCandidates.map((candidate) => candidate.address))).toEqual(
+      new Set(['media.example.org', '203.0.113.7']),
+    );
+  });
+
+  it('announces the configured hostname to the workers, not the resolved literal', async () => {
+    await stopMedia();
+    await startFakeMedia({
+      announcedIp: 'media.example.org',
+      resolveAddress: async () => ['203.0.113.7'],
+    });
+
+    expect(fakeListenInfos().map((info) => info.announcedAddress)).toEqual([
+      'media.example.org',
+      'media.example.org',
+    ]);
+  });
+
+  it('leaves the list alone when PUBLIC_ADDRESS is already a literal', async () => {
+    const { iceCandidates } = await createTransport(
+      { eventId: EVENT, socketId: 'speaker-a' },
+      'send',
+      { create: true },
+    );
+
+    expect(iceCandidates).toHaveLength(2);
+    expect(iceCandidates.every((candidate) => candidate.address === '203.0.113.1')).toBe(true);
+  });
+
+  it('appends the new literal once a polled address has moved', async () => {
+    await stopMedia();
+    let resolved = '203.0.113.7';
+    await startFakeMedia({
+      announcedIp: 'media.example.org',
+      resolveAddress: async () => [resolved],
+      addressPollMs: 1,
+    });
+    resolved = '198.51.100.4';
+    await vi.waitFor(async () => {
+      const { iceCandidates } = await createTransport(
+        { eventId: EVENT, socketId: `speaker-${resolved}-${Math.random()}` },
+        'send',
+        { create: true },
+      );
+      expect(iceCandidates.map((candidate) => candidate.address)).toContain('198.51.100.4');
+    });
+  });
+
+  it('keeps the last good literal when a refresh stops resolving', async () => {
+    await stopMedia();
+    let fail = false;
+    await startFakeMedia({
+      announcedIp: 'media.example.org',
+      resolveAddress: async () => {
+        if (fail) {
+          throw new Error('SERVFAIL');
+        }
+        return ['203.0.113.7'];
+      },
+      addressPollMs: 1,
+    });
+    fail = true;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const { iceCandidates } = await createTransport(
+      { eventId: EVENT, socketId: 'speaker-a' },
+      'send',
+      { create: true },
+    );
+    expect(iceCandidates.map((candidate) => candidate.address)).toContain('203.0.113.7');
+  });
+
+  it('logs the configured hostname and the address it resolved to together', async () => {
+    await stopMedia();
+    await startFakeMedia({
+      announcedIp: 'media.example.org',
+      resolveAddress: async () => ['203.0.113.7'],
+    });
+
+    const summary = vi
+      .mocked(console.log)
+      .mock.calls.map(([line]) => String(line))
+      .findLast((line) => line.includes('worker(s)'));
+    expect(summary).toContain('media.example.org');
+    expect(summary).toContain('203.0.113.7');
+  });
+
+  it('warns about a private literal, naming the address guests would be given', async () => {
+    await stopMedia();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await startFakeMedia({ announcedIp: '192.168.1.20' });
+
+    expect(warn.mock.calls.map(([line]) => String(line)).join('\n')).toContain('192.168.1.20');
+  });
+
+  it('refuses to boot on a hostname that resolves only to private addresses', async () => {
+    await stopMedia();
+    await expect(
+      startFakeMedia({ announcedIp: 'media.example.org', resolveAddress: async () => ['10.0.0.5'] }),
+    ).rejects.toThrow(/private or loopback/);
   });
 
   it('restarts ICE on an owned transport and refuses an unknown one', async () => {
