@@ -190,20 +190,22 @@ A home connection's public IP usually changes on an ISP reconnect, which is why
 `PUBLIC_ADDRESS` takes a hostname: point a dynamic-DNS record at your connection and put
 that name in `.env`.
 
-LinguaCast resolves that name itself rather than leaving it to the browser. It has to:
-the address a guest connects back on is sent as a literal, and Firefox
-([bug 1713128](https://bugzilla.mozilla.org/show_bug.cgi?id=1713128)) discards any
-candidate that names a host rather than an address. Chrome resolves them and connects, so
-an unresolved hostname is a deployment where Chrome works, Firefox is silent, and no error
-appears anywhere.
+LinguaCast resolves that name itself as well as sending it. Each guest is offered both
+forms of the address it should connect back on, because browsers disagree about which one
+works: Firefox ([bug 1713128](https://bugzilla.mozilla.org/show_bug.cgi?id=1713128))
+ignores anything that names a host and needs the address, while a phone on a
+mobile-only-IPv6 carrier can reach you *only* by looking the name up. Offering both is
+what makes one deployment serve them all.
 
 The name is resolved at startup — the log line reads `mediasoup: home.example.org resolved
-to 203.0.113.10` — and re-checked every minute. When your IP moves, LinguaCast switches to
-the new one and anyone connected reconnects within a few seconds; their audio was already
-gone, because the old address stopped working the moment it changed. A hostname that does
-not resolve at startup stops the server rather than letting it run with nothing usable to
-hand out, and so does one that resolves only to a private address — inside a container
-that usually means the name is answered by a LAN resolver rather than the public one.
+to 203.0.113.10` — and re-checked every minute. When your IP moves, LinguaCast starts
+handing out the new one immediately; nothing is restarted and no room is torn down.
+Anyone who was connected has to reconnect, which their browser attempts on its own within
+a few seconds — their audio was already gone, because the old address stopped working the
+moment it changed. A hostname that does not resolve at startup stops the server rather
+than letting it run with nothing usable to hand out, and so does one that resolves only to
+a private address — inside a container that usually means the name is answered by a LAN
+resolver rather than the public one.
 
 A name with several A records is fine. LinguaCast keeps using whichever address it is
 already on while the name still answers with it, so a record that hands out its addresses

@@ -49,27 +49,34 @@ and is indistinguishable from a blocked port or a privacy extension.
 
 ## Resolution
 
-The server resolves the name instead of the browser. `core/media/announced-address.ts`
+The server resolves the name so that Firefox never has to. `core/media/announced-address.ts`
 resolves `PUBLIC_ADDRESS` to an IPv4 address at startup, fatally if it cannot, and
-re-resolves it every minute. mediasoup only ever sees a literal address.
+re-resolves it every minute.
 
-A hostname stays the right thing to configure — that is what makes a changing public IP
-survivable — so the resolution had to keep running rather than happen once. When the
-address moves, `WorkerPool.setAnnouncedAddress` rebuilds each worker's `WebRtcServer` on
-the new one: `announcedAddress` lives in the listen infos and is fixed when the server is
-created, and a `WebRtcServer` cannot be created before the old one releases the port. The
-rooms on that worker are dropped first and clients renegotiate through the existing
-`media:reset` path — the same recovery a dead worker gets. Those sessions were already
-dead: when a public address changes, every NAT mapping behind it has gone with it.
+The literal is **added** to the candidate list rather than substituted for the name.
+mediasoup announces `PUBLIC_ADDRESS` verbatim, and `augmentCandidates` in
+`core/media/config.ts` derives a literal-addressed twin of every candidate — same
+protocol, port and TCP type, its own foundation, and a priority one step above its source
+so a client that can use either tries the literal first. `createTransport` applies it, so
+the append is a media-domain decision and costs no extra port.
 
-There is no opt-out: announcing the name verbatim only helps when the client's resolver
-knows better than the server's, and it costs every Firefox guest their audio.
+Substituting the literal, which is what this write-up originally described, cost the
+deployment its other half: a phone on an IPv6-only carrier has no IPv4 candidate of its
+own and reached the server only by resolving the name through DNS64 to a NAT64 address.
+Removing the DNS step removed that path, and it showed up only on a mid-session network
+handoff — a fresh page load re-enumerates interfaces and can pick up Android's 464XLAT
+IPv4, while an ICE restart re-gathers on a peer connection that still holds the old view.
+See `recover-a-chromium-listener-whose-page-cannot-see-the-new-network.md`.
+
+Because the announced value is now the configured one, it never moves. A polled address
+change re-runs the STUN cross-check and nothing else: no `WebRtcServer` is rebuilt and no
+room is dropped, and the next transport created simply carries the new literal. The
+`address_changed` reset reason is gone with the rebuild it announced.
 
 ## Notes
 
-- Announcing both a hostname and an address is not a way out. `announcedAddress` is one
-  value per listen info, and a second listen info would need a second port per worker —
-  and Firefox still needs the address, so the hostname candidate buys it nothing.
+- A second listen info per worker is still not a way out. It would need a second port and
+  a hosting-guide change; appending at signalling time needs neither.
 - `iceServers` URLs are unaffected: a STUN or TURN URL is a URL, and Firefox resolves it
   normally. Only candidate connection-addresses have this restriction.
 - Resolution is IPv4-only on purpose. The workers bind an IPv4 address, so announcing a
