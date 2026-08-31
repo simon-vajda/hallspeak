@@ -4,6 +4,7 @@ import { type EvictionReason, notifications } from '../notifications';
 import { presence } from '../presence';
 import { type AddressResolver, AnnouncedAddress } from './announced-address';
 import {
+  augmentCandidates,
   type IceServer,
   iceServersFor,
   isUnroutableAnnouncedAddress,
@@ -35,8 +36,6 @@ export interface StartMediaOptions {
   createWorker?: WorkerFactory;
   resolveAddress?: AddressResolver;
   addressPollMs?: number;
-  /** EXPERIMENT ONLY: announce `net.announcedIp` verbatim even when it is a hostname. */
-  announceHostname?: boolean;
   /** Off by default so a test never sends a datagram; `index.ts` turns it on. */
   probeReflexiveAddress?: boolean;
 }
@@ -74,29 +73,19 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
   if (announcedIp !== options.net.announcedIp) {
     console.log(`mediasoup: ${options.net.announcedIp} resolved to ${announcedIp}`);
   }
-  // EXPERIMENT ONLY: announce the configured name rather than the address it resolved to,
-  // which is what this repo did before 5a0d039. The resolved value stays on `announced`,
-  // so the startup warnings below still describe a real address.
-  const net = {
-    ...options.net,
-    announcedIp: options.announceHostname ? options.net.announcedIp : announcedIp,
-  };
-  if (options.announceHostname) {
-    console.warn(
-      `mediasoup: EXPERIMENT — announcing ${options.net.announcedIp} verbatim rather than ` +
-        `${announcedIp}. Firefox guests will have no audio while this is on.`,
-    );
-  }
 
   const turnConfigured = Boolean(options.turn.turnUrl && options.turn.turnSecret);
+  // The configured value is what the workers announce, hostname and all: `createTransport`
+  // adds the resolved literal to every candidate list, so both forms reach the client and
+  // the announced value never moves.
   const pool = new WorkerPool({
-    net,
+    net: options.net,
     turnConfigured,
     hostCpuCount: options.hostCpuCount,
     createWorker: options.createWorker,
   });
   await pool.start();
-  announced.onChange((next) => void pool.setAnnouncedAddress(next));
+  console.log(pool.startupSummary(announcedIp));
 
   const listeners = new ListenerCountPublisher({
     // A recount rather than a delta, and a room that has gone answers zero: the window is
@@ -267,7 +256,9 @@ export async function createTransport(
   return {
     id: transport.id,
     iceParameters: transport.iceParameters,
-    iceCandidates: transport.iceCandidates,
+    // Both address forms: mediasoup announced the configured one, and the literal it
+    // currently resolves to is added here. See `augmentCandidates`.
+    iceCandidates: augmentCandidates(transport.iceCandidates, require_().announced.current),
     dtlsParameters: transport.dtlsParameters,
   };
 }

@@ -1,4 +1,6 @@
 import { EventEmitter } from 'node:events';
+import type { types } from 'mediasoup';
+import type { AddressResolver } from './announced-address';
 import type { TurnConfig } from './config';
 import { createTransport, produce, startMedia, stopMedia } from './index';
 import type { WorkerFactory } from './workers';
@@ -18,6 +20,14 @@ const seq = { producer: 0, consumer: 0, transport: 0, iceRestart: 0 };
 export const fakeMediaControls = { refuseConsume: false, failPause: false, failResume: false };
 
 let currentWorker: FakeWorker | undefined;
+let announcedListenInfos: types.TransportListenInfo[] = [];
+/** What the pool told the worker to announce; every fake candidate carries it. */
+let announcedByPool = '';
+
+/** The listen infos the pool handed the worker, so a test can read what is announced. */
+export function fakeListenInfos(): types.TransportListenInfo[] {
+  return announcedListenInfos;
+}
 
 /** Simulates mediasoup losing its worker after startup. */
 export function failWorker(): void {
@@ -95,7 +105,30 @@ class FakeConsumer extends EventEmitter {
 class FakeTransport extends EventEmitter {
   closed = false;
   readonly iceParameters = { usernameFragment: 'u' };
-  readonly iceCandidates = [{ foundation: 'udp' }];
+  // Shaped like mediasoup's own, because `createTransport` derives a literal-addressed
+  // twin from every field here and a stub would make that derivation untestable. The
+  // announced address is the one the pool was built with.
+  readonly iceCandidates: types.IceCandidate[] = [
+    {
+      foundation: 'udpcandidate',
+      priority: 1076302079,
+      ip: announcedByPool,
+      address: announcedByPool,
+      protocol: 'udp',
+      port: 44400,
+      type: 'host',
+    },
+    {
+      foundation: 'tcpcandidate',
+      priority: 1076302078,
+      ip: announcedByPool,
+      address: announcedByPool,
+      protocol: 'tcp',
+      port: 44400,
+      type: 'host',
+      tcpType: 'passive',
+    },
+  ];
   readonly dtlsParameters = { role: 'auto' };
   readonly iceState = 'connected';
   readonly dtlsState = 'connected';
@@ -191,7 +224,9 @@ class FakeRouter {
 
 class FakeWorker extends EventEmitter {
   closed = false;
-  async createWebRtcServer() {
+  async createWebRtcServer({ listenInfos }: { listenInfos: types.TransportListenInfo[] }) {
+    announcedListenInfos = listenInfos;
+    announcedByPool = listenInfos[0]?.announcedAddress ?? announcedByPool;
     return { close: () => {} };
   }
   async createRouter() {
@@ -214,6 +249,9 @@ export const fakeWorkerFactory = (async () => {
 export interface FakeMediaOptions {
   graceMs?: number;
   turn?: TurnConfig;
+  announcedIp?: string;
+  resolveAddress?: AddressResolver;
+  addressPollMs?: number;
 }
 
 /** Starts the media singleton on fake workers; the returned function stops it again. */
@@ -226,12 +264,21 @@ export async function startFakeMedia(options: FakeMediaOptions = {}): Promise<()
   fakeMediaControls.failPause = false;
   fakeMediaControls.failResume = false;
   currentWorker = undefined;
+  announcedListenInfos = [];
+  announcedByPool = options.announcedIp ?? '203.0.113.1';
   await startMedia({
-    net: { listenIp: '0.0.0.0', announcedIp: '203.0.113.1', rtcPortBase: 44400, maxWorkers: 1 },
+    net: {
+      listenIp: '0.0.0.0',
+      announcedIp: options.announcedIp ?? '203.0.113.1',
+      rtcPortBase: 44400,
+      maxWorkers: 1,
+    },
     turn: options.turn ?? {},
     hostCpuCount: 1,
     graceMs: options.graceMs,
     createWorker: fakeWorkerFactory,
+    resolveAddress: options.resolveAddress,
+    addressPollMs: options.addressPollMs,
   });
   return stopMedia;
 }

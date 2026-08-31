@@ -160,16 +160,24 @@ describe('WorkerPool.start', () => {
     await pool.close();
   });
 
-  it('logs a startup summary naming both counts, the ports, the address and TURN', async () => {
+  it('summarises both counts, the ports, the address and TURN', async () => {
     const { pool } = harness({ maxWorkers: 2 }, 8);
     await pool.start();
-    const summary = logs.join('\n');
+    const summary = pool.startupSummary();
     expect(summary).toContain('2');
     expect(summary).toContain('8');
     expect(summary).toContain('44400');
     expect(summary).toContain('44401');
     expect(summary).toContain('203.0.113.10');
     expect(summary.toLowerCase()).toContain('turn');
+    await pool.close();
+  });
+
+  it('names the resolved literal beside a configured hostname, and only then', async () => {
+    const { pool } = harness({ maxWorkers: 1 }, 1);
+    await pool.start();
+    expect(pool.startupSummary('198.51.100.4')).toContain('203.0.113.10 (198.51.100.4)');
+    expect(pool.startupSummary('203.0.113.10')).toContain('connect to 203.0.113.10 ·');
     await pool.close();
   });
 });
