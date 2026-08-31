@@ -287,10 +287,10 @@ export function ListenerRoom({
           <ConnectionLine link={link} />
           {/* Chromium keeps one network view per page, so a connection it opened during a
               Wi-Fi to cellular handoff can end up with candidates the server cannot pair
-              with — and every replacement this page builds inherits the same view. Loading
-              the page again is the only recovery, and it is one the listener has to be
-              offered rather than left to discover. */}
-          {link.kind === 'lost' && socketError === null ? (
+              with — and every replacement this page builds inherits the same view. Offer
+              the reload as soon as that family mismatch is visible, while generic recovery
+              may continue in the background. */}
+          {(media.reconnectRecommended || link.kind === 'lost') && socketError === null ? (
             <Button
               size="pill"
               variant="secondary"

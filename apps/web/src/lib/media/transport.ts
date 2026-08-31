@@ -18,6 +18,7 @@ export async function openTransport(input: {
   iceServers: RTCIceServer[];
   /** Names the channel a produce belongs to; the send side needs it, the receive side does not. */
   slug?: string;
+  onCandidateAddressFamilyMismatch?: () => void;
 }): Promise<types.Transport> {
   const params = await input.api.createTransport(input.direction);
   const options = { ...params, iceServers: input.iceServers };
@@ -30,7 +31,12 @@ export async function openTransport(input: {
       ? input.device.createSendTransport(options)
       : input.device.createRecvTransport(options);
 
-  watchTransport(transport, input.direction);
+  watchTransport(
+    transport,
+    input.direction,
+    params.iceCandidates,
+    input.onCandidateAddressFamilyMismatch,
+  );
 
   transport.on('connect', ({ dtlsParameters }, callback, errback) => {
     input.api

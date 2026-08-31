@@ -73,6 +73,7 @@ interface Session {
 export function useMedia(socket: SocketClient | null) {
   const [state, setState] = useState<MediaState>(initialMediaState);
   const [health, setHealth] = useState<MediaHealth>('idle');
+  const [reconnectRecommended, setReconnectRecommended] = useState(false);
   const [stats, setStats] = useState<MediaStats | null>(null);
   // The counters are cumulative, so the grade is a delta against the previous sample.
   const previousSample = useRef<StatsSample | null>(null);
@@ -111,6 +112,7 @@ export function useMedia(socket: SocketClient | null) {
       releaseSession();
       setState(afterConnect);
       setHealth('connecting');
+      setReconnectRecommended(false);
       previousSample.current = null;
     };
 
@@ -123,6 +125,7 @@ export function useMedia(socket: SocketClient | null) {
       releaseSession();
       setState(initialMediaState);
       setHealth('idle');
+      setReconnectRecommended(false);
       setStats(null);
     };
   }, [socket, releaseSession]);
@@ -237,6 +240,14 @@ export function useMedia(socket: SocketClient | null) {
         direction,
         iceServers: active.iceServers,
         slug,
+        onCandidateAddressFamilyMismatch:
+          direction === 'recv'
+            ? () => {
+                if (session.current === active) {
+                  setReconnectRecommended(true);
+                }
+              }
+            : undefined,
       }).finally(() => {
         delete active.pendingTransports[direction];
       });
@@ -295,6 +306,7 @@ export function useMedia(socket: SocketClient | null) {
             // The path this direction was fighting for is up; a later handoff starts over.
             active.iceRecoveryAttempts[direction] = 0;
             setHealth('connected');
+            setReconnectRecommended(false);
             return;
           }
           if (iceRecoveryStep(attempts) === 'give-up') {
@@ -580,6 +592,7 @@ export function useMedia(socket: SocketClient | null) {
   return {
     state,
     health,
+    reconnectRecommended,
     stats,
     startProducing,
     stopProducing,
