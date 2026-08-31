@@ -18,7 +18,7 @@ export interface LifecycleServer {
         reason?: 'ended' | 'dropped';
       },
     ): unknown;
-    emit(event: 'media:reset', payload: { reason: 'worker_died' | 'address_changed' }): unknown;
+    emit(event: 'media:reset', payload: { reason: 'worker_died' }): unknown;
     emit(event: 'channel:listeners', payload: { slug: string; count: number }): unknown;
   };
   in(room: string): { disconnectSockets(close: boolean): unknown };
@@ -105,7 +105,7 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
       const reason = notification.reason;
       // The media under the socket went away but the caller's access did not: renegotiate
       // rather than disconnect.
-      if (reason === 'worker_died' || reason === 'address_changed') {
+      if (reason === 'worker_died') {
         io.to(room).emit('media:reset', { reason });
         return;
       }

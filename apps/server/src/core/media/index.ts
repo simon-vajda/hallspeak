@@ -100,7 +100,7 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
       // first real count of the next broadcast on the same channel.
       listeners.forgetEvent(room.eventId);
       // Idle and shutdown take nobody's access away, so nothing is evicted for them.
-      if (reason === 'worker_died' || reason === 'address_changed') {
+      if (reason === 'worker_died') {
         notifications.publish({ type: 'room-evicted', eventId: room.eventId, reason });
       }
     },
@@ -119,14 +119,23 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
   // Never awaited: the answer is a log line and nothing reads it, so a STUN server that is
   // slow or gone must not hold up the listener. Only worth asking when the address looks
   // usable — the warning above already covers the case where it does not.
-  if (options.probeReflexiveAddress && options.turn.stunUrl) {
-    void discoverReflexiveAddress(options.turn.stunUrl).then((reflexive) => {
-      const mismatch = reflexiveMismatch(announcedIp, reflexive);
+  const stunUrl = options.turn.stunUrl;
+  if (!options.probeReflexiveAddress || !stunUrl) {
+    return;
+  }
+  const crossCheck = (address: string) => {
+    void discoverReflexiveAddress(stunUrl).then((reflexive) => {
+      const mismatch = reflexiveMismatch(address, reflexive);
       if (mismatch) {
         console.warn(mismatch);
       }
     });
-  }
+  };
+  crossCheck(announcedIp);
+  // The only startup check a move can meaningfully re-run: `AnnouncedAddress.refresh`
+  // already filters unroutable answers before it notifies, so the warning above could
+  // never fire from here. Nothing is rebuilt — the announced address no longer moves.
+  announced.onChange(crossCheck);
 }
 
 export async function stopMedia(): Promise<void> {

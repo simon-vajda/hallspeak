@@ -147,6 +147,33 @@ describe('produce', () => {
     });
   });
 
+  it('keeps a live room across a polled address move, evicting nobody', async () => {
+    await stopMedia();
+    let resolved = '203.0.113.7';
+    await startFakeMedia({
+      announcedIp: 'media.example.org',
+      resolveAddress: async () => [resolved],
+      addressPollMs: 1,
+    });
+    await goLive('speaker-a');
+    published = [];
+
+    resolved = '198.51.100.4';
+    let guest = 0;
+    await vi.waitFor(async () => {
+      guest += 1;
+      const { iceCandidates } = await createTransport(
+        { eventId: EVENT, socketId: `guest-${guest}` },
+        'recv',
+        { create: false },
+      );
+      expect(iceCandidates.map((candidate) => candidate.address)).toContain('198.51.100.4');
+    });
+
+    expect(isOnline(EVENT, ENGLISH)).toBe(true);
+    expect(published.filter((n) => n.type === 'room-evicted')).toEqual([]);
+  });
+
   it('creates an initially paused producer before publishing opened', async () => {
     let statusAtOpened: { online: boolean; muted: boolean } | undefined;
     const unsubscribeStatus = notifications.subscribe((notification) => {
@@ -408,7 +435,10 @@ describe('createTransport', () => {
   it('refuses to boot on a hostname that resolves only to private addresses', async () => {
     await stopMedia();
     await expect(
-      startFakeMedia({ announcedIp: 'media.example.org', resolveAddress: async () => ['10.0.0.5'] }),
+      startFakeMedia({
+        announcedIp: 'media.example.org',
+        resolveAddress: async () => ['10.0.0.5'],
+      }),
     ).rejects.toThrow(/private or loopback/);
   });
 

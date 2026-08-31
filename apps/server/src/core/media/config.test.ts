@@ -99,10 +99,7 @@ describe('augmentCandidates', () => {
   });
 
   it('ranks the literal above the name it was derived from', () => {
-    const [udpName, tcpName, udpLiteral, tcpLiteral] = augmentCandidates(
-      hostname(),
-      '203.0.113.7',
-    );
+    const [udpName, tcpName, udpLiteral, tcpLiteral] = augmentCandidates(hostname(), '203.0.113.7');
     expect(udpLiteral?.priority).toBeGreaterThan(udpName?.priority ?? 0);
     expect(tcpLiteral?.priority).toBeGreaterThan(tcpName?.priority ?? 0);
   });
