@@ -62,6 +62,15 @@ prefixes — but there the connection forms and is then killed, rather than neve
 
 ## Resolution
 
+The address-family gap itself is now closed at the source: the server offers both the
+configured hostname and the literal it resolves to in every candidate list, so a phone on
+an IPv6-only carrier resolves the name through DNS64 and pairs against a NAT64 address
+without a reload. See
+`announce-a-resolved-address-because-firefox-drops-hostname-ice-candidates.md`. The
+reload stays as the last resort for whatever that does not cover — a carrier with no
+NAT64 among them — and the mismatch diagnosis below is withheld while any offered
+candidate is a name the browser may still resolve.
+
 The media leg gained a terminal health, `failed`, which resolves to the connection line's
 existing `lost` state, and the listener screen offers a **Reconnect** control that loads
 the page again. That is the only recovery Chromium accepts, and it works on every host and
@@ -75,7 +84,11 @@ nothing and cost the guest their place on the page.
 The recovery ladder that runs first still earns its keep: restart ICE once, then rebuild
 the transport, four attempts with backoff, then stop. Restarts fix an ordinary path change
 without disturbing the consumers, and stopping is what keeps a phone's radio from being
-held awake forever against a connection that cannot form.
+held awake forever against a connection that cannot form. Two edges are narrower than
+that summary: a transport the browser has declared `failed` is rebuilt at once rather than
+spending a restart the browser has already proved useless, and a transport whose direction
+has never connected is left gathering for longer than a stalled one rather than being
+interrupted mid-gather.
 
 ## Notes
 

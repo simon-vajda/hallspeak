@@ -54,8 +54,8 @@ export const _consumePayload: ConsumeParams[0] = {
   rtpCapabilities: { codecs: [] },
 };
 export const _reset: Parameters<S2C['media:reset']>[0] = { reason: 'worker_died' };
-// @ts-expect-error — a moved announced address no longer rebuilds anything, so it is not a reset.
 export const _addressChangedReset: Parameters<S2C['media:reset']>[0] = {
+  // @ts-expect-error — a moved address rebuilds nothing now, so it is not a reset reason.
   reason: 'address_changed',
 };
 
