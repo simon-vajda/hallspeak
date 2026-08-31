@@ -28,6 +28,14 @@ function setActionHandler(
   }
 }
 
+function setPositionState(session: MediaSession, state?: MediaPositionState) {
+  try {
+    session.setPositionState(state);
+  } catch {
+    // Position state remains best effort on partial implementations.
+  }
+}
+
 /** Owns lock-screen metadata and controls for the mounted listener room. */
 export function useListenerMediaSession({
   audio,
@@ -68,6 +76,13 @@ export function useListenerMediaSession({
         // Metadata is optional; action controls and normal playback still work without it.
       }
     }
+    // Logical content is a live interpretation, not the six-second carrier file. Infinity
+    // asks supporting system UIs for a live, non-seekable presentation instead of a loop.
+    setPositionState(session, {
+      duration: Number.POSITIVE_INFINITY,
+      playbackRate: 1,
+      position: 0,
+    });
 
     const sync = () => syncPlaybackState(session, element);
     const play = () => handlePlay();
@@ -87,6 +102,7 @@ export function useListenerMediaSession({
       setActionHandler(session, 'play', null);
       setActionHandler(session, 'pause', null);
       setPlaybackState(session, false, true);
+      setPositionState(session);
       try {
         session.metadata = null;
       } catch {
