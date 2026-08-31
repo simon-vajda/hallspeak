@@ -82,6 +82,14 @@ export type TransportConnectionState =
 export const ICE_RECOVERY_DELAY_MS = 5_000;
 
 /**
+ * A transport that has never connected is still gathering, and cutting its first gather
+ * short restarts ICE on candidates the browser has not finished trying. A direction that
+ * has connected once has no first gather left to protect, so a transport rebuilt for it
+ * keeps the short deadline above.
+ */
+export const ICE_FIRST_GATHER_DELAY_MS = 15_000;
+
+/**
  * Not every stuck transport is recoverable by restarting it. An ICE restart re-gathers on
  * the browser's existing peer connection, and after a network handoff that connection can
  * be holding the interfaces the device had at the moment it was created — on a phone
@@ -99,6 +107,7 @@ export const ICE_RECOVERY_MAX_DELAY_MS = 30_000;
 export function iceRecoveryDelay(
   connectionState: TransportConnectionState,
   attempts = 0,
+  hasEverConnected = true,
 ): number | null {
   if (connectionState === 'connected' || connectionState === 'closed') {
     return null;
@@ -109,6 +118,9 @@ export function iceRecoveryDelay(
   if (connectionState === 'failed' && attempts === 0) {
     return 0;
   }
+  if (!hasEverConnected && attempts === 0) {
+    return ICE_FIRST_GATHER_DELAY_MS;
+  }
   return Math.min(ICE_RECOVERY_DELAY_MS * 2 ** attempts, ICE_RECOVERY_MAX_DELAY_MS);
 }
 
@@ -118,10 +130,20 @@ export type IceRecoveryStep = 'restart' | 'rebuild' | 'give-up';
  * Restart first: it is cheap, it keeps the consumers and the producer attached, and it is
  * the right answer to an ordinary path change. Everything after that rebuilds, because a
  * restart that did not work will not work twice for the same reason.
+ *
+ * `failed` skips the restart entirely. The browser has already declared that path dead, and
+ * a restart re-gathers on the same peer connection — which after a network handoff still
+ * holds the interfaces the page had when it was created.
  */
-export function iceRecoveryStep(attempts: number): IceRecoveryStep {
+export function iceRecoveryStep(
+  attempts: number,
+  connectionState: TransportConnectionState,
+): IceRecoveryStep {
   if (attempts >= MAX_ICE_RECOVERY_ATTEMPTS) {
     return 'give-up';
+  }
+  if (connectionState === 'failed') {
+    return 'rebuild';
   }
   return attempts === 0 ? 'restart' : 'rebuild';
 }

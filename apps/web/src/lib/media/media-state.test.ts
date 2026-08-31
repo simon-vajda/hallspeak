@@ -10,6 +10,7 @@ import {
   hasCandidateAddressFamilyMismatch,
   ICE_RECOVERY_DELAY_MS,
   ICE_RECOVERY_MAX_DELAY_MS,
+  ICE_FIRST_GATHER_DELAY_MS,
   iceRecoveryDelay,
   iceRecoveryStep,
   initialMediaState,
@@ -110,6 +111,27 @@ describe('ICE recovery', () => {
     expect(iceRecoveryDelay('failed', 1)).toBe(ICE_RECOVERY_DELAY_MS * 2);
   });
 
+  it('leaves a first gather alone longer than it leaves a stalled transport', () => {
+    expect(iceRecoveryDelay('new', 0, false)).toBe(ICE_FIRST_GATHER_DELAY_MS);
+    expect(iceRecoveryDelay('connecting', 0, false)).toBe(ICE_FIRST_GATHER_DELAY_MS);
+    expect(ICE_FIRST_GATHER_DELAY_MS).toBeGreaterThan(ICE_RECOVERY_DELAY_MS);
+  });
+
+  it('keeps the short deadline for a transport that connected and then stalled', () => {
+    expect(iceRecoveryDelay('disconnected', 0, true)).toBe(ICE_RECOVERY_DELAY_MS);
+    expect(iceRecoveryDelay('new', 0, true)).toBe(ICE_RECOVERY_DELAY_MS);
+  });
+
+  it('does not extend the deadline for a rebuilt transport on a direction that has connected', () => {
+    // The fact is per direction, not per transport: a rebuild hands the direction a fresh
+    // transport, and giving that one the first-gather deadline would slow the recovery.
+    expect(iceRecoveryDelay('new', 1, true)).toBe(ICE_RECOVERY_DELAY_MS * 2);
+  });
+
+  it('still declares a dead path dead at once, however long the first gather may wait', () => {
+    expect(iceRecoveryDelay('failed', 0, false)).toBe(0);
+  });
+
   it('does not arm recovery for a connected or closed transport', () => {
     expect(iceRecoveryDelay('connected')).toBeNull();
     expect(iceRecoveryDelay('connected', 1)).toBeNull();
@@ -132,10 +154,21 @@ describe('ICE recovery', () => {
 
 describe('iceRecoveryStep', () => {
   it('restarts first, then rebuilds, then gives up', () => {
-    expect(iceRecoveryStep(0)).toBe('restart');
-    expect(iceRecoveryStep(1)).toBe('rebuild');
-    expect(iceRecoveryStep(MAX_ICE_RECOVERY_ATTEMPTS - 1)).toBe('rebuild');
-    expect(iceRecoveryStep(MAX_ICE_RECOVERY_ATTEMPTS)).toBe('give-up');
+    expect(iceRecoveryStep(0, 'disconnected')).toBe('restart');
+    expect(iceRecoveryStep(1, 'disconnected')).toBe('rebuild');
+    expect(iceRecoveryStep(MAX_ICE_RECOVERY_ATTEMPTS - 1, 'disconnected')).toBe('rebuild');
+    expect(iceRecoveryStep(MAX_ICE_RECOVERY_ATTEMPTS, 'disconnected')).toBe('give-up');
+  });
+
+  it('rebuilds a failed transport at once rather than spending a restart on it', () => {
+    expect(iceRecoveryStep(0, 'failed')).toBe('rebuild');
+    expect(iceRecoveryStep(1, 'failed')).toBe('rebuild');
+    expect(iceRecoveryStep(MAX_ICE_RECOVERY_ATTEMPTS, 'failed')).toBe('give-up');
+  });
+
+  it('still restarts first for a transport that is merely stalled', () => {
+    expect(iceRecoveryStep(0, 'new')).toBe('restart');
+    expect(iceRecoveryStep(0, 'connecting')).toBe('restart');
   });
 });
 
