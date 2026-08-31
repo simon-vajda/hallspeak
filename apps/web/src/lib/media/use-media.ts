@@ -57,6 +57,12 @@ interface Session {
    */
   iceRecoveryAttempts: Partial<Record<TransportDirection, number>>;
   iceRecoveryTimers: Partial<Record<TransportDirection, ReturnType<typeof setTimeout>>>;
+  /**
+   * Whether this direction has ever reached connected, for the same reason the attempt
+   * count lives here: a rebuilt transport has no first gather to protect, and reading the
+   * fact off the transport would hand every rebuild the long first-gather deadline.
+   */
+  iceConnectedOnce: Partial<Record<TransportDirection, boolean>>;
   pendingConsumers: Map<string, Promise<MediaStreamTrack>>;
   pendingProducer?: Promise<types.Producer>;
 }
@@ -203,6 +209,7 @@ export function useMedia(socket: SocketClient | null) {
           pendingIceRestarts: {},
           iceRecoveryAttempts: {},
           iceRecoveryTimers: {},
+          iceConnectedOnce: {},
           pendingConsumers: new Map(),
         };
         session.current = created;
@@ -300,21 +307,23 @@ export function useMedia(socket: SocketClient | null) {
           return;
         }
         const attempts = active.iceRecoveryAttempts[direction] ?? 0;
-        const delay = iceRecoveryDelay(next, attempts);
+        const connectedOnce = active.iceConnectedOnce[direction] ?? false;
+        const delay = iceRecoveryDelay(next, attempts, connectedOnce);
         if (delay === null) {
           if (next === 'connected') {
             // The path this direction was fighting for is up; a later handoff starts over.
             active.iceRecoveryAttempts[direction] = 0;
+            active.iceConnectedOnce[direction] = true;
             setHealth('connected');
             setReconnectRecommended(false);
             return;
           }
-          if (iceRecoveryStep(attempts) === 'give-up') {
+          if (iceRecoveryStep(attempts, next) === 'give-up') {
             setHealth('failed');
           } else {
             setHealth('trouble');
           }
-          if (iceRecoveryStep(attempts) === 'give-up' && !gaveUp) {
+          if (iceRecoveryStep(attempts, next) === 'give-up' && !gaveUp) {
             gaveUp = true;
             logIceRecovery(
               direction,
@@ -340,7 +349,7 @@ export function useMedia(socket: SocketClient | null) {
 
           setHealth('trouble');
           const taken = active.iceRecoveryAttempts[direction] ?? 0;
-          const step = iceRecoveryStep(taken);
+          const step = iceRecoveryStep(taken, next);
           const attempt = taken + 1;
           active.iceRecoveryAttempts[direction] = attempt;
 
