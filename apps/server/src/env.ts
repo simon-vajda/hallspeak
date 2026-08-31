@@ -38,6 +38,14 @@ const BaseEnvSchema = z.object({
   // production refuses to boot without it. A hostname is resolved by
   // `core/media/announced-address.ts`; only a literal address is ever announced.
   PUBLIC_ADDRESS: z.string().min(1).optional(),
+  // EXPERIMENT ONLY. Announces PUBLIC_ADDRESS verbatim instead of the address it resolves
+  // to, restoring the pre-5a0d039 behaviour so the announced address can be isolated as
+  // the variable behind the Android handoff regression. Costs every Firefox guest their
+  // audio while it is on. Revert this branch once the question is answered.
+  MEDIA_ANNOUNCE_HOSTNAME: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.stringbool().default(false),
+  ),
   // Worker i binds base + i, on UDP and TCP. The operator forwards this many ports.
   MEDIA_RTC_PORT_BASE: z.coerce.number().int().min(1024).max(65_000).default(44400),
   MEDIA_MAX_WORKERS: z.coerce.number().int().positive().max(64).default(4),
