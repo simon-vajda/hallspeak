@@ -1,7 +1,7 @@
 import type { components } from '@linguacast/contract/openapi';
 import { Link } from '@tanstack/react-router';
 import { ChevronLeft, Loader2, Pause, Play } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { ChannelStrip } from '@/components/guest/channel-strip';
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useAudioOutput } from '@/lib/audio/use-audio-output';
 import { useAudioSink } from '@/lib/audio/use-audio-sink';
 import { useAudioVolume } from '@/lib/audio/use-audio-volume';
+import { useListenerMediaSession } from '@/lib/audio/use-listener-media-session';
 import { formatPin } from '@/lib/format';
 import { isLinkUp, resolveLinkState } from '@/lib/media/link-state';
 import { consumerPlan, mayAttachConsumerTrack } from '@/lib/media/media-state';
@@ -25,6 +26,7 @@ import {
   badgeLabel,
   type ListenIntentState,
   listenActionState,
+  listenerMediaPlayAction,
   playTargetLabel,
   reconcileListenIntent,
   statusNote,
@@ -113,6 +115,35 @@ export function ListenerRoom({
     isPlaying,
     linkConnected,
     now,
+  });
+  const startListening = useCallback(() => {
+    const element = audio.current;
+    switch (listenerMediaPlayAction(actionState, element?.paused ?? true)) {
+      case 'start':
+        setPlayback({ intent: 'playing', holdDeadline: null });
+        return;
+      case 'resume':
+        void element
+          ?.play()
+          .catch((cause) => console.error('media: could not resume audio playback', cause));
+        return;
+      case 'ignore':
+        return;
+    }
+  }, [actionState]);
+  const pauseListening = useCallback(() => {
+    audio.current?.pause();
+    setPlayback((current) =>
+      current.intent === 'idle' ? current : { intent: 'idle', holdDeadline: null },
+    );
+  }, []);
+  useListenerMediaSession({
+    audio,
+    available: actionState === 'ready' || actionState === 'playing',
+    channelName: channel.name,
+    eventName,
+    onPlay: startListening,
+    onPause: pauseListening,
   });
 
   useLayoutEffect(() => {
@@ -272,12 +303,11 @@ export function ListenerRoom({
             disabled={actionState === 'unavailable' || actionState === 'holding'}
             onClick={() => {
               if (actionState === 'ready') {
-                setPlayback({ intent: 'playing', holdDeadline: null });
+                startListening();
                 return;
               }
               if (actionState === 'playing') {
-                setPlayback({ intent: 'idle', holdDeadline: null });
-                audio.current?.pause();
+                pauseListening();
               }
             }}
           />

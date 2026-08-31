@@ -54,6 +54,22 @@ export function reconcileListenIntent(
 
 export type ListenActionState = 'unavailable' | 'ready' | 'playing' | 'holding';
 
+export type ListenerMediaPlayAction = 'start' | 'resume' | 'ignore';
+
+/** Lock-screen Play either starts a Consumer or resumes an interrupted media element. */
+export function listenerMediaPlayAction(
+  state: ListenActionState,
+  elementPaused: boolean,
+): ListenerMediaPlayAction {
+  if (state === 'ready') {
+    return 'start';
+  }
+  if (state === 'playing' && elementPaused) {
+    return 'resume';
+  }
+  return 'ignore';
+}
+
 /** Target answers only whether this guest can hear or is hearing this channel. */
 export function listenActionState(
   input: ListenIntentState & {

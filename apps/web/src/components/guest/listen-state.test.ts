@@ -4,6 +4,7 @@ import {
   badgeLabel,
   HOLD_MS,
   listenActionState,
+  listenerMediaPlayAction,
   playTargetLabel,
   reconcileListenIntent,
   statusNote,
@@ -187,6 +188,22 @@ describe('bounded playback intent', () => {
         now,
       }),
     ).toBe('unavailable');
+  });
+});
+
+describe('listener Media Session actions', () => {
+  it('starts an available channel that has no Consumer', () => {
+    expect(listenerMediaPlayAction('ready', true)).toBe('start');
+  });
+
+  it('resumes an existing Consumer after a platform interruption', () => {
+    expect(listenerMediaPlayAction('playing', true)).toBe('resume');
+  });
+
+  it('ignores redundant and unavailable Play actions', () => {
+    expect(listenerMediaPlayAction('playing', false)).toBe('ignore');
+    expect(listenerMediaPlayAction('holding', true)).toBe('ignore');
+    expect(listenerMediaPlayAction('unavailable', true)).toBe('ignore');
   });
 });
 
