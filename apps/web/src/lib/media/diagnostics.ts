@@ -27,7 +27,12 @@ export function watchTransport(
   const tag = `${direction} transport`;
   log(`${tag} created`);
 
-  transport.on('icegatheringstatechange', (gathering) => log(`${tag} ice gathering ${gathering}`));
+  transport.on('icegatheringstatechange', (gathering) => {
+    log(`${tag} ice gathering ${gathering}`);
+    if (gathering === 'complete') {
+      void reportLocalCandidates(transport, tag);
+    }
+  });
 
   transport.on('icecandidateerror', (event) => {
     console.warn(`media: ${tag} ice candidate error`, event.errorCode, event.errorText, event.url);
@@ -84,6 +89,8 @@ async function reportPath(
     return null;
   }
 
+  log(`${tag} local candidates ${describeCandidateType(report, 'local-candidate')}`);
+
   let bytes = 0;
   let pair: string | null = null;
   let candidatePairCount = 0;
@@ -133,22 +140,37 @@ async function reportPath(
   return 'connected';
 }
 
+async function reportLocalCandidates(transport: types.Transport, tag: string): Promise<void> {
+  const report = await transport.getStats().catch(() => null);
+  if (!report || transport.closed) {
+    return;
+  }
+  log(`${tag} local candidates ${describeCandidateType(report, 'local-candidate')}`);
+}
+
+function describeCandidateType(
+  report: RTCStatsReport,
+  type: 'local-candidate' | 'remote-candidate',
+): string {
+  const candidates: string[] = [];
+  for (const entry of report.values()) {
+    if (entry.type !== type) {
+      continue;
+    }
+    const where = `${entry.candidateType}/${entry.protocol} ${entry.address ?? '?'}:${entry.port ?? '?'}`;
+    candidates.push(entry.networkType === undefined ? where : `${where} (${entry.networkType})`);
+  }
+  return `[${candidates.join(', ') || 'none'}]`;
+}
+
 /**
  * What ICE had to work with. A handoff that leaves the browser gathering on an interface
  * that is already gone reads as no local candidates at all, which is indistinguishable
  * from a suppressed-candidate shield until the two sides are counted separately.
  */
 function describeCandidates(report: RTCStatsReport): string {
-  const local: string[] = [];
-  const remote: string[] = [];
   const pairs: string[] = [];
   for (const entry of report.values()) {
-    if (entry.type === 'local-candidate' || entry.type === 'remote-candidate') {
-      const where = `${entry.candidateType}/${entry.protocol} ${entry.address ?? '?'}:${entry.port ?? '?'}`;
-      (entry.type === 'local-candidate' ? local : remote).push(
-        entry.networkType === undefined ? where : `${where} (${entry.networkType})`,
-      );
-    }
     if (entry.type === 'candidate-pair') {
       pairs.push(String(entry.state));
     }
@@ -157,8 +179,8 @@ function describeCandidates(report: RTCStatsReport): string {
   // strings are the whole diagnosis — an address family that cannot pair reads as nothing
   // at all until the candidates themselves are on screen.
   return (
-    `local [${local.join(', ') || 'none'}] ` +
-    `remote [${remote.join(', ') || 'none'}] ` +
+    `local ${describeCandidateType(report, 'local-candidate')} ` +
+    `remote ${describeCandidateType(report, 'remote-candidate')} ` +
     `pairs [${pairs.join(', ') || 'none'}]`
   );
 }
