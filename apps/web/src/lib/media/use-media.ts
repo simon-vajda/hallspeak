@@ -286,15 +286,24 @@ export function useMedia(socket: SocketClient | null) {
         } else {
           active.consumers.clear();
         }
-        // Before the state that re-opens it, not after: the server permits one transport
-        // per direction, so an effect reaching `createTransport` while it still holds this
-        // one is refused with `transport_exists` and the rebuild dies there.
-        await signalling(socket).closeTransport(transport.id);
-        // Renegotiating, not in trouble. Left at `trouble` the link reads as down, `online`
-        // is false, and the effects that would open the replacement decline to — the
-        // rebuild would tear the transport down and nothing would ever ask for another.
-        setHealth('connecting');
-        setState((prev) => beginRebuild(prev, direction));
+        try {
+          // Before the state that re-opens it, not after: the server permits one transport
+          // per direction, so an effect reaching `createTransport` while it still holds this
+          // one is refused with `transport_exists` and the rebuild dies there.
+          await signalling(socket).closeTransport(transport.id);
+        } catch (cause) {
+          // The local transport is already closed, so a direction left holding its id here
+          // would never reopen and never reach `failed` — no replacement, and no Reconnect
+          // offered either. A refused `createTransport` is at least loud and retryable, and
+          // a socket that never comes back voids this state wholesale on its next connect.
+          console.error('media: could not release the transport server-side', cause);
+        } finally {
+          // Renegotiating, not in trouble. Left at `trouble` the link reads as down, `online`
+          // is false, and the effects that would open the replacement decline to — the
+          // rebuild would tear the transport down and nothing would ever ask for another.
+          setHealth('connecting');
+          setState((prev) => beginRebuild(prev, direction));
+        }
       };
 
       const armIceRecovery = (next: TransportConnectionState): void => {
