@@ -14,6 +14,7 @@ import { useAudioOutput } from '@/lib/audio/use-audio-output';
 import { useAudioSink } from '@/lib/audio/use-audio-sink';
 import { useAudioVolume } from '@/lib/audio/use-audio-volume';
 import { useListenerMediaSession } from '@/lib/audio/use-listener-media-session';
+import { useMediaSessionCarrier } from '@/lib/audio/use-media-session-carrier';
 import { formatPin } from '@/lib/format';
 import { isLinkUp, resolveLinkState } from '@/lib/media/link-state';
 import { consumerPlan, mayAttachConsumerTrack } from '@/lib/media/media-state';
@@ -74,6 +75,7 @@ export function ListenerRoom({
   });
   const media = useMedia(socket);
   const audio = useRef<HTMLAudioElement | null>(null);
+  const { audio: carrierAudio, play: playCarrier, pause: pauseCarrier } = useMediaSessionCarrier();
   const output = useAudioOutput();
   const volume = useAudioVolume(audio);
   useAudioSink(audio, output.deviceId, output.clearSelection);
@@ -118,7 +120,11 @@ export function ListenerRoom({
   });
   const startListening = useCallback(() => {
     const element = audio.current;
-    switch (listenerMediaPlayAction(actionState, element?.paused ?? true)) {
+    const action = listenerMediaPlayAction(actionState, element?.paused ?? true);
+    if (action !== 'ignore') {
+      playCarrier();
+    }
+    switch (action) {
       case 'start':
         setPlayback({ intent: 'playing', holdDeadline: null });
         return;
@@ -130,13 +136,14 @@ export function ListenerRoom({
       case 'ignore':
         return;
     }
-  }, [actionState]);
+  }, [actionState, playCarrier]);
   const pauseListening = useCallback(() => {
     audio.current?.pause();
+    pauseCarrier();
     setPlayback((current) =>
       current.intent === 'idle' ? current : { intent: 'idle', holdDeadline: null },
     );
-  }, []);
+  }, [pauseCarrier]);
   useListenerMediaSession({
     audio,
     available: actionState === 'ready' || actionState === 'playing',
@@ -145,6 +152,14 @@ export function ListenerRoom({
     onPlay: startListening,
     onPause: pauseListening,
   });
+
+  useEffect(() => {
+    if (resolvedPlayback.intent === 'idle') {
+      pauseCarrier();
+    } else {
+      playCarrier();
+    }
+  }, [resolvedPlayback.intent, playCarrier, pauseCarrier]);
 
   useLayoutEffect(() => {
     setPlayback((current) => {
@@ -340,6 +355,10 @@ export function ListenerRoom({
         {/* The element the consumer's track plays through; it renders nothing itself. */}
         {/* biome-ignore lint/a11y/useMediaCaption: interpreted speech has no track to caption. */}
         <audio ref={audio} autoPlay className="hidden" />
+        {/* This silent file is separate from WebRTC because Android promotes file playback,
+            not a live srcObject, into persistent system media controls. */}
+        {/* biome-ignore lint/a11y/useMediaCaption: digital silence contains no speech. */}
+        <audio ref={carrierAudio} loop preload="auto" className="hidden" />
       </main>
 
       <div className="mx-auto mt-auto flex w-full max-w-shell shrink-0 flex-col items-center gap-5 px-gutter pb-8.5 text-center lg:pb-16.5">
