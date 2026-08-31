@@ -70,6 +70,43 @@ describe('ICE candidate address families', () => {
       }),
     ).toBe(false);
   });
+
+  it('withholds it while the remote list still offers a name the browser may resolve', () => {
+    expect(
+      hasCandidateAddressFamilyMismatch({
+        localAddresses: ['2a0a:f640:241b:7b2e::1'],
+        remoteAddresses: ['87.97.83.56', 'media.example.org'],
+        candidatePairCount: 0,
+      }),
+    ).toBe(false);
+  });
+
+  it('still exposes a genuine gap when every remote candidate is a literal', () => {
+    expect(
+      hasCandidateAddressFamilyMismatch({
+        localAddresses: ['2a0a:f640:241b:7b2e::1'],
+        remoteAddresses: ['87.97.83.56', '87.97.83.57'],
+        candidatePairCount: 0,
+      }),
+    ).toBe(true);
+  });
+
+  it('withholds it on an empty local or remote list', () => {
+    expect(
+      hasCandidateAddressFamilyMismatch({
+        localAddresses: [],
+        remoteAddresses: ['87.97.83.56'],
+        candidatePairCount: 0,
+      }),
+    ).toBe(false);
+    expect(
+      hasCandidateAddressFamilyMismatch({
+        localAddresses: ['2a0a:f640:241b:7b2e::1'],
+        remoteAddresses: [],
+        candidatePairCount: 0,
+      }),
+    ).toBe(false);
+  });
 });
 
 describe('afterConnect', () => {

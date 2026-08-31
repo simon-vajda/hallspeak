@@ -28,8 +28,16 @@ export function hasCandidateAddressFamilyMismatch(input: {
     return false;
   }
 
+  // A remote candidate of unknown family is a name the browser may still resolve — and
+  // through DNS64 it may resolve to a family this device does have. Diagnosing a gap the
+  // server has already covered would recommend a reload nobody needs.
+  const remoteFamilies = input.remoteAddresses.map(candidateAddressFamily);
+  if (remoteFamilies.some((family) => family === null)) {
+    return false;
+  }
+
   const local = new Set(input.localAddresses.map(candidateAddressFamily).filter(Boolean));
-  const remote = new Set(input.remoteAddresses.map(candidateAddressFamily).filter(Boolean));
+  const remote = new Set(remoteFamilies);
   if (local.size === 0 || remote.size === 0) {
     return false;
   }
