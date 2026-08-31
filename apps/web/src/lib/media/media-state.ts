@@ -6,6 +6,36 @@
 
 export type TransportDirection = 'send' | 'recv';
 
+export type CandidateAddressFamily = 'ipv4' | 'ipv6';
+
+/**
+ * An empty ICE checklist can be diagnosed before the browser declares the transport
+ * failed. Hostnames stay unknown: only literal addresses prove an address-family gap.
+ */
+export function candidateAddressFamily(address: string): CandidateAddressFamily | null {
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(address)) {
+    return 'ipv4';
+  }
+  return address.includes(':') ? 'ipv6' : null;
+}
+
+export function hasCandidateAddressFamilyMismatch(input: {
+  localAddresses: string[];
+  remoteAddresses: string[];
+  candidatePairCount: number;
+}): boolean {
+  if (input.candidatePairCount > 0) {
+    return false;
+  }
+
+  const local = new Set(input.localAddresses.map(candidateAddressFamily).filter(Boolean));
+  const remote = new Set(input.remoteAddresses.map(candidateAddressFamily).filter(Boolean));
+  if (local.size === 0 || remote.size === 0) {
+    return false;
+  }
+  return [...local].every((family) => !remote.has(family));
+}
+
 /** What the client holds for one event. Every id in it is void after a reset. */
 export interface MediaState {
   /** Bumped on every socket connect, so a late reply from the previous peer can be dated. */

@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   afterConnect,
   beginRebuild,
+  candidateAddressFamily,
   canRollbackProducerControl,
   consumerClosed,
   consumerOpened,
   consumerPlan,
+  hasCandidateAddressFamilyMismatch,
   ICE_RECOVERY_DELAY_MS,
   ICE_RECOVERY_MAX_DELAY_MS,
   iceRecoveryDelay,
@@ -26,6 +28,48 @@ const live: MediaState = {
   producerId: 'p1',
   consumers: { english: 'c1' },
 };
+
+describe('ICE candidate address families', () => {
+  it('classifies only literal IPv4 and IPv6 addresses', () => {
+    expect(candidateAddressFamily('87.97.83.56')).toBe('ipv4');
+    expect(candidateAddressFamily('2a0a:f640:241b:7b2e::1')).toBe('ipv6');
+    expect(candidateAddressFamily('candidate.local')).toBeNull();
+  });
+
+  it('detects an empty checklist split between IPv6 local and IPv4 remote candidates', () => {
+    expect(
+      hasCandidateAddressFamilyMismatch({
+        localAddresses: ['2a0a:f640:241b:7b2e::1', '2a0a:f640:1412:f620::1'],
+        remoteAddresses: ['87.97.83.56'],
+        candidatePairCount: 0,
+      }),
+    ).toBe(true);
+  });
+
+  it('withholds the diagnosis when a family overlaps, a pair exists, or addresses are unknown', () => {
+    expect(
+      hasCandidateAddressFamilyMismatch({
+        localAddresses: ['2a0a:f640:241b:7b2e::1', '192.0.0.4'],
+        remoteAddresses: ['87.97.83.56'],
+        candidatePairCount: 0,
+      }),
+    ).toBe(false);
+    expect(
+      hasCandidateAddressFamilyMismatch({
+        localAddresses: ['2a0a:f640:241b:7b2e::1'],
+        remoteAddresses: ['87.97.83.56'],
+        candidatePairCount: 1,
+      }),
+    ).toBe(false);
+    expect(
+      hasCandidateAddressFamilyMismatch({
+        localAddresses: ['candidate.local'],
+        remoteAddresses: ['87.97.83.56'],
+        candidatePairCount: 0,
+      }),
+    ).toBe(false);
+  });
+});
 
 describe('afterConnect', () => {
   it('discards every identifier, first connection or not', () => {

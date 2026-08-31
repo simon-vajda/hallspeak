@@ -1,5 +1,10 @@
 import type { types } from 'mediasoup-client';
-import { ICE_RECOVERY_DELAY_MS } from './media-state';
+import { hasCandidateAddressFamilyMismatch, ICE_RECOVERY_DELAY_MS } from './media-state';
+
+interface OfferedCandidate {
+  address?: unknown;
+  ip?: unknown;
+}
 
 /**
  * The browser half of the silent-failure telemetry the server carries in
@@ -13,7 +18,12 @@ function log(message: string, ...rest: unknown[]): void {
   console.info(`media: ${message}`, ...rest);
 }
 
-export function watchTransport(transport: types.Transport, direction: 'send' | 'recv'): void {
+export function watchTransport(
+  transport: types.Transport,
+  direction: 'send' | 'recv',
+  remoteCandidates: OfferedCandidate[],
+  onCandidateAddressFamilyMismatch?: () => void,
+): void {
   const tag = `${direction} transport`;
   log(`${tag} created`);
 
@@ -37,7 +47,11 @@ export function watchTransport(transport: types.Transport, direction: 'send' | '
     if (transport.closed) {
       return;
     }
-    void reportPath(transport, tag);
+    void reportPath(transport, tag, remoteCandidates).then((result) => {
+      if (result === 'candidate-address-family-mismatch') {
+        onCandidateAddressFamilyMismatch?.();
+      }
+    });
   }, ICE_RECOVERY_DELAY_MS);
 }
 
@@ -55,17 +69,25 @@ export function reportTransportPath(
   transport: types.Transport,
   direction: 'send' | 'recv',
 ): Promise<void> {
-  return reportPath(transport, `${direction} transport`);
+  return reportPath(transport, `${direction} transport`).then(() => undefined);
 }
 
-async function reportPath(transport: types.Transport, tag: string): Promise<void> {
+type TransportPathReport = 'connected' | 'no-rtp' | 'no-pair' | 'candidate-address-family-mismatch';
+
+async function reportPath(
+  transport: types.Transport,
+  tag: string,
+  remoteCandidates: OfferedCandidate[] = [],
+): Promise<TransportPathReport | null> {
   const report = await transport.getStats().catch(() => null);
   if (!report) {
-    return;
+    return null;
   }
 
   let bytes = 0;
   let pair: string | null = null;
+  let candidatePairCount = 0;
+  const localAddresses: string[] = [];
   for (const entry of report.values()) {
     if (entry.type === 'outbound-rtp') {
       bytes += Number(entry.bytesSent ?? 0);
@@ -73,8 +95,14 @@ async function reportPath(transport: types.Transport, tag: string): Promise<void
     if (entry.type === 'inbound-rtp') {
       bytes += Number(entry.bytesReceived ?? 0);
     }
-    if (entry.type === 'candidate-pair' && entry.state === 'succeeded' && entry.nominated) {
-      pair = `${entry.localCandidateId} -> ${entry.remoteCandidateId}`;
+    if (entry.type === 'candidate-pair') {
+      candidatePairCount += 1;
+      if (entry.state === 'succeeded' && entry.nominated) {
+        pair = `${entry.localCandidateId} -> ${entry.remoteCandidateId}`;
+      }
+    }
+    if (entry.type === 'local-candidate' && typeof entry.address === 'string') {
+      localAddresses.push(entry.address);
     }
   }
 
@@ -85,13 +113,24 @@ async function reportPath(transport: types.Transport, tag: string): Promise<void
         'candidates, or a blocked RTC port, both look exactly like this.',
       describeCandidates(report),
     );
-    return;
+    const remoteAddresses = remoteCandidates.flatMap((candidate) => {
+      const address = candidate.address ?? candidate.ip;
+      return typeof address === 'string' ? [address] : [];
+    });
+    return hasCandidateAddressFamilyMismatch({
+      localAddresses,
+      remoteAddresses,
+      candidatePairCount,
+    })
+      ? 'candidate-address-family-mismatch'
+      : 'no-pair';
   }
   if (bytes === 0) {
     console.warn(`media: ${tag} connected on ${pair} but no RTP has moved.`);
-    return;
+    return 'no-rtp';
   }
   log(`${tag} carrying RTP on ${pair} (${bytes} bytes)`);
+  return 'connected';
 }
 
 /**
