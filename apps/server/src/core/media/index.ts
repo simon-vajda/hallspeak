@@ -35,6 +35,8 @@ export interface StartMediaOptions {
   createWorker?: WorkerFactory;
   resolveAddress?: AddressResolver;
   addressPollMs?: number;
+  /** EXPERIMENT ONLY: announce `net.announcedIp` verbatim even when it is a hostname. */
+  announceHostname?: boolean;
   /** Off by default so a test never sends a datagram; `index.ts` turns it on. */
   probeReflexiveAddress?: boolean;
 }
@@ -72,7 +74,19 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
   if (announcedIp !== options.net.announcedIp) {
     console.log(`mediasoup: ${options.net.announcedIp} resolved to ${announcedIp}`);
   }
-  const net = { ...options.net, announcedIp };
+  // EXPERIMENT ONLY: announce the configured name rather than the address it resolved to,
+  // which is what this repo did before 5a0d039. The resolved value stays on `announced`,
+  // so the startup warnings below still describe a real address.
+  const net = {
+    ...options.net,
+    announcedIp: options.announceHostname ? options.net.announcedIp : announcedIp,
+  };
+  if (options.announceHostname) {
+    console.warn(
+      `mediasoup: EXPERIMENT — announcing ${options.net.announcedIp} verbatim rather than ` +
+        `${announcedIp}. Firefox guests will have no audio while this is on.`,
+    );
+  }
 
   const turnConfigured = Boolean(options.turn.turnUrl && options.turn.turnSecret);
   const pool = new WorkerPool({
