@@ -97,6 +97,11 @@ A failure that produces no Problem is a bug in whatever produced it, not a case 
 ### Signalling
 The out-of-band exchange that negotiates a media connection before audio flows — capabilities, transport parameters, producers and consumers. It names a *role* played over the socket, not the socket itself: the transport is a socket, and signalling is one of the things carried on it alongside presence and room membership.
 
+### Announced address
+Where the server tells a client to connect back to it, as distinct from where it listens. The two differ on any deployment behind NAT: the server binds a local address and must name a public one, and nothing in the protocol checks that the name it gives is reachable — a wrong one produces well-formed instructions nobody can act on, and no error anywhere.
+
+It is announced in whichever forms clients need rather than one canonical form, because browsers disagree about what they accept: some discard a name and require a literal address, while a device on a network that offers no route to that literal can reach the server only by resolving the name. Offering both is what lets one deployment serve them all, and it is why the operator configures a name and the server resolves it rather than choosing between them.
+
 ### Worker
 An operating-system process that hosts Rooms, one of a fixed pool started at boot. A Room lives entirely on the Worker it was created on and nothing is piped between Workers, so one Event is bounded by one Worker no matter how many exist.
 
