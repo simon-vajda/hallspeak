@@ -97,10 +97,14 @@ export function selfCheck({
   muted: boolean | null;
   live: boolean;
 }): SelfCheck {
+  const volumeLabel = `${Math.round(volume)}%`;
+  const volumeWarn = volume < LOW_VOLUME;
+
+  // Nobody broadcasting outranks any mute state: there is no interpreter to be muted.
   if (!live) {
     return {
-      volumeLabel: `${Math.round(volume)}%`,
-      volumeWarn: volume < LOW_VOLUME,
+      volumeLabel,
+      volumeWarn,
       interpreterLabel: 'Not broadcasting',
       interpreterKnown: true,
       interpreterWarn: true,
@@ -108,8 +112,8 @@ export function selfCheck({
   }
 
   return {
-    volumeLabel: `${Math.round(volume)}%`,
-    volumeWarn: volume < LOW_VOLUME,
+    volumeLabel,
+    volumeWarn,
     interpreterLabel: muted === null ? '—' : muted ? 'Muted' : 'Not muted',
     interpreterKnown: muted !== null,
     interpreterWarn: muted === true,
