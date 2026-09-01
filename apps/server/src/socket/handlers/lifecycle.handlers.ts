@@ -1,8 +1,10 @@
+import type { ReportCategory } from '@linguacast/contract/socket';
 import type { SocketAuth } from '../../core/access';
 import { getChannelById } from '../../core/channels.service';
 import * as media from '../../core/media';
 import type { Notification } from '../../core/notifications';
 import { presence } from '../../core/presence';
+import { reports } from '../../core/reports';
 import type { Db } from '../../db/client';
 import { channelRoom, eventRoom } from '../lib/rooms';
 
@@ -20,6 +22,14 @@ export interface LifecycleServer {
     ): unknown;
     emit(event: 'media:reset', payload: { reason: 'worker_died' }): unknown;
     emit(event: 'channel:listeners', payload: { slug: string; count: number }): unknown;
+    emit(
+      event: 'channel:reports',
+      payload: {
+        slug: string;
+        rows: { category: ReportCategory; count: number; ageMs: number }[];
+        soundsGood: { count: number; ageMs: number } | null;
+      },
+    ): unknown;
   };
   in(room: string): { disconnectSockets(close: boolean): unknown };
   sockets: { sockets: Map<string, { disconnect(close: boolean): unknown }> };
@@ -39,6 +49,8 @@ export interface LifecycleSocket {
 export function releaseSocket(socket: { id: string }, auth: SocketAuth): void {
   media.releasePeer(auth.eventId, socket.id);
   presence.release(socket.id);
+  // Reports stay in the window; cooldown and the right to resolve them go with the socket.
+  reports.releaseSocket(socket.id);
 }
 
 /**
@@ -90,6 +102,20 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
       io.to(holder).emit('channel:listeners', {
         slug: notification.slug,
         count: notification.count,
+      });
+      return;
+    }
+
+    /** Addressed to the claim holder for the reason `listeners-changed` is: see above. */
+    case 'reports-changed': {
+      const holder = presence.holder(notification.channelId);
+      if (holder === undefined) {
+        return;
+      }
+      io.to(holder).emit('channel:reports', {
+        slug: notification.slug,
+        rows: notification.rows,
+        soundsGood: notification.soundsGood,
       });
       return;
     }

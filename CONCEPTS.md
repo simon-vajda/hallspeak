@@ -58,6 +58,27 @@ open, so a muted interpreter still has an audience.
 Nothing here learns who is Listening. The count is a number, and Listener identity is outside
 this product.
 
+### Issue report
+An anonymous signal from one Listener that a Channel's audio is wrong, chosen from five fixed
+categories and carrying nothing else — no text, no identity, no history the Speaker can read back
+to a person.
+
+Reports are counted, not delivered. The server holds a per-Channel tally over a rolling five-minute
+window and shows it to whoever holds the Broadcast claim, so an interpreter sees how many people
+are reporting each category and how recently, and nobody else sees it at all. A report ages out of
+the window on its own; the tally is a current problem rather than a session log, and it is process
+memory that no restart preserves.
+
+Reporting requires a Live Channel and a guest in that Channel's room: a report on an idle Channel
+has no recipient.
+
+One accepted report opens a connection-scoped feedback episode. Until that episode is closed, the
+Listener can confirm **Audio sounds good now** independently of the two-minute category cooldown.
+That confirmation removes the connection's still-active problem reports and appears to the Speaker
+as a separate positive tally for 30 seconds; it is not a sixth problem category.
+The episode stays open after its problem rows age out, but ends on confirmation, disconnect, or a
+deliberate end to the Broadcast. A confirmation never claims that every Listener's audio is fixed.
+
 ### Playback hold
 A bounded recovery state entered only when an unexpected Producer close interrupts a Listener
 who was receiving audio. The Listener keeps the request for 30 seconds, resumes automatically if

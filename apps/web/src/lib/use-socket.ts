@@ -10,6 +10,12 @@ import {
   resetStatusesForAuth,
   resetStatusOrdering,
 } from '@/lib/channel-status';
+import {
+  type AnchoredResolution,
+  type AnchoredRow,
+  anchorResolution,
+  anchorRows,
+} from '@/lib/reports';
 import { connectSocket } from '@/lib/socket';
 import { initialSocketConnectionState, socketConnectionState } from '@/lib/socket-state';
 import type { SocketAuth, SocketClient } from '@/socket/client';
@@ -30,6 +36,13 @@ export function useSocket(auth: SocketAuth | null) {
   const [channelStatusState, setChannelStatusState] =
     useState<ChannelStatusState>(initialChannelStatuses);
   const [listeners, setListeners] = useState<Record<string, number>>({});
+  const [reports, setReports] = useState<Record<string, AnchoredRow[]>>({});
+  const [reportResolutions, setReportResolutions] = useState<
+    Record<string, AnchoredResolution | null>
+  >({});
+  // False until the connect-time tally lands. An empty window and one this socket has not
+  // heard are different states, and only `No reports` may be printed for the first.
+  const [reportsKnown, setReportsKnown] = useState(false);
   const [socket, setSocket] = useState<SocketClient | null>(null);
   const channelStatusRef = useRef(channelStatusState);
   channelStatusRef.current = channelStatusState;
@@ -70,6 +83,11 @@ export function useSocket(auth: SocketAuth | null) {
       // outage, the studio's tile would state an audience for a broadcast the server has
       // already reaped. `sendInitialListenerCount` re-seeds the real number on reconnect.
       setListeners({});
+      // A tally from a dropped socket describes a channel nobody is updating, for the same
+      // reason the counts go: the studio withholds rather than claiming an empty window.
+      setReports({});
+      setReportResolutions({});
+      setReportsKnown(false);
       // The server ends a session by disconnecting it and Socket.IO does not retry that,
       // so it is terminal, not a blip. Reported as such or the screen promises a recovery
       // that will never come.
@@ -99,6 +117,18 @@ export function useSocket(auth: SocketAuth | null) {
     // holds the `?? 0` fallback waiting for the first arrival or departure.
     s.on('channel:listeners', ({ slug, count }) => {
       setListeners((prev) => ({ ...prev, [slug]: count }));
+    });
+    // Sent once on connect whether or not there are rows, then on every change.
+    s.on('channel:reports', ({ slug, rows, soundsGood }) => {
+      // Anchored here rather than at render: the wire's `ageMs` is only true at receipt, so
+      // re-deriving it later would reset every row to "just now".
+      const now = Date.now();
+      setReports((prev) => ({ ...prev, [slug]: anchorRows(rows, now) }));
+      setReportResolutions((prev) => ({
+        ...prev,
+        [slug]: anchorResolution(soundsGood, now),
+      }));
+      setReportsKnown(true);
     });
 
     return () => {
@@ -140,6 +170,9 @@ export function useSocket(auth: SocketAuth | null) {
     online,
     channelStatuses: channelStatusState.channels,
     listeners,
+    reports,
+    reportResolutions,
+    reportsKnown,
     socket,
     joinChannel,
     leaveChannel,

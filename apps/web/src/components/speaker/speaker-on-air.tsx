@@ -9,12 +9,14 @@ import { AudioSettings } from '@/components/speaker/audio-settings';
 import { EndBroadcastDialog } from '@/components/speaker/end-broadcast-dialog';
 import { InputLevelPanel } from '@/components/speaker/input-level-panel';
 import { ListenerPageLink } from '@/components/speaker/listener-page-link';
+import { ListenerReports } from '@/components/speaker/listener-reports';
 import { OnAirStats } from '@/components/speaker/on-air-stats';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { isLinkUp, type LinkState } from '@/lib/media/link-state';
+import type { AnchoredResolution, AnchoredRow } from '@/lib/reports';
 import type { BroadcastState } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
@@ -42,6 +44,9 @@ export function SpeakerOnAir({
   mic,
   startedAt,
   listeners,
+  reports,
+  reportResolution,
+  reportsKnown,
   state,
   link,
   onToggleMute,
@@ -55,6 +60,9 @@ export function SpeakerOnAir({
   mic: ReturnType<typeof useMicCapture>;
   startedAt: number | null;
   listeners: number;
+  reports: AnchoredRow[];
+  reportResolution: AnchoredResolution | null;
+  reportsKnown: boolean;
   state: BroadcastState;
   link: LinkState;
   onToggleMute: () => void;
@@ -92,11 +100,11 @@ export function SpeakerOnAir({
 
         <h1 className="mt-4 text-screen lg:mt-3.5 lg:mb-7.5 lg:text-hero">{channel.name}</h1>
 
-        <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-0 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start lg:gap-x-8.5 lg:gap-y-4">
+        <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-0 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start xl:grid-cols-[300px_1fr_340px] lg:gap-x-8.5 lg:gap-y-4">
           <OnAirStats
             startedAt={startedAt}
             listeners={listeners}
-            className="order-3 lg:order-none lg:col-start-2 lg:row-start-1"
+            className="order-4 lg:order-none lg:col-start-2 lg:row-start-1"
           />
           <div className="order-1 flex flex-1 flex-col items-center justify-center gap-4 py-10 lg:order-none lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
             <PlayTarget
@@ -118,16 +126,37 @@ export function SpeakerOnAir({
             />
           </div>
 
+          {/* Phone: directly under the connection line, the one block whose contents change,
+              growing downward into what was already below the fold. From `xl` it takes a
+              column of its own; between `lg` and `xl` it sits at the foot of the readout
+              column, because three columns need 1040px of content box and `lg` gives 944. */}
+          <ListenerReports
+            rows={reports}
+            resolution={reportResolution}
+            known={reportsKnown}
+            variant="phone"
+            className="order-3 lg:hidden"
+          />
+
           <InputLevelPanel
             analyser={mic.analyser}
             muted={isMuted}
-            className="order-4 lg:order-none lg:col-start-2 lg:row-start-2"
+            className="order-5 lg:order-none lg:col-start-2 lg:row-start-2"
           />
           <AudioSettings
             mic={mic}
             preferences={preferences}
             onPreferencesChange={onPreferencesChange}
-            className="order-5 lg:order-none lg:col-start-2 lg:row-start-3"
+            className="order-6 lg:order-none lg:col-start-2 lg:row-start-3"
+          />
+
+          {/* From `lg` the panel is always present, empty state included: the column has the
+              room, and a slot that comes and goes would move what the interpreter watches. */}
+          <ListenerReports
+            rows={reports}
+            resolution={reportResolution}
+            known={reportsKnown}
+            className="hidden lg:order-none lg:col-start-2 lg:row-start-4 lg:block xl:col-start-3 xl:row-start-1"
           />
 
           <div className="contents lg:order-none lg:col-start-1 lg:row-start-4 lg:block">
@@ -135,11 +164,11 @@ export function SpeakerOnAir({
             <Button
               variant="ghost"
               onClick={() => setConfirming(true)}
-              className="order-6 mt-4 h-10.5 w-full rounded-full text-sm font-semibold text-destructive hover:bg-destructive-muted hover:text-destructive lg:mt-0"
+              className="order-7 mt-4 h-10.5 w-full rounded-full text-sm font-semibold text-destructive hover:bg-destructive-muted hover:text-destructive lg:mt-0"
             >
               End broadcast
             </Button>
-            <ListenerPageLink pin={pin} slug={channel.slug} className="order-7 mt-2" />
+            <ListenerPageLink pin={pin} slug={channel.slug} className="order-8 mt-2" />
           </div>
         </div>
       </main>
