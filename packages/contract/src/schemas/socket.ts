@@ -45,6 +45,8 @@ export const ChannelListeners = z.object({ slug: SocketSlug, count: z.int().nonn
  */
 export const ReportCategory = z.enum(['quiet', 'loud', 'static', 'noise', 'silent']);
 
+export type ReportCategory = z.infer<typeof ReportCategory>;
+
 export const ChannelReportPayload = z.object({ slug: SocketSlug, category: ReportCategory });
 
 export const ChannelReportResponse = z.object({});
@@ -66,6 +68,8 @@ export const ChannelReports = z.object({
     }),
   ),
 });
+
+export type ReportRow = z.infer<typeof ChannelReports>['rows'][number];
 
 /**
  * mediasoup's capability, ICE, DTLS and RTP structures cross the wire as validated but
