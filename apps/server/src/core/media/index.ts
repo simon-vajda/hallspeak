@@ -2,6 +2,7 @@ import type { types } from 'mediasoup';
 import { AppError } from '../../lib/problem';
 import { type EvictionReason, notifications } from '../notifications';
 import { presence } from '../presence';
+import { reports } from '../reports';
 import { type AddressResolver, AnnouncedAddress } from './announced-address';
 import {
   augmentCandidates,
@@ -99,6 +100,7 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
       // The remembered counts must not outlive the room: kept, they would suppress the
       // first real count of the next broadcast on the same channel.
       listeners.forgetEvent(room.eventId);
+      reports.forgetEvent(room.eventId);
       // Idle and shutdown take nobody's access away, so nothing is evicted for them.
       if (reason === 'worker_died') {
         notifications.publish({ type: 'room-evicted', eventId: room.eventId, reason });
@@ -506,6 +508,8 @@ export function revokeChannel(eventId: number, channelId: number, reason: Evicti
   const room = state?.registry.get(eventId);
   room?.closeProducer(channelId);
 
+  reports.forgetChannel(eventId, channelId);
+
   const holder = presence.releaseChannel(channelId);
   if (holder) {
     room?.closePeer(holder);
@@ -523,6 +527,7 @@ export function revokeChannel(eventId: number, channelId: number, reason: Evicti
 export function revokeEvent(eventId: number, channelIds: number[], reason: EvictionReason): void {
   for (const channelId of channelIds) {
     presence.releaseChannel(channelId);
+    reports.forgetChannel(eventId, channelId);
   }
   state?.registry.closeEvent(eventId, 'revoked');
   notifications.publish({ type: 'room-evicted', eventId, reason });
