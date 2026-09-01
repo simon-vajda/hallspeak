@@ -65,6 +65,16 @@
      the delay baked in, so a call site adds one class rather than restating the timing. */
   --animate-ring: ring 2.6s ease-out infinite;
   --animate-ring-delayed: ring 2.6s ease-out 1.3s infinite;
+
+  /* Two identical keyframes, alternated by a parity counter: re-applying one animation name
+     to a mounted element does not replay it, so a single keyframe would flash the first
+     listener report and nothing after it. */
+  --animate-report-flash-a: report-flash-a 900ms ease-out;
+  --animate-report-flash-b: report-flash-b 900ms ease-out;
+
+  /* Phone only: the reports panel is absent until it has something to say, so it arrives
+     rather than appearing. */
+  --animate-report-in: report-in 260ms ease-out;
 }
 
 /* The handoff's spacing and type ramp, as scale entries rather than call-site literals.
@@ -306,6 +316,36 @@
   }
 }
 
+/* Identical on purpose: alternated, they replay on every arriving tally. */
+@keyframes report-flash-a {
+  0% {
+    background-color: var(--warn-muted);
+  }
+  100% {
+    background-color: var(--secondary);
+  }
+}
+
+@keyframes report-flash-b {
+  0% {
+    background-color: var(--warn-muted);
+  }
+  100% {
+    background-color: var(--secondary);
+  }
+}
+
+@keyframes report-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* the live dot is a status, not decoration — hold it solid, never hide it */
   .animate-pulse-live {
@@ -320,6 +360,17 @@
     animation: none;
     transform: scale(1);
     opacity: 0.45;
+  }
+
+  /* the flash is a colour and the entrance a slide; both are held at their resting frame,
+     which is why the panel's row list is also an aria-live region — the flash is never the
+     only cue that a report arrived */
+  .animate-report-flash-a,
+  .animate-report-flash-b,
+  .animate-report-in {
+    animation: none;
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
