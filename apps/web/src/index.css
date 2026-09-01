@@ -29,6 +29,10 @@
   --color-warn-muted: var(--warn-muted);
   --color-warn-border: var(--warn-border);
 
+  /* Inset self-check panel inside report surface. It needs its own role because `secondary`
+     and `popover` deliberately collapse to one colour in dark mode. */
+  --color-check-surface: var(--check-surface);
+
   --color-primary-hover: var(--primary-hover);
 
   --color-ring: var(--ring);
@@ -197,6 +201,7 @@
 
   --secondary: oklch(0.946 0.009 205.9); /* #E7EFF0 */
   --secondary-foreground: oklch(0.307 0.052 251.8);
+  --check-surface: oklch(0.946 0.009 205.9); /* #E7EFF0 */
   --muted: oklch(0.946 0.009 205.9);
   --muted-foreground: oklch(0.492 0.036 241.3); /* #4F6474 */
   --accent: oklch(0.946 0.009 205.9);
@@ -245,6 +250,7 @@
 
   --secondary: oklch(0.312 0.048 246.5);
   --secondary-foreground: oklch(0.954 0.011 204.1);
+  --check-surface: oklch(0.23 0.034 249.5); /* #101E2C */
   --muted: oklch(0.312 0.048 246.5);
   --muted-foreground: oklch(0.734 0.033 222.2); /* #93AEB8 */
   /* `accent`'s only role is the highlighted row inside a popover, so it is one step up

@@ -7,6 +7,11 @@ export interface ListenIntentState {
   holdDeadline: number | null;
 }
 
+/** True after this listener has asked for audio, whether or not samples have arrived yet. */
+export function hasRequestedAudio(state: ListenIntentState): boolean {
+  return state.intent !== 'idle';
+}
+
 export interface ListenConditions {
   live: boolean;
   closeReason?: 'ended' | 'dropped';

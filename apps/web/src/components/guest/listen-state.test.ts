@@ -3,6 +3,7 @@ import {
   badgeHasLiveDot,
   badgeLabel,
   HOLD_MS,
+  hasRequestedAudio,
   listenActionState,
   listenerMediaPlayAction,
   playTargetLabel,
@@ -14,6 +15,12 @@ describe('bounded playback intent', () => {
   const now = 1_000_000;
   const idle = { intent: 'idle', holdDeadline: null } as const;
   const playingIntent = { intent: 'playing', holdDeadline: null } as const;
+
+  it('exposes post-listen controls from intent rather than flowing audio', () => {
+    expect(hasRequestedAudio(idle)).toBe(false);
+    expect(hasRequestedAudio(playingIntent)).toBe(true);
+    expect(hasRequestedAudio({ intent: 'holding', holdDeadline: now + HOLD_MS })).toBe(true);
+  });
 
   it('disables the Listen target while no producer exists', () => {
     const action = listenActionState({

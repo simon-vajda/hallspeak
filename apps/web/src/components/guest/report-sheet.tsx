@@ -1,5 +1,5 @@
 import type { ReportCategory } from '@linguacast/contract/socket';
-import { Check } from 'lucide-react';
+import { Check, MessageCircleWarning } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { ResponsiveSurface } from '@/components/responsive-surface';
@@ -95,8 +95,13 @@ export function ReportSheet({
           setPending(null);
         }
       }}
-      triggerClassName="rounded-full text-note font-semibold text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
-      trigger="Report a problem"
+      triggerClassName="flex cursor-pointer items-center gap-1.75 rounded-sm px-1 py-1.5 text-note font-semibold whitespace-nowrap text-muted-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+      trigger={
+        <>
+          <MessageCircleWarning className="size-4" />
+          Report a problem
+        </>
+      }
     >
       {stage.kind === 'sent' ? (
         <div className="flex flex-col items-center px-1.5 pt-0.5 pb-1.5 text-center">
@@ -127,7 +132,7 @@ export function ReportSheet({
         </div>
       ) : (
         <div>
-          <div className="rounded-lg bg-secondary px-4 pt-3.5 pb-3.75">
+          <div className="rounded-lg bg-check-surface px-4 pt-3.5 pb-3.75">
             <span className={cn(MICRO_LABEL, 'block')}>Check first</span>
             <div className="mt-2.75 flex items-baseline justify-between gap-3">
               <span className="text-sm leading-normal">Your volume</span>
