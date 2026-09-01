@@ -21,6 +21,14 @@
   --color-destructive-muted: var(--destructive-muted);
   --color-destructive-border: var(--destructive-border);
 
+  /* The fourth colour, for a listener report. Amber is a row wash and a figure, never a
+     solid fill and never a dot: that is what keeps it clear of `primary`, which marks what
+     can be pressed, and of `live`, which marks audio moving. */
+  --color-warn: var(--warn);
+  --color-warn-on-muted: var(--warn-on-muted);
+  --color-warn-muted: var(--warn-muted);
+  --color-warn-border: var(--warn-border);
+
   --color-primary-hover: var(--primary-hover);
 
   --color-ring: var(--ring);
@@ -206,6 +214,12 @@
   --live-muted: oklch(0.943 0.03 172.9); /* #D9F3EA */
   --destructive-muted: oklch(0.942 0.02 28.9); /* #F9E7E4 */
   --destructive-border: oklch(0.883 0.032 29.8); /* #EDD1CC */
+
+  --warn: oklch(0.649 0.136 75.4); /* #BE8104 */
+  /* The warn colour as type, on `warn-muted`. Never on a `warn` fill: nothing paints one. */
+  --warn-on-muted: oklch(0.475 0.097 77.6); /* #7A5406 */
+  --warn-muted: oklch(0.958 0.032 85.5); /* #FBF0D9 */
+  --warn-border: oklch(0.898 0.061 88.4); /* #EEDCB0 */
 }
 
 .dark {
@@ -249,6 +263,13 @@
      tinted fill and a border one step above it. */
   --destructive-muted: oklch(0.34 0.055 28.2);
   --destructive-border: oklch(0.42 0.075 28.5);
+
+  /* It reverses like the rest of the palette — a deep amber on a pale wash in light, a
+     light amber on a deep wash here — so warn and destructive keep one relationship. */
+  --warn: oklch(0.793 0.143 82.9); /* #E8B23C */
+  --warn-on-muted: oklch(0.842 0.129 86.3); /* #F0C560 */
+  --warn-muted: oklch(0.345 0.048 84); /* #45371A */
+  --warn-border: oklch(0.416 0.061 87.8); /* #5A4A22 */
 }
 
 /* Hover as a wash *over* the control's own fill rather than a replacement of it: a
