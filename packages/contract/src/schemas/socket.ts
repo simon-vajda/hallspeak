@@ -39,6 +39,52 @@ export const ChannelStatus = z.object({
 export const ChannelListeners = z.object({ slug: SocketSlug, count: z.int().nonnegative() });
 
 /**
+ * Five fixed categories and nothing else: a report carries no text, no listener identifier
+ * and no history, so the enum is the whole vocabulary and an unknown one is rejected by the
+ * validation middleware before any handler runs.
+ */
+export const ReportCategory = z.enum(['quiet', 'loud', 'static', 'noise', 'silent']);
+
+export type ReportCategory = z.infer<typeof ReportCategory>;
+
+export const ChannelReportPayload = z.object({ slug: SocketSlug, category: ReportCategory });
+
+export const ChannelReportResponse = z.object({});
+
+export const ChannelResolveReportsPayload = z.object({ slug: SocketSlug });
+
+export const ChannelResolveReportsResponse = z.object({});
+
+/**
+ * To the socket holding the channel's speaker claim alone, never to the channel room: the
+ * tally is for the one person who can act on it, and a listener must not learn what other
+ * listeners reported. `ageMs` rather than an absolute timestamp — the studio anchors each
+ * row to its own clock at receipt, so a client clock minutes off the server's does not make
+ * every age wrong by that offset.
+ */
+export const ChannelReports = z.object({
+  slug: SocketSlug,
+  rows: z.array(
+    z.object({
+      category: ReportCategory,
+      count: z.int().positive(),
+      ageMs: z.int().nonnegative(),
+    }),
+  ),
+  /** Positive follow-up kept separate from the five problem categories. */
+  soundsGood: z
+    .object({
+      count: z.int().positive(),
+      ageMs: z.int().nonnegative(),
+    })
+    .nullable(),
+});
+
+export type ReportRow = z.infer<typeof ChannelReports>['rows'][number];
+
+export type ReportResolution = z.infer<typeof ChannelReports>['soundsGood'];
+
+/**
  * mediasoup's capability, ICE, DTLS and RTP structures cross the wire as validated but
  * opaque objects: this package compiles with `"types": []` and no DOM and must never
  * import mediasoup. Loose rather than strict, so every key survives the round trip —

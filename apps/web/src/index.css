@@ -21,6 +21,18 @@
   --color-destructive-muted: var(--destructive-muted);
   --color-destructive-border: var(--destructive-border);
 
+  /* The fourth colour, for a listener report. Amber is a row wash and a figure, never a
+     solid fill and never a dot: that is what keeps it clear of `primary`, which marks what
+     can be pressed, and of `live`, which marks audio moving. */
+  --color-warn: var(--warn);
+  --color-warn-on-muted: var(--warn-on-muted);
+  --color-warn-muted: var(--warn-muted);
+  --color-warn-border: var(--warn-border);
+
+  /* Inset self-check panel inside report surface. It needs its own role because `secondary`
+     and `popover` deliberately collapse to one colour in dark mode. */
+  --color-check-surface: var(--check-surface);
+
   --color-primary-hover: var(--primary-hover);
 
   --color-ring: var(--ring);
@@ -57,6 +69,19 @@
      the delay baked in, so a call site adds one class rather than restating the timing. */
   --animate-ring: ring 2.6s ease-out infinite;
   --animate-ring-delayed: ring 2.6s ease-out 1.3s infinite;
+
+  /* Two identical keyframes, alternated by a parity counter: re-applying one animation name
+     to a mounted element does not replay it, so a single keyframe would flash the first
+     listener report and nothing after it. */
+  --animate-report-flash-a: report-flash-a 900ms ease-out;
+  --animate-report-flash-b: report-flash-b 900ms ease-out;
+
+  /* Phone only: the reports panel is absent until it has something to say, so it arrives
+     rather than appearing. */
+  --animate-report-in: report-in 260ms ease-out;
+  --animate-report-out: report-out 260ms ease-in forwards;
+  --animate-report-row-in: report-row-in 200ms ease-out;
+  --animate-report-row-out: report-row-out 200ms ease-in forwards;
 }
 
 /* The handoff's spacing and type ramp, as scale entries rather than call-site literals.
@@ -179,6 +204,7 @@
 
   --secondary: oklch(0.946 0.009 205.9); /* #E7EFF0 */
   --secondary-foreground: oklch(0.307 0.052 251.8);
+  --check-surface: oklch(0.946 0.009 205.9); /* #E7EFF0 */
   --muted: oklch(0.946 0.009 205.9);
   --muted-foreground: oklch(0.492 0.036 241.3); /* #4F6474 */
   --accent: oklch(0.946 0.009 205.9);
@@ -206,6 +232,12 @@
   --live-muted: oklch(0.943 0.03 172.9); /* #D9F3EA */
   --destructive-muted: oklch(0.942 0.02 28.9); /* #F9E7E4 */
   --destructive-border: oklch(0.883 0.032 29.8); /* #EDD1CC */
+
+  --warn: oklch(0.649 0.136 75.4); /* #BE8104 */
+  /* The warn colour as type, on `warn-muted`. Never on a `warn` fill: nothing paints one. */
+  --warn-on-muted: oklch(0.475 0.097 77.6); /* #7A5406 */
+  --warn-muted: oklch(0.958 0.032 85.5); /* #FBF0D9 */
+  --warn-border: oklch(0.898 0.061 88.4); /* #EEDCB0 */
 }
 
 .dark {
@@ -221,6 +253,7 @@
 
   --secondary: oklch(0.312 0.048 246.5);
   --secondary-foreground: oklch(0.954 0.011 204.1);
+  --check-surface: oklch(0.23 0.034 249.5); /* #101E2C */
   --muted: oklch(0.312 0.048 246.5);
   --muted-foreground: oklch(0.734 0.033 222.2); /* #93AEB8 */
   /* `accent`'s only role is the highlighted row inside a popover, so it is one step up
@@ -249,6 +282,13 @@
      tinted fill and a border one step above it. */
   --destructive-muted: oklch(0.34 0.055 28.2);
   --destructive-border: oklch(0.42 0.075 28.5);
+
+  /* It reverses like the rest of the palette — a deep amber on a pale wash in light, a
+     light amber on a deep wash here — so warn and destructive keep one relationship. */
+  --warn: oklch(0.793 0.143 82.9); /* #E8B23C */
+  --warn-on-muted: oklch(0.842 0.129 86.3); /* #F0C560 */
+  --warn-muted: oklch(0.345 0.048 84); /* #45371A */
+  --warn-border: oklch(0.416 0.061 87.8); /* #5A4A22 */
 }
 
 /* Hover as a wash *over* the control's own fill rather than a replacement of it: a
@@ -285,6 +325,77 @@
   }
 }
 
+/* Identical on purpose: alternated, they replay on every arriving tally. */
+@keyframes report-flash-a {
+  0% {
+    background-color: var(--warn-muted);
+  }
+  100% {
+    background-color: var(--secondary);
+  }
+}
+
+@keyframes report-flash-b {
+  0% {
+    background-color: var(--warn-muted);
+  }
+  100% {
+    background-color: var(--secondary);
+  }
+}
+
+@keyframes report-in {
+  0% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  100% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes report-out {
+  0% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes report-row-in {
+  0% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  100% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes report-row-out {
+  0% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* the live dot is a status, not decoration — hold it solid, never hide it */
   .animate-pulse-live {
@@ -299,6 +410,39 @@
     animation: none;
     transform: scale(1);
     opacity: 0.45;
+  }
+
+  /* the flash is a colour and the entrance a slide; both are held at their resting frame,
+     which is why the panel's row list is also an aria-live region — the flash is never the
+     only cue that a report arrived */
+  .animate-report-flash-a,
+  .animate-report-flash-b,
+  .animate-report-in {
+    animation: none;
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .animate-report-out {
+    animation: none;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(0);
+  }
+
+  .animate-report-row-in {
+    animation: none;
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .animate-report-row-out {
+    animation: none;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(0);
   }
 }
 
