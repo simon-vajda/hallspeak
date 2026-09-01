@@ -41,6 +41,9 @@ export function ReportSheet({
     if (!open) {
       return;
     }
+    // Read the clock on the way in too: the stored one is as old as the last time the
+    // surface was open, which would print a stale `Sent Ns ago` for a second.
+    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), TICK_MS);
     return () => clearInterval(timer);
   }, [open]);
@@ -58,13 +61,20 @@ export function ReportSheet({
     async (category: ReportCategory) => {
       setPending(category);
       setFailed(null);
-      const result = await onSend(category);
-      setPending(null);
-      if (result.ok) {
-        setStage({ kind: 'sent', category });
-        return;
+      try {
+        const result = await onSend(category);
+        if (result.ok) {
+          setStage({ kind: 'sent', category });
+          return;
+        }
+        setFailed({ category, message: result.message });
+      } catch {
+        // The ack has its own deadline and rejects when it passes. Without this the pending
+        // state would never clear and every category would stay inert for good.
+        setFailed({ category, message: 'Could not send. Try again.' });
+      } finally {
+        setPending(null);
       }
-      setFailed({ category, message: result.message });
     },
     [onSend],
   );
@@ -82,6 +92,7 @@ export function ReportSheet({
         if (!next) {
           setStage({ kind: 'list' });
           setFailed(null);
+          setPending(null);
         }
       }}
       triggerClassName="rounded-full text-note font-semibold text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"

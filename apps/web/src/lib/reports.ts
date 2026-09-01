@@ -2,6 +2,27 @@ import type { ReportCategory, ReportRow } from '@linguacast/contract/socket';
 
 export type ReportTone = 'warn' | 'severe';
 
+/** A row anchored to this client's clock at receipt. */
+export interface AnchoredRow {
+  category: ReportCategory;
+  count: number;
+  receivedAt: number;
+}
+
+/**
+ * The wire carries `ageMs` rather than a timestamp, so each row is anchored the moment it
+ * arrives. Anchoring at receipt rather than at render is what keeps a row's age honest: a
+ * later re-anchor would reset every row to "just now", and an absolute server timestamp
+ * would be read against a client clock that can be minutes off.
+ */
+export function anchorRows(rows: ReportRow[], now: number): AnchoredRow[] {
+  return rows.map((row) => ({
+    category: row.category,
+    count: row.count,
+    receivedAt: now - row.ageMs,
+  }));
+}
+
 /** The order the listener sheet lists them in; the studio sorts by severity and recency. */
 export const REPORT_CATEGORIES: { key: ReportCategory; label: string }[] = [
   { key: 'quiet', label: 'Too quiet' },

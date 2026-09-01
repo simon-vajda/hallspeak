@@ -1,5 +1,4 @@
 import type { components } from '@linguacast/contract/openapi';
-import type { ReportRow } from '@linguacast/contract/socket';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SpeakerDisplaced } from '@/components/speaker/speaker-displaced';
 import { SpeakerOnAir } from '@/components/speaker/speaker-on-air';
@@ -10,6 +9,7 @@ import { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { type ChannelStatusEntry, rollbackMutedAfterFailure } from '@/lib/channel-status';
 import { isLinkUp, resolveLinkState } from '@/lib/media/link-state';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
+import type { AnchoredRow } from '@/lib/reports';
 import type { SocketStatus } from '@/lib/use-socket';
 import type { SocketClient } from '@/socket/client';
 import {
@@ -47,7 +47,7 @@ export function SpeakerStudio({
   speakerCode: string;
   /** Guests currently receiving this channel's audio. */
   listeners: number;
-  reports: ReportRow[];
+  reports: AnchoredRow[];
   /** False until the connect-time tally lands; the panel withholds rather than claiming. */
   reportsKnown: boolean;
   socket: SocketClient | null;

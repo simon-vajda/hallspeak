@@ -1,7 +1,12 @@
-import type { ReportRow } from '@linguacast/contract/socket';
 import { useEffect, useRef, useState } from 'react';
 import { MICRO_LABEL } from '@/components/micro-label';
-import { reportAgeLabel, reportLabel, reportTone, sortReportRows } from '@/lib/reports';
+import {
+  type AnchoredRow,
+  reportAgeLabel,
+  reportLabel,
+  reportTone,
+  sortReportRows,
+} from '@/lib/reports';
 import { cn } from '@/lib/utils';
 
 /** The same five minutes the server keeps, so a row leaves without waiting for a publish. */
@@ -18,22 +23,6 @@ const CHIP = {
   warn: 'bg-warn/26 text-warn-on-muted',
   severe: 'bg-destructive/18 text-destructive',
 } as const;
-
-/** A row anchored to this client's clock at receipt, so a skewed server clock cannot age it. */
-export interface AnchoredRow {
-  category: ReportRow['category'];
-  count: number;
-  receivedAt: number;
-}
-
-/** The wire's `ageMs` becomes an anchor on the receiving clock; see KTD3. */
-export function anchorRows(rows: ReportRow[], now: number): AnchoredRow[] {
-  return rows.map((row) => ({
-    category: row.category,
-    count: row.count,
-    receivedAt: now - row.ageMs,
-  }));
-}
 
 export function ListenerReports({
   rows,

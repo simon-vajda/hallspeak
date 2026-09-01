@@ -1,7 +1,6 @@
 import type { components } from '@linguacast/contract/openapi';
-import type { ReportRow } from '@linguacast/contract/socket';
 import { Mic, MicOff } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { LiveBadge } from '@/components/live-badge';
@@ -10,13 +9,14 @@ import { AudioSettings } from '@/components/speaker/audio-settings';
 import { EndBroadcastDialog } from '@/components/speaker/end-broadcast-dialog';
 import { InputLevelPanel } from '@/components/speaker/input-level-panel';
 import { ListenerPageLink } from '@/components/speaker/listener-page-link';
-import { anchorRows, ListenerReports } from '@/components/speaker/listener-reports';
+import { ListenerReports } from '@/components/speaker/listener-reports';
 import { OnAirStats } from '@/components/speaker/on-air-stats';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { isLinkUp, type LinkState } from '@/lib/media/link-state';
+import type { AnchoredRow } from '@/lib/reports';
 import type { BroadcastState } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
@@ -59,7 +59,7 @@ export function SpeakerOnAir({
   mic: ReturnType<typeof useMicCapture>;
   startedAt: number | null;
   listeners: number;
-  reports: ReportRow[];
+  reports: AnchoredRow[];
   reportsKnown: boolean;
   state: BroadcastState;
   link: LinkState;
@@ -69,9 +69,6 @@ export function SpeakerOnAir({
   onPreferencesChange: (patch: Partial<AudioPreferences>) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
-  // Anchored to this client's clock at receipt, so the rows age locally rather than against
-  // a server clock the browser may be minutes away from.
-  const rows = useMemo(() => anchorRows(reports, Date.now()), [reports]);
   const isMuted = state === 'muted';
   // A producer this screen still holds locally is not reaching anyone while signalling is
   // down, so the badge falls back to the pre-producer wording rather than claiming the air.
@@ -132,7 +129,7 @@ export function SpeakerOnAir({
               column of its own; between `lg` and `xl` it sits at the foot of the readout
               column, because three columns need 1040px of content box and `lg` gives 944. */}
           <ListenerReports
-            rows={rows}
+            rows={reports}
             known={reportsKnown}
             variant="phone"
             className="order-3 lg:hidden"
@@ -153,7 +150,7 @@ export function SpeakerOnAir({
           {/* From `lg` the panel is always present, empty state included: the column has the
               room, and a slot that comes and goes would move what the interpreter watches. */}
           <ListenerReports
-            rows={rows}
+            rows={reports}
             known={reportsKnown}
             className="hidden lg:order-none lg:col-start-2 lg:row-start-4 lg:block xl:col-start-3 xl:row-start-1"
           />
