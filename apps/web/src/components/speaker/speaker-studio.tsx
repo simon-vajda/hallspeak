@@ -1,4 +1,5 @@
 import type { components } from '@linguacast/contract/openapi';
+import type { ReportRow } from '@linguacast/contract/socket';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SpeakerDisplaced } from '@/components/speaker/speaker-displaced';
 import { SpeakerOnAir } from '@/components/speaker/speaker-on-air';
@@ -33,6 +34,8 @@ export function SpeakerStudio({
   channel,
   speakerCode,
   listeners,
+  reports,
+  reportsKnown,
   socket,
   status,
   hasConnected,
@@ -44,6 +47,9 @@ export function SpeakerStudio({
   speakerCode: string;
   /** Guests currently receiving this channel's audio. */
   listeners: number;
+  reports: ReportRow[];
+  /** False until the connect-time tally lands; the panel withholds rather than claiming. */
+  reportsKnown: boolean;
   socket: SocketClient | null;
   status: SocketStatus;
   hasConnected: boolean;
@@ -312,6 +318,8 @@ export function SpeakerStudio({
         mic={mic}
         startedAt={startedAt}
         listeners={listeners}
+        reports={reports}
+        reportsKnown={reportsKnown}
         state={state}
         link={link}
         onToggleMute={() => {
