@@ -8,11 +8,18 @@ import {
   sortReportRows,
 } from '@/lib/reports';
 import { cn } from '@/lib/utils';
+import { reconcileReportRows, removeLeavingReportRows } from './report-row-presence';
 
 /** The same five minutes the server keeps, so a row leaves without waiting for a publish. */
 const WINDOW_MS = 5 * 60 * 1000;
 
 const TICK_MS = 1_000;
+
+/** Matches report-in and report-out in index.css. */
+const TRANSITION_MS = 260;
+
+/** Matches report-row-in and report-row-out in index.css. */
+const ROW_TRANSITION_MS = 200;
 
 const TONE = {
   warn: 'border-warn-border bg-warn-muted text-warn-on-muted',
@@ -54,24 +61,25 @@ export function ListenerReports({
     })),
   );
   const flash = useFlashParity(sorted.length === 0 ? 0 : live.reduce((sum, r) => sum + r.count, 0));
+  const phoneVisible = variant !== 'phone' || !known || sorted.length > 0;
+  const presence = usePanelPresence(phoneVisible);
+  const presentRows = useReportRowPresence(sorted);
 
   // The phone panel is absent while empty — but never while withholding, which would make a
   // dropped socket look like an empty window.
-  if (variant === 'phone' && known && sorted.length === 0) {
+  if (variant === 'phone' && presence === 'hidden') {
     return null;
   }
 
-  return (
+  const panel = (
     <section
       className={cn(
         'rounded-lg bg-secondary p-5',
-        // The panel arrives on the phone rather than appearing, and flashes on every later
-        // report. One element carries one `animation`, so the entrance is the mount frame
-        // and the alternating flash takes over from the first arrival after it.
-        variant === 'phone' && flash === 0 && 'animate-report-in',
+        // Flash stays on the panel while the phone entrance lives on its wrapper. Keeping
+        // them on separate elements prevents the first flash from cancelling the entrance.
         flash === 1 && 'animate-report-flash-a',
         flash === 2 && 'animate-report-flash-b',
-        className,
+        variant === 'panel' && className,
       )}
     >
       <div className="flex items-baseline justify-between gap-3">
@@ -79,34 +87,44 @@ export function ListenerReports({
         <span className="text-meta font-medium text-muted-foreground">Last five minutes</span>
       </div>
       <div className="mt-3.5 flex flex-col gap-1.5" aria-live="polite">
-        {sorted.map((row) => {
+        {presentRows.map(({ row, phase }) => {
           const tone = reportTone(row.category);
           return (
             <div
               key={row.category}
+              aria-hidden={phase === 'leaving'}
               className={cn(
-                'flex items-center justify-between gap-3 rounded-md border py-2.75 pr-3 pl-3.5',
-                TONE[tone],
+                'grid',
+                phase === 'leaving' ? 'animate-report-row-out' : 'animate-report-row-in',
               )}
             >
-              <span>
-                <span className="block font-semibold text-sm">{reportLabel(row.category)}</span>
-                <span className="mt-0.5 block text-meta font-medium text-muted-foreground">
-                  {reportAgeLabel(row.ageMs)}
-                </span>
-              </span>
-              <span
-                className={cn(
-                  'flex h-6.5 min-w-6.5 items-center justify-center rounded-full px-2 text-note font-semibold',
-                  CHIP[tone],
-                )}
-              >
-                {row.count}
-              </span>
+              <div className="min-h-0 overflow-hidden">
+                <div
+                  className={cn(
+                    'flex items-center justify-between gap-3 rounded-md border py-2.75 pr-3 pl-3.5',
+                    TONE[tone],
+                  )}
+                >
+                  <span>
+                    <span className="block font-semibold text-sm">{reportLabel(row.category)}</span>
+                    <span className="mt-0.5 block text-meta font-medium text-muted-foreground">
+                      {reportAgeLabel(row.ageMs)}
+                    </span>
+                  </span>
+                  <span
+                    className={cn(
+                      'flex h-6.5 min-w-6.5 items-center justify-center rounded-full px-2 text-note font-semibold',
+                      CHIP[tone],
+                    )}
+                  >
+                    {row.count}
+                  </span>
+                </div>
+              </div>
             </div>
           );
         })}
-        {sorted.length === 0 ? (
+        {presentRows.length === 0 && (variant === 'panel' || phoneVisible) ? (
           <p className="rounded-md border border-border border-dashed px-3.5 py-4 text-note text-muted-foreground">
             {known ? (
               'No reports. Listeners can flag an audio problem from their page, and it appears here for five minutes.'
@@ -121,6 +139,63 @@ export function ListenerReports({
       </div>
     </section>
   );
+
+  return variant === 'phone' ? (
+    <div
+      className={cn('grid', phoneVisible ? 'animate-report-in' : 'animate-report-out', className)}
+    >
+      <div className="min-h-0 overflow-hidden">{panel}</div>
+    </div>
+  ) : (
+    panel
+  );
+}
+
+/** Retains removed categories until their keyed exit animations finish. */
+function useReportRowPresence(rows: ReturnType<typeof sortReportRows>) {
+  const [presentRows, setPresentRows] = useState(() => reconcileReportRows([], rows));
+
+  useEffect(() => {
+    setPresentRows((current) => reconcileReportRows(current, rows));
+  }, [rows]);
+
+  const leavingKey = presentRows
+    .filter((row) => row.phase === 'leaving')
+    .map((row) => row.row.category)
+    .join(':');
+
+  useEffect(() => {
+    if (!leavingKey) {
+      return;
+    }
+    const timer = setTimeout(
+      () => setPresentRows((current) => removeLeavingReportRows(current)),
+      ROW_TRANSITION_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [leavingKey]);
+
+  return presentRows;
+}
+
+/** Keeps the phone panel mounted long enough for its exit animation to finish. */
+function usePanelPresence(visible: boolean): 'hidden' | 'visible' | 'leaving' {
+  const [presence, setPresence] = useState<'hidden' | 'visible' | 'leaving'>(() =>
+    visible ? 'visible' : 'hidden',
+  );
+
+  useEffect(() => {
+    if (visible) {
+      setPresence('visible');
+      return;
+    }
+
+    setPresence((current) => (current === 'hidden' ? current : 'leaving'));
+    const timer = setTimeout(() => setPresence('hidden'), TRANSITION_MS);
+    return () => clearTimeout(timer);
+  }, [visible]);
+
+  return presence;
 }
 
 /**
