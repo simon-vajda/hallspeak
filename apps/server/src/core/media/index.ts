@@ -338,6 +338,10 @@ export async function produce(
   watchProducer(producer, ctx.eventId, input.slug);
   producer.observer.once('close', () => {
     const appData = producer.appData as { closeReason?: unknown };
+    if (appData.closeReason === 'ended') {
+      // A deliberate end closes every listener feedback episode for this broadcast.
+      reports.forgetChannel(ctx.eventId, input.channelId);
+    }
     notifications.publish({
       type: 'producer-closed',
       eventId: ctx.eventId,

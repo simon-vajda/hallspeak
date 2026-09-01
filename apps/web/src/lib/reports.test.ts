@@ -1,6 +1,12 @@
 import type { ReportRow } from '@linguacast/contract/socket';
 import { describe, expect, it } from 'vitest';
-import { reportAgeLabel, reportLabel, reportTone, sortReportRows } from './reports';
+import {
+  anchorResolution,
+  reportAgeLabel,
+  reportLabel,
+  reportTone,
+  sortReportRows,
+} from './reports';
 
 const row = (category: ReportRow['category'], ageMs: number): ReportRow => ({
   category,
@@ -15,6 +21,16 @@ describe('reportTone', () => {
     expect(reportTone('quiet')).toBe('warn');
     expect(reportTone('static')).toBe('warn');
     expect(reportTone('noise')).toBe('warn');
+  });
+});
+
+describe('anchorResolution', () => {
+  it('anchors server age to the client receipt time', () => {
+    expect(anchorResolution({ count: 2, ageMs: 4_000 }, 100_000)).toEqual({
+      count: 2,
+      receivedAt: 96_000,
+    });
+    expect(anchorResolution(null, 100_000)).toBeNull();
   });
 });
 

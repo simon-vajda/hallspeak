@@ -23,7 +23,7 @@ import {
   stopConsuming,
   stopProducing,
 } from './handlers/media.handlers';
-import { sendInitialReports, submitReport } from './handlers/reports.handlers';
+import { resolveReports, sendInitialReports, submitReport } from './handlers/reports.handlers';
 import { handshakeGate } from './handshake';
 import { on } from './lib/on';
 import { channelRoom, eventRoom } from './lib/rooms';
@@ -77,6 +77,9 @@ export function attachSocket(httpServer: ServerType): SocketServer {
     });
 
     on(socket, 'channel:report', (payload) => submitReport(db, socket, socket.data, payload));
+    on(socket, 'channel:resolve-reports', (payload) =>
+      resolveReports(db, socket, socket.data, payload),
+    );
 
     on(socket, 'media:capabilities', () => getCapabilities(socket, socket.data));
     on(socket, 'media:create-transport', (payload) => openTransport(socket, socket.data, payload));

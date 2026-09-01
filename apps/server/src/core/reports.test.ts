@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Notification } from './notifications';
-import { REPORT_COOLDOWN_MS, REPORT_WINDOW_MS, ReportRegistry } from './reports';
+import {
+  REPORT_COOLDOWN_MS,
+  REPORT_RESOLUTION_WINDOW_MS,
+  REPORT_WINDOW_MS,
+  ReportRegistry,
+} from './reports';
 
 function harness() {
   const published: Notification[] = [];
@@ -10,6 +15,9 @@ function harness() {
 
 const rowsOf = (notification: Notification | undefined) =>
   notification && notification.type === 'reports-changed' ? notification.rows : undefined;
+
+const soundsGoodOf = (notification: Notification | undefined) =>
+  notification && notification.type === 'reports-changed' ? notification.soundsGood : undefined;
 
 describe('ReportRegistry', () => {
   beforeEach(() => {
@@ -60,6 +68,65 @@ describe('ReportRegistry', () => {
 
     expect(registry.record(1, 10, 'english', 'a', 'quiet')).toBe('accepted');
     expect(registry.tally(1, 10)).toEqual([{ category: 'quiet', count: 2, ageMs: 0 }]);
+  });
+
+  it('resolves every active problem from one socket and keeps other listeners intact', () => {
+    const { registry, published } = harness();
+
+    registry.record(1, 10, 'english', 'a', 'quiet');
+    registry.record(1, 10, 'english', 'a', 'noise');
+    registry.record(1, 10, 'english', 'b', 'quiet');
+
+    expect(registry.resolve(1, 10, 'a')).toBe('accepted');
+    expect(rowsOf(published.at(-1))).toEqual([{ category: 'quiet', count: 1, ageMs: 0 }]);
+    expect(soundsGoodOf(published.at(-1))).toEqual({ count: 1, ageMs: 0 });
+  });
+
+  it('keeps resolution available after the negative entries age out', async () => {
+    const { registry, published } = harness();
+
+    registry.record(1, 10, 'english', 'a', 'quiet');
+    await vi.advanceTimersByTimeAsync(REPORT_WINDOW_MS);
+
+    expect(registry.tally(1, 10)).toEqual([]);
+    expect(registry.resolve(1, 10, 'a')).toBe('accepted');
+    expect(soundsGoodOf(published.at(-1))).toEqual({ count: 1, ageMs: 0 });
+  });
+
+  it('expires a positive confirmation without dropping the problem window', async () => {
+    const { registry, published } = harness();
+
+    registry.record(1, 10, 'english', 'a', 'quiet');
+    registry.record(1, 10, 'english', 'b', 'noise');
+    registry.resolve(1, 10, 'a');
+    published.length = 0;
+    await vi.advanceTimersByTimeAsync(REPORT_RESOLUTION_WINDOW_MS);
+
+    expect(registry.snapshot(1, 10)).toEqual({
+      rows: [{ category: 'noise', count: 1, ageMs: REPORT_RESOLUTION_WINDOW_MS }],
+      soundsGood: null,
+    });
+    expect(soundsGoodOf(published.at(-1))).toBeNull();
+  });
+
+  it('accepts one resolution per reporting episode', () => {
+    const { registry } = harness();
+
+    expect(registry.resolve(1, 10, 'a')).toBe('not_open');
+    registry.record(1, 10, 'english', 'a', 'quiet');
+    expect(registry.resolve(1, 10, 'a')).toBe('accepted');
+    expect(registry.resolve(1, 10, 'a')).toBe('not_open');
+  });
+
+  it('keeps the original category cooldown after resolving its visible report', () => {
+    const { registry } = harness();
+
+    registry.record(1, 10, 'english', 'a', 'quiet');
+    registry.resolve(1, 10, 'a');
+
+    expect(registry.record(1, 10, 'english', 'a', 'quiet')).toBe('too_soon');
+    vi.advanceTimersByTime(REPORT_COOLDOWN_MS);
+    expect(registry.record(1, 10, 'english', 'a', 'quiet')).toBe('accepted');
   });
 
   it('drops an entry older than the window from the tally', () => {
@@ -124,6 +191,7 @@ describe('ReportRegistry', () => {
 
     expect(registry.tally(1, 10)).toEqual([{ category: 'quiet', count: 1, ageMs: 0 }]);
     expect(registry.record(1, 10, 'english', 'b', 'quiet')).toBe('accepted');
+    expect(registry.resolve(1, 10, 'a')).toBe('not_open');
   });
 
   it('scopes a tally to its own channel', () => {

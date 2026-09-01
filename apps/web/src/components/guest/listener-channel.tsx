@@ -62,6 +62,7 @@ export function ListenerChannel({ view }: { view: PublicChannelView }) {
 
   return (
     <ListenerRoom
+      key={slug}
       eventName={view.event.name}
       pin={view.event.pin}
       channel={view.channel}

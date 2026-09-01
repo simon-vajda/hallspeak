@@ -20,6 +20,7 @@ export interface ReportsSocket {
     payload: {
       slug: string;
       rows: { category: ReportCategory; count: number; ageMs: number }[];
+      soundsGood: { count: number; ageMs: number } | null;
     },
   ): unknown;
 }
@@ -55,6 +56,29 @@ export function submitReport(
   return {};
 }
 
+/** Clears this connection's open problem reports and adds one positive confirmation. */
+export function resolveReports(
+  db: Db,
+  socket: ReportingSocket,
+  auth: SocketAuth,
+  { slug }: { slug: string },
+): Record<string, never> {
+  const channel = findEnabledChannelBySlug(db, auth.eventId, slug);
+  if (!channel || !socket.rooms.has(channelRoom(channel.id))) {
+    throw new AppError('not_found', `No channel "${slug}" on this event.`);
+  }
+
+  if (!media.isOnline(auth.eventId, channel.id)) {
+    throw new AppError('channel_offline', 'Nobody is broadcasting on this channel right now.');
+  }
+
+  if (reports.resolve(auth.eventId, channel.id, socket.id) === 'not_open') {
+    throw new AppError('no_open_report', 'Report a problem before confirming that audio is good.');
+  }
+
+  return {};
+}
+
 /**
  * A studio that reconnects or reloads while reports are live must not read an empty panel,
  * so it is told the current tally on connect. It is sent whether or not there are rows:
@@ -75,6 +99,6 @@ export function sendInitialReports(db: Db, socket: ReportsSocket, auth: SocketAu
 
   socket.emit('channel:reports', {
     slug: channel.slug,
-    rows: reports.tally(auth.eventId, channelId),
+    ...reports.snapshot(auth.eventId, channelId),
   });
 }

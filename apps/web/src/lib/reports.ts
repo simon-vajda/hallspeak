@@ -1,10 +1,15 @@
-import type { ReportCategory, ReportRow } from '@linguacast/contract/socket';
+import type { ReportCategory, ReportResolution, ReportRow } from '@linguacast/contract/socket';
 
 export type ReportTone = 'warn' | 'severe';
 
 /** A row anchored to this client's clock at receipt. */
 export interface AnchoredRow {
   category: ReportCategory;
+  count: number;
+  receivedAt: number;
+}
+
+export interface AnchoredResolution {
   count: number;
   receivedAt: number;
 }
@@ -21,6 +26,15 @@ export function anchorRows(rows: ReportRow[], now: number): AnchoredRow[] {
     count: row.count,
     receivedAt: now - row.ageMs,
   }));
+}
+
+export function anchorResolution(
+  resolution: ReportResolution,
+  now: number,
+): AnchoredResolution | null {
+  return resolution === null
+    ? null
+    : { count: resolution.count, receivedAt: now - resolution.ageMs };
 }
 
 /** The order the listener sheet lists them in; the studio sorts by severity and recency. */

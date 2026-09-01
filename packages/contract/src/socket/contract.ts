@@ -6,6 +6,8 @@ import {
   ChannelReportPayload,
   ChannelReportResponse,
   ChannelReports,
+  ChannelResolveReportsPayload,
+  ChannelResolveReportsResponse,
   ChannelStatus,
   MediaCapabilitiesPayload,
   MediaCapabilitiesResponse,
@@ -53,6 +55,12 @@ export const clientToServer = {
    * inside the cooldown all resolve to a reason rather than to silence.
    */
   'channel:report': event({ payload: ChannelReportPayload, response: ChannelReportResponse }),
+
+  /** Resolves this connection's open reporting episode and clears its active problems. */
+  'channel:resolve-reports': event({
+    payload: ChannelResolveReportsPayload,
+    response: ChannelResolveReportsResponse,
+  }),
 
   /** Where every negotiation starts, and restarts from after a reset. */
   'media:capabilities': event({

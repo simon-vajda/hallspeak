@@ -24,7 +24,11 @@ export interface LifecycleServer {
     emit(event: 'channel:listeners', payload: { slug: string; count: number }): unknown;
     emit(
       event: 'channel:reports',
-      payload: { slug: string; rows: { category: ReportCategory; count: number; ageMs: number }[] },
+      payload: {
+        slug: string;
+        rows: { category: ReportCategory; count: number; ageMs: number }[];
+        soundsGood: { count: number; ageMs: number } | null;
+      },
     ): unknown;
   };
   in(room: string): { disconnectSockets(close: boolean): unknown };
@@ -45,7 +49,7 @@ export interface LifecycleSocket {
 export function releaseSocket(socket: { id: string }, auth: SocketAuth): void {
   media.releasePeer(auth.eventId, socket.id);
   presence.release(socket.id);
-  // The reports this socket sent stay in the window; only its cooldown goes with it.
+  // Reports stay in the window; cooldown and the right to resolve them go with the socket.
   reports.releaseSocket(socket.id);
 }
 
@@ -111,6 +115,7 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
       io.to(holder).emit('channel:reports', {
         slug: notification.slug,
         rows: notification.rows,
+        soundsGood: notification.soundsGood,
       });
       return;
     }

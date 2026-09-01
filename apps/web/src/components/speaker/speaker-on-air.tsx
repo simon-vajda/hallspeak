@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { isLinkUp, type LinkState } from '@/lib/media/link-state';
-import type { AnchoredRow } from '@/lib/reports';
+import type { AnchoredResolution, AnchoredRow } from '@/lib/reports';
 import type { BroadcastState } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
@@ -45,6 +45,7 @@ export function SpeakerOnAir({
   startedAt,
   listeners,
   reports,
+  reportResolution,
   reportsKnown,
   state,
   link,
@@ -60,6 +61,7 @@ export function SpeakerOnAir({
   startedAt: number | null;
   listeners: number;
   reports: AnchoredRow[];
+  reportResolution: AnchoredResolution | null;
   reportsKnown: boolean;
   state: BroadcastState;
   link: LinkState;
@@ -130,6 +132,7 @@ export function SpeakerOnAir({
               column, because three columns need 1040px of content box and `lg` gives 944. */}
           <ListenerReports
             rows={reports}
+            resolution={reportResolution}
             known={reportsKnown}
             variant="phone"
             className="order-3 lg:hidden"
@@ -151,6 +154,7 @@ export function SpeakerOnAir({
               room, and a slot that comes and goes would move what the interpreter watches. */}
           <ListenerReports
             rows={reports}
+            resolution={reportResolution}
             known={reportsKnown}
             className="hidden lg:order-none lg:col-start-2 lg:row-start-4 lg:block xl:col-start-3 xl:row-start-1"
           />

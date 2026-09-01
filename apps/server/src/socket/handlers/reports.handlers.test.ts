@@ -14,7 +14,7 @@ import { createTestDb } from '../../db/testing';
 import { channelRoom } from '../lib/rooms';
 import { validate } from '../lib/validate';
 import { applyNotification, type LifecycleServer, releaseSocket } from './lifecycle.handlers';
-import { sendInitialReports, submitReport } from './reports.handlers';
+import { resolveReports, sendInitialReports, submitReport } from './reports.handlers';
 
 function fakeSocket(id: string, rooms: string[] = []) {
   return { id, rooms: new Set(rooms) };
@@ -99,6 +99,7 @@ describe('submitReport', () => {
         payload: {
           slug: 'english',
           rows: [{ category: 'quiet', count: 1, ageMs: expect.any(Number) }],
+          soundsGood: null,
         },
       },
     ]);
@@ -169,6 +170,56 @@ describe('submitReport', () => {
   });
 });
 
+describe('resolveReports', () => {
+  it('clears this connection’s reports and sends a positive confirmation', async () => {
+    const { io, tallies } = fakeIo();
+    const unsubscribe = subscribe(io);
+    presence.claim(englishId, 'code-english', SPEAKER);
+    await live();
+    const socket = fakeSocket(LISTENER, [channelRoom(englishId)]);
+    submitReport(db, socket, listener, { slug: 'english', category: 'quiet' });
+    submitReport(db, socket, listener, { slug: 'english', category: 'noise' });
+
+    expect(resolveReports(db, socket, listener, { slug: 'english' })).toEqual({});
+    expect(tallies().at(-1)).toEqual({
+      room: SPEAKER,
+      event: 'channel:reports',
+      payload: {
+        slug: 'english',
+        rows: [],
+        soundsGood: { count: 1, ageMs: expect.any(Number) },
+      },
+    });
+    unsubscribe();
+  });
+
+  it('refuses a connection with no open reporting episode', async () => {
+    await live();
+
+    expect(() =>
+      resolveReports(db, fakeSocket(LISTENER, [channelRoom(englishId)]), listener, {
+        slug: 'english',
+      }),
+    ).toThrow(expect.objectContaining({ code: 'no_open_report' }));
+  });
+
+  it('refuses a connection outside the channel room', async () => {
+    await live();
+
+    expect(() => resolveReports(db, fakeSocket(LISTENER), listener, { slug: 'english' })).toThrow(
+      expect.objectContaining({ code: 'not_found' }),
+    );
+  });
+
+  it('refuses a resolution after the channel goes offline', async () => {
+    const socket = fakeSocket(LISTENER, [channelRoom(englishId)]);
+
+    expect(() => resolveReports(db, socket, listener, { slug: 'english' })).toThrow(
+      expect.objectContaining({ code: 'channel_offline' }),
+    );
+  });
+});
+
 describe('reports-changed with no claim holder', () => {
   it('emits to nobody and does not throw', async () => {
     const { io, tallies } = fakeIo();
@@ -199,7 +250,11 @@ describe('sendInitialReports', () => {
     sendInitialReports(db, { emit: (_event, payload) => emitted.push(payload) }, speaker);
 
     expect(emitted).toEqual([
-      { slug: 'english', rows: [{ category: 'silent', count: 1, ageMs: expect.any(Number) }] },
+      {
+        slug: 'english',
+        rows: [{ category: 'silent', count: 1, ageMs: expect.any(Number) }],
+        soundsGood: null,
+      },
     ]);
   });
 
@@ -208,7 +263,25 @@ describe('sendInitialReports', () => {
 
     sendInitialReports(db, { emit: (_event, payload) => emitted.push(payload) }, speaker);
 
-    expect(emitted).toEqual([{ slug: 'english', rows: [] }]);
+    expect(emitted).toEqual([{ slug: 'english', rows: [], soundsGood: null }]);
+  });
+
+  it('includes recent positive confirmations in the connect-time snapshot', async () => {
+    const emitted: unknown[] = [];
+    await live();
+    const socket = fakeSocket(LISTENER, [channelRoom(englishId)]);
+    submitReport(db, socket, listener, { slug: 'english', category: 'quiet' });
+    resolveReports(db, socket, listener, { slug: 'english' });
+
+    sendInitialReports(db, { emit: (_event, payload) => emitted.push(payload) }, speaker);
+
+    expect(emitted).toEqual([
+      {
+        slug: 'english',
+        rows: [],
+        soundsGood: { count: 1, ageMs: expect.any(Number) },
+      },
+    ]);
   });
 
   it('sends nothing for a socket holding no claim', () => {

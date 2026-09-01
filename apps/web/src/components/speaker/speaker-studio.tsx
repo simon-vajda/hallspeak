@@ -9,7 +9,7 @@ import { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { type ChannelStatusEntry, rollbackMutedAfterFailure } from '@/lib/channel-status';
 import { isLinkUp, resolveLinkState } from '@/lib/media/link-state';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
-import type { AnchoredRow } from '@/lib/reports';
+import type { AnchoredResolution, AnchoredRow } from '@/lib/reports';
 import type { SocketStatus } from '@/lib/use-socket';
 import type { SocketClient } from '@/socket/client';
 import {
@@ -35,6 +35,7 @@ export function SpeakerStudio({
   speakerCode,
   listeners,
   reports,
+  reportResolution,
   reportsKnown,
   socket,
   status,
@@ -48,6 +49,7 @@ export function SpeakerStudio({
   /** Guests currently receiving this channel's audio. */
   listeners: number;
   reports: AnchoredRow[];
+  reportResolution: AnchoredResolution | null;
   /** False until the connect-time tally lands; the panel withholds rather than claiming. */
   reportsKnown: boolean;
   socket: SocketClient | null;
@@ -319,6 +321,7 @@ export function SpeakerStudio({
         startedAt={startedAt}
         listeners={listeners}
         reports={reports}
+        reportResolution={reportResolution}
         reportsKnown={reportsKnown}
         state={state}
         link={link}

@@ -1,6 +1,8 @@
+import { Check } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { MICRO_LABEL } from '@/components/micro-label';
 import {
+  type AnchoredResolution,
   type AnchoredRow,
   reportAgeLabel,
   reportLabel,
@@ -12,6 +14,9 @@ import { reconcileReportRows, removeLeavingReportRows } from './report-row-prese
 
 /** The same five minutes the server keeps, so a row leaves without waiting for a publish. */
 const WINDOW_MS = 5 * 60 * 1000;
+
+/** Positive follow-up only acknowledges a recent fix; it is not ongoing channel state. */
+const RESOLUTION_WINDOW_MS = 30 * 1000;
 
 const TICK_MS = 1_000;
 
@@ -33,11 +38,13 @@ const CHIP = {
 
 export function ListenerReports({
   rows,
+  resolution,
   known,
   className,
   variant = 'panel',
 }: {
   rows: AnchoredRow[];
+  resolution: AnchoredResolution | null;
   /** False until the connect-time tally lands: `No reports` is a claim a dropped socket
    * cannot support, so the panel withholds instead. */
   known: boolean;
@@ -60,8 +67,12 @@ export function ListenerReports({
       ageMs: now - row.receivedAt,
     })),
   );
-  const flash = useFlashParity(sorted.length === 0 ? 0 : live.reduce((sum, r) => sum + r.count, 0));
-  const phoneVisible = variant !== 'phone' || !known || sorted.length > 0;
+  const liveResolution =
+    resolution !== null && now - resolution.receivedAt < RESOLUTION_WINDOW_MS ? resolution : null;
+  const issueTotal = sorted.length === 0 ? 0 : live.reduce((sum, r) => sum + r.count, 0);
+  const flash = useFlashParity(issueTotal, liveResolution?.receivedAt ?? null);
+  const phoneVisible =
+    variant !== 'phone' || !known || sorted.length > 0 || liveResolution !== null;
   const presence = usePanelPresence(phoneVisible);
   const presentRows = useReportRowPresence(sorted);
 
@@ -84,9 +95,29 @@ export function ListenerReports({
     >
       <div className="flex items-baseline justify-between gap-3">
         <h2 className={MICRO_LABEL}>Listener reports</h2>
-        <span className="text-meta font-medium text-muted-foreground">Last five minutes</span>
+        <span className="text-meta font-medium text-muted-foreground">Recent feedback</span>
       </div>
       <div className="mt-3.5 flex flex-col gap-1.5" aria-live="polite">
+        {liveResolution ? (
+          <div className="grid animate-report-row-in">
+            <div className="min-h-0 overflow-hidden">
+              <div className="flex items-center justify-between gap-3 rounded-md border border-live/35 bg-live-muted py-2.75 pr-3 pl-3.5 text-live-on-muted">
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Check className="size-4.5 shrink-0 stroke-[2.5]" />
+                  <span>
+                    <span className="block font-semibold text-sm">Audio sounds good now</span>
+                    <span className="mt-0.5 block text-meta font-medium text-muted-foreground">
+                      {reportAgeLabel(now - liveResolution.receivedAt)}
+                    </span>
+                  </span>
+                </span>
+                <span className="flex h-6.5 min-w-6.5 items-center justify-center rounded-full bg-live/20 px-2 text-note font-semibold">
+                  {liveResolution.count}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : null}
         {presentRows.map(({ row, phase }) => {
           const tone = reportTone(row.category);
           return (
@@ -124,7 +155,9 @@ export function ListenerReports({
             </div>
           );
         })}
-        {presentRows.length === 0 && (variant === 'panel' || phoneVisible) ? (
+        {presentRows.length === 0 &&
+        liveResolution === null &&
+        (variant === 'panel' || phoneVisible) ? (
           <p className="rounded-md border border-border border-dashed px-3.5 py-4 text-note text-muted-foreground">
             {known ? (
               'No reports. Listeners can flag an audio problem from their page, and it appears here for five minutes.'
@@ -203,16 +236,19 @@ function usePanelPresence(visible: boolean): 'hidden' | 'visible' | 'leaving' {
  * mounted element does not replay it, so a single keyframe would flash the first report
  * and nothing after it.
  */
-function useFlashParity(total: number): 0 | 1 | 2 {
-  const previous = useRef(total);
+function useFlashParity(total: number, resolutionAt: number | null): 0 | 1 | 2 {
+  const previous = useRef({ total, resolutionAt });
   const [parity, setParity] = useState<0 | 1 | 2>(0);
 
   useEffect(() => {
-    if (total > previous.current) {
+    if (
+      total > previous.current.total ||
+      (resolutionAt !== null && resolutionAt !== previous.current.resolutionAt)
+    ) {
       setParity((current) => (current === 1 ? 2 : 1));
     }
-    previous.current = total;
-  }, [total]);
+    previous.current = { total, resolutionAt };
+  }, [total, resolutionAt]);
 
   return parity;
 }

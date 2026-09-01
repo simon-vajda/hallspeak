@@ -10,7 +10,12 @@ import {
   resetStatusesForAuth,
   resetStatusOrdering,
 } from '@/lib/channel-status';
-import { type AnchoredRow, anchorRows } from '@/lib/reports';
+import {
+  type AnchoredResolution,
+  type AnchoredRow,
+  anchorResolution,
+  anchorRows,
+} from '@/lib/reports';
 import { connectSocket } from '@/lib/socket';
 import { initialSocketConnectionState, socketConnectionState } from '@/lib/socket-state';
 import type { SocketAuth, SocketClient } from '@/socket/client';
@@ -32,6 +37,9 @@ export function useSocket(auth: SocketAuth | null) {
     useState<ChannelStatusState>(initialChannelStatuses);
   const [listeners, setListeners] = useState<Record<string, number>>({});
   const [reports, setReports] = useState<Record<string, AnchoredRow[]>>({});
+  const [reportResolutions, setReportResolutions] = useState<
+    Record<string, AnchoredResolution | null>
+  >({});
   // False until the connect-time tally lands. An empty window and one this socket has not
   // heard are different states, and only `No reports` may be printed for the first.
   const [reportsKnown, setReportsKnown] = useState(false);
@@ -78,6 +86,7 @@ export function useSocket(auth: SocketAuth | null) {
       // A tally from a dropped socket describes a channel nobody is updating, for the same
       // reason the counts go: the studio withholds rather than claiming an empty window.
       setReports({});
+      setReportResolutions({});
       setReportsKnown(false);
       // The server ends a session by disconnecting it and Socket.IO does not retry that,
       // so it is terminal, not a blip. Reported as such or the screen promises a recovery
@@ -110,10 +119,15 @@ export function useSocket(auth: SocketAuth | null) {
       setListeners((prev) => ({ ...prev, [slug]: count }));
     });
     // Sent once on connect whether or not there are rows, then on every change.
-    s.on('channel:reports', ({ slug, rows }) => {
+    s.on('channel:reports', ({ slug, rows, soundsGood }) => {
       // Anchored here rather than at render: the wire's `ageMs` is only true at receipt, so
       // re-deriving it later would reset every row to "just now".
-      setReports((prev) => ({ ...prev, [slug]: anchorRows(rows, Date.now()) }));
+      const now = Date.now();
+      setReports((prev) => ({ ...prev, [slug]: anchorRows(rows, now) }));
+      setReportResolutions((prev) => ({
+        ...prev,
+        [slug]: anchorResolution(soundsGood, now),
+      }));
       setReportsKnown(true);
     });
 
@@ -157,6 +171,7 @@ export function useSocket(auth: SocketAuth | null) {
     channelStatuses: channelStatusState.channels,
     listeners,
     reports,
+    reportResolutions,
     reportsKnown,
     socket,
     joinChannel,

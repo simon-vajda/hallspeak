@@ -15,6 +15,7 @@ type _Names = Expect<
     | 'channel:join'
     | 'channel:leave'
     | 'channel:report'
+    | 'channel:resolve-reports'
     | 'media:capabilities'
     | 'media:create-transport'
     | 'media:connect-transport'
