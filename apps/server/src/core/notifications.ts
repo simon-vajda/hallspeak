@@ -3,7 +3,7 @@
  * the domain entity. Two modules named around "events" with unrelated meanings is a trap.
  */
 
-import type { ReportRow } from '@linguacast/contract/socket';
+import type { ReportResolution, ReportRow } from '@linguacast/contract/socket';
 
 export type EvictionReason = 'worker_died' | 'access_revoked' | 'claim_taken_over';
 
@@ -38,6 +38,7 @@ export type Notification =
       channelId: number;
       slug: string;
       rows: ReportRow[];
+      soundsGood: ReportResolution;
     }
   | { type: 'peer-evicted'; socketId: string; reason: EvictionReason }
   | { type: 'room-evicted'; eventId: number; reason: EvictionReason };

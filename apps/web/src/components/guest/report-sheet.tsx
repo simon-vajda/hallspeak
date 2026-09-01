@@ -12,13 +12,16 @@ import { reportRows, type SentMap, selfCheck } from './report-state';
 const TICK_MS = 1_000;
 
 type Stage = { kind: 'list' } | { kind: 'sent'; category: ReportCategory };
+type ReportStage = Stage | { kind: 'resolved' };
 
 export function ReportSheet({
   volume,
   muted,
   live,
   sent,
+  reportOpen,
   onSend,
+  onResolve,
 }: {
   /** The listener's own volume, 0-100. */
   volume: number;
@@ -27,15 +30,22 @@ export function ReportSheet({
   live: boolean;
   /** Owned by the room, so closing and reopening the surface keeps the disable. */
   sent: SentMap;
+  /** This connection has reported since its last positive confirmation. */
+  reportOpen: boolean;
   onSend: (category: ReportCategory) => Promise<{ ok: true } | { ok: false; message: string }>;
+  onResolve: () => Promise<{ ok: true } | { ok: false; message: string }>;
 }) {
   const [open, setOpen] = useState(false);
-  const [stage, setStage] = useState<Stage>({ kind: 'list' });
+  const [stage, setStage] = useState<ReportStage>({ kind: 'list' });
   const [pending, setPending] = useState<ReportCategory | null>(null);
   const [failed, setFailed] = useState<{ category: ReportCategory; message: string } | null>(null);
+  const [resolving, setResolving] = useState(false);
+  const [resolveFailed, setResolveFailed] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const confirmation = useRef<HTMLParagraphElement | null>(null);
   const firstCategory = useRef<HTMLButtonElement | null>(null);
+  const resolutionButton = useRef<HTMLButtonElement | null>(null);
+  const hasOpenReport = reportOpen;
 
   useEffect(() => {
     if (!open) {
@@ -50,17 +60,20 @@ export function ReportSheet({
 
   // The stage swap moves focus explicitly, or the dialog drops it to the document body.
   useEffect(() => {
-    if (stage.kind === 'sent') {
+    if (stage.kind !== 'list') {
       confirmation.current?.focus();
+    } else if (hasOpenReport) {
+      resolutionButton.current?.focus();
     } else {
       firstCategory.current?.focus();
     }
-  }, [stage]);
+  }, [stage, hasOpenReport]);
 
   const send = useCallback(
     async (category: ReportCategory) => {
       setPending(category);
       setFailed(null);
+      setResolveFailed(null);
       try {
         const result = await onSend(category);
         if (result.ok) {
@@ -79,42 +92,67 @@ export function ReportSheet({
     [onSend],
   );
 
+  const resolve = useCallback(async () => {
+    setResolving(true);
+    setFailed(null);
+    setResolveFailed(null);
+    try {
+      const result = await onResolve();
+      if (result.ok) {
+        setStage({ kind: 'resolved' });
+        return;
+      }
+      setResolveFailed(result.message);
+    } catch {
+      setResolveFailed('Could not send. Try again.');
+    } finally {
+      setResolving(false);
+    }
+  }, [onResolve]);
+
   const rows = reportRows({ sent, pending, failed, live, now });
   const check = selfCheck({ volume, muted, live });
   const firstEnabled = rows.find((row) => !row.disabled)?.key;
 
   return (
     <ResponsiveSurface
-      title={stage.kind === 'sent' ? 'Report sent' : 'Report a problem'}
+      title={
+        stage.kind === 'list' ? (hasOpenReport ? 'Update report' : 'Report a problem') : 'Sent'
+      }
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
         if (!next) {
           setStage({ kind: 'list' });
           setFailed(null);
+          setResolveFailed(null);
           setPending(null);
+          setResolving(false);
         }
       }}
       triggerClassName="flex cursor-pointer items-center gap-1.75 rounded-sm px-1 py-1.5 text-note font-semibold whitespace-nowrap text-muted-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
       trigger={
         <>
           <MessageCircleWarning className="size-4" />
-          Report a problem
+          {hasOpenReport ? 'Update report' : 'Report a problem'}
         </>
       }
     >
-      {stage.kind === 'sent' ? (
+      {stage.kind !== 'list' ? (
         <div className="flex flex-col items-center px-1.5 pt-0.5 pb-1.5 text-center">
           <span className="flex size-11 items-center justify-center rounded-full bg-live-muted text-live-on-muted">
             <Check className="size-5 stroke-[2.25]" />
           </span>
           {/* Focused on arrival, so the stage swap does not drop focus to the body. */}
           <p ref={confirmation} tabIndex={-1} className="mt-4 text-section outline-none">
-            Sent — “{reportLabel(stage.category)}”.
+            {stage.kind === 'sent'
+              ? `Sent — “${reportLabel(stage.category)}”.`
+              : 'Sent — “Audio sounds good now”.'}
           </p>
           <p className="mt-2 max-w-72.5 text-note text-muted-foreground">
-            Reports are anonymous and counted together with other listeners’. They clear after five
-            minutes, and nothing comes back to you.
+            {stage.kind === 'sent'
+              ? 'Reports are anonymous and counted together with other listeners’. They clear after five minutes, and nothing comes back to you.'
+              : 'The interpreter sees your confirmation without learning who sent it.'}
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2.5">
             <Button
@@ -123,7 +161,7 @@ export function ReportSheet({
               onClick={() => setStage({ kind: 'list' })}
               className="rounded-full"
             >
-              Report something else
+              {stage.kind === 'sent' ? 'Update report' : 'Report a problem'}
             </Button>
             <Button size="action" onClick={() => setOpen(false)} className="rounded-full">
               Back to listening
@@ -159,14 +197,40 @@ export function ReportSheet({
             </div>
           </div>
 
-          <span className={cn(MICRO_LABEL, 'mt-5 mb-2.5 block')}>What is wrong</span>
+          {hasOpenReport ? (
+            <div className="mt-5">
+              <span className={cn(MICRO_LABEL, 'mb-2.5 block')}>Is it fixed?</span>
+              <button
+                ref={resolutionButton}
+                type="button"
+                disabled={!live || resolving || pending !== null}
+                onClick={() => void resolve()}
+                className="hover:overlay flex min-h-touch w-full cursor-pointer items-center justify-between gap-3 rounded-full border border-live/35 bg-live-muted px-4.5 text-left font-semibold text-sm text-live-on-muted disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+              >
+                <span className="flex items-center gap-2">
+                  <Check className="size-4 stroke-[2.5]" />
+                  Audio sounds good now
+                </span>
+                <span className="text-meta font-medium text-muted-foreground">
+                  {resolving ? 'Sending…' : ''}
+                </span>
+              </button>
+              {resolveFailed ? (
+                <p className="mt-2 text-note text-destructive">{resolveFailed}</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          <span className={cn(MICRO_LABEL, 'mt-5 mb-2.5 block')}>
+            {hasOpenReport ? 'Still having a problem?' : 'What is wrong'}
+          </span>
           <div className="flex flex-col gap-2">
             {rows.map((row) => (
               <button
                 key={row.key}
                 type="button"
                 ref={row.key === firstEnabled ? firstCategory : undefined}
-                disabled={row.disabled}
+                disabled={row.disabled || resolving}
                 onClick={() => void send(row.key)}
                 className="hover:overlay-strong flex min-h-touch w-full cursor-pointer items-center justify-between gap-3 rounded-full border border-border px-4.5 text-left font-semibold text-sm disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
               >

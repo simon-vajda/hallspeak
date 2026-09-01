@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Notification } from '../notifications';
 import { notifications } from '../notifications';
 import { presence } from '../presence';
+import { reports } from '../reports';
 import {
   activeRooms,
   channelStatus,
@@ -127,6 +128,24 @@ describe('produce', () => {
       channelId: ENGLISH,
       slug: 'english',
       reason: 'ended',
+    });
+  });
+
+  it('clears listener feedback when the speaker deliberately ends the broadcast', async () => {
+    const { producerId } = await goLive('speaker-a');
+    reports.record(EVENT, ENGLISH, 'english', 'guest-a', 'quiet');
+    published = [];
+
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+
+    expect(reports.snapshot(EVENT, ENGLISH)).toEqual({ rows: [], soundsGood: null });
+    expect(published).toContainEqual({
+      type: 'reports-changed',
+      eventId: EVENT,
+      channelId: ENGLISH,
+      slug: 'english',
+      rows: [],
+      soundsGood: null,
     });
   });
 

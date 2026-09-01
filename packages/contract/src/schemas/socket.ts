@@ -51,6 +51,10 @@ export const ChannelReportPayload = z.object({ slug: SocketSlug, category: Repor
 
 export const ChannelReportResponse = z.object({});
 
+export const ChannelResolveReportsPayload = z.object({ slug: SocketSlug });
+
+export const ChannelResolveReportsResponse = z.object({});
+
 /**
  * To the socket holding the channel's speaker claim alone, never to the channel room: the
  * tally is for the one person who can act on it, and a listener must not learn what other
@@ -67,9 +71,18 @@ export const ChannelReports = z.object({
       ageMs: z.int().nonnegative(),
     }),
   ),
+  /** Positive follow-up kept separate from the five problem categories. */
+  soundsGood: z
+    .object({
+      count: z.int().positive(),
+      ageMs: z.int().nonnegative(),
+    })
+    .nullable(),
 });
 
 export type ReportRow = z.infer<typeof ChannelReports>['rows'][number];
+
+export type ReportResolution = z.infer<typeof ChannelReports>['soundsGood'];
 
 /**
  * mediasoup's capability, ICE, DTLS and RTP structures cross the wire as validated but

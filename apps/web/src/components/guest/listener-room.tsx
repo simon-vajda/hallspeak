@@ -81,11 +81,27 @@ export function ListenerRoom({
   // Owned here rather than in the sheet, so closing and reopening it keeps the disable.
   // Process-local by design: a reload is a new socket and carries no cooldown.
   const [sentReports, setSentReports] = useState<SentMap>({});
+  const [reportOpen, setReportOpen] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
   const { audio: carrierAudio, play: playCarrier, pause: pauseCarrier } = useMediaSessionCarrier();
   const output = useAudioOutput();
   const volume = useAudioVolume(audio);
   useAudioSink(audio, output.deviceId, output.clearSelection);
+
+  // Server scopes cooldown and resolution eligibility to one live socket connection.
+  useEffect(() => {
+    if (status !== 'connected') {
+      setSentReports({});
+      setReportOpen(false);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (closeReason === 'ended') {
+      setSentReports({});
+      setReportOpen(false);
+    }
+  }, [closeReason]);
 
   const link = resolveLinkState({
     socketStatus: status,
@@ -282,10 +298,23 @@ export function ListenerRoom({
         return { ok: false as const, message: ack.error.message };
       }
       setSentReports((current) => ({ ...current, [category]: Date.now() }));
+      setReportOpen(true);
       return { ok: true as const };
     },
     [socket, channel.slug],
   );
+
+  const resolveReports = useCallback(async () => {
+    if (!socket) {
+      return { ok: false as const, message: 'No connection.' };
+    }
+    const ack = await socket.emitWithAck('channel:resolve-reports', { slug: channel.slug });
+    if (!ack.ok) {
+      return { ok: false as const, message: ack.error.message };
+    }
+    setReportOpen(false);
+    return { ok: true as const };
+  }, [socket, channel.slug]);
 
   const meta = `${eventName} · PIN ${formatPin(pin)}`;
   const note =
@@ -394,7 +423,9 @@ export function ListenerRoom({
               muted={muted}
               live={live}
               sent={sentReports}
+              reportOpen={reportOpen}
               onSend={sendReport}
+              onResolve={resolveReports}
             />
           ) : null}
         </div>
