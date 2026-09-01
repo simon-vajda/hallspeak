@@ -23,6 +23,7 @@ import {
   stopConsuming,
   stopProducing,
 } from './handlers/media.handlers';
+import { sendInitialReports, submitReport } from './handlers/reports.handlers';
 import { handshakeGate } from './handshake';
 import { on } from './lib/on';
 import { channelRoom, eventRoom } from './lib/rooms';
@@ -75,6 +76,8 @@ export function attachSocket(httpServer: ServerType): SocketServer {
       return undefined;
     });
 
+    on(socket, 'channel:report', (payload) => submitReport(db, socket, socket.data, payload));
+
     on(socket, 'media:capabilities', () => getCapabilities(socket, socket.data));
     on(socket, 'media:create-transport', (payload) => openTransport(socket, socket.data, payload));
     on(socket, 'media:connect-transport', (payload) =>
@@ -103,8 +106,11 @@ export function attachSocket(httpServer: ServerType): SocketServer {
         // Addressed to this socket alone, so a studio joining a channel already being
         // listened to shows a number rather than a blank.
         sendInitialListenerCount(db, socket, socket.data);
+        // Unconditional, empty rows included: an empty window and one the studio has not
+        // heard are different states, and only this message's arrival separates them.
+        sendInitialReports(db, socket, socket.data);
       } catch (cause) {
-        console.error(`socket: could not send the initial listener count to ${socket.id}`, cause);
+        console.error(`socket: could not send the initial channel state to ${socket.id}`, cause);
       }
     }
   });
