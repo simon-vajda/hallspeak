@@ -1,4 +1,5 @@
 import type { components } from '@linguacast/contract/openapi';
+import type { ReportCategory } from '@linguacast/contract/socket';
 import { Link } from '@tanstack/react-router';
 import { ChevronLeft, Loader2, Pause, Play } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -6,6 +7,7 @@ import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { ChannelStrip } from '@/components/guest/channel-strip';
 import { ListenerAudioSettings } from '@/components/guest/listener-audio-settings';
+import { ReportSheet } from '@/components/guest/report-sheet';
 import { LiveBadge } from '@/components/live-badge';
 import { PlayTarget } from '@/components/play-target';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
@@ -32,6 +34,7 @@ import {
   reconcileListenIntent,
   statusNote,
 } from './listen-state';
+import type { SentMap } from './report-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -74,6 +77,9 @@ export function ListenerRoom({
     holdDeadline: null,
   });
   const media = useMedia(socket);
+  // Owned here rather than in the sheet, so closing and reopening it keeps the disable.
+  // Process-local by design: a reload is a new socket and carries no cooldown.
+  const [sentReports, setSentReports] = useState<SentMap>({});
   const audio = useRef<HTMLAudioElement | null>(null);
   const { audio: carrierAudio, play: playCarrier, pause: pauseCarrier } = useMediaSessionCarrier();
   const output = useAudioOutput();
@@ -265,6 +271,21 @@ export function ListenerRoom({
       });
   }, [consumers, activeSlug, online, startConsuming, stopConsuming]);
 
+  const sendReport = useCallback(
+    async (category: ReportCategory) => {
+      if (!socket) {
+        return { ok: false as const, message: 'No connection.' };
+      }
+      const ack = await socket.emitWithAck('channel:report', { slug: channel.slug, category });
+      if (!ack.ok) {
+        return { ok: false as const, message: ack.error.message };
+      }
+      setSentReports((current) => ({ ...current, [category]: Date.now() }));
+      return { ok: true as const };
+    },
+    [socket, channel.slug],
+  );
+
   const meta = `${eventName} · PIN ${formatPin(pin)}`;
   const note =
     socketError ??
@@ -363,13 +384,13 @@ export function ListenerRoom({
 
       <div className="mx-auto mt-auto flex w-full max-w-shell shrink-0 flex-col items-center gap-5 px-gutter pb-8.5 text-center lg:pb-16.5">
         <ListenerAudioSettings output={output} volume={volume} className="max-w-105" />
-        <Link
-          to="/events/$pin"
-          params={{ pin }}
-          className="rounded-full text-note font-semibold text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
-        >
-          Switch channel
-        </Link>
+        <ReportSheet
+          volume={volume.volume}
+          muted={muted}
+          live={live}
+          sent={sentReports}
+          onSend={sendReport}
+        />
       </div>
     </div>
   );
