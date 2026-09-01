@@ -27,6 +27,7 @@ import type { SocketClient } from '@/socket/client';
 import {
   badgeHasLiveDot,
   badgeLabel,
+  hasRequestedAudio,
   type ListenIntentState,
   listenActionState,
   listenerMediaPlayAction,
@@ -384,13 +385,19 @@ export function ListenerRoom({
 
       <div className="mx-auto mt-auto flex w-full max-w-shell shrink-0 flex-col items-center gap-5 px-gutter pb-8.5 text-center lg:pb-16.5">
         <ListenerAudioSettings output={output} volume={volume} className="max-w-105" />
-        <ReportSheet
-          volume={volume.volume}
-          muted={muted}
-          live={live}
-          sent={sentReports}
-          onSend={sendReport}
-        />
+        {/* Keep the trigger's 32px row even before Listen, so intent changes do not move
+            the audio settings or the room above it. Unmounting still closes an open surface. */}
+        <div className="flex min-h-8 items-center">
+          {hasRequestedAudio(resolvedPlayback) ? (
+            <ReportSheet
+              volume={volume.volume}
+              muted={muted}
+              live={live}
+              sent={sentReports}
+              onSend={sendReport}
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   );
