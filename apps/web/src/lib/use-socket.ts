@@ -1,4 +1,3 @@
-import type { ReportRow } from '@linguacast/contract/socket';
 import { unwrap } from '@linguacast/contract/socket';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
@@ -11,6 +10,7 @@ import {
   resetStatusesForAuth,
   resetStatusOrdering,
 } from '@/lib/channel-status';
+import { type AnchoredRow, anchorRows } from '@/lib/reports';
 import { connectSocket } from '@/lib/socket';
 import { initialSocketConnectionState, socketConnectionState } from '@/lib/socket-state';
 import type { SocketAuth, SocketClient } from '@/socket/client';
@@ -31,7 +31,7 @@ export function useSocket(auth: SocketAuth | null) {
   const [channelStatusState, setChannelStatusState] =
     useState<ChannelStatusState>(initialChannelStatuses);
   const [listeners, setListeners] = useState<Record<string, number>>({});
-  const [reports, setReports] = useState<Record<string, ReportRow[]>>({});
+  const [reports, setReports] = useState<Record<string, AnchoredRow[]>>({});
   // False until the connect-time tally lands. An empty window and one this socket has not
   // heard are different states, and only `No reports` may be printed for the first.
   const [reportsKnown, setReportsKnown] = useState(false);
@@ -111,7 +111,9 @@ export function useSocket(auth: SocketAuth | null) {
     });
     // Sent once on connect whether or not there are rows, then on every change.
     s.on('channel:reports', ({ slug, rows }) => {
-      setReports((prev) => ({ ...prev, [slug]: rows }));
+      // Anchored here rather than at render: the wire's `ageMs` is only true at receipt, so
+      // re-deriving it later would reset every row to "just now".
+      setReports((prev) => ({ ...prev, [slug]: anchorRows(rows, Date.now()) }));
       setReportsKnown(true);
     });
 

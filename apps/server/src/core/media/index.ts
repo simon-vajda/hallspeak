@@ -151,6 +151,7 @@ export async function stopMedia(): Promise<void> {
   announced.close();
   await registry.closeAll();
   listeners.close();
+  reports.close();
   await pool.close();
 }
 

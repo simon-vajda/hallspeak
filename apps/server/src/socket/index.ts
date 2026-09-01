@@ -102,15 +102,21 @@ export function attachSocket(httpServer: ServerType): SocketServer {
     // escape an EventEmitter and take the whole single-process server down with it. Failing
     // it costs one studio a number until the next change; failing loudly costs every event.
     if (speakerChannelId !== null) {
+      // One try each: sharing a block would let a failed count suppress the tally, and a
+      // studio that never hears one withholds its panel for the life of the connection.
       try {
         // Addressed to this socket alone, so a studio joining a channel already being
         // listened to shows a number rather than a blank.
         sendInitialListenerCount(db, socket, socket.data);
+      } catch (cause) {
+        console.error(`socket: could not send the initial listener count to ${socket.id}`, cause);
+      }
+      try {
         // Unconditional, empty rows included: an empty window and one the studio has not
         // heard are different states, and only this message's arrival separates them.
         sendInitialReports(db, socket, socket.data);
       } catch (cause) {
-        console.error(`socket: could not send the initial channel state to ${socket.id}`, cause);
+        console.error(`socket: could not send the initial report tally to ${socket.id}`, cause);
       }
     }
   });
