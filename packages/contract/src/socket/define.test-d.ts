@@ -14,6 +14,7 @@ type _Names = Expect<
     | 'ping'
     | 'channel:join'
     | 'channel:leave'
+    | 'channel:report'
     | 'media:capabilities'
     | 'media:create-transport'
     | 'media:connect-transport'

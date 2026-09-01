@@ -3,6 +3,9 @@ import {
   ChannelJoinResponse,
   ChannelLeavePayload,
   ChannelListeners,
+  ChannelReportPayload,
+  ChannelReports,
+  ChannelReportResponse,
   ChannelStatus,
   MediaCapabilitiesPayload,
   MediaCapabilitiesResponse,
@@ -43,6 +46,13 @@ export const clientToServer = {
 
   /** Fire-and-forget: a failed leave means nothing. */
   'channel:leave': event({ payload: ChannelLeavePayload }),
+
+  /**
+   * Acked, because every refusal is one the listener has to see on the row they tapped:
+   * a channel with no producer, a socket that never joined the channel, and a repeat
+   * inside the cooldown all resolve to a reason rather than to silence.
+   */
+  'channel:report': event({ payload: ChannelReportPayload, response: ChannelReportResponse }),
 
   /** Where every negotiation starts, and restarts from after a reset. */
   'media:capabilities': event({
@@ -111,6 +121,13 @@ export const serverToClient = {
    * number and a listener churning does not concern the event room.
    */
   'channel:listeners': event({ payload: ChannelListeners }),
+
+  /**
+   * To the socket holding the channel's speaker claim, like `channel:listeners` and for the
+   * same reason: the tally is addressed to the one person who can fix what it reports, and
+   * a listener has no business seeing what other listeners reported.
+   */
+  'channel:reports': event({ payload: ChannelReports }),
 
   /** Discard every held media identifier and renegotiate; the socket itself survives. */
   'media:reset': event({ payload: MediaReset }),
