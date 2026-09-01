@@ -79,6 +79,9 @@
   /* Phone only: the reports panel is absent until it has something to say, so it arrives
      rather than appearing. */
   --animate-report-in: report-in 260ms ease-out;
+  --animate-report-out: report-out 260ms ease-in forwards;
+  --animate-report-row-in: report-row-in 200ms ease-out;
+  --animate-report-row-out: report-row-out 200ms ease-in forwards;
 }
 
 /* The handoff's spacing and type ramp, as scale entries rather than call-site literals.
@@ -343,12 +346,53 @@
 
 @keyframes report-in {
   0% {
+    grid-template-rows: 0fr;
     opacity: 0;
     transform: translateY(-6px);
   }
   100% {
+    grid-template-rows: 1fr;
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes report-out {
+  0% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes report-row-in {
+  0% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  100% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes report-row-out {
+  0% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-4px);
   }
 }
 
@@ -375,7 +419,29 @@
   .animate-report-flash-b,
   .animate-report-in {
     animation: none;
+    grid-template-rows: 1fr;
     opacity: 1;
+    transform: translateY(0);
+  }
+
+  .animate-report-out {
+    animation: none;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(0);
+  }
+
+  .animate-report-row-in {
+    animation: none;
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .animate-report-row-out {
+    animation: none;
+    grid-template-rows: 0fr;
+    opacity: 0;
     transform: translateY(0);
   }
 }
