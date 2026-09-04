@@ -2,6 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Icon, type IconName } from '@/components/icon';
 import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import { VenueRow } from '@/components/venue-row';
@@ -88,8 +89,20 @@ export default function Home() {
       </Text>
 
       <View style={styles.actions}>
-        <HomeAction label="Scan QR code" emphasis="primary" onPress={() => router.push('/scan')} />
-        <HomeAction label="Paste a link" emphasis="secondary" onPress={pasteLink} />
+        <HomeAction
+          label="Scan QR code"
+          icon="qr"
+          iconSize={23}
+          emphasis="primary"
+          onPress={() => router.push('/scan')}
+        />
+        <HomeAction
+          label="Paste a link"
+          icon="link"
+          iconSize={20}
+          emphasis="secondary"
+          onPress={pasteLink}
+        />
       </View>
 
       {view.kind === 'empty' ? (
@@ -136,11 +149,13 @@ export default function Home() {
 
 type HomeActionProps = {
   label: string;
+  icon: IconName;
+  iconSize: number;
   emphasis: 'primary' | 'secondary';
   onPress: () => void;
 };
 
-function HomeAction({ label, emphasis, onPress }: HomeActionProps) {
+function HomeAction({ label, icon, iconSize, emphasis, onPress }: HomeActionProps) {
   const theme = useTheme();
   const primary = emphasis === 'primary';
 
@@ -160,6 +175,7 @@ function HomeAction({ label, emphasis, onPress }: HomeActionProps) {
           : null,
       ]}
     >
+      <Icon name={icon} size={iconSize} color={primary ? 'primaryForeground' : 'foreground'} />
       <Text variant="section" color={primary ? 'primaryForeground' : 'foreground'}>
         {label}
       </Text>
@@ -197,8 +213,10 @@ const styles = StyleSheet.create({
   },
   action: {
     borderRadius: radius.full,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.step * 2.5,
   },
   section: {
     gap: spacing.step * 2,
