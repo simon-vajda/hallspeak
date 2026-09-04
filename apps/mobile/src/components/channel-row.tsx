@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
 import { radius, spacing, typography } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -53,13 +54,11 @@ export function ChannelRow({ row, onOpen }: ChannelRowProps) {
       </View>
 
       <View style={[styles.target, row.online ? { backgroundColor: theme.colors.primary } : null]}>
-        <Text
-          variant="body"
+        <Icon
+          name={row.online ? 'play' : 'chev-r'}
+          size={markSize}
           color={row.online ? 'primaryForeground' : 'mutedForeground'}
-          style={{ fontSize: markSize, lineHeight: markSize * 1.3 }}
-        >
-          {row.online ? '▶' : '›'}
-        </Text>
+        />
       </View>
     </Pressable>
   );
