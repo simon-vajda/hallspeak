@@ -3,12 +3,14 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, type IconName } from '@/components/icon';
+import { LinkEntrySheet } from '@/components/link-entry-sheet';
 import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import { VenueRow } from '@/components/venue-row';
 import { elevation, radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 import { forgetEvent, readRememberedEvents, setEventPinned } from '@/venues/storage';
+import type { Venue } from '@/venues/types';
 import {
   buildVenueList,
   EMPTY_STATE,
@@ -23,6 +25,7 @@ export default function Home() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [view, setView] = useState<VenueListView>(EMPTY_VIEW);
+  const [linkEntryOpen, setLinkEntryOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     setView(buildVenueList(await readRememberedEvents()));
@@ -62,11 +65,12 @@ export default function Home() {
     [refresh],
   );
 
-  /**
-   * The shared link-entry sheet is the single thing this action needs and it does not exist
-   * yet; this is the one call site to point at it.
-   */
-  const pasteLink = useCallback(() => {}, []);
+  const pasteLink = useCallback(() => setLinkEntryOpen(true), []);
+
+  const openScanned = useCallback((venue: Venue) => {
+    setLinkEntryOpen(false);
+    router.push(`/events/${venue.host}/${venue.pin}`);
+  }, []);
 
   return (
     <ScrollView
@@ -143,6 +147,10 @@ export default function Home() {
       <Text variant="note" color="mutedForeground" style={styles.note}>
         {STORAGE_NOTE}
       </Text>
+
+      {linkEntryOpen ? (
+        <LinkEntrySheet onClose={() => setLinkEntryOpen(false)} onOpened={openScanned} />
+      ) : null}
     </ScrollView>
   );
 }
