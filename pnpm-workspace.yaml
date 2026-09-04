@@ -16,6 +16,13 @@ allowBuilds:
   esbuild: true
   better-sqlite3: false
   mediasoup: true
+  # jest-expo pulls both of these as optional native accelerators. @parcel/watcher
+  # is jest-haste-map's file watcher, which falls back to Node's own fs watching;
+  # unrs-resolver ships prebuilt N-API binaries as optionalDependencies and only
+  # compiles when none matches. Declining both keeps `pnpm install` exit 0 with no
+  # loss of behaviour.
+  '@parcel/watcher': false
+  unrs-resolver: false
 minimumReleaseAgeExclude:
   - '@tanstack/react-router@1.170.25'
   - '@tanstack/router-core@1.171.21'
