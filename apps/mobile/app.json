@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "LinguaCast",
+    "slug": "linguacast",
+    "scheme": "linguacast",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.linguacast.app",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.linguacast.app"
+    },
+    "plugins": ["expo-router", "expo-font", "expo-sqlite", "expo-system-ui", "expo-status-bar"]
+  }
+}
