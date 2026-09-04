@@ -1,4 +1,5 @@
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
 import { radius, spacing, typography } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -59,13 +60,11 @@ export function VenueRow({ row, onOpen, onTogglePinned, onRemove }: VenueRowProp
         onPress={() => onTogglePinned(row)}
         style={styles.star}
       >
-        <Text
-          variant="subtitle"
+        <Icon
+          name={row.pinned ? 'star-filled' : 'star'}
+          size={starSize}
           color={row.pinned ? 'primary' : 'mutedForeground'}
-          style={{ fontSize: starSize, lineHeight: starSize * 1.2 }}
-        >
-          {row.pinned ? '★' : '☆'}
-        </Text>
+        />
       </Pressable>
     </Pressable>
   );
