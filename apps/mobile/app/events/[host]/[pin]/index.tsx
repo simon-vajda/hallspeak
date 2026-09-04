@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChannelRow } from '@/components/channel-row';
+import { Icon, type IconName } from '@/components/icon';
 import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import { radius, spacing, typography } from '@/theme/tokens';
@@ -97,12 +98,12 @@ export default function EventScreen() {
       }
     >
       <View style={styles.bar}>
-        <RoundButton label="Go back" glyph="‹" onPress={goBack} />
+        <RoundButton label="Go back" icon="chev-l" onPress={goBack} />
         <View style={styles.spacer} />
         {pinned === null ? null : (
           <RoundButton
             label={pinned ? 'Unpin this event' : 'Pin this event'}
-            glyph={pinned ? '★' : '☆'}
+            icon={pinned ? 'star-filled' : 'star'}
             tint={pinned ? 'primary' : 'mutedForeground'}
             onPress={togglePinned}
           />
@@ -188,14 +189,13 @@ export default function EventScreen() {
 
 type RoundButtonProps = {
   label: string;
-  glyph: string;
+  icon: IconName;
   tint?: 'foreground' | 'mutedForeground' | 'primary';
   onPress: () => void;
 };
 
-function RoundButton({ label, glyph, tint = 'foreground', onPress }: RoundButtonProps) {
+function RoundButton({ label, icon, tint = 'foreground', onPress }: RoundButtonProps) {
   const theme = useTheme();
-  const glyphSize = typography.subtitle.fontSize;
 
   return (
     <Pressable
@@ -207,13 +207,7 @@ function RoundButton({ label, glyph, tint = 'foreground', onPress }: RoundButton
         { backgroundColor: pressed ? theme.colors.hoverOverlayStrong : theme.colors.secondary },
       ]}
     >
-      <Text
-        variant="subtitle"
-        color={tint}
-        style={{ fontSize: glyphSize, lineHeight: glyphSize * 1.2 }}
-      >
-        {glyph}
-      </Text>
+      <Icon name={icon} size={typography.subtitle.fontSize} color={tint} />
     </Pressable>
   );
 }
