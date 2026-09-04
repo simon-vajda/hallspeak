@@ -46,7 +46,10 @@ repo base's strictness flags — so `strict`, `verbatimModuleSyntax`, `isolatedM
 unlike `apps/web` there is no `baseUrl` to work around.
 
 Do not put comments in `tsconfig.json`: the Expo CLI rewrites its `include` array on every
-`expo start` and drops them. This section is where that reasoning lives instead.
+`expo start` and drops them. This section is where that reasoning lives instead. That rewrite
+also re-expands the file's arrays, which Biome then collapses — so after running Metro, expect
+`tsconfig.json` to show up as a formatting-only diff and settle again on the next
+`pnpm check:fix`.
 
 ## Tests
 
