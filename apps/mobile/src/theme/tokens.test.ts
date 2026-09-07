@@ -56,6 +56,73 @@ describe('tonal surfaces', () => {
   });
 });
 
+/**
+ * WCAG relative luminance, the one measure that says whether two surfaces are told apart. It
+ * lives in the test rather than beside the tokens because nothing in the app computes it: the
+ * palette is fixed, and this is the check that keeps it honest.
+ */
+function luminance(hex: string): number {
+  const channels = [1, 3, 5].map(
+    (offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255,
+  );
+
+  const [red = 0, green = 0, blue = 0] = channels.map((value) =>
+    value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4,
+  );
+
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrast(a: string, b: string): number {
+  const [lighter, darker] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * Light mode is where surfaces collapse: every one of them sits within a few points of white,
+ * so a step that reads clearly on a monitor disappears on a phone held in daylight. Dark mode
+ * separates for free, because the same step near black is a far larger ratio. The floors are
+ * therefore stated for light and checked in both schemes, which is what stops a future value
+ * from being picked against a dark background and inherited by the light one.
+ */
+describe('surface separation', () => {
+  const floors: [string, (p: Palette, s: Record<SurfaceLevel, string>) => [string, string]][] = [
+    ['a card against the page', (p) => [p.card, p.background]],
+    ['a tonal action against the page', (p) => [p.secondary, p.background]],
+    ['a hairline against the page', (p) => [p.border, p.background]],
+    ['a hairline against a card', (p) => [p.border, p.card]],
+    ['a selected row against a card', (p) => [p.primaryMuted, p.card]],
+    ['the first tonal step against the page', (p, s) => [s.base, p.background]],
+  ];
+
+  for (const [what, pick] of floors) {
+    it(`separates ${what}`, () => {
+      for (const scheme of ['light', 'dark'] as const) {
+        const [a, b] = pick(colors[scheme], surfaces[scheme]);
+
+        expect(`${scheme} ${contrast(a, b) >= 1.07}`).toBe(`${scheme} true`);
+      }
+    });
+  }
+
+  it('keeps each tonal step apart from the one below it', () => {
+    const rungs: [SurfaceLevel, SurfaceLevel][] = [
+      ['base', 'low'],
+      ['high', 'base'],
+      ['highest', 'high'],
+    ];
+
+    for (const scheme of ['light', 'dark'] as const) {
+      for (const [step, below] of rungs) {
+        const apart = contrast(surfaces[scheme][step], surfaces[scheme][below]) >= 1.03;
+
+        expect(`${scheme} ${step} ${apart}`).toBe(`${scheme} ${step} true`);
+      }
+    }
+  });
+});
+
 describe('type ramp', () => {
   it('specifies every step completely', () => {
     for (const [step, style] of Object.entries(type) as [TypeStep, (typeof type)[TypeStep]][]) {

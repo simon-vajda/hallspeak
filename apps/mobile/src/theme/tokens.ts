@@ -44,7 +44,10 @@ export type ColorScheme = 'light' | 'dark';
 export type Palette = Record<ColorRole, string>;
 
 const light: Palette = {
-  background: '#F7FAFA',
+  // The ground sits a clear step below white so that every surface above it separates by tone
+  // alone. Held nearer white it read as a fourth shade of the same near-white as the cards,
+  // the panels and the tonal actions, which on a phone in daylight is no separation at all.
+  background: '#F2F7F8',
   foreground: '#1B3149',
   card: '#FFFFFF',
   cardForeground: '#1B3149',
@@ -56,35 +59,35 @@ const light: Palette = {
   // The design's `color-mix(in oklch, primary 18%, …)` selection wash, resolved against the
   // surface a selected row actually sits on — `card` in each scheme. Teal, never `live-muted`:
   // a chosen row is something you pressed, not audio moving.
-  primaryMuted: '#D3F4F3',
+  primaryMuted: '#C3EDEC',
 
-  secondary: '#E7EFF0',
+  secondary: '#DCE7E9',
   secondaryForeground: '#1B3149',
-  muted: '#E7EFF0',
+  muted: '#DCE7E9',
   mutedForeground: '#4F6474',
-  accent: '#E7EFF0',
+  accent: '#DCE7E9',
   accentForeground: '#1B3149',
 
   destructive: '#B04437',
-  destructiveMuted: '#F9E7E4',
-  destructiveBorder: '#EDD1CC',
+  destructiveMuted: '#F7E3DF',
+  destructiveBorder: '#E9C8C2',
 
   // Amber is a wash and a figure, never a solid fill and never a dot: at signal strength it
-  // is 3.2:1 on `background`, enough for shapes and not for copy. `warnOnMuted` is the type
+  // is 3.1:1 on `background`, enough for shapes and not for copy. `warnOnMuted` is the type
   // colour that carries the words.
   warn: '#BE8104',
   warnOnMuted: '#7A5406',
-  warnMuted: '#FBF0D9',
-  warnBorder: '#EEDCB0',
+  warnMuted: '#F7E9C9',
+  warnBorder: '#E9D3A2',
   warnForeground: '#10283A',
 
-  border: '#D6E4E6',
-  input: '#D6E4E6',
+  border: '#C2D2D6',
+  input: '#C2D2D6',
   ring: '#0BC3BC',
 
   live: '#3AD3A6',
   liveOnMuted: '#0C6349',
-  liveMuted: '#D9F3EA',
+  liveMuted: '#BAE9D6',
 };
 
 const dark: Palette = {
@@ -219,9 +222,9 @@ export type SurfaceLevel = 'low' | 'base' | 'high' | 'highest';
  */
 const lightSurfaces: Record<SurfaceLevel, string> = {
   low: '#FFFFFF',
-  base: '#F1F7F8',
-  high: '#EAF2F4',
-  highest: '#E3EDEF',
+  base: '#DFEAEC',
+  high: '#D5E1E4',
+  highest: '#CBD9DC',
 };
 
 const darkSurfaces: Record<SurfaceLevel, string> = {
