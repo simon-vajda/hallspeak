@@ -9,6 +9,7 @@ import Flashlight from 'lucide-react-native/icons/flashlight';
 import FlashlightOff from 'lucide-react-native/icons/flashlight-off';
 import Headphones from 'lucide-react-native/icons/headphones';
 import Link from 'lucide-react-native/icons/link';
+import Link2Off from 'lucide-react-native/icons/link-2-off';
 import Pause from 'lucide-react-native/icons/pause';
 import Play from 'lucide-react-native/icons/play';
 import QrCode from 'lucide-react-native/icons/qr-code';
@@ -37,6 +38,7 @@ export const icons = {
   appearance: SunMoon,
   scan: QrCode,
   link: Link,
+  badLink: Link2Off,
   pin: Star,
   remove: Trash,
   forward: ChevronRight,

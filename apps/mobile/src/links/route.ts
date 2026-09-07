@@ -1,4 +1,6 @@
+import { PIN_PATTERN, SLUG_PATTERN } from '@linguacast/contract/patterns';
 import type { Href } from 'expo-router';
+import { isListenerHost } from './host';
 
 /**
  * Routes are addressed by host and PIN rather than by a stored history id: a scanned code
@@ -30,7 +32,7 @@ export function encodeHostSegment(host: string): string {
 /**
  * Typed routes cannot express a path built at runtime, and the alternative — pathname plus
  * params at every call site — would leave the builders above with no caller and the dotted
- * host untested. The cast is confined to these two lines.
+ * host untested. The cast is confined to the four builders below.
  */
 export function eventHref(host: string, pin: string): Href {
   return buildEventPath(host, pin) as Href;
@@ -48,8 +50,44 @@ export function reportSheetHref(host: string, pin: string, slug: string): Href {
   return `${buildChannelPath(host, pin, slug)}/report` as Href;
 }
 
-export function readHostSegment(segment: string | string[] | undefined): string {
+type RouteSegment = string | string[] | undefined;
+
+export type EventParams = { host: string; pin: string };
+export type ChannelParams = EventParams & { slug: string };
+
+function firstSegment(segment: RouteSegment): string {
   const raw = Array.isArray(segment) ? segment[0] : segment;
 
   return raw === undefined ? '' : raw;
+}
+
+/**
+ * The app registers a URL scheme, so these params arrive from outside it as well as from the
+ * link parser, and the parser's checks are no longer the only way in. Null is what keeps an
+ * unvalidated host out of `apiBaseUrl`, which interpolates the whole value into an origin.
+ */
+export function readEventParams(host: RouteSegment, pin: RouteSegment): EventParams | null {
+  const readHost = firstSegment(host).toLowerCase();
+  const readPin = firstSegment(pin);
+
+  if (!isListenerHost(readHost) || !PIN_PATTERN.test(readPin)) {
+    return null;
+  }
+
+  return { host: readHost, pin: readPin };
+}
+
+export function readChannelParams(
+  host: RouteSegment,
+  pin: RouteSegment,
+  slug: RouteSegment,
+): ChannelParams | null {
+  const event = readEventParams(host, pin);
+  const readSlug = firstSegment(slug);
+
+  if (event === null || !SLUG_PATTERN.test(readSlug)) {
+    return null;
+  }
+
+  return { ...event, slug: readSlug };
 }
