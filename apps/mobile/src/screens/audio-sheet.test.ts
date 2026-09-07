@@ -1,16 +1,42 @@
 import { describe, expect, it } from '@jest/globals';
-import { ALL_AUDIO_SHEET_COPY, DEFAULT_OUTPUTS, selectOutput, volumeLabel } from './audio-sheet';
+import {
+  ALL_AUDIO_SHEET_COPY,
+  DEFAULT_OUTPUTS,
+  DEFAULT_VOLUME_STATE,
+  isSilent,
+  selectOutput,
+  setVolume,
+  toggleMute,
+  volumeLabel,
+} from './audio-sheet';
 
 describe('volumeLabel', () => {
-  it('formats the ends and the middle of the range', () => {
-    expect(volumeLabel(0, false)).toBe('0%');
-    expect(volumeLabel(80, false)).toBe('80%');
-    expect(volumeLabel(100, false)).toBe('100%');
+  it('formats the range', () => {
+    expect(volumeLabel(setVolume(DEFAULT_VOLUME_STATE, 80))).toBe('80%');
+    expect(volumeLabel(setVolume(DEFAULT_VOLUME_STATE, 100))).toBe('100%');
   });
 
-  it('reads muted as muted rather than as zero per cent', () => {
-    expect(volumeLabel(80, true)).toBe('Muted');
-    expect(volumeLabel(0, true)).toBe('Muted');
+  it('reads zero as muted rather than as nought per cent', () => {
+    expect(volumeLabel(setVolume(DEFAULT_VOLUME_STATE, 0))).toBe('Muted');
+  });
+});
+
+describe('mute', () => {
+  it('is the same state as a slider dragged to the end', () => {
+    expect(isSilent(setVolume(DEFAULT_VOLUME_STATE, 0))).toBe(true);
+    expect(isSilent(toggleMute(DEFAULT_VOLUME_STATE))).toBe(true);
+  });
+
+  it('returns to where the volume was', () => {
+    const muted = toggleMute(setVolume(DEFAULT_VOLUME_STATE, 35));
+
+    expect(toggleMute(muted).volume).toBe(35);
+  });
+
+  it('does not adopt zero as the level to come back to', () => {
+    const muted = setVolume(DEFAULT_VOLUME_STATE, 0);
+
+    expect(toggleMute(muted).volume).toBe(DEFAULT_VOLUME_STATE.lastAudible);
   });
 });
 

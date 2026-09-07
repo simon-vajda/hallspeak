@@ -54,12 +54,21 @@ export function formatLastJoined(at: number, now: number = Date.now()): string {
     : `${date.getDate()} ${month} ${date.getFullYear()}`;
 }
 
-/** The host as a bare domain — no scheme, no path — beside the date the guest last opened it. */
-export function rowSubtitle(entry: HistoryEntry, now: number = Date.now()): string {
-  const date = formatLastJoined(entry.lastJoinedAt, now);
-  const host = displayHost(entry.host);
+/** The host as a bare domain: no scheme, no path. The design sets this line in a mono face. */
+export function rowHost(entry: HistoryEntry): string {
+  return displayHost(entry.host);
+}
 
-  return date === '' ? host : `${host} · ${date}`;
+/** When the guest was last here. The channel they chose is not remembered. */
+export function rowDetail(entry: HistoryEntry, now: number = Date.now()): string {
+  const date = formatLastJoined(entry.lastJoinedAt, now);
+
+  return date === '' ? '' : `Last joined ${date}`;
+}
+
+/** The whole row as one line, for the label a screen reader reads. */
+export function rowSubtitle(entry: HistoryEntry, now: number = Date.now()): string {
+  return [rowHost(entry), rowDetail(entry, now)].filter((part) => part).join(' · ');
 }
 
 export const EMPTY_HISTORY_TITLE = 'No events yet';

@@ -9,8 +9,6 @@ export type HistoryEntry = {
   host: string;
   pin: string;
   name: string;
-  /** The channel the guest last opened on this event, or null if they only saw the picker. */
-  lastSlug: string | null;
   lastJoinedAt: number;
   pinned: boolean;
   /** Set when opening the event failed. Only the guest ever removes a row (R12). */
@@ -40,7 +38,6 @@ function parseEntry(value: unknown): HistoryEntry | null {
     host: row.host,
     pin: row.pin,
     name: typeof row.name === 'string' ? row.name : '',
-    lastSlug: typeof row.lastSlug === 'string' ? row.lastSlug : null,
     lastJoinedAt: typeof row.lastJoinedAt === 'number' ? row.lastJoinedAt : 0,
     pinned: row.pinned === true,
     unavailable: row.unavailable === true,
@@ -77,9 +74,15 @@ export function serializeHistory(entries: HistoryEntry[]): string {
 
 export type RememberInput = HistoryKey & {
   name: string;
-  slug?: string | null;
   at: number;
 };
+
+/**
+ * The channel a guest chose is deliberately not remembered. A history row opens the event's
+ * picker, because the language someone wants is a property of this service rather than of
+ * the last one — and a row that jumped straight into a channel would make changing it a
+ * back-navigation.
+ */
 
 /** Writing an event down is also what clears an earlier failure to reach it (AE2). */
 export function remember(entries: HistoryEntry[], input: RememberInput): HistoryEntry[] {
@@ -92,7 +95,6 @@ export function remember(entries: HistoryEntry[], input: RememberInput): History
         host: input.host,
         pin: input.pin,
         name: input.name,
-        lastSlug: input.slug ?? null,
         lastJoinedAt: input.at,
         pinned: false,
         unavailable: false,
@@ -102,14 +104,7 @@ export function remember(entries: HistoryEntry[], input: RememberInput): History
 
   return entries.map((entry) =>
     isSame(entry, input)
-      ? {
-          ...entry,
-          name: input.name,
-          // A guest who reopens the picker has not left the channel they last chose.
-          lastSlug: input.slug === undefined ? entry.lastSlug : input.slug,
-          lastJoinedAt: input.at,
-          unavailable: false,
-        }
+      ? { ...entry, name: input.name, lastJoinedAt: input.at, unavailable: false }
       : entry,
   );
 }
@@ -128,6 +123,11 @@ export function setPinned(
   pinned: boolean,
 ): HistoryEntry[] {
   return entries.map((entry) => (isSame(entry, key) ? { ...entry, pinned } : entry));
+}
+
+/** Puts a removed row back exactly as it was, pin and last-joined date included. */
+export function restore(entries: HistoryEntry[], entry: HistoryEntry): HistoryEntry[] {
+  return entries.some((existing) => isSame(existing, entry)) ? entries : [...entries, entry];
 }
 
 export function remove(entries: HistoryEntry[], key: HistoryKey): HistoryEntry[] {

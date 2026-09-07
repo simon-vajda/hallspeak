@@ -1,15 +1,14 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { ActionButton } from '@/components/action-button';
-import { NativeTextInput } from '@/components/native-controls';
+import { LinkField } from '@/components/link-field';
 import { RefusalBanner } from '@/components/refusal-banner';
 import { SheetChrome } from '@/components/sheet-chrome';
 import { parseListenerLink } from '@/links/parse';
 import { channelHref, eventHref } from '@/links/route';
 import { refusalMessage } from '@/screens/scanner-state';
 import { useColors } from '@/theme/provider';
-import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 
 export default function LinkEntrySheet() {
@@ -38,16 +37,8 @@ export default function LinkEntrySheet() {
         LinguaCast event.
       </Text>
 
-      {/* The universal TextInput is driven by native observable state rather than React's
-          controlled-input model, so `value` is a starting value and onChangeText is the
-          source of truth. */}
-      <NativeTextInput
-        placeholder="https://…"
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="url"
-        returnKeyType="go"
-        style={{ ...styles.field, borderColor: colors.input }}
+      <LinkField
+        value={value}
         onChangeText={(next) => {
           setValue(next);
           setRefusal(null);
@@ -61,13 +52,3 @@ export default function LinkEntrySheet() {
     </SheetChrome>
   );
 }
-
-const styles = StyleSheet.create({
-  field: {
-    minHeight: spacing.pill,
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    borderRadius: radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-});

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -11,15 +11,22 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useColors } from '@/theme/provider';
 import { motion, radius } from '@/theme/tokens';
-import { type } from '@/theme/typography';
-import { ICON_STROKE_LARGE, Icon } from './icon';
+import { Icon } from './icon';
 import { ringFrame } from './motion';
 
-const DIAMETER = 176;
+// The design draws 172 on iOS and 180 on Android, each sized to its own platform's frame,
+// inside a stage that leaves room for the rings to expand into.
+const DIAMETER = Platform.OS === 'ios' ? 172 : 180;
+const RING_WIDTH = Platform.OS === 'ios' ? 2 : 3;
+const STAGE = DIAMETER + 40;
+const GLYPH = Platform.OS === 'ios' ? 54 : 58;
 
 /**
  * The round control at the centre of the Channel screen, built in plain React Native with
  * Reanimated because `@expo/ui` has no vector or animation surface.
+ *
+ * It carries the glyph alone, as the design draws it — the word belongs to the screen reader,
+ * which is why `label` is the accessibility label rather than visible text.
  *
  * `rings` means audio is moving, not that a socket is open. This run ships no audio path, so
  * the target is deliberately inert: it renders, it answers a press with the platform's own
@@ -48,6 +55,7 @@ export function ListenTarget({
       ) : null}
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={label}
         accessibilityState={{ disabled }}
         disabled={disabled}
         onPress={onPress}
@@ -60,15 +68,7 @@ export function ListenTarget({
           },
         ]}
       >
-        <Icon
-          name="listen"
-          size={39}
-          color={colors.primaryForeground}
-          strokeWidth={ICON_STROKE_LARGE}
-        />
-        <Text style={[type.section, styles.label, { color: colors.primaryForeground }]}>
-          {label}
-        </Text>
+        <Icon name="listen" size={GLYPH} color={colors.primaryForeground} filled />
       </Pressable>
     </View>
   );
@@ -105,13 +105,13 @@ function Ring({ color, delayed = false }: { color: string; delayed?: boolean }) 
 }
 
 const styles = StyleSheet.create({
-  stage: { width: DIAMETER, height: DIAMETER, alignItems: 'center', justifyContent: 'center' },
+  stage: { width: STAGE, height: STAGE, alignItems: 'center', justifyContent: 'center' },
   ring: {
     position: 'absolute',
     width: DIAMETER,
     height: DIAMETER,
     borderRadius: radius.full,
-    borderWidth: 2,
+    borderWidth: RING_WIDTH,
   },
   target: {
     width: DIAMETER,
@@ -119,7 +119,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
   },
-  label: { includeFontPadding: false },
 });

@@ -62,7 +62,7 @@ export default function EventScreen() {
         <ActionButton
           label="Back to your events"
           icon="back"
-          variant="outlined"
+          variant="tonal"
           onPress={() => router.dismissTo('/')}
         />
       </ErrorState>

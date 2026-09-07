@@ -1,17 +1,38 @@
 import { StyleSheet, View } from 'react-native';
+import { useColors } from '@/theme/provider';
+
+/** The design's waveform silhouette: tallest in the middle, tapering to both ends. */
+const BARS = [5, 8, 11, 14, 16, 14, 11, 8, 5];
 
 /**
- * The slot the connection line will occupy. Its four states on the web run 17px to 47px
- * tall, so the height is reserved now: without it, a later audio round would move everything
- * below this line by 30px the moment audio starts.
+ * The nine-bar link indicator. `filled` is how many bars the link is carrying, and it is 0
+ * in this run for every state: the bars are graded from WebRTC statistics on the web, and
+ * this app has no media leg behind them yet.
  *
- * It is empty rather than a placeholder shape. There is no media leg behind it in this run,
- * and a drawn waveform with nothing feeding it would be a claim.
+ * The slot is reserved at the design's height either way, so the audio round that fills
+ * these in moves nothing below them.
  */
-export function ConnectionLine() {
-  return <View style={styles.slot} />;
+export function ConnectionLine({ filled = 0 }: { filled?: number }) {
+  const colors = useColors();
+
+  return (
+    <View style={styles.row}>
+      {BARS.map((height, index) => (
+        <View
+          // The silhouette is symmetric, so heights repeat and the index is the identity.
+          // biome-ignore lint/suspicious/noArrayIndexKey: a fixed-length static bar row.
+          key={index}
+          style={[
+            styles.bar,
+            { height, backgroundColor: index < filled ? colors.live : colors.border },
+          ]}
+        />
+      ))}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  slot: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 16 },
+  bar: { width: 3, borderRadius: 2 },
 });

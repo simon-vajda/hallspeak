@@ -8,6 +8,7 @@ import {
   type RememberInput,
   remember,
   remove,
+  restore,
   serializeHistory,
   setPinned,
 } from './history';
@@ -41,6 +42,10 @@ export function markEventUnavailable(key: HistoryKey): HistoryEntry[] {
 
 export function setEventPinned(key: HistoryKey, pinned: boolean): HistoryEntry[] {
   return write(setPinned(listHistorySync(), key, pinned));
+}
+
+export function restoreEvent(entry: HistoryEntry): HistoryEntry[] {
+  return write(restore(listHistorySync(), entry));
 }
 
 export function removeEvent(key: HistoryKey): HistoryEntry[] {

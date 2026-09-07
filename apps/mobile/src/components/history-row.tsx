@@ -1,15 +1,21 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { HistoryEntry } from '@/history/history';
-import { pinActionLabel, removeActionLabel, rowSubtitle } from '@/screens/home-list';
+import {
+  pinActionLabel,
+  removeActionLabel,
+  rowDetail,
+  rowHost,
+  rowSubtitle,
+} from '@/screens/home-list';
 import { useColors } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
-import { type } from '@/theme/typography';
+import { MONO_FONT, type } from '@/theme/typography';
 import { Icon } from './icon';
 
 /**
- * Pin and Remove are accessibility actions as well as gestures. Neither a swipe nor a long
- * press is reachable under VoiceOver or TalkBack, so without these the two actions would be
- * unavailable to a screen-reader user rather than merely awkward. The visual row is unchanged.
+ * The star is the pin control, reachable by tap. A long press works too, but a gesture is
+ * not an affordance — and neither a long press nor a swipe is reachable under VoiceOver or
+ * TalkBack, which is why Remove is also an accessibility action on the row.
  */
 export function HistoryRow({
   entry,
@@ -45,11 +51,7 @@ export function HistoryRow({
       onLongPress={onTogglePin}
       style={({ pressed }) => [
         styles.row,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          opacity: pressed ? 0.9 : 1,
-        },
+        { backgroundColor: colors.card, opacity: pressed ? 0.92 : 1 },
       ]}
     >
       <View style={styles.text}>
@@ -59,8 +61,11 @@ export function HistoryRow({
         >
           {entry.name}
         </Text>
+        <Text numberOfLines={1} style={[styles.host, { color: colors.mutedForeground }]}>
+          {rowHost(entry)}
+        </Text>
         <Text numberOfLines={1} style={[type.meta, { color: colors.mutedForeground }]}>
-          {rowSubtitle(entry)}
+          {rowDetail(entry)}
         </Text>
         {muted ? (
           <View style={styles.unavailable}>
@@ -71,8 +76,22 @@ export function HistoryRow({
           </View>
         ) : null}
       </View>
-      {entry.pinned ? <Icon name="pin" size={16} color={colors.mutedForeground} /> : null}
-      <Icon name="forward" size={18} color={colors.mutedForeground} />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={pinActionLabel(entry)}
+        accessibilityState={{ selected: entry.pinned }}
+        onPress={onTogglePin}
+        hitSlop={10}
+        style={styles.star}
+      >
+        <Icon
+          name="pin"
+          size={19}
+          filled={entry.pinned}
+          strokeWidth={entry.pinned ? 1.6 : 1.8}
+          color={entry.pinned ? colors.primary : colors.mutedForeground}
+        />
+      </Pressable>
     </Pressable>
   );
 }
@@ -81,13 +100,19 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 13,
     minHeight: spacing.touch + 20,
-    paddingHorizontal: spacing.panel,
-    paddingVertical: 14,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
   },
   text: { flex: 1, gap: 3 },
+  host: { fontFamily: MONO_FONT, fontSize: 12, lineHeight: 16 },
+  star: {
+    width: spacing.touch,
+    height: spacing.touch,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.full,
+  },
   unavailable: { flexDirection: 'row', alignItems: 'center', gap: 5 },
 });
