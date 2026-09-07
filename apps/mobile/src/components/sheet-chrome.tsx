@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useColors } from '@/theme/provider';
 import { spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
@@ -7,8 +7,12 @@ import { Icon } from './icon';
 
 /**
  * Every sheet's title and dismiss control, rendered as content. Android caps a form sheet at
- * three detents and renders neither a header nor a nested stack inside one, so a sheet that
- * relied on native chrome would have a title on iOS and none on Android.
+ * three detents and renders neither a header nor a nested stack inside one, so a sheet
+ * relying on native chrome would have a title on iOS and none on Android.
+ *
+ * The header and the body share one scroll container. A `ScrollView` nested beside the
+ * header lays out over it inside a form sheet, which supplies no bounded height to resolve
+ * that against.
  */
 export function SheetChrome({
   title,
@@ -24,7 +28,11 @@ export function SheetChrome({
   const colors = useColors();
 
   return (
-    <View style={[styles.sheet, { backgroundColor: colors.background }]}>
+    <ScrollView
+      style={{ backgroundColor: colors.background }}
+      contentContainerStyle={styles.sheet}
+      contentInsetAdjustmentBehavior="never"
+    >
       <View style={styles.header}>
         <View style={styles.titles}>
           {eyebrow ? (
@@ -42,12 +50,12 @@ export function SheetChrome({
         </Pressable>
       </View>
       {children}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  sheet: { flex: 1, paddingHorizontal: spacing.gutter, paddingTop: 18, gap: 16 },
+  sheet: { paddingHorizontal: spacing.gutter, paddingTop: 18, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   titles: { flex: 1, gap: 2 },
   close: {
