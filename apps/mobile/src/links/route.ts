@@ -40,6 +40,14 @@ export function channelHref(host: string, pin: string, slug: string): Href {
   return buildChannelPath(host, pin, slug) as Href;
 }
 
+export function audioSheetHref(host: string, pin: string, slug: string): Href {
+  return `${buildChannelPath(host, pin, slug)}/audio` as Href;
+}
+
+export function reportSheetHref(host: string, pin: string, slug: string): Href {
+  return `${buildChannelPath(host, pin, slug)}/report` as Href;
+}
+
 export function readHostSegment(segment: string | string[] | undefined): string {
   const raw = Array.isArray(segment) ? segment[0] : segment;
 

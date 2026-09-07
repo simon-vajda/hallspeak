@@ -55,7 +55,7 @@ export function ListenTarget({
           styles.target,
           {
             backgroundColor: colors.primary,
-            opacity: disabled ? 0.5 : 1,
+            opacity: disabled ? 0.7 : 1,
             transform: [{ scale: pressed ? 0.96 : 1 }],
           },
         ]}
