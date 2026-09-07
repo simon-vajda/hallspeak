@@ -1,11 +1,7 @@
 /**
- * The design system's tokens, transcribed from
- * `docs/design/mobile-app/_ds/.../tokens/{colors,layout,motion}.css`.
- *
- * Colours are hex because React Native supports neither `oklch()` nor `color-mix()`. Each
- * value is the hex the design file records beside its `oklch()`; the two exceptions are
- * noted where they occur. The hover overlays and `primaryHover` are deliberately absent:
- * they exist for a pointer, and a touch device's pressed state is `Pressable`'s job.
+ * Colours are hex because React Native supports neither `oklch()` nor `color-mix()`. The
+ * hover overlays and `primaryHover` are deliberately absent: they exist for a pointer, and
+ * a touch device's pressed state is `Pressable`'s job.
  *
  * Teal (`primary`) marks what can be pressed. Green (`live`) marks that audio is moving.
  * They are near-identical in greyscale, so shape and position carry the distinction and the
