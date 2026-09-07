@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -18,6 +18,7 @@ import { Icon } from '@/components/icon';
 import { ListenTarget } from '@/components/listen-target';
 import { LiveBadge } from '@/components/live-badge';
 import { ScreenGlow } from '@/components/screen-glow';
+import { ScreenHeader } from '@/components/screen-header';
 import { rememberEvent } from '@/history/store';
 import { audioSheetHref, readHostSegment, reportSheetHref } from '@/links/route';
 import {
@@ -27,6 +28,7 @@ import {
   LISTEN_LABEL,
   LISTEN_UNAVAILABLE_NOTE,
   REPORT_ACTION_LABEL,
+  STOP_LABEL,
 } from '@/screens/channel-copy';
 import { channelReading, eventErrorMessage } from '@/screens/event-view';
 import { useColors } from '@/theme/provider';
@@ -46,12 +48,25 @@ export default function ChannelScreen() {
   const query = useQuery(channelQueryOptions(host, pin, slug));
   const view = query.data;
 
+  // Whether this guest has asked for the channel's audio. It is intent and nothing more —
+  // no consumer exists to derive it from yet — which is why the target's note still says
+  // listening is unavailable, and why a channel leaving the air clears it below.
+  const [listening, setListening] = useState(false);
+
   // Reaching a channel writes its event down; the channel itself is not remembered.
   useEffect(() => {
     if (view) {
       rememberEvent({ host, pin, name: view.event.name, at: Date.now() });
     }
   }, [view, host, pin]);
+
+  // A refresh that finds the channel off the air ends the intent with it, so the rings never
+  // outlive the broadcast they were asked for.
+  useEffect(() => {
+    if (view && !view.channel.online) {
+      setListening(false);
+    }
+  }, [view]);
 
   if (query.isError) {
     const message = eventErrorMessage(query.error);
@@ -68,71 +83,76 @@ export default function ChannelScreen() {
 
   const reading = channelReading(view?.channel.online, query.isSuccess);
   const copy = channelCopy(reading);
+  const onAir = reading === 'on-air';
 
   return (
-    <>
-      <Stack.Screen options={{ headerTitle: view?.event.name ?? '' }} />
-      <View style={styles.screen}>
-        <ScreenGlow variant="channel" />
-        {/* The stage takes the height the screen has: the target sits in the middle of it,
-            and the two actions stay at the thumb line however tall the phone is. */}
-        <ScrollView
-          contentContainerStyle={styles.stage}
-          contentInsetAdjustmentBehavior="never"
-          refreshControl={
-            <RefreshControl
-              refreshing={query.isRefetching}
-              onRefresh={() => void query.refetch()}
-            />
-          }
-        >
-          <View style={styles.badgeSlot}>
-            {copy.badge ? (
-              <LiveBadge live={reading === 'on-air'} label={copy.badge} />
-            ) : (
-              <Text style={[type.meta, { color: colors.mutedForeground }]}>
-                {copy.accessibleBadge}
-              </Text>
-            )}
-          </View>
+    <View style={styles.screen}>
+      <ScreenGlow variant="channel" />
+      <ScreenHeader title={view?.event.name} />
+      {/* The stage takes the height the screen has: the target sits in the middle of it,
+          and the two actions stay at the thumb line however tall the phone is. */}
+      <ScrollView
+        contentContainerStyle={styles.stage}
+        contentInsetAdjustmentBehavior="never"
+        refreshControl={
+          <RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} />
+        }
+      >
+        <View style={styles.badgeSlot}>
+          {copy.badge ? (
+            <LiveBadge live={reading === 'on-air'} label={copy.badge} />
+          ) : (
+            <Text style={[type.meta, { color: colors.mutedForeground }]}>
+              {copy.accessibleBadge}
+            </Text>
+          )}
+        </View>
 
-          <Text numberOfLines={2} style={[type.hero, styles.centred, { color: colors.foreground }]}>
-            {view?.channel.name ?? ' '}
-          </Text>
+        <Text numberOfLines={2} style={[type.hero, styles.centred, { color: colors.foreground }]}>
+          {view?.channel.name ?? ' '}
+        </Text>
 
-          <ListenTarget label={LISTEN_LABEL} disabled />
+        <ListenTarget
+          label={listening ? STOP_LABEL : LISTEN_LABEL}
+          active={listening}
+          rings={listening}
+          disabled={!onAir}
+          onPress={() => setListening((was) => !was)}
+        />
 
-          <ConnectionLine />
+        <ConnectionLine />
 
-          <Text style={[type.body, styles.note, { color: colors.mutedForeground }]}>
-            {copy.note}
-          </Text>
-          <Text style={[type.meta, styles.note, { color: colors.mutedForeground }]}>
-            {LISTEN_UNAVAILABLE_NOTE}
-          </Text>
-        </ScrollView>
+        <Text style={[type.body, styles.note, { color: colors.mutedForeground }]}>{copy.note}</Text>
+        <Text style={[type.meta, styles.note, { color: colors.mutedForeground }]}>
+          {LISTEN_UNAVAILABLE_NOTE}
+        </Text>
+      </ScrollView>
 
-        {/* Two unrelated jobs, so a wide surface and a separate one rather than a stack of
-            equal buttons: the audio control reads its own state in its face. */}
-        <View style={styles.thumbLine}>
-          <GlassSurface interactive raised style={styles.audioSurface}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={AUDIO_ACTION_LABEL}
-              accessibilityHint={AUDIO_ACTION_DETAIL}
-              onPress={() => router.push(audioSheetHref(host, pin, slug))}
-              style={styles.audioPress}
+      {/* Two unrelated jobs, so a wide surface and a separate one rather than a stack of
+          equal buttons: the audio control reads its own state in its face. */}
+      <View style={styles.thumbLine}>
+        <GlassSurface interactive raised style={styles.audioSurface}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={AUDIO_ACTION_LABEL}
+            accessibilityHint={AUDIO_ACTION_DETAIL}
+            onPress={() => router.push(audioSheetHref(host, pin, slug))}
+            style={styles.audioPress}
+          >
+            <Icon name="headphones" size={20} color={colors.foreground} strokeWidth={2.25} />
+            <Text
+              numberOfLines={1}
+              style={[type.section, styles.audioLabel, { color: colors.foreground }]}
             >
-              <Icon name="headphones" size={20} color={colors.foreground} strokeWidth={2.25} />
-              <Text
-                numberOfLines={1}
-                style={[type.section, styles.audioLabel, { color: colors.foreground }]}
-              >
-                {AUDIO_ACTION_DETAIL}
-              </Text>
-            </Pressable>
-          </GlassSurface>
+              {AUDIO_ACTION_DETAIL}
+            </Text>
+          </Pressable>
+        </GlassSurface>
 
+        {/* Only a listener may report a problem: someone who has not pressed Listen has
+            nothing to describe, and the five categories all name a fault in audio they
+            would be receiving. */}
+        {listening ? (
           <GlassSurface interactive raised style={IOS ? styles.reportRound : styles.reportSquircle}>
             <Pressable
               accessibilityRole="button"
@@ -143,9 +163,9 @@ export default function ChannelScreen() {
               <Icon name="report" size={21} color={colors.foreground} strokeWidth={2.1} />
             </Pressable>
           </GlassSurface>
-        </View>
+        ) : null}
       </View>
-    </>
+    </View>
   );
 }
 

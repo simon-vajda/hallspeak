@@ -2,12 +2,14 @@
 // Metro would carry all of them into the bundle.
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import Check from 'lucide-react-native/icons/check';
+import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import CircleAlert from 'lucide-react-native/icons/circle-alert';
 import Flashlight from 'lucide-react-native/icons/flashlight';
 import FlashlightOff from 'lucide-react-native/icons/flashlight-off';
 import Headphones from 'lucide-react-native/icons/headphones';
 import Link from 'lucide-react-native/icons/link';
+import Pause from 'lucide-react-native/icons/pause';
 import Play from 'lucide-react-native/icons/play';
 import QrCode from 'lucide-react-native/icons/qr-code';
 import RefreshCw from 'lucide-react-native/icons/refresh-cw';
@@ -37,11 +39,13 @@ export const icons = {
   remove: Trash,
   forward: ChevronRight,
   back: ArrowLeft,
+  backChevron: ChevronLeft,
   close: X,
   torchOn: Flashlight,
   torchOff: FlashlightOff,
   headphones: Headphones,
   listen: Play,
+  stop: Pause,
   audio: SlidersHorizontal,
   report: CircleAlert,
   volume: Volume2,

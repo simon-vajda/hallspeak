@@ -40,8 +40,12 @@ export function channelCopy(reading: ChannelReading): ChannelCopy {
 }
 
 export const LISTEN_LABEL = 'Listen';
+export const STOP_LABEL = 'Stop listening';
 
-/** The target is present and inert in this run; saying so is better than a dead control. */
+/**
+ * The target answers a press in this run but no audio path exists behind it, so the note
+ * stays and stays literal: pressing Listen is an intent, not a stream.
+ */
 export const LISTEN_UNAVAILABLE_NOTE = 'Listening is not available in this version.';
 
 export const AUDIO_ACTION_LABEL = 'Audio';
@@ -54,6 +58,7 @@ export const ALL_CHANNEL_COPY: string[] = [
     [badge, accessibleBadge, note].filter((value): value is string => value !== null),
   ),
   LISTEN_LABEL,
+  STOP_LABEL,
   LISTEN_UNAVAILABLE_NOTE,
   AUDIO_ACTION_LABEL,
   AUDIO_ACTION_DETAIL,

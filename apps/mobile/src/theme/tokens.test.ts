@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
-import { colors, type Palette } from './tokens';
+import { connectedListShape } from './shape';
+import { colors, type Palette, radius, withAlpha } from './tokens';
 import { type TypeStep, type } from './typography';
 
 const HEX = /^#[0-9A-F]{6}([0-9A-F]{2})?$/;
@@ -44,5 +45,35 @@ describe('type ramp', () => {
 
       expect(`${step} ${specified}`).toBe(`${step} true`);
     }
+  });
+});
+
+describe('withAlpha', () => {
+  it('appends the alpha byte React Native reads, clamping out of range', () => {
+    expect(withAlpha('#3AD3A6', 1)).toBe('#3AD3A6ff');
+    expect(withAlpha('#3AD3A6', 0)).toBe('#3AD3A600');
+    expect(withAlpha('#3AD3A6', 0.14)).toBe('#3AD3A624');
+    expect(withAlpha('#3AD3A6', 2)).toBe('#3AD3A6ff');
+    expect(withAlpha('#3AD3A6', -1)).toBe('#3AD3A600');
+  });
+});
+
+describe('connectedListShape', () => {
+  it('rounds only the outer corners of the group', () => {
+    const [first, middle, last] = [0, 1, 2].map((index) => connectedListShape(index, 3));
+
+    expect(first?.borderTopLeftRadius).toBe(radius.xl);
+    expect(first?.borderBottomLeftRadius).toBe(6);
+    expect(middle?.borderTopLeftRadius).toBe(6);
+    expect(middle?.borderBottomRightRadius).toBe(6);
+    expect(last?.borderBottomRightRadius).toBe(radius.xl);
+    expect(last?.borderTopRightRadius).toBe(6);
+  });
+
+  it('rounds a lone row on both ends', () => {
+    const only = connectedListShape(0, 1);
+
+    expect(only.borderTopLeftRadius).toBe(radius.xl);
+    expect(only.borderBottomRightRadius).toBe(radius.xl);
   });
 });

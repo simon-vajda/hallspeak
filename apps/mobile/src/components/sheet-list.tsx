@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useColors } from '@/theme/provider';
+import { connectedListShape } from '@/theme/shape';
 import { radius } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 
@@ -102,7 +103,9 @@ export function SheetOption({
       onPress={onPress}
       style={({ pressed }) => [
         styles.option,
-        ANDROID ? androidShape(index, count) : [styles.iosOption, { borderColor: colors.border }],
+        ANDROID
+          ? connectedListShape(index, count)
+          : [styles.iosOption, { borderColor: colors.border }],
         { backgroundColor: background, opacity: disabled ? 0.5 : pressed ? 0.92 : 1 },
       ]}
     >
@@ -127,17 +130,6 @@ export function SheetOption({
 }
 
 /** Material's connected list: the group's outer corners are round, its joins nearly square. */
-function androidShape(index: number, count: number) {
-  const end = radius.xl;
-  const join = 6;
-
-  return {
-    borderTopLeftRadius: index === 0 ? end : join,
-    borderTopRightRadius: index === 0 ? end : join,
-    borderBottomLeftRadius: index === count - 1 ? end : join,
-    borderBottomRightRadius: index === count - 1 ? end : join,
-  };
-}
 
 const styles = StyleSheet.create({
   card: { borderRadius: radius.lg, paddingHorizontal: 18, paddingVertical: 15, gap: 11 },
