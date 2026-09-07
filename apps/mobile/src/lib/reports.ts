@@ -19,6 +19,10 @@ export const REPORT_CATEGORIES: { key: ReportCategory; label: string }[] = [
   { key: 'silent', label: 'No audio at all' },
 ];
 
+export function reportLabel(category: ReportCategory): string {
+  return REPORT_CATEGORIES.find((entry) => entry.key === category)?.label ?? category;
+}
+
 /** Seconds while they read as a moment, minutes once they do not. */
 export function reportAgeLabel(ageMs: number): string {
   const seconds = Math.floor(Math.max(ageMs, 0) / 1000);

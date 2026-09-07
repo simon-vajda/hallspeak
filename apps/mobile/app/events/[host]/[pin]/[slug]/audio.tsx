@@ -4,6 +4,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '@/components/icon';
 import { NativeSlider } from '@/components/native-controls';
 import { SheetChrome } from '@/components/sheet-chrome';
+import { SheetOption, SheetOptions } from '@/components/sheet-list';
 import {
   AUDIO_SHEET_TITLE,
   AUDIO_SHEET_UNAVAILABLE_NOTE,
@@ -42,65 +43,37 @@ export default function AudioSheet() {
         <Text style={[type.label, { color: colors.mutedForeground }]}>
           {OUTPUT_SECTION_TITLE.toUpperCase()}
         </Text>
-
-        {/* Android's list is Material's connected group — separate shapes with a 3px gap,
-            the ends rounded and the joins square. iOS's is one inset card with dividers. */}
-        <View
-          style={ANDROID ? styles.androidGroup : [styles.iosGroup, { borderColor: colors.border }]}
-        >
+        <SheetOptions>
           {outputs.map((output, index) => (
-            <Pressable
+            <SheetOption
               key={output.id}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: output.selected }}
+              index={index}
+              count={outputs.length}
+              label={output.label}
+              selected={output.selected}
+              leading={
+                ANDROID ? (
+                  <View
+                    style={[
+                      styles.radio,
+                      { borderColor: output.selected ? colors.primary : colors.mutedForeground },
+                    ]}
+                  >
+                    {output.selected ? (
+                      <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
+                    ) : null}
+                  </View>
+                ) : undefined
+              }
+              trailing={
+                !ANDROID && output.selected ? (
+                  <Icon name="confirm" size={18} color={colors.primary} strokeWidth={2.5} />
+                ) : undefined
+              }
               onPress={() => setOutputs(selectOutput(outputs, output.id))}
-              style={[
-                styles.row,
-                ANDROID
-                  ? [
-                      androidRowShape(index, outputs.length),
-                      {
-                        backgroundColor: output.selected ? colors.primaryMuted : colors.card,
-                      },
-                    ]
-                  : [
-                      index > 0 && {
-                        borderTopWidth: StyleSheet.hairlineWidth,
-                        borderTopColor: colors.border,
-                      },
-                      output.selected && { backgroundColor: colors.primaryMuted },
-                    ],
-              ]}
-            >
-              {ANDROID ? (
-                <View
-                  style={[
-                    styles.radio,
-                    { borderColor: output.selected ? colors.primary : colors.mutedForeground },
-                  ]}
-                >
-                  {output.selected ? (
-                    <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
-                  ) : null}
-                </View>
-              ) : null}
-              <Text
-                style={[
-                  type.bodyLg,
-                  styles.rowLabel,
-                  output.selected && styles.rowLabelSelected,
-                  { color: colors.foreground },
-                ]}
-              >
-                {output.label}
-              </Text>
-              {!ANDROID && output.selected ? (
-                <Icon name="confirm" size={18} color={colors.primary} strokeWidth={2.5} />
-              ) : null}
-            </Pressable>
+            />
           ))}
-        </View>
-
+        </SheetOptions>
         <Text style={[type.note, { color: colors.mutedForeground }]}>{OUTPUT_NOTE}</Text>
       </View>
 
@@ -120,7 +93,7 @@ export default function AudioSheet() {
             accessibilityLabel={silent ? UNMUTE_LABEL : MUTE_LABEL}
             accessibilityState={{ selected: silent }}
             onPress={() => setVolumeState(toggleMute(volume))}
-            style={[styles.speaker, { backgroundColor: ANDROID ? colors.card : colors.secondary }]}
+            style={[styles.speaker, { backgroundColor: colors.card }]}
           >
             <Icon
               name={silent ? 'muted' : 'volume'}
@@ -148,34 +121,8 @@ export default function AudioSheet() {
   );
 }
 
-/** Material's connected list: the group's outer corners are round, its joins nearly square. */
-function androidRowShape(index: number, count: number) {
-  const end = radius.xl;
-  const join = 6;
-
-  return {
-    borderTopLeftRadius: index === 0 ? end : join,
-    borderTopRightRadius: index === 0 ? end : join,
-    borderBottomLeftRadius: index === count - 1 ? end : join,
-    borderBottomRightRadius: index === count - 1 ? end : join,
-  };
-}
-
 const styles = StyleSheet.create({
   section: { gap: 10 },
-  androidGroup: { gap: 3 },
-  iosGroup: {
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    minHeight: ANDROID ? 60 : 52,
-    paddingHorizontal: 20,
-  },
   radio: {
     width: 20,
     height: 20,
@@ -185,8 +132,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioDot: { width: 10, height: 10, borderRadius: radius.full },
-  rowLabel: { flex: 1 },
-  rowLabelSelected: { fontWeight: '600' },
   volumeHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   readout: { fontFamily: MONO_FONT, fontSize: 12, fontWeight: '600' },
   volumeRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },

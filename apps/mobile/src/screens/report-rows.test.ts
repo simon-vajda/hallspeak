@@ -2,11 +2,17 @@ import { describe, expect, it } from '@jest/globals';
 import { REPORT_CATEGORIES } from '../lib/reports';
 import {
   ALL_REPORT_SHEET_COPY,
+  hasOpenReport,
+  IDLE_SEND,
+  isBusy,
   LOW_VOLUME,
   REPORT_DISABLE_MS,
   RESOLUTION_LABEL,
   reportRows,
+  reportSheetTitle,
+  STILL_A_PROBLEM_TITLE,
   selfCheck,
+  WHAT_IS_WRONG_TITLE,
 } from './report-rows';
 
 const rows = (overrides: Parameters<typeof reportRows>[0]) => reportRows(overrides);
@@ -102,5 +108,35 @@ describe('report sheet copy', () => {
         );
       }
     }
+  });
+});
+
+describe('the positive signal', () => {
+  it('appears only once this connection has an open report', () => {
+    expect(hasOpenReport(IDLE_SEND, {})).toBe(false);
+    expect(hasOpenReport(IDLE_SEND, { quiet: 1 })).toBe(true);
+  });
+
+  it('is gone again once the guest says it is fixed', () => {
+    expect(hasOpenReport({ kind: 'resolved' }, { quiet: 1 })).toBe(false);
+  });
+
+  it('renames the sheet and the category heading while a report is open', () => {
+    expect(reportSheetTitle(false)).toBe('Report a problem');
+    expect(reportSheetTitle(true)).toBe('Update report');
+    expect(STILL_A_PROBLEM_TITLE).not.toBe(WHAT_IS_WRONG_TITLE);
+  });
+
+  it('is not a sixth category', () => {
+    expect(REPORT_CATEGORIES.map((entry) => entry.label)).not.toContain(RESOLUTION_LABEL);
+  });
+});
+
+describe('isBusy', () => {
+  it('holds every row inert while a send or a resolve is in flight', () => {
+    expect(isBusy({ kind: 'sending', category: 'quiet' })).toBe(true);
+    expect(isBusy({ kind: 'resolving' })).toBe(true);
+    expect(isBusy(IDLE_SEND)).toBe(false);
+    expect(isBusy({ kind: 'resolved' })).toBe(false);
   });
 });
