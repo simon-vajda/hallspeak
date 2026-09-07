@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   audioLabel: { flex: 1, minWidth: 0 },
-  reportRound: { width: 56, height: 56, borderRadius: radius.full },
+  reportRound: { width: 56, height: 56, borderRadius: 28 },
   reportSquircle: { width: 56, height: 56, borderRadius: 18 },
   reportPress: {
     width: 56,

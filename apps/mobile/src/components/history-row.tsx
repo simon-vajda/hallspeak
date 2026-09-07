@@ -8,7 +8,7 @@ import {
   rowSubtitle,
 } from '@/screens/home-list';
 import { useColors } from '@/theme/provider';
-import { radius, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 import { MONO_FONT, type } from '@/theme/typography';
 import { Icon } from './icon';
 
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     height: spacing.touch,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.full,
+    borderRadius: spacing.touch / 2,
   },
   unavailable: { flexDirection: 'row', alignItems: 'center', gap: 5 },
 });

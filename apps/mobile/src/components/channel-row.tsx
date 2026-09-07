@@ -52,7 +52,7 @@ export function ChannelRow({
       </View>
       {onAir ? (
         <View style={[styles.listen, { backgroundColor: colors.primary }]}>
-          <Icon name="listen" size={15} color={colors.primaryForeground} />
+          <Icon name="listen" size={15} color={colors.primaryForeground} filled />
         </View>
       ) : (
         <View style={styles.listen}>
@@ -79,7 +79,9 @@ const styles = StyleSheet.create({
   listen: {
     width: spacing.action,
     height: spacing.action,
-    borderRadius: radius.full,
+    // Half the box rather than `radius.full`: Android drops a radius that far past the
+    // view's own size on a small square, and the affordance renders as a hard square.
+    borderRadius: spacing.action / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
