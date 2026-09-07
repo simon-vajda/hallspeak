@@ -172,7 +172,13 @@ function ChromeButton({
   large?: boolean;
 }) {
   const size = large ? TORCH_SIZE : spacing.touch;
-  const shape = { width: size, height: size, borderRadius: large && !IOS ? 18 : size / 2 };
+  const shape = {
+    width: size,
+    height: size,
+    borderRadius: large && !IOS ? 18 : size / 2,
+    // Android's translucent fallback gets a jagged-looking hairline over the camera feed.
+    borderWidth: IOS ? undefined : 0,
+  };
 
   return (
     <GlassSurface interactive fallbackColor={OVER_CAMERA_SCRIM} style={shape}>
