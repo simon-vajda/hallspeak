@@ -26,7 +26,9 @@ const RING_WIDTH = IOS ? 2 : 3;
 const RING_TRAVEL = 0.3;
 const STAGE = Math.ceil(DIAMETER * (1 + RING_TRAVEL));
 const GLYPH = IOS ? 54 : 58;
-const GLOW = STAGE * 2;
+// Oversize the iOS wash so its falloff stays soft beyond the target without reaching app bar.
+const GLOW_WIDTH = STAGE * 2.75;
+const GLOW_HEIGHT = STAGE * 2.75;
 
 /**
  * The round control at the centre of the Channel screen, built in plain React Native with
@@ -62,14 +64,20 @@ export function ListenTarget({
           `ScreenGlow` gives: it is what glass refracts, and Android's frames go without. */}
       {IOS && !disabled ? (
         <View pointerEvents="none" style={styles.glow}>
-          <Svg width={GLOW} height={GLOW}>
+          <Svg width={GLOW_WIDTH} height={GLOW_HEIGHT}>
             <Defs>
               <RadialGradient id="listen-glow" cx="50%" cy="50%" rx="50%" ry="50%">
-                <Stop offset="0" stopColor={colors.primary} stopOpacity={rings ? 0.4 : 0.2} />
-                <Stop offset="0.72" stopColor={colors.primary} stopOpacity="0" />
+                <Stop offset="0" stopColor={colors.primary} stopOpacity="0.16" />
+                <Stop offset="0.82" stopColor={colors.primary} stopOpacity="0" />
               </RadialGradient>
             </Defs>
-            <Rect x="0" y="0" width={GLOW} height={GLOW} fill="url(#listen-glow)" />
+            <Rect
+              x="0"
+              y="0"
+              width={GLOW_WIDTH}
+              height={GLOW_HEIGHT}
+              fill="url(#listen-glow)"
+            />
           </Svg>
         </View>
       ) : null}
@@ -138,7 +146,13 @@ function Ring({ color, delayed = false }: { color: string; delayed?: boolean }) 
 
 const styles = StyleSheet.create({
   stage: { width: STAGE, height: STAGE, alignItems: 'center', justifyContent: 'center' },
-  glow: { position: 'absolute', width: GLOW, height: GLOW },
+  glow: {
+    position: 'absolute',
+    left: (STAGE - GLOW_WIDTH) / 2,
+    top: (STAGE - GLOW_HEIGHT) / 2,
+    width: GLOW_WIDTH,
+    height: GLOW_HEIGHT,
+  },
   ring: {
     position: 'absolute',
     width: DIAMETER,
@@ -152,8 +166,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOpacity: 0.36,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.32,
+    shadowRadius: 42,
+    shadowOffset: { width: 0, height: 18 },
   },
 });

@@ -17,7 +17,6 @@ import { GlassSurface } from '@/components/glass-surface';
 import { Icon } from '@/components/icon';
 import { ListenTarget } from '@/components/listen-target';
 import { LiveBadge } from '@/components/live-badge';
-import { ScreenGlow } from '@/components/screen-glow';
 import { ScreenHeader } from '@/components/screen-header';
 import { rememberEvent } from '@/history/store';
 import { audioSheetHref, readHostSegment, reportSheetHref } from '@/links/route';
@@ -87,7 +86,6 @@ export default function ChannelScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScreenGlow variant="channel" />
       <ScreenHeader title={view?.event.name} />
       {/* The stage takes the height the screen has: the target sits in the middle of it,
           and the two actions stay at the thumb line however tall the phone is. */}
