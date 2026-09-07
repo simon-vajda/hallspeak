@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useColors } from '@/theme/provider';
-import { spacing } from '@/theme/tokens';
+import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 import { Icon } from './icon';
 
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   close: {
     width: spacing.action,
     height: spacing.action,
-    borderRadius: 999,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },

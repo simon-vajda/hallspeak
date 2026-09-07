@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -76,7 +76,9 @@ export default function HomeScreen() {
     setEntries(setEventPinned({ host: entry.host, pin: entry.pin }, !entry.pinned));
   }, []);
 
-  const rows = toRows(entries);
+  // Referentially stable across renders, so FlatList and its swipeable rows are not handed
+  // a fresh array on every state change elsewhere on the screen.
+  const rows = useMemo(() => toRows(entries), [entries]);
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]} edges={['top']}>

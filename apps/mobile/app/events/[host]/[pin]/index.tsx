@@ -5,7 +5,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native
 import { eventQueryOptions } from '@/api/queries';
 import { ActionButton } from '@/components/action-button';
 import { ChannelRow } from '@/components/channel-row';
-import { Icon } from '@/components/icon';
+import { ErrorState } from '@/components/error-state';
 import { markEventUnavailable, rememberEvent } from '@/history/store';
 import { displayHost } from '@/links/host';
 import { channelHref, readHostSegment } from '@/links/route';
@@ -53,21 +53,19 @@ export default function EventScreen() {
     const message = eventErrorMessage(query.error);
 
     return (
-      <ScrollView contentContainerStyle={styles.centre} refreshControl={refresh}>
-        <Icon name="unreachable" size={28} color={colors.mutedForeground} />
-        <Text style={[type.title, styles.centred, { color: colors.foreground }]}>
-          {message.title}
-        </Text>
-        <Text style={[type.note, styles.centred, { color: colors.mutedForeground }]}>
-          {message.body}
-        </Text>
+      <ErrorState
+        title={message.title}
+        body={message.body}
+        refreshing={query.isRefetching}
+        onRefresh={() => void query.refetch()}
+      >
         <ActionButton
           label="Back to your events"
           icon="back"
           variant="outlined"
           onPress={() => router.dismissTo('/')}
         />
-      </ScrollView>
+      </ErrorState>
     );
   }
 
@@ -126,13 +124,6 @@ export default function EventScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.gutter, paddingBottom: 40, gap: 22 },
-  centre: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingHorizontal: spacing.gutter,
-  },
   centred: { textAlign: 'center' },
   header: { gap: 10, paddingTop: 4 },
   hostChip: {

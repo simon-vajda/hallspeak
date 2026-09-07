@@ -1,16 +1,13 @@
 // Per-icon subpaths rather than the package barrel: the barrel is every lucide glyph, and
 // Metro would carry all of them into the bundle.
-import Airplay from 'lucide-react-native/icons/airplay';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import Check from 'lucide-react-native/icons/check';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Flashlight from 'lucide-react-native/icons/flashlight';
 import FlashlightOff from 'lucide-react-native/icons/flashlight-off';
-import Headphones from 'lucide-react-native/icons/headphones';
 import Link from 'lucide-react-native/icons/link';
 import MessageSquareWarning from 'lucide-react-native/icons/message-square-warning';
 import Pin from 'lucide-react-native/icons/pin';
-import PinOff from 'lucide-react-native/icons/pin-off';
 import Play from 'lucide-react-native/icons/play';
 import QrCode from 'lucide-react-native/icons/qr-code';
 import RefreshCw from 'lucide-react-native/icons/refresh-cw';
@@ -35,20 +32,17 @@ export const icons = {
   scan: QrCode,
   link: Link,
   pin: Pin,
-  unpin: PinOff,
   remove: Trash,
   forward: ChevronRight,
   back: ArrowLeft,
   close: X,
   torchOn: Flashlight,
   torchOff: FlashlightOff,
-  headphones: Headphones,
   listen: Play,
   audio: SlidersHorizontal,
   report: MessageSquareWarning,
   volume: Volume2,
   output: Speaker,
-  airplay: Airplay,
   confirm: Check,
   warn: TriangleAlert,
   retry: RefreshCw,
