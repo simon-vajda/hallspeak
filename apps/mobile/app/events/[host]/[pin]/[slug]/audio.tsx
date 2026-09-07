@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '@/components/icon';
 import { NativeSlider } from '@/components/native-controls';
+import { SheetChoice } from '@/components/sheet-choice';
 import { SheetChrome } from '@/components/sheet-chrome';
-import { SheetOption, SheetOptions } from '@/components/sheet-list';
+import { SheetOptions } from '@/components/sheet-list';
 import {
   AUDIO_SHEET_TITLE,
   AUDIO_SHEET_UNAVAILABLE_NOTE,
@@ -45,31 +46,12 @@ export default function AudioSheet() {
         </Text>
         <SheetOptions>
           {outputs.map((output, index) => (
-            <SheetOption
+            <SheetChoice
               key={output.id}
               index={index}
               count={outputs.length}
               label={output.label}
               selected={output.selected}
-              leading={
-                ANDROID ? (
-                  <View
-                    style={[
-                      styles.radio,
-                      { borderColor: output.selected ? colors.primary : colors.mutedForeground },
-                    ]}
-                  >
-                    {output.selected ? (
-                      <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />
-                    ) : null}
-                  </View>
-                ) : undefined
-              }
-              trailing={
-                !ANDROID && output.selected ? (
-                  <Icon name="confirm" size={18} color={colors.primary} strokeWidth={2.5} />
-                ) : undefined
-              }
               onPress={() => setOutputs(selectOutput(outputs, output.id))}
             />
           ))}
@@ -123,15 +105,6 @@ export default function AudioSheet() {
 
 const styles = StyleSheet.create({
   section: { gap: 10 },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioDot: { width: 10, height: 10, borderRadius: 5 },
   volumeHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   readout: type.monoValue,
   volumeRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },

@@ -16,6 +16,7 @@ import RefreshCw from 'lucide-react-native/icons/refresh-cw';
 import SlidersHorizontal from 'lucide-react-native/icons/sliders-horizontal';
 import Speaker from 'lucide-react-native/icons/speaker';
 import Star from 'lucide-react-native/icons/star';
+import SunMoon from 'lucide-react-native/icons/sun-moon';
 import Trash from 'lucide-react-native/icons/trash';
 import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
 import Volume2 from 'lucide-react-native/icons/volume-2';
@@ -33,6 +34,7 @@ export type IconProps = SvgProps & { size?: number; color?: string; strokeWidth?
  * site from reaching for a glyph the design never chose.
  */
 export const icons = {
+  appearance: SunMoon,
   scan: QrCode,
   link: Link,
   pin: Star,

@@ -6,6 +6,7 @@ import { icons } from './icons';
  * nothing in a release build, where a failing list here is loud.
  */
 const EXPECTED = [
+  'appearance',
   'audio',
   'back',
   'backChevron',

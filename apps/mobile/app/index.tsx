@@ -4,6 +4,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionButton } from '@/components/action-button';
+import { AppearanceButton } from '@/components/appearance-button';
 import { HistoryRow } from '@/components/history-row';
 import { Icon } from '@/components/icon';
 import { LogoLockup } from '@/components/logo-lockup';
@@ -115,7 +116,10 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={false} onRefresh={reload} />}
       >
         <View style={styles.header}>
-          <LogoLockup />
+          <View style={styles.brandRow}>
+            <LogoLockup />
+            <AppearanceButton />
+          </View>
           <Text style={[type.screenLg, styles.title, { color: colors.foreground }]}>Join</Text>
           <Text style={[type.bodyLg, { color: colors.mutedForeground }]}>
             Scan the code at your venue, or pick up where you left off.
@@ -170,6 +174,12 @@ const styles = StyleSheet.create({
   // The design gives the wordmark room above it and sets the title well clear of both the
   // mark and the line under it; the cramped version had all three on one 6px rhythm.
   header: { gap: 8, paddingTop: 22, paddingBottom: 4, paddingHorizontal: 4 },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   title: { marginTop: 14 },
   actions: { gap: 10 },
   section: { gap: 8 },
