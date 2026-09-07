@@ -94,7 +94,7 @@ export const type: Record<TypeStep, Step> = {
   // scanner asks a question over the camera, and the tighter figure closes the words up.
   prompt: display(22, 27.5, -0.22),
 
-  wordmark: display(17, 20, -0.4),
+  wordmark: display(20, 24, -0.4),
 
   // A row in a sheet's option list, in the platform's own face and at its own metrics. A
   // restyled native control reads as an imitation of one, so the split lives here rather

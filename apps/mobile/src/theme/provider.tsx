@@ -1,8 +1,13 @@
-import { createContext, type ReactNode, use, useMemo } from 'react';
-import { useColorScheme } from 'react-native';
+import { createContext, type ReactNode, use, useCallback, useMemo, useState } from 'react';
+import { Appearance, useColorScheme } from 'react-native';
+import { nativeColorScheme, resolveColorScheme, type ThemePreference } from './preferences';
+import { readThemePreference, saveThemePreference } from './store';
 import { type ColorScheme, colors, type Palette } from './tokens';
 
 export type Theme = {
+  preference: ThemePreference;
+  setPreference: (preference: ThemePreference) => void;
+  saveFailed: boolean;
   scheme: ColorScheme;
   colors: Palette;
 };
@@ -16,9 +21,26 @@ export const SEED_COLOR = colors.light.primary;
 
 const ThemeContext = createContext<Theme | null>(null);
 
+// Restore the native override at app boot, before any screen or native surface mounts.
+// `unspecified` clears it so React Native resumes observing the device's appearance.
+const initialPreference = readThemePreference();
+Appearance.setColorScheme(nativeColorScheme(initialPreference));
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const scheme: ColorScheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  const theme = useMemo(() => ({ scheme, colors: colors[scheme] }), [scheme]);
+  const [preference, setPreferenceState] = useState(initialPreference);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const scheme = resolveColorScheme(preference, useColorScheme());
+  const setPreference = useCallback((next: ThemePreference) => {
+    // Clear the native override before rerendering System, so the hook reads the device
+    // scheme rather than the previous explicit choice.
+    Appearance.setColorScheme(nativeColorScheme(next));
+    setPreferenceState(next);
+    setSaveFailed(!saveThemePreference(next));
+  }, []);
+  const theme = useMemo(
+    () => ({ preference, setPreference, saveFailed, scheme, colors: colors[scheme] }),
+    [preference, setPreference, saveFailed, scheme],
+  );
 
   return <ThemeContext value={theme}>{children}</ThemeContext>;
 }

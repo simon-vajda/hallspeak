@@ -16,6 +16,6 @@ export function LogoLockup() {
 
 const styles = StyleSheet.create({
   lockup: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  mark: { width: 14, height: 14, borderRadius: 4 },
+  mark: { width: 16, height: 16, borderRadius: 4 },
   wordmark: type.wordmark,
 });

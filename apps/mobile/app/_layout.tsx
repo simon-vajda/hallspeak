@@ -48,6 +48,7 @@ function Navigator() {
         }}
       >
         <Stack.Screen name="link" options={SHEET} />
+        <Stack.Screen name="appearance" options={SHEET} />
         <Stack.Screen name="events/[host]/[pin]/[slug]/audio" options={SHEET} />
         <Stack.Screen name="events/[host]/[pin]/[slug]/report" options={SHEET} />
       </Stack>

@@ -1,7 +1,7 @@
 import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
 import type { ReactNode } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
-import { useColors } from '@/theme/provider';
+import { useTheme } from '@/theme/provider';
 import { radius } from '@/theme/tokens';
 import { glassMode } from './glass';
 
@@ -39,12 +39,13 @@ export function GlassSurface({
    * own, because a white panel over a live camera is not a fallback, it is a hole. */
   fallbackColor?: string;
 }) {
-  const colors = useColors();
+  const { colors, scheme } = useTheme();
   const shadow = raised ? { ...styles.raised, shadowColor: colors.primary } : null;
 
   if (glassMode(isGlassEffectAPIAvailable()) === 'glass') {
     return (
       <GlassView
+        colorScheme={scheme}
         glassEffectStyle="clear"
         tintColor={tinted ? colors.primary : undefined}
         isInteractive={interactive}
