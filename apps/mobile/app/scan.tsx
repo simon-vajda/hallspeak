@@ -20,6 +20,16 @@ import { useColors } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 
+/**
+ * The only literal colours in the app, and deliberately not role tokens: this screen is a
+ * camera field, which is whatever the room looks like rather than a surface of the app. It is
+ * black on both platforms in both schemes, and its chrome is white over that.
+ */
+const OVER_CAMERA = '#FFFFFF';
+const CAMERA_FIELD = '#000000';
+const OVER_CAMERA_MUTED = 'rgba(255,255,255,0.72)';
+const OVER_CAMERA_SCRIM = 'rgba(255,255,255,0.18)';
+
 export default function ScannerScreen() {
   const colors = useColors();
   const router = useRouter();
@@ -159,7 +169,7 @@ function RoundButton({
       onPress={onPress}
       style={styles.round}
     >
-      <Icon name={icon} size={20} color="#FFFFFF" />
+      <Icon name={icon} size={20} color={OVER_CAMERA} />
     </Pressable>
   );
 }
@@ -184,8 +194,7 @@ const CORNERS = {
 } as const;
 
 const styles = StyleSheet.create({
-  // Not a theme colour: this is the room behind the lens, not a surface of the app.
-  screen: { flex: 1, backgroundColor: '#000000' },
+  screen: { flex: 1, backgroundColor: CAMERA_FIELD },
   chrome: { flex: 1, justifyContent: 'space-between', paddingHorizontal: spacing.gutter },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 8 },
   round: {
@@ -194,14 +203,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: OVER_CAMERA_SCRIM,
   },
   reticle: { alignSelf: 'center', width: 232, height: 232 },
   corner: { position: 'absolute', width: 44, height: 44 },
   bottom: { gap: 10, paddingBottom: 20 },
   centred: { textAlign: 'center' },
-  overlayText: { color: '#FFFFFF' },
-  overlayMuted: { color: 'rgba(255,255,255,0.72)', paddingBottom: 4 },
+  overlayText: { color: OVER_CAMERA },
+  overlayMuted: { color: OVER_CAMERA_MUTED, paddingBottom: 4 },
   refusal: {
     flexDirection: 'row',
     alignItems: 'center',
