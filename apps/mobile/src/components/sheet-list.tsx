@@ -7,6 +7,8 @@ import { type } from '@/theme/typography';
 
 const ANDROID = Platform.OS === 'android';
 
+const CARD_GAP = 11;
+
 /**
  * The two shapes both sheets are built from, and the one place their platform split lives.
  * A choice is a pill on iOS and a segment of Material's connected list on Android — the
@@ -45,7 +47,13 @@ export function SheetCardRow({
     <View
       style={[
         styles.cardRow,
-        divided && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+        // Matching the card's own gap, so the rule sits midway between the two rows
+        // rather than against the label under it.
+        divided && {
+          paddingTop: CARD_GAP,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.border,
+        },
       ]}
     >
       <Text style={[type.body, { color: colors.foreground }]}>{label}</Text>
@@ -132,7 +140,7 @@ export function SheetOption({
 /** Material's connected list: the group's outer corners are round, its joins nearly square. */
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radius.lg, paddingHorizontal: 18, paddingVertical: 15, gap: 11 },
+  card: { borderRadius: radius.lg, paddingHorizontal: 18, paddingVertical: 15, gap: CARD_GAP },
   cardRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, paddingTop: 0 },
   value: { flex: 1, textAlign: 'right', fontWeight: '600' },
   mono: { fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }), fontSize: 14 },

@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
-  divider: { height: StyleSheet.hairlineWidth, marginLeft: 16 },
+  divider: { height: StyleSheet.hairlineWidth, marginHorizontal: 16 },
   removePanel: {
     width: 116,
     alignItems: 'center',

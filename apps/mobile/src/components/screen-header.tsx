@@ -52,10 +52,7 @@ export function ScreenHeader({ title }: { title?: string }) {
       )}
       <View style={styles.title}>
         {title ? (
-          <Text
-            numberOfLines={1}
-            style={[type.meta, styles.text, { color: colors.mutedForeground }]}
-          >
+          <Text numberOfLines={1} style={[type.section, styles.text, { color: colors.foreground }]}>
             {title}
           </Text>
         ) : null}
