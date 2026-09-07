@@ -7,6 +7,7 @@ import { ActionButton } from '@/components/action-button';
 import { HistoryRow } from '@/components/history-row';
 import { Icon } from '@/components/icon';
 import { LogoLockup } from '@/components/logo-lockup';
+import { ScreenGlow } from '@/components/screen-glow';
 import { Snackbar } from '@/components/snackbar';
 import type { HistoryEntry } from '@/history/history';
 import { listHistorySync, removeEvent, restoreEvent, setEventPinned } from '@/history/store';
@@ -108,13 +109,14 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]} edges={['top']}>
+      <ScreenGlow variant="home" />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={false} onRefresh={reload} />}
       >
         <View style={styles.header}>
           <LogoLockup />
-          <Text style={[type.screen, styles.title, { color: colors.foreground }]}>Listen</Text>
+          <Text style={[type.screenLg, styles.title, { color: colors.foreground }]}>Join</Text>
           <Text style={[type.bodyLg, { color: colors.mutedForeground }]}>
             Scan the code at your venue, or pick up where you left off.
           </Text>
@@ -167,8 +169,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 44, gap: 26 },
   // The design gives the wordmark room above it and sets the title well clear of both the
   // mark and the line under it; the cramped version had all three on one 6px rhythm.
-  header: { gap: 6, paddingTop: 18, paddingHorizontal: 4 },
-  title: { marginTop: 10 },
+  header: { gap: 8, paddingTop: 22, paddingBottom: 4, paddingHorizontal: 4 },
+  title: { marginTop: 14 },
   actions: { gap: 10 },
   section: { gap: 8 },
   sectionLabel: { paddingHorizontal: 16 },

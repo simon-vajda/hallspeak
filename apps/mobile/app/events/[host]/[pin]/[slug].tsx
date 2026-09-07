@@ -17,6 +17,7 @@ import { GlassSurface } from '@/components/glass-surface';
 import { Icon } from '@/components/icon';
 import { ListenTarget } from '@/components/listen-target';
 import { LiveBadge } from '@/components/live-badge';
+import { ScreenGlow } from '@/components/screen-glow';
 import { rememberEvent } from '@/history/store';
 import { audioSheetHref, readHostSegment, reportSheetHref } from '@/links/route';
 import {
@@ -72,6 +73,7 @@ export default function ChannelScreen() {
     <>
       <Stack.Screen options={{ headerTitle: view?.event.name ?? '' }} />
       <View style={styles.screen}>
+        <ScreenGlow variant="channel" />
         {/* The stage takes the height the screen has: the target sits in the middle of it,
             and the two actions stay at the thumb line however tall the phone is. */}
         <ScrollView

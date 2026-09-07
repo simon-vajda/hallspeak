@@ -51,8 +51,10 @@ function Navigator() {
         }}
       >
         {/* `title` is what the next screen's back button says, so Home carries one even
-            though its own header is hidden. */}
-        <Stack.Screen name="index" options={{ headerShown: false, title: 'Listen' }} />
+            though its own header is hidden. `Join` rather than `Listen` because this screen
+            opens a speaker's link too once that round lands, and a back button that said
+            `Listen` would then be naming the wrong half of the product. */}
+        <Stack.Screen name="index" options={{ headerShown: false, title: 'Join' }} />
         <Stack.Screen name="scan" options={{ headerShown: false }} />
         <Stack.Screen name="link" options={SHEET} />
         {/* The screens draw their own title at the design's hero and screen steps, so the

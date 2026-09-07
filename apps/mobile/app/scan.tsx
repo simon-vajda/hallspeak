@@ -4,7 +4,7 @@ import { useIsFocused, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ActionButton } from '@/components/action-button';
+import { GlassSurface } from '@/components/glass-surface';
 import { Icon } from '@/components/icon';
 import { RefusalBanner } from '@/components/refusal-banner';
 import { ScanReticle } from '@/components/scan-reticle';
@@ -33,16 +33,20 @@ const OVER_CAMERA_MUTED = 'rgba(255,255,255,0.72)';
 const OVER_CAMERA_SCRIM = 'rgba(255,255,255,0.16)';
 
 const IOS = Platform.OS === 'ios';
+const TORCH_SIZE = 56;
 
 export default function ScannerScreen() {
-  const colors = useColors();
   const router = useRouter();
   const focused = useIsFocused();
   const [status, request] = useCameraPermissions();
   const [state, setState] = useState(INITIAL_SCAN_STATE);
   const [torch, setTorch] = useState(false);
+  // A GlassView sizes to its content and ignores flex, so the pill beside the torch is given
+  // the width the row measured rather than asked to share it.
+  const [rowWidth, setRowWidth] = useState<number | null>(null);
 
   const permission = cameraPermission(status);
+  const torchWidth = showsTorch(permission) ? TORCH_SIZE : 0;
 
   const onScanned = useCallback(
     ({ data }: { data: string }) => {
@@ -90,22 +94,12 @@ export default function ScannerScreen() {
 
       <SafeAreaView style={styles.chrome}>
         <View style={styles.topRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-            onPress={() => router.back()}
-            style={[styles.round, IOS && styles.roundScrim]}
-          >
-            <Icon name="close" size={IOS ? 19 : 22} color={OVER_CAMERA} strokeWidth={2.4} />
-          </Pressable>
-          <Text style={[IOS ? styles.iosTitle : styles.androidTitle, styles.overlayText]}>
-            Scan to listen
-          </Text>
-          {IOS ? <View style={styles.round} /> : null}
+          <ChromeButton label="Close" icon="close" onPress={() => router.back()} />
+          <Text style={styles.screenTitle}>Scan to listen</Text>
         </View>
 
         <View style={styles.bottom}>
-          <Text style={[styles.prompt, styles.overlayText]}>Scan the event's QR code</Text>
+          <Text style={styles.prompt}>Scan the event's QR code</Text>
 
           {state.refusal ? (
             <RefusalBanner
@@ -121,7 +115,7 @@ export default function ScannerScreen() {
                   ? 'LinguaCast cannot use the camera. You can turn it on in Settings.'
                   : 'LinguaCast needs the camera to read the code at your venue.'}
               </Text>
-              <ActionButton
+              <WideAction
                 label={offersSettings(permission) ? 'Open Settings' : 'Allow the camera'}
                 icon="scan"
                 onPress={() =>
@@ -133,46 +127,110 @@ export default function ScannerScreen() {
 
           {/* Link entry is a peer of the camera in every permission state, not a fallback
               that appears once the camera has been refused. */}
-          <View style={styles.actionRow}>
-            <Pressable
-              accessibilityRole="button"
+          <View
+            style={styles.actionRow}
+            onLayout={({ nativeEvent }) => setRowWidth(nativeEvent.layout.width)}
+          >
+            <WideAction
+              label="Enter the link instead"
+              icon="link"
+              width={rowWidth === null ? undefined : rowWidth - (torchWidth ? torchWidth + 12 : 0)}
               onPress={() => router.push('/link')}
-              style={[
-                styles.linkAction,
-                IOS
-                  ? styles.roundScrim
-                  : { backgroundColor: colors.primary, borderRadius: radius.lg },
-              ]}
-            >
-              <Icon
-                name="link"
-                size={IOS ? 18 : 20}
-                color={IOS ? OVER_CAMERA : colors.primaryForeground}
-              />
-              <Text style={[type.section, { color: IOS ? OVER_CAMERA : colors.primaryForeground }]}>
-                Enter the link instead
-              </Text>
-            </Pressable>
+            />
 
             {showsTorch(permission) ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={torch ? 'Turn the torch off' : 'Turn the torch on'}
-                accessibilityState={{ selected: torch }}
+              <ChromeButton
+                label={torch ? 'Turn the torch off' : 'Turn the torch on'}
+                icon={torch ? 'torchOff' : 'torchOn'}
+                selected={torch}
+                large
                 onPress={() => setTorch((on) => !on)}
-                style={[styles.torch, IOS ? styles.roundScrim : styles.torchSquircle]}
-              >
-                <Icon
-                  name={torch ? 'torchOff' : 'torchOn'}
-                  size={IOS ? 20 : 22}
-                  color={OVER_CAMERA}
-                />
-              </Pressable>
+              />
             ) : null}
           </View>
         </View>
       </SafeAreaView>
     </View>
+  );
+}
+
+/**
+ * Over a live camera, iOS gets real liquid glass and Android a translucent scrim — the same
+ * split the design draws, and the one place glass has something worth refracting.
+ */
+function ChromeButton({
+  label,
+  icon,
+  onPress,
+  selected = false,
+  large = false,
+}: {
+  label: string;
+  icon: 'close' | 'torchOn' | 'torchOff';
+  onPress: () => void;
+  selected?: boolean;
+  large?: boolean;
+}) {
+  const size = large ? TORCH_SIZE : spacing.touch;
+  const shape = { width: size, height: size, borderRadius: large && !IOS ? 18 : radius.full };
+
+  return (
+    <GlassSurface interactive fallbackColor={OVER_CAMERA_SCRIM} style={shape}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ selected }}
+        onPress={onPress}
+        style={[styles.centreBox, shape]}
+      >
+        <Icon name={icon} size={large ? 22 : 20} color={OVER_CAMERA} strokeWidth={2.2} />
+      </Pressable>
+    </GlassSurface>
+  );
+}
+
+function WideAction({
+  label,
+  icon,
+  onPress,
+  width,
+}: {
+  label: string;
+  icon: 'link' | 'scan';
+  onPress: () => void;
+  width?: number;
+}) {
+  const colors = useColors();
+
+  // Android's is Material's filled button; iOS's is a glass pill over the camera.
+  if (!IOS) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        style={[
+          styles.wide,
+          width === undefined ? styles.stretch : { width },
+          { backgroundColor: colors.primary, borderRadius: radius.lg },
+        ]}
+      >
+        <Icon name={icon} size={20} color={colors.primaryForeground} />
+        <Text style={[type.section, { color: colors.primaryForeground }]}>{label}</Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <GlassSurface
+      interactive
+      fallbackColor={OVER_CAMERA_SCRIM}
+      style={width === undefined ? styles.widePill : { ...styles.widePill, width }}
+    >
+      <Pressable accessibilityRole="button" onPress={onPress} style={styles.wide}>
+        <Icon name={icon} size={18} color={OVER_CAMERA} />
+        <Text style={[type.section, styles.overlayText]}>{label}</Text>
+      </Pressable>
+    </GlassSurface>
   );
 }
 
@@ -182,21 +240,21 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: IOS ? 0 : 6,
-    paddingHorizontal: IOS ? 18 : 8,
+    gap: 10,
+    paddingHorizontal: 12,
     paddingTop: 4,
   },
-  round: {
-    width: spacing.touch,
-    height: spacing.touch,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+  screenTitle: {
+    flex: 1,
+    fontFamily: DISPLAY_FONT,
+    fontSize: 22,
+    lineHeight: 27.5,
+    letterSpacing: -0.22,
+    fontWeight: '600',
+    color: OVER_CAMERA,
   },
-  roundScrim: { backgroundColor: OVER_CAMERA_SCRIM },
-  iosTitle: { flex: 1, textAlign: 'center', fontSize: 15, fontWeight: '600' },
-  androidTitle: { flex: 1, fontSize: 22, fontWeight: '400' },
-  bottom: { gap: 14, paddingHorizontal: IOS ? 26 : 24, paddingBottom: 26 },
+  centreBox: { alignItems: 'center', justifyContent: 'center' },
+  bottom: { gap: 14, paddingHorizontal: 24, paddingBottom: 26 },
   prompt: {
     fontFamily: DISPLAY_FONT,
     fontSize: 22,
@@ -204,27 +262,19 @@ const styles = StyleSheet.create({
     letterSpacing: -0.22,
     fontWeight: '600',
     textAlign: 'center',
+    color: OVER_CAMERA,
   },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  linkAction: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: IOS ? 50 : 56,
+  stretch: { alignSelf: 'stretch' },
+  widePill: { borderRadius: radius.full, alignSelf: 'stretch' },
+  wide: {
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: IOS ? 9 : 10,
-    borderRadius: radius.full,
+    gap: 10,
     paddingHorizontal: 16,
   },
-  torch: {
-    width: IOS ? 50 : 56,
-    height: IOS ? 50 : 56,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  torchSquircle: { borderRadius: 18, backgroundColor: OVER_CAMERA_SCRIM },
   centred: { textAlign: 'center' },
   overlayText: { color: OVER_CAMERA },
   overlayMuted: { color: OVER_CAMERA_MUTED },
