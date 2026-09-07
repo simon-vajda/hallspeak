@@ -8,9 +8,10 @@ import {
   rowSubtitle,
 } from '@/screens/home-list';
 import { useColors } from '@/theme/provider';
-import { spacing } from '@/theme/tokens';
+import { spacing, withAlpha } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 import { Icon } from './icon';
+import { pressOpacity, ripple } from './press';
 
 /**
  * The star is the pin control, reachable by tap. A long press works too, but a gesture is
@@ -19,11 +20,15 @@ import { Icon } from './icon';
  */
 export function HistoryRow({
   entry,
+  surface,
   onOpen,
   onTogglePin,
   onRemove,
 }: {
   entry: HistoryEntry;
+  /** Opaque by requirement, not by style: the swipe-to-remove panel sits directly behind the
+   * row, and a translucent one would show red before the guest has swiped. */
+  surface: string;
   onOpen: () => void;
   onTogglePin: () => void;
   onRemove: () => void;
@@ -49,9 +54,10 @@ export function HistoryRow({
       }}
       onPress={onOpen}
       onLongPress={onTogglePin}
+      android_ripple={ripple(withAlpha(colors.foreground, 0.1))}
       style={({ pressed }) => [
         styles.row,
-        { backgroundColor: colors.card, opacity: pressed ? 0.92 : 1 },
+        { backgroundColor: surface, opacity: pressOpacity(pressed, 0.92) },
       ]}
     >
       <View style={styles.text}>
@@ -82,6 +88,7 @@ export function HistoryRow({
         accessibilityState={{ selected: entry.pinned }}
         onPress={onTogglePin}
         hitSlop={10}
+        android_ripple={ripple(withAlpha(colors.foreground, 0.12), true)}
         style={styles.star}
       >
         <Icon

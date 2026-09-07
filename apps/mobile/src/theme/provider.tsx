@@ -2,7 +2,7 @@ import { createContext, type ReactNode, use, useCallback, useMemo, useState } fr
 import { Appearance, useColorScheme } from 'react-native';
 import { nativeColorScheme, resolveColorScheme, type ThemePreference } from './preferences';
 import { readThemePreference, saveThemePreference } from './store';
-import { type ColorScheme, colors, type Palette } from './tokens';
+import { type ColorScheme, colors, type Palette, type SurfaceLevel, surfaces } from './tokens';
 
 export type Theme = {
   preference: ThemePreference;
@@ -10,6 +10,7 @@ export type Theme = {
   saveFailed: boolean;
   scheme: ColorScheme;
   colors: Palette;
+  surfaces: Record<SurfaceLevel, string>;
 };
 
 /**
@@ -38,7 +39,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setSaveFailed(!saveThemePreference(next));
   }, []);
   const theme = useMemo(
-    () => ({ preference, setPreference, saveFailed, scheme, colors: colors[scheme] }),
+    () => ({
+      preference,
+      setPreference,
+      saveFailed,
+      scheme,
+      colors: colors[scheme],
+      surfaces: surfaces[scheme],
+    }),
     [preference, setPreference, saveFailed, scheme],
   );
 
@@ -57,4 +65,13 @@ export function useTheme(): Theme {
 
 export function useColors(): Palette {
   return useTheme().colors;
+}
+
+/**
+ * Material 3's tonal containers, resolved for the active scheme. Android-only by intent: on
+ * iOS depth is glass and a cast shadow, so a stepped surface there would be a second answer
+ * to a question the platform has already answered.
+ */
+export function useSurfaces(): Record<SurfaceLevel, string> {
+  return useTheme().surfaces;
 }

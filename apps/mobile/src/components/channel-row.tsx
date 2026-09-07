@@ -1,12 +1,13 @@
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ChannelReading } from '@/screens/event-view';
 import { channelReadingAccessibleLabel, channelReadingLabel } from '@/screens/event-view';
-import { useColors } from '@/theme/provider';
+import { useColors, useSurfaces } from '@/theme/provider';
 import { connectedListShape } from '@/theme/shape';
 import { radius, withAlpha } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 import { Icon } from './icon';
 import { LiveDot } from './live-dot';
+import { pressOpacity, ripple } from './press';
 
 const IOS = Platform.OS === 'ios';
 
@@ -37,6 +38,7 @@ export function ChannelRow({
   onPress: () => void;
 }) {
   const colors = useColors();
+  const surfaces = useSurfaces();
   const onAir = reading === 'on-air';
   const label = channelReadingLabel(reading);
 
@@ -46,16 +48,29 @@ export function ChannelRow({
       accessibilityLabel={name}
       accessibilityHint={channelReadingAccessibleLabel(reading)}
       onPress={onPress}
+      android_ripple={ripple(withAlpha(onAir ? colors.live : colors.foreground, 0.14))}
       style={({ pressed }) => [
         styles.row,
         IOS ? styles.iosRow : connectedListShape(index, count),
         onAir
           ? {
-              backgroundColor: withAlpha(colors.live, IOS ? 0.14 : 0.16),
+              // Opaque on Android, because that platform draws an elevated view's shadow
+              // through a translucent fill and the wash comes out muddy under the teal disc.
+              backgroundColor: IOS ? withAlpha(colors.live, 0.14) : colors.liveMuted,
               borderColor: IOS ? withAlpha(colors.live, 0.38) : 'transparent',
             }
-          : { borderColor: colors.border, borderStyle: 'dashed' },
-        { opacity: pressed ? 0.9 : 1 },
+          : {
+              // Android fills the offline row from the tonal ladder so the connected list reads
+              // as one object; iOS keeps it an outline, which is what a separate card is.
+              backgroundColor: IOS ? undefined : surfaces.base,
+              borderColor: colors.border,
+              borderStyle: 'dashed',
+            },
+        // The one elevated surface in the Android app, and the rule is that narrow: a shadow
+        // means audio is moving. Every other container is flat and separated by tone, which is
+        // what keeps this one reading as raised rather than as decoration.
+        IOS || !onAir ? null : styles.elevated,
+        { opacity: pressOpacity(pressed) },
       ]}
     >
       <LiveDot tone={onAir ? 'live' : 'offline'} />
@@ -104,6 +119,8 @@ const styles = StyleSheet.create({
     paddingRight: 15,
     paddingVertical: IOS ? 15 : 18,
     borderWidth: 1,
+    // Keeps the ripple inside the row's own connected-list corners.
+    overflow: 'hidden',
   },
   iosRow: { borderRadius: 22 },
   text: { flex: 1 },
@@ -124,4 +141,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
   },
   targetSquircle: { borderRadius: radius.md + 2 },
+  elevated: { elevation: 2 },
 });

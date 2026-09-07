@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionButton } from '@/components/action-button';
@@ -19,12 +19,15 @@ import {
   HISTORY_FOOTER,
   sectionHistory,
 } from '@/screens/home-list';
-import { useColors } from '@/theme/provider';
+import { useColors, useSurfaces } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 
+const IOS = Platform.OS === 'ios';
+
 export default function HomeScreen() {
   const colors = useColors();
+  const surfaces = useSurfaces();
   const router = useRouter();
   // Read synchronously on the first render: kv-store supports it, so pinned rows paint on the
   // first frame instead of after an empty flash.
@@ -71,13 +74,28 @@ export default function HomeScreen() {
 
   const { pinned, recent } = useMemo(() => sectionHistory(entries), [entries]);
 
-  const section = (title: string, rows: HistoryEntry[]) =>
-    rows.length === 0 ? null : (
+  /**
+   * On Android the two sections sit on different steps of Material's tonal ladder, which is
+   * that platform's own way of saying one group outranks the other. Tone alone, with no
+   * shadow: a list group does not float above the page, and a shadow on one would make every
+   * surface without one look unfinished. iOS says the same thing with glass and keeps both on
+   * `card`, so nothing here changes there.
+   */
+  const section = (title: string, rows: HistoryEntry[], level: 'base' | 'high') => {
+    const surface = IOS ? colors.card : surfaces[level];
+
+    return rows.length === 0 ? null : (
       <View style={styles.section}>
         <Text style={[type.label, styles.sectionLabel, { color: colors.mutedForeground }]}>
           {title.toUpperCase()}
         </Text>
-        <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.group,
+            IOS ? null : styles.flat,
+            { backgroundColor: surface, borderColor: colors.border },
+          ]}
+        >
           {rows.map((entry, index) => (
             <View key={`${entry.host}:${entry.pin}`}>
               {index > 0 ? (
@@ -97,6 +115,7 @@ export default function HomeScreen() {
               >
                 <HistoryRow
                   entry={entry}
+                  surface={surface}
                   onOpen={() => open(entry)}
                   onTogglePin={() => togglePin(entry)}
                   onRemove={() => remove(entry)}
@@ -107,6 +126,7 @@ export default function HomeScreen() {
         </View>
       </View>
     );
+  };
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]} edges={['top']}>
@@ -146,8 +166,8 @@ export default function HomeScreen() {
           </View>
         ) : (
           <>
-            {section('Pinned', pinned)}
-            {section('Recent', recent)}
+            {section('Pinned', pinned, 'high')}
+            {section('Recent', recent, 'base')}
           </>
         )}
 
@@ -189,6 +209,9 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
+  // A tonal surface carries no outline: the step already separates it from the page, and the
+  // two together read as two answers to the same question.
+  flat: { borderWidth: 0 },
   divider: { height: StyleSheet.hairlineWidth, marginHorizontal: spacing.gutter },
   removePanel: {
     width: 116,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { connectedListShape } from './shape';
-import { colors, type Palette, radius, withAlpha } from './tokens';
+import { colors, type Palette, radius, type SurfaceLevel, surfaces, withAlpha } from './tokens';
 import { type TypeStep, type } from './typography';
 
 const HEX = /^#[0-9A-F]{6}([0-9A-F]{2})?$/;
@@ -31,6 +31,28 @@ describe('palette', () => {
   it('never lets teal and green collapse into one another', () => {
     expect(colors.light.primary).not.toBe(colors.light.live);
     expect(colors.dark.primary).not.toBe(colors.dark.live);
+  });
+});
+
+describe('tonal surfaces', () => {
+  const ladder: SurfaceLevel[] = ['low', 'base', 'high', 'highest'];
+
+  it('carries the same levels in both schemes, all hex', () => {
+    for (const scheme of ['light', 'dark'] as const) {
+      expect(Object.keys(surfaces[scheme]).sort()).toEqual([...ladder].sort());
+
+      for (const [level, value] of Object.entries(surfaces[scheme])) {
+        expect(`${scheme}.${level} ${HEX.test(value)}`).toBe(`${scheme}.${level} true`);
+      }
+    }
+  });
+
+  it('gives every step its own value, so a step is always visible', () => {
+    for (const scheme of ['light', 'dark'] as const) {
+      const values = ladder.map((level) => surfaces[scheme][level]);
+
+      expect(new Set(values).size).toBe(ladder.length);
+    }
   });
 });
 
