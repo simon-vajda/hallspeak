@@ -1,3 +1,5 @@
+import type { Href } from 'expo-router';
+
 /**
  * Routes are addressed by host and PIN rather than by a stored history id: a scanned code
  * reaches the Event screen before anything is remembered, so opening an event cannot depend
@@ -23,6 +25,19 @@ export function buildChannelPath(host: string, pin: string, slug: string): strin
  */
 export function encodeHostSegment(host: string): string {
   return host;
+}
+
+/**
+ * Typed routes cannot express a path built at runtime, and the alternative — pathname plus
+ * params at every call site — would leave the builders above with no caller and the dotted
+ * host untested. The cast is confined to these two lines.
+ */
+export function eventHref(host: string, pin: string): Href {
+  return buildEventPath(host, pin) as Href;
+}
+
+export function channelHref(host: string, pin: string, slug: string): Href {
+  return buildChannelPath(host, pin, slug) as Href;
 }
 
 export function readHostSegment(segment: string | string[] | undefined): string {
