@@ -13,12 +13,8 @@ import { useColors } from '@/theme/provider';
  */
 type Wash = { cx: number; cy: number; rx: number; ry: number; opacity: number; stop: number };
 
-const WASHES: Record<'home' | 'channel', Wash[]> = {
+const WASHES: Record<'home', Wash[]> = {
   home: [{ cx: 0.82, cy: 0.04, rx: 1, ry: 0.4, opacity: 0.26, stop: 0.72 }],
-  // The channel screen's upper wash belongs to the listen target and travels with it (see
-  // `ListenTarget`); what stays here is the design's lower one, under the thumb line, which
-  // is what gives the two glass actions something to refract.
-  channel: [{ cx: 0.5, cy: 0.92, rx: 0.9, ry: 0.4, opacity: 0.24, stop: 0.72 }],
 };
 
 export function ScreenGlow({ variant }: { variant: keyof typeof WASHES }) {
