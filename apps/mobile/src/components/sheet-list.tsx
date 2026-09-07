@@ -59,7 +59,7 @@ export function SheetCardRow({
       <Text style={[type.body, { color: colors.foreground }]}>{label}</Text>
       <Text
         style={[
-          mono ? styles.mono : type.body,
+          mono ? type.monoValue : type.bodyStrong,
           styles.value,
           { color: warn ? colors.warnOnMuted : (tone ?? colors.foreground) },
         ]}
@@ -118,15 +118,7 @@ export function SheetOption({
       ]}
     >
       {leading}
-      <Text
-        style={[
-          ANDROID ? styles.androidLabel : styles.iosLabel,
-          styles.grow,
-          { color: foreground },
-        ]}
-      >
-        {label}
-      </Text>
+      <Text style={[type.option, styles.grow, { color: foreground }]}>{label}</Text>
       {note ? (
         <Text style={[type.meta, { color: colors.mutedForeground }]} numberOfLines={1}>
           {note}
@@ -137,13 +129,10 @@ export function SheetOption({
   );
 }
 
-/** Material's connected list: the group's outer corners are round, its joins nearly square. */
-
 const styles = StyleSheet.create({
   card: { borderRadius: radius.lg, paddingHorizontal: 18, paddingVertical: 15, gap: CARD_GAP },
   cardRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, paddingTop: 0 },
-  value: { flex: 1, textAlign: 'right', fontWeight: '600' },
-  mono: { fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }), fontSize: 14 },
+  value: { flex: 1, textAlign: 'right' },
   androidGroup: { gap: 3 },
   iosGroup: { gap: 8 },
   option: {
@@ -155,6 +144,4 @@ const styles = StyleSheet.create({
   },
   iosOption: { borderRadius: radius.full, borderWidth: StyleSheet.hairlineWidth },
   grow: { flex: 1 },
-  androidLabel: { fontSize: 16, fontWeight: '500', letterSpacing: 0.16 },
-  iosLabel: { fontSize: 15, fontWeight: '600' },
 });

@@ -45,8 +45,8 @@ export function Snackbar({
 const styles = StyleSheet.create({
   bar: {
     position: 'absolute',
-    left: spacing.gutter,
-    right: spacing.gutter,
+    left: spacing.overlay,
+    right: spacing.overlay,
     bottom: 24,
     flexDirection: 'row',
     alignItems: 'center',

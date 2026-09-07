@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/theme/provider';
+import { spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 import { GlassSurface } from './glass-surface';
 import { Icon } from './icon';
@@ -64,7 +65,7 @@ export function ScreenHeader({ title }: { title?: string }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.gutter },
   disc: { width: BUTTON, height: BUTTON, borderRadius: BUTTON / 2 },
   press: { width: BUTTON, height: BUTTON, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, minWidth: 0 },

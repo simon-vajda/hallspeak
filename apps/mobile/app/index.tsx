@@ -166,20 +166,20 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 44, gap: 26 },
+  content: { paddingHorizontal: spacing.gutter, paddingBottom: 44, gap: 26 },
   // The design gives the wordmark room above it and sets the title well clear of both the
   // mark and the line under it; the cramped version had all three on one 6px rhythm.
   header: { gap: 8, paddingTop: 22, paddingBottom: 4, paddingHorizontal: 4 },
   title: { marginTop: 14 },
   actions: { gap: 10 },
   section: { gap: 8 },
-  sectionLabel: { paddingHorizontal: 16 },
+  sectionLabel: { paddingHorizontal: spacing.gutter },
   group: {
     borderRadius: radius.xl,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
-  divider: { height: StyleSheet.hairlineWidth, marginHorizontal: 16 },
+  divider: { height: StyleSheet.hairlineWidth, marginHorizontal: spacing.gutter },
   removePanel: {
     width: 116,
     alignItems: 'center',

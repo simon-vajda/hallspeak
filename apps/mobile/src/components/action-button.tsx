@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   },
   // The design gives the screen's one primary action four points over its neighbour.
   prominent: { minHeight: 60 },
-  tonal: { minHeight: 56 },
+  tonal: { minHeight: spacing.control },
   content: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 11 },
   label: { includeFontPadding: false },
 });
