@@ -19,7 +19,7 @@ import { ListenTarget } from '@/components/listen-target';
 import { LiveBadge } from '@/components/live-badge';
 import { ScreenHeader } from '@/components/screen-header';
 import { rememberEvent } from '@/history/store';
-import { audioSheetHref, readChannelParams, reportSheetHref } from '@/links/route';
+import { audioSheetHref, eventHref, readChannelParams, reportSheetHref } from '@/links/route';
 import {
   AUDIO_ACTION_DETAIL,
   AUDIO_ACTION_LABEL,
@@ -96,7 +96,7 @@ export default function ChannelScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader title={view?.event.name} />
+      <ScreenHeader backHref={eventHref(host, pin)} title={view?.event.name} />
       {/* The stage takes the height the screen has: the target sits in the middle of it,
           and the two actions stay at the thumb line however tall the phone is. */}
       <ScrollView

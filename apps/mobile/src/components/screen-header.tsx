@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/theme/provider';
@@ -21,7 +21,7 @@ const BUTTON = IOS ? 38 : 48;
  * behind it, so nothing casts the drop shadow that dates a plain top app bar. And the
  * screen's own background — a glow included — runs under the row instead of stopping at it.
  */
-export function ScreenHeader({ title }: { title?: string }) {
+export function ScreenHeader({ backHref, title }: { backHref: Href; title?: string }) {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -30,7 +30,7 @@ export function ScreenHeader({ title }: { title?: string }) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Back"
-      onPress={() => router.back()}
+      onPress={() => router.dismissTo(backHref)}
       style={({ pressed }) => [styles.press, { opacity: pressed ? 0.6 : 1 }]}
     >
       <Icon

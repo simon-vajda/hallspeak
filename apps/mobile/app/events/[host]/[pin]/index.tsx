@@ -90,7 +90,7 @@ export default function EventScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader />
+      <ScreenHeader backHref="/" />
       <ScrollView
         contentContainerStyle={styles.content}
         contentInsetAdjustmentBehavior="never"
