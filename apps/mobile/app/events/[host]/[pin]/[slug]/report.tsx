@@ -32,7 +32,7 @@ import {
   YOUR_VOLUME_LABEL,
 } from '@/screens/report-rows';
 import { useColors } from '@/theme/provider';
-import { radius, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 
 /** Long enough to see the transition, short enough not to feel like a hang. */
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   tick: {
     width: spacing.touch,
     height: spacing.touch,
-    borderRadius: radius.full,
+    borderRadius: spacing.touch / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

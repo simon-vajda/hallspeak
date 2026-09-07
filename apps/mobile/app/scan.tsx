@@ -172,7 +172,7 @@ function ChromeButton({
   large?: boolean;
 }) {
   const size = large ? TORCH_SIZE : spacing.touch;
-  const shape = { width: size, height: size, borderRadius: large && !IOS ? 18 : radius.full };
+  const shape = { width: size, height: size, borderRadius: large && !IOS ? 18 : size / 2 };
 
   return (
     <GlassSurface interactive fallbackColor={OVER_CAMERA_SCRIM} style={shape}>
