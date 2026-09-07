@@ -202,3 +202,36 @@ export function withAlpha(hex: string, alpha: number): string {
 
   return `${hex}${byte.toString(16).padStart(2, '0')}`;
 }
+
+export type SurfaceLevel = 'low' | 'base' | 'high' | 'highest';
+
+/**
+ * Material 3's tonal container ladder, which is how Android expresses depth: a surface one
+ * step along the ladder reads as raised, without a blur and without a gradient. The direction
+ * is the platform's own and differs per scheme — a light container darkens as it rises,
+ * because nothing is lighter than the white it starts at, while a dark one lightens.
+ *
+ * Both schemes stay on the palette's hue, so a stepped surface never reads as a second
+ * colour. `low` in light and `base` in dark are the values `card` already carries, so a
+ * surface that takes them is unchanged.
+ *
+ * It is deliberately unused on iOS, where depth is glass and a cast shadow.
+ */
+const lightSurfaces: Record<SurfaceLevel, string> = {
+  low: '#FFFFFF',
+  base: '#F1F7F8',
+  high: '#EAF2F4',
+  highest: '#E3EDEF',
+};
+
+const darkSurfaces: Record<SurfaceLevel, string> = {
+  low: '#16283A',
+  base: '#1B3348',
+  high: '#213C53',
+  highest: '#274158',
+};
+
+export const surfaces: Record<ColorScheme, Record<SurfaceLevel, string>> = {
+  light: lightSurfaces,
+  dark: darkSurfaces,
+};

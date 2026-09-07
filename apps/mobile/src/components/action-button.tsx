@@ -1,9 +1,12 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useColors } from '@/theme/provider';
-import { radius, spacing } from '@/theme/tokens';
+import { radius, spacing, withAlpha } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 import { Icon } from './icon';
 import type { IconName } from './icons';
+import { ripple } from './press';
+
+const IOS = Platform.OS === 'ios';
 
 /**
  * The screen's stated actions. These stay plain React Native rather than `@expo/ui`: they
@@ -31,12 +34,17 @@ export function ActionButton({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
+      android_ripple={ripple(
+        withAlpha(filled ? colors.primaryForeground : colors.foreground, 0.14),
+      )}
       style={({ pressed }) => [
         styles.button,
         filled ? styles.prominent : styles.tonal,
         {
           backgroundColor: filled ? colors.primary : colors.secondary,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
+          // The ripple already reports the press on Android, and a control that also shrinks
+          // under the finger reads as two controls responding at once.
+          transform: [{ scale: IOS && pressed ? 0.98 : 1 }],
         },
       ]}
     >
@@ -65,6 +73,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.full,
     paddingHorizontal: spacing.actionX,
+    // Clips Android's ripple to the pill; without it the wash spills into the square bounds.
+    overflow: 'hidden',
   },
   // The design gives the screen's one primary action four points over its neighbour.
   prominent: { minHeight: 60 },
