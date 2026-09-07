@@ -4,22 +4,26 @@ import { useColors } from '@/theme/provider';
 import { spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 import { Icon } from './icon';
+import type { IconName } from './icons';
 
 /**
  * The one failure surface both public screens show. It scrolls so the pull-to-refresh that
  * recovers from it is available on the failure itself, not only once something rendered.
+ * A failure a retry cannot change omits `onRefresh` and gets no pull affordance.
  */
 export function ErrorState({
   title,
   body,
-  refreshing,
+  icon = 'unreachable',
+  refreshing = false,
   onRefresh,
   children,
 }: {
   title: string;
   body: string;
-  refreshing: boolean;
-  onRefresh: () => void;
+  icon?: IconName;
+  refreshing?: boolean;
+  onRefresh?: () => void;
   children?: ReactNode;
 }) {
   const colors = useColors();
@@ -27,9 +31,11 @@ export function ErrorState({
   return (
     <ScrollView
       contentContainerStyle={styles.centre}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={
+        onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined
+      }
     >
-      <Icon name="unreachable" size={28} color={colors.mutedForeground} />
+      <Icon name={icon} size={28} color={colors.mutedForeground} />
       <Text style={[type.title, styles.centred, { color: colors.foreground }]}>{title}</Text>
       <Text style={[type.note, styles.centred, { color: colors.mutedForeground }]}>{body}</Text>
       {children}

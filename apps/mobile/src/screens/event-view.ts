@@ -51,6 +51,16 @@ export function eventErrorMessage(error: unknown): EventErrorMessage {
   };
 }
 
+/**
+ * Refused before any request, so this one does name its cause: the address itself is not an
+ * event, which is a thing the guest can see and fix. Pull-to-refresh is withheld with it —
+ * retrying an address that cannot be an event only spends the server's per-address budget.
+ */
+export const BAD_ROUTE_MESSAGE: EventErrorMessage = {
+  title: 'This link is not a LinguaCast event',
+  body: 'Check the link, or scan the code at your venue again.',
+};
+
 /** The web app's "it updates on its own" line would be a false promise without a socket. */
 export const EVENT_REFRESH_NOTE =
   'Channel status was read when this screen loaded. Pull down to read it again.';

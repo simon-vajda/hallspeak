@@ -9,8 +9,9 @@ import { ErrorState } from '@/components/error-state';
 import { ScreenHeader } from '@/components/screen-header';
 import { markEventUnavailable, rememberEvent } from '@/history/store';
 import { displayHost } from '@/links/host';
-import { channelHref, readHostSegment } from '@/links/route';
+import { channelHref, readEventParams } from '@/links/route';
 import {
+  BAD_ROUTE_MESSAGE,
   CHOOSE_A_CHANNEL,
   channelReading,
   EVENT_REFRESH_NOTE,
@@ -28,10 +29,11 @@ export default function EventScreen() {
   const colors = useColors();
   const router = useRouter();
   const params = useLocalSearchParams<{ host: string; pin: string }>();
-  const host = readHostSegment(params.host);
-  const pin = params.pin ?? '';
+  const route = readEventParams(params.host, params.pin);
+  const host = route?.host ?? '';
+  const pin = route?.pin ?? '';
 
-  const query = useQuery(eventQueryOptions(host, pin));
+  const query = useQuery({ ...eventQueryOptions(host, pin), enabled: route !== null });
   const event = query.data;
 
   // Opening the event is what writes it down, and what clears an earlier failure to reach
@@ -42,13 +44,29 @@ export default function EventScreen() {
     }
   }, [event, host, pin]);
 
+  // Only a failure with nothing to show marks the row. A refetch that fails over a rendered
+  // event has not established that the event is unreachable, and saying so would put a false
+  // mark on the guest's own list.
   useEffect(() => {
-    if (query.isError) {
+    if (query.isError && event === undefined) {
       markEventUnavailable({ host, pin });
     }
-  }, [query.isError, host, pin]);
+  }, [query.isError, event, host, pin]);
 
-  if (query.isError) {
+  if (route === null) {
+    return (
+      <ErrorState title={BAD_ROUTE_MESSAGE.title} body={BAD_ROUTE_MESSAGE.body} icon="badLink">
+        <ActionButton
+          label="Back to your events"
+          icon="back"
+          variant="tonal"
+          onPress={() => router.dismissTo('/')}
+        />
+      </ErrorState>
+    );
+  }
+
+  if (query.isError && event === undefined) {
     const message = eventErrorMessage(query.error);
 
     return (

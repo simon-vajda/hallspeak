@@ -71,13 +71,7 @@ export function ListenTarget({
                 <Stop offset="0.82" stopColor={colors.primary} stopOpacity="0" />
               </RadialGradient>
             </Defs>
-            <Rect
-              x="0"
-              y="0"
-              width={GLOW_WIDTH}
-              height={GLOW_HEIGHT}
-              fill="url(#listen-glow)"
-            />
+            <Rect x="0" y="0" width={GLOW_WIDTH} height={GLOW_HEIGHT} fill="url(#listen-glow)" />
           </Svg>
         </View>
       ) : null}

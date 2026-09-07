@@ -10,6 +10,7 @@ const EXPECTED = [
   'audio',
   'back',
   'backChevron',
+  'badLink',
   'close',
   'confirm',
   'forward',

@@ -19,7 +19,7 @@ import { ListenTarget } from '@/components/listen-target';
 import { LiveBadge } from '@/components/live-badge';
 import { ScreenHeader } from '@/components/screen-header';
 import { rememberEvent } from '@/history/store';
-import { audioSheetHref, readHostSegment, reportSheetHref } from '@/links/route';
+import { audioSheetHref, readChannelParams, reportSheetHref } from '@/links/route';
 import {
   AUDIO_ACTION_DETAIL,
   AUDIO_ACTION_LABEL,
@@ -29,7 +29,7 @@ import {
   REPORT_ACTION_LABEL,
   STOP_LABEL,
 } from '@/screens/channel-copy';
-import { channelReading, eventErrorMessage } from '@/screens/event-view';
+import { BAD_ROUTE_MESSAGE, channelReading, eventErrorMessage } from '@/screens/event-view';
 import { useColors } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
@@ -40,11 +40,15 @@ export default function ChannelScreen() {
   const colors = useColors();
   const router = useRouter();
   const params = useLocalSearchParams<{ host: string; pin: string; slug: string }>();
-  const host = readHostSegment(params.host);
-  const pin = params.pin ?? '';
-  const slug = params.slug ?? '';
+  const route = readChannelParams(params.host, params.pin, params.slug);
+  const host = route?.host ?? '';
+  const pin = route?.pin ?? '';
+  const slug = route?.slug ?? '';
 
-  const query = useQuery(channelQueryOptions(host, pin, slug));
+  const query = useQuery({
+    ...channelQueryOptions(host, pin, slug),
+    enabled: route !== null,
+  });
   const view = query.data;
 
   // Whether this guest has asked for the channel's audio. It is intent and nothing more —
@@ -67,7 +71,13 @@ export default function ChannelScreen() {
     }
   }, [view]);
 
-  if (query.isError) {
+  if (route === null) {
+    return (
+      <ErrorState title={BAD_ROUTE_MESSAGE.title} body={BAD_ROUTE_MESSAGE.body} icon="badLink" />
+    );
+  }
+
+  if (query.isError && view === undefined) {
     const message = eventErrorMessage(query.error);
 
     return (

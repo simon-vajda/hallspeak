@@ -11,7 +11,7 @@ export type HistoryEntry = {
   name: string;
   lastJoinedAt: number;
   pinned: boolean;
-  /** Set when opening the event failed. Only the guest ever removes a row (R12). */
+  /** Set when opening the event failed. Only the guest ever removes a row. */
   unavailable: boolean;
 };
 
@@ -84,7 +84,7 @@ export type RememberInput = HistoryKey & {
  * back-navigation.
  */
 
-/** Writing an event down is also what clears an earlier failure to reach it (AE2). */
+/** Writing an event down is also what clears an earlier failure to reach it. */
 export function remember(entries: HistoryEntry[], input: RememberInput): HistoryEntry[] {
   const existing = entries.find((entry) => isSame(entry, input));
 
