@@ -114,7 +114,7 @@ export default function HomeScreen() {
       >
         <View style={styles.header}>
           <LogoLockup />
-          <Text style={[type.screen, { color: colors.foreground }]}>Listen</Text>
+          <Text style={[type.screen, styles.title, { color: colors.foreground }]}>Listen</Text>
           <Text style={[type.bodyLg, { color: colors.mutedForeground }]}>
             Scan the code at your venue, or pick up where you left off.
           </Text>
@@ -164,8 +164,11 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: 16, paddingBottom: 44, gap: 22 },
-  header: { gap: 6, paddingTop: 12, paddingHorizontal: 4 },
+  content: { paddingHorizontal: 16, paddingBottom: 44, gap: 26 },
+  // The design gives the wordmark room above it and sets the title well clear of both the
+  // mark and the line under it; the cramped version had all three on one 6px rhythm.
+  header: { gap: 6, paddingTop: 18, paddingHorizontal: 4 },
+  title: { marginTop: 10 },
   actions: { gap: 10 },
   section: { gap: 8 },
   sectionLabel: { paddingHorizontal: 16 },
