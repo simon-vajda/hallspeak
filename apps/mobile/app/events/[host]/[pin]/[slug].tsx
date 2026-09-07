@@ -115,7 +115,7 @@ export default function ChannelScreen() {
         {/* Two unrelated jobs, so a wide surface and a separate one rather than a stack of
             equal buttons: the audio control reads its own state in its face. */}
         <View style={styles.thumbLine}>
-          <GlassSurface style={styles.audioSurface}>
+          <GlassSurface interactive raised style={styles.audioSurface}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={AUDIO_ACTION_LABEL}
@@ -133,7 +133,7 @@ export default function ChannelScreen() {
             </Pressable>
           </GlassSurface>
 
-          <GlassSurface style={IOS ? styles.reportRound : styles.reportSquircle}>
+          <GlassSurface interactive raised style={IOS ? styles.reportRound : styles.reportSquircle}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={REPORT_ACTION_LABEL}
