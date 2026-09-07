@@ -23,7 +23,9 @@ const APP_ROOT = process.cwd();
 const COLOUR_EXEMPT = ['app/scan.tsx', 'src/components/scan-reticle.tsx'];
 
 const COLOUR = /['"]#[0-9a-fA-F]{3,8}['"]|\brgba?\(/;
-const TYPE = /\b(fontSize|lineHeight|letterSpacing|fontWeight|fontFamily)\s*:/;
+// `undefined` is not a value off the ramp: it clears one the ramp supplied, which is the only
+// way to opt a single platform out of a step it measures differently.
+const TYPE = /\b(fontSize|lineHeight|letterSpacing|fontWeight|fontFamily)\s*:(?!\s*undefined\b)/;
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
