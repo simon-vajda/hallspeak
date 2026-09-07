@@ -135,7 +135,6 @@ export default function AudioSheet() {
               value={volume.volume}
               min={MIN_VOLUME}
               max={MAX_VOLUME}
-              step={1}
               onValueChange={(next) => setVolumeState(setVolume(volume, next))}
             />
           </View>
