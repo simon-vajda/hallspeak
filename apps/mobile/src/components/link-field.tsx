@@ -1,4 +1,4 @@
-import { StyleSheet, TextInput } from 'react-native';
+import { Platform, StyleSheet, TextInput } from 'react-native';
 import { useColors } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
@@ -37,6 +37,7 @@ export function LinkField({
       style={[
         type.bodyLg,
         styles.field,
+        Platform.OS === 'ios' && styles.iosText,
         { backgroundColor: colors.card, borderColor: colors.input, color: colors.foreground },
       ]}
     />
@@ -49,5 +50,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: radius.md,
     borderWidth: 1,
+  },
+  // UIKit lays a single-line field's text out against the line box rather than the frame, so a
+  // line height taller than the glyphs pushes it off centre. Android measures from the frame and
+  // keeps the ramp's value.
+  iosText: {
+    lineHeight: undefined,
+    paddingVertical: 0,
   },
 });
