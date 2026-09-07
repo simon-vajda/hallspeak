@@ -5,8 +5,9 @@ The LinguaCast listener app for iOS and Android: Expo SDK 57, React Native 0.86,
 ## What it does today
 
 Four screens — Home, Scanner, Event, Channel — and three sheets: link entry, Audio and Report.
-Home is device-local memory of the events this phone has opened. Event and Channel read the
-public REST API of whichever server the link names.
+Home is device-local memory of the events this phone has opened; a row opens that event's
+channel picker, and no channel is remembered. Event and Channel read the public REST API of
+whichever server the link names.
 
 It holds **no Socket.IO connection and no mediasoup**, so a channel's on-air state is a reading
 taken when the fetch answered and frozen after, the listen target is inert, and the Audio and
