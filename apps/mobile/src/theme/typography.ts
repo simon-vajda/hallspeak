@@ -54,7 +54,9 @@ export const type: Record<TypeStep, Step> = {
   body: { fontSize: 14, lineHeight: 21, fontWeight: '400' },
   bodyLg: { fontSize: 17, lineHeight: 27.2, fontWeight: '400' },
 
-  screen: display(30, 31.8, -1.05),
+  // 38px, which is what the mobile design draws for a screen title. The web app's own step
+  // is 30, but that ramp's phone value was never this app's: these screens were drawn at 38.
+  screen: display(38, 38, -1.52),
   screenLg: display(52, 53.56, -2.34),
 
   // The title of a screen whose only subject is one name — the channel a guest is listening to.
