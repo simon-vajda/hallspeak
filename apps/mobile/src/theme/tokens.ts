@@ -182,3 +182,14 @@ export const motion = {
   /** The frame both animations hold at under Reduce Motion, rather than disappearing. */
   ringRestOpacity: 0.45,
 } as const;
+
+/**
+ * The design writes its washes as `color-mix(in oklch, <role> N%, transparent)`. React
+ * Native has no such function, so a call site composes the same thing from a role token and
+ * an alpha — never from a second hex, which would fix one scheme's answer into both.
+ */
+export function withAlpha(hex: string, alpha: number): string {
+  const byte = Math.round(Math.min(Math.max(alpha, 0), 1) * 255);
+
+  return `${hex}${byte.toString(16).padStart(2, '0')}`;
+}

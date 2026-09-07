@@ -8,7 +8,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { shouldRetryApiQuery } from '@/lib/query-retry';
 import { ThemeProvider, useTheme } from '@/theme/provider';
 import { radius } from '@/theme/tokens';
-import { DISPLAY_FONT } from '@/theme/typography';
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Already hidden, which is not a failure worth showing a listener.
@@ -43,24 +42,12 @@ function Navigator() {
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
+          // Every screen draws its own header as content, so the navigator supplies none.
+          headerShown: false,
           contentStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.primary,
-          headerLargeTitleStyle: { fontFamily: DISPLAY_FONT, color: colors.foreground },
-          headerStyle: { backgroundColor: colors.background },
-          headerTitleStyle: { color: colors.foreground },
         }}
       >
-        {/* `title` is what the next screen's back button says, so Home carries one even
-            though its own header is hidden. `Join` rather than `Listen` because this screen
-            opens a speaker's link too once that round lands, and a back button that said
-            `Listen` would then be naming the wrong half of the product. */}
-        <Stack.Screen name="index" options={{ headerShown: false, title: 'Join' }} />
-        <Stack.Screen name="scan" options={{ headerShown: false }} />
         <Stack.Screen name="link" options={SHEET} />
-        {/* The screens draw their own title at the design's hero and screen steps, so the
-            native header carries the back affordance and nothing else. */}
-        <Stack.Screen name="events/[host]/[pin]/index" options={{ headerTitle: '' }} />
-        <Stack.Screen name="events/[host]/[pin]/[slug]" options={{ headerTitle: '' }} />
         <Stack.Screen name="events/[host]/[pin]/[slug]/audio" options={SHEET} />
         <Stack.Screen name="events/[host]/[pin]/[slug]/report" options={SHEET} />
       </Stack>

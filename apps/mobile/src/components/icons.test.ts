@@ -8,6 +8,7 @@ import { icons } from './icons';
 const EXPECTED = [
   'audio',
   'back',
+  'backChevron',
   'close',
   'confirm',
   'forward',
@@ -21,6 +22,7 @@ const EXPECTED = [
   'report',
   'retry',
   'scan',
+  'stop',
   'torchOff',
   'torchOn',
   'unreachable',
