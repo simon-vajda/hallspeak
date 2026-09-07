@@ -17,10 +17,14 @@ export function GlassSurface({
   children,
   style,
   interactive = false,
+  tinted = false,
 }: {
   children?: ReactNode;
   style?: ViewStyle;
   interactive?: boolean;
+  /** Off by default: over a light ground a clear glass tinted `primary` renders as a solid
+   * primary fill, which would make a secondary panel outrank the screen's own action. */
+  tinted?: boolean;
 }) {
   const colors = useColors();
 
@@ -28,7 +32,7 @@ export function GlassSurface({
     return (
       <GlassView
         glassEffectStyle="clear"
-        tintColor={colors.primary}
+        tintColor={tinted ? colors.primary : undefined}
         isInteractive={interactive}
         style={[styles.surface, style]}
       >
