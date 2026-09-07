@@ -1,15 +1,14 @@
 import { Platform, type TextStyle } from 'react-native';
 
 /**
- * The type ramp from `docs/design/mobile-app/_ds/.../tokens/typography.css`, with every
- * `rem` resolved against the design's 16px root and every `em` of tracking resolved against
- * its own step — React Native takes points for both.
+ * Every size is in points: `rem` is resolved against a 16px root and `em` of tracking
+ * against its own step, because React Native takes points for both.
  *
- * The family split follows the design's build notes: Space Grotesk on the wordmark, screen
- * titles, event and channel names and any large readout; the platform's own face on rows,
- * buttons and sheet labels, because a restyled native control reads as an imitation of one.
- * A display step names the weight-matched static face rather than asking the system to
- * synthesise 600 from a regular one.
+ * The family split: Space Grotesk on the wordmark, screen titles, event and channel names
+ * and any large readout; the platform's own face on rows, buttons and sheet labels, because
+ * a restyled native control reads as an imitation of one. A display step names the
+ * weight-matched static face rather than asking the system to synthesise 600 from a regular
+ * one.
  */
 export const DISPLAY_FONT = 'SpaceGrotesk_600SemiBold';
 
