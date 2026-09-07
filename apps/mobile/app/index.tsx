@@ -55,14 +55,13 @@ export default function HomeScreen() {
   }, []);
 
   const undoRemove = useCallback(() => {
-    setRemoved((entry) => {
-      if (entry) {
-        setEntries(restoreEvent(entry));
-      }
+    if (!removed) {
+      return;
+    }
 
-      return null;
-    });
-  }, []);
+    setEntries(restoreEvent(removed));
+    setRemoved(null);
+  }, [removed]);
 
   const togglePin = useCallback((entry: HistoryEntry) => {
     setEntries(setEventPinned({ host: entry.host, pin: entry.pin }, !entry.pinned));
