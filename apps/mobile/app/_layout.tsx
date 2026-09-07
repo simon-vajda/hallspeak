@@ -50,14 +50,15 @@ function Navigator() {
           headerTitleStyle: { color: colors.foreground },
         }}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+        {/* `title` is what the next screen's back button says, so Home carries one even
+            though its own header is hidden. */}
+        <Stack.Screen name="index" options={{ headerShown: false, title: 'Listen' }} />
         <Stack.Screen name="scan" options={{ headerShown: false }} />
         <Stack.Screen name="link" options={SHEET} />
-        <Stack.Screen
-          name="events/[host]/[pin]/index"
-          options={{ headerLargeTitle: true, title: '' }}
-        />
-        <Stack.Screen name="events/[host]/[pin]/[slug]" options={{ title: '' }} />
+        {/* The screens draw their own title at the design's hero and screen steps, so the
+            native header carries the back affordance and nothing else. */}
+        <Stack.Screen name="events/[host]/[pin]/index" options={{ headerTitle: '' }} />
+        <Stack.Screen name="events/[host]/[pin]/[slug]" options={{ headerTitle: '' }} />
         <Stack.Screen name="events/[host]/[pin]/[slug]/audio" options={SHEET} />
         <Stack.Screen name="events/[host]/[pin]/[slug]/report" options={SHEET} />
       </Stack>
