@@ -96,6 +96,13 @@ The speaker link is the ordinary Channel URL with the code attached, so strippin
 ### Listener link
 The URL that takes a guest straight into an Event, carrying its PIN. Also rendered as a QR code for printing or projecting. Possession of the link is the entire authorization to listen.
 
+The mobile app registers its own URL scheme, so the same destination can also arrive as an app link rather than a web address. Arriving that way carries no more authorization than the link itself and no less — and, because anyone can compose one, it is not evidence that the address was ever checked.
+
+### Event history
+The device-local record of the Events a guest has opened, held by the mobile app and by nothing on any server. Each entry names an Event by the address that hosts it together with its PIN, because a PIN is unique to its server rather than to the world.
+
+It is never a server query. The list spans many self-hosted origins, so no one of them could assemble it, and asking every stored origin whether a guest still belongs there would disclose where that person worships to servers that did not ask. An entry records no Channel: returning to an Event means choosing a language again, which is a property of that service rather than of the last visit. Only the guest removes an entry, so an Event that could not be reached is marked and kept rather than dropped.
+
 ### Admin
 The only authenticated role in the system, and a single account. The Admin creates Events and Channels, enables them, regenerates PINs and Speaker codes, and shares the links.
 
