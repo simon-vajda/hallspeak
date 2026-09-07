@@ -1,5 +1,5 @@
-import { Host, Slider, Switch } from '@expo/ui';
-import { StyleSheet } from 'react-native';
+import { Host, Slider, Switch, TextInput, type TextInputProps } from '@expo/ui';
+import { StyleSheet, type ViewStyle } from 'react-native';
 import { SEED_COLOR, useTheme } from '@/theme/provider';
 
 /**
@@ -65,6 +65,29 @@ export function NativeSwitch({
       style={styles.host}
     >
       <Switch value={value} label={label} onValueChange={onValueChange} />
+    </Host>
+  );
+}
+
+/**
+ * The universal `TextInput` is driven by native observable state rather than React's
+ * controlled-input model, so `onChangeText` is the source of truth and there is no `value`
+ * to hold in sync.
+ */
+export function NativeTextInput({
+  style,
+  ...props
+}: TextInputProps & { style?: ViewStyle | ViewStyle[] }) {
+  const { scheme } = useTheme();
+
+  return (
+    <Host
+      matchContents={{ vertical: true }}
+      colorScheme={scheme}
+      seedColor={SEED_COLOR}
+      style={[styles.host, style]}
+    >
+      <TextInput {...props} />
     </Host>
   );
 }

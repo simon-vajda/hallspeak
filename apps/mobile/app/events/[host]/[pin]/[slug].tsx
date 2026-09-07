@@ -5,6 +5,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { channelQueryOptions } from '@/api/queries';
 import { ActionButton } from '@/components/action-button';
 import { ConnectionLine } from '@/components/connection-line';
+import { ErrorState } from '@/components/error-state';
 import { GlassSurface } from '@/components/glass-surface';
 import { Icon } from '@/components/icon';
 import { ListenTarget } from '@/components/listen-target';
@@ -50,15 +51,12 @@ export default function ChannelScreen() {
     const message = eventErrorMessage(query.error);
 
     return (
-      <ScrollView contentContainerStyle={styles.centre} refreshControl={refresh}>
-        <Icon name="unreachable" size={28} color={colors.mutedForeground} />
-        <Text style={[type.title, styles.centred, { color: colors.foreground }]}>
-          {message.title}
-        </Text>
-        <Text style={[type.note, styles.centred, { color: colors.mutedForeground }]}>
-          {message.body}
-        </Text>
-      </ScrollView>
+      <ErrorState
+        title={message.title}
+        body={message.body}
+        refreshing={query.isRefetching}
+        onRefresh={() => void query.refetch()}
+      />
     );
   }
 
@@ -132,13 +130,6 @@ export default function ChannelScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.gutter, paddingBottom: 36, gap: 22 },
-  centre: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingHorizontal: spacing.gutter,
-  },
   centred: { textAlign: 'center' },
   header: { alignItems: 'center', gap: 8, paddingTop: 4 },
   badgeSlot: { minHeight: 26, justifyContent: 'center' },

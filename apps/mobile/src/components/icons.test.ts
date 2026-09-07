@@ -6,13 +6,11 @@ import { icons } from './icons';
  * nothing in a release build, where a failing list here is loud.
  */
 const EXPECTED = [
-  'airplay',
   'audio',
   'back',
   'close',
   'confirm',
   'forward',
-  'headphones',
   'link',
   'listen',
   'output',
@@ -23,7 +21,6 @@ const EXPECTED = [
   'scan',
   'torchOff',
   'torchOn',
-  'unpin',
   'unreachable',
   'volume',
   'warn',

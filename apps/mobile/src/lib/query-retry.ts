@@ -1,3 +1,7 @@
+// Copied verbatim from `apps/web/src/lib/query-retry.ts`, including the two exports this app
+// has no caller for yet. Byte-identity is the point: it is what makes lifting this into a
+// shared package later a move rather than a merge.
+
 const RETRYABLE_CODES = new Set(['internal_error', 'unavailable']);
 
 const MAX_RETRIES = 3;

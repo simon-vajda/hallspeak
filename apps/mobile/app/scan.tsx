@@ -6,6 +6,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionButton } from '@/components/action-button';
 import { Icon } from '@/components/icon';
+import { RefusalBanner } from '@/components/refusal-banner';
 import { channelHref, eventHref } from '@/links/route';
 import {
   cameraPermission,
@@ -117,16 +118,10 @@ export default function ScannerScreen() {
           </Text>
 
           {state.refusal ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setState(rearm())}
-              style={[styles.refusal, { backgroundColor: colors.destructiveMuted }]}
-            >
-              <Icon name="warn" size={16} color={colors.destructive} />
-              <Text style={[type.note, styles.refusalText, { color: colors.destructive }]}>
-                {refusalMessage(state.refusal)} Tap to scan again.
-              </Text>
-            </Pressable>
+            <RefusalBanner
+              message={`${refusalMessage(state.refusal)} Tap to scan again.`}
+              onRetry={() => setState(rearm())}
+            />
           ) : null}
 
           {permission === 'undetermined' ? (
@@ -211,12 +206,4 @@ const styles = StyleSheet.create({
   centred: { textAlign: 'center' },
   overlayText: { color: OVER_CAMERA },
   overlayMuted: { color: OVER_CAMERA_MUTED, paddingBottom: 4 },
-  refusal: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    borderRadius: radius.md,
-  },
-  refusalText: { flex: 1 },
 });
