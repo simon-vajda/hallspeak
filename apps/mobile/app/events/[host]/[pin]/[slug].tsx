@@ -32,7 +32,7 @@ import {
 } from '@/screens/channel-copy';
 import { channelReading, eventErrorMessage } from '@/screens/event-view';
 import { useColors } from '@/theme/provider';
-import { radius } from '@/theme/tokens';
+import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 
 const IOS = Platform.OS === 'ios';
@@ -184,8 +184,8 @@ const styles = StyleSheet.create({
   note: { maxWidth: 300, textAlign: 'center' },
   thumbLine: {
     position: 'absolute',
-    left: 16,
-    right: 16,
+    left: spacing.gutter,
+    right: spacing.gutter,
     bottom: IOS ? 34 : 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -196,15 +196,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 11,
-    height: 56,
+    height: spacing.control,
     paddingHorizontal: 20,
   },
   audioLabel: { flex: 1, minWidth: 0 },
-  reportRound: { width: 56, height: 56, borderRadius: 28 },
-  reportSquircle: { width: 56, height: 56, borderRadius: 18 },
+  reportRound: {
+    width: spacing.control,
+    height: spacing.control,
+    borderRadius: spacing.control / 2,
+  },
+  reportSquircle: { width: spacing.control, height: spacing.control, borderRadius: 18 },
   reportPress: {
-    width: 56,
-    height: 56,
+    width: spacing.control,
+    height: spacing.control,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -20,7 +20,7 @@ import {
 } from '@/screens/scanner-state';
 import { useColors } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
-import { DISPLAY_FONT, type } from '@/theme/typography';
+import { type } from '@/theme/typography';
 
 /**
  * The only literal colours in the app, and deliberately not role tokens: this screen is a
@@ -244,31 +244,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 4,
   },
-  screenTitle: {
-    flex: 1,
-    fontFamily: DISPLAY_FONT,
-    fontSize: 22,
-    lineHeight: 27.5,
-    letterSpacing: -0.22,
-    fontWeight: '600',
-    color: OVER_CAMERA,
-  },
+  screenTitle: { ...type.prompt, flex: 1, color: OVER_CAMERA },
   centreBox: { alignItems: 'center', justifyContent: 'center' },
   bottom: { gap: 14, paddingHorizontal: 24, paddingBottom: 26 },
-  prompt: {
-    fontFamily: DISPLAY_FONT,
-    fontSize: 22,
-    lineHeight: 27.5,
-    letterSpacing: -0.22,
-    fontWeight: '600',
-    textAlign: 'center',
-    color: OVER_CAMERA,
-  },
+  prompt: { ...type.prompt, textAlign: 'center', color: OVER_CAMERA },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stretch: { alignSelf: 'stretch' },
   widePill: { borderRadius: radius.full, alignSelf: 'stretch' },
   wide: {
-    minHeight: 56,
+    minHeight: spacing.control,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

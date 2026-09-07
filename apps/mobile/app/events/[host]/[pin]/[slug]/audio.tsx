@@ -24,7 +24,7 @@ import {
   volumeLabel,
 } from '@/screens/audio-sheet';
 import { useColors } from '@/theme/provider';
-import { MONO_FONT, type } from '@/theme/typography';
+import { type } from '@/theme/typography';
 
 const ANDROID = Platform.OS === 'android';
 const SPEAKER = ANDROID ? 48 : 44;
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   },
   radioDot: { width: 10, height: 10, borderRadius: 5 },
   volumeHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  readout: { fontFamily: MONO_FONT, fontSize: 12, fontWeight: '600' },
+  readout: type.monoValue,
   volumeRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   speaker: {
     width: SPEAKER,

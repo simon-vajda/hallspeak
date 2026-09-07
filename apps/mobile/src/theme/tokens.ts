@@ -158,18 +158,31 @@ export const radius = {
 /**
  * Raw numbers, because React Native takes numbers: the fractional-step spelling Tailwind
  * needs to reach an off-scale value has no equivalent here.
+ *
+ * These are roles, not a numeric grid. React Native has no cascade, so every value is stated
+ * at every component and a 4pt scale would only rename the numbers; what earns a token is a
+ * measurement that means the same thing in more than one place, and would be wrong in one of
+ * them if the other changed. A padding used once inside a single component stays a literal.
  */
 export const spacing = {
-  step: 4,
-  gutter: 26,
-  gutterLg: 40,
-  shell: 1120,
+  /** Screen edge to content on a list surface — Home, the header row, the thumb line. Event
+   * and Channel set their own, wider, because the design draws them that way. */
+  gutter: 16,
+  /** The same distance on a surface that floats over a screen: a sheet, a snackbar, a
+   * full-screen message. Wider, because the surface carries its own edge. */
+  overlay: 26,
+  /** The inset of a filled panel. */
   panel: 22,
+  /** A text action's horizontal padding. */
   actionX: 17,
+  /** A compact round control that sits beside text. */
   action: 38,
-  actionSm: 33,
+  /** The smallest target a finger is given, and the floor for a control in a cluster. */
   touch: 44,
+  /** A pill-shaped input. */
   pill: 48,
+  /** A full-width or floating action: the thumb line, the scanner's action, a tonal button. */
+  control: 56,
 } as const;
 
 /** Two animations exist, both tied to audio state; nothing else moves except a press. */

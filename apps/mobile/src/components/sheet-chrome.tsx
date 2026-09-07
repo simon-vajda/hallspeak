@@ -63,7 +63,7 @@ export function SheetChrome({
 
 const styles = StyleSheet.create({
   sheet: {
-    paddingHorizontal: spacing.gutter,
+    paddingHorizontal: spacing.overlay,
     paddingTop: Platform.OS === 'android' ? 12 : 18,
     paddingBottom: 32,
     gap: 16,

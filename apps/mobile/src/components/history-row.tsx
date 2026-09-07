@@ -9,7 +9,7 @@ import {
 } from '@/screens/home-list';
 import { useColors } from '@/theme/provider';
 import { spacing } from '@/theme/tokens';
-import { MONO_FONT, type } from '@/theme/typography';
+import { type } from '@/theme/typography';
 import { Icon } from './icon';
 
 /**
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   text: { flex: 1, gap: 3 },
-  host: { fontFamily: MONO_FONT, fontSize: 12, lineHeight: 16 },
+  host: type.mono,
   star: {
     width: spacing.touch,
     height: spacing.touch,

@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    paddingHorizontal: spacing.gutter,
+    paddingHorizontal: spacing.overlay,
   },
   centred: { textAlign: 'center' },
 });
