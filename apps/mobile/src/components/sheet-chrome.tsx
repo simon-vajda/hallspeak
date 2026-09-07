@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useColors } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
@@ -13,6 +13,10 @@ import { Icon } from './icon';
  * The header and the body share one scroll container. A `ScrollView` nested beside the
  * header lays out over it inside a form sheet, which supplies no bounded height to resolve
  * that against.
+ *
+ * The drag handle is drawn on Android and left to the system on iOS. `sheetGrabberVisible`
+ * is honoured by UIKit's sheet and by nothing on Android, so Material's handle has to be
+ * content like the title beside it.
  */
 export function SheetChrome({
   title,
@@ -33,6 +37,9 @@ export function SheetChrome({
       contentContainerStyle={styles.sheet}
       contentInsetAdjustmentBehavior="never"
     >
+      {Platform.OS === 'android' ? (
+        <View style={[styles.handle, { backgroundColor: colors.border }]} />
+      ) : null}
       <View style={styles.header}>
         <View style={styles.titles}>
           {eyebrow ? (
@@ -55,7 +62,13 @@ export function SheetChrome({
 }
 
 const styles = StyleSheet.create({
-  sheet: { paddingHorizontal: spacing.gutter, paddingTop: 18, paddingBottom: 32, gap: 16 },
+  sheet: {
+    paddingHorizontal: spacing.gutter,
+    paddingTop: Platform.OS === 'android' ? 12 : 18,
+    paddingBottom: 32,
+    gap: 16,
+  },
+  handle: { width: 32, height: 4, borderRadius: 999, alignSelf: 'center', marginBottom: 2 },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   titles: { flex: 1, gap: 2 },
   close: {

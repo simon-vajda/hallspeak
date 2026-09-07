@@ -4,6 +4,8 @@ import {
   formatLastJoined,
   pinActionLabel,
   removeActionLabel,
+  rowDetail,
+  rowHost,
   rowSubtitle,
   sectionHistory,
 } from './home-list';
@@ -14,7 +16,6 @@ const entry = (overrides: Partial<HistoryEntry> = {}): HistoryEntry => ({
   host: 'a.example',
   pin: '834912',
   name: 'Sunday service',
-  lastSlug: null,
   lastJoinedAt: NOW,
   pinned: false,
   unavailable: false,
@@ -65,15 +66,20 @@ describe('formatLastJoined', () => {
   });
 });
 
-describe('rowSubtitle', () => {
-  it('composes the bare host and the date', () => {
-    const subtitle = rowSubtitle(
-      entry({ host: 'stpauls.linguacast.app', lastJoinedAt: Date.UTC(2026, 7, 31, 12) }),
-      NOW,
-    );
+describe('row lines', () => {
+  const row = entry({ host: 'stpauls.linguacast.app', lastJoinedAt: Date.UTC(2026, 7, 31, 12) });
 
-    expect(subtitle).toBe('stpauls.linguacast.app · 31 August');
-    expect(subtitle).not.toContain('://');
+  it('gives the host its own line, with no scheme', () => {
+    expect(rowHost(row)).toBe('stpauls.linguacast.app');
+    expect(rowHost(row)).not.toContain('://');
+  });
+
+  it('states when the guest was last here', () => {
+    expect(rowDetail(row, NOW)).toBe('Last joined 31 August');
+  });
+
+  it('reads as one line for a screen reader', () => {
+    expect(rowSubtitle(row, NOW)).toBe('stpauls.linguacast.app · Last joined 31 August');
   });
 });
 

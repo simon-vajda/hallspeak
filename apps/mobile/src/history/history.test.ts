@@ -5,6 +5,7 @@ import {
   parseHistory,
   remember,
   remove,
+  restore,
   serializeHistory,
   setPinned,
 } from './history';
@@ -13,7 +14,6 @@ const entry = (overrides: Partial<HistoryEntry> = {}): HistoryEntry => ({
   host: 'a.example',
   pin: '834912',
   name: 'Sunday service',
-  lastSlug: null,
   lastJoinedAt: 1_000,
   pinned: false,
   unavailable: false,
@@ -28,29 +28,22 @@ describe('remember', () => {
     expect(after[0]?.lastJoinedAt).toBe(5);
   });
 
-  it('updates the date and the last channel without duplicating', () => {
+  it('updates the date without duplicating', () => {
     const after = remember([entry()], {
       host: 'a.example',
       pin: '834912',
       name: 'Sunday service',
-      slug: 'magyar',
       at: 2_000,
     });
 
     expect(after).toHaveLength(1);
-    expect(after[0]?.lastSlug).toBe('magyar');
     expect(after[0]?.lastJoinedAt).toBe(2_000);
   });
 
-  it('leaves the last channel alone when the guest only saw the picker', () => {
-    const after = remember([entry({ lastSlug: 'magyar' })], {
-      host: 'a.example',
-      pin: '834912',
-      name: 'Sunday service',
-      at: 2_000,
-    });
+  it('remembers no channel: a row opens the event, never a language', () => {
+    const after = remember([], { host: 'a.example', pin: '834912', name: 'Sunday', at: 5 });
 
-    expect(after[0]?.lastSlug).toBe('magyar');
+    expect(after[0]).not.toHaveProperty('lastSlug');
   });
 
   it('clears an earlier failure to reach the event', () => {
@@ -73,7 +66,7 @@ describe('remember', () => {
 
 describe('markUnavailable', () => {
   it('sets the flag and touches nothing else', () => {
-    const before = entry({ pinned: true, lastSlug: 'magyar' });
+    const before = entry({ pinned: true });
     const after = markUnavailable([before], { host: 'a.example', pin: '834912' });
 
     expect(after[0]).toEqual({ ...before, unavailable: true });
@@ -125,11 +118,22 @@ describe('parseHistory', () => {
         host: 'a.example',
         pin: '1',
         name: '',
-        lastSlug: null,
         lastJoinedAt: 0,
         pinned: false,
         unavailable: false,
       },
     ]);
+  });
+});
+
+describe('restore', () => {
+  it('puts a removed row back exactly as it was', () => {
+    const removed = entry({ pinned: true, lastJoinedAt: 42 });
+
+    expect(restore(remove([removed], removed), removed)).toEqual([removed]);
+  });
+
+  it('does not duplicate a row that is already there', () => {
+    expect(restore([entry()], entry())).toEqual([entry()]);
   });
 });

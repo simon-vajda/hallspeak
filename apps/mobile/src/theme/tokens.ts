@@ -21,6 +21,7 @@ export type ColorRole =
   | 'popoverForeground'
   | 'primary'
   | 'primaryForeground'
+  | 'primaryMuted'
   | 'secondary'
   | 'secondaryForeground'
   | 'muted'
@@ -56,6 +57,10 @@ const light: Palette = {
 
   primary: '#0BC3BC',
   primaryForeground: '#10283A',
+  // The design's `color-mix(in oklch, primary 18%, …)` selection wash, resolved against the
+  // surface a selected row actually sits on — `card` in each scheme. Teal, never `live-muted`:
+  // a chosen row is something you pressed, not audio moving.
+  primaryMuted: '#D3F4F3',
 
   secondary: '#E7EFF0',
   secondaryForeground: '#1B3149',
@@ -97,6 +102,7 @@ const dark: Palette = {
   // Identical to light on purpose: what can be pressed is the same teal in both schemes.
   primary: '#0BC3BC',
   primaryForeground: '#10283A',
+  primaryMuted: '#184D5D',
 
   secondary: '#1B3348',
   secondaryForeground: '#E8F2F3',

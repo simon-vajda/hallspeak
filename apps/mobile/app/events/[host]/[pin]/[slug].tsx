@@ -1,9 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { channelQueryOptions } from '@/api/queries';
-import { ActionButton } from '@/components/action-button';
 import { ConnectionLine } from '@/components/connection-line';
 import { ErrorState } from '@/components/error-state';
 import { GlassSurface } from '@/components/glass-surface';
@@ -22,8 +29,10 @@ import {
 } from '@/screens/channel-copy';
 import { channelReading, eventErrorMessage } from '@/screens/event-view';
 import { useColors } from '@/theme/provider';
-import { radius, spacing } from '@/theme/tokens';
+import { radius } from '@/theme/tokens';
 import { type } from '@/theme/typography';
+
+const IOS = Platform.OS === 'ios';
 
 export default function ChannelScreen() {
   const colors = useColors();
@@ -36,16 +45,12 @@ export default function ChannelScreen() {
   const query = useQuery(channelQueryOptions(host, pin, slug));
   const view = query.data;
 
-  // The channel the guest chose is what the history row names next time.
+  // Reaching a channel writes its event down; the channel itself is not remembered.
   useEffect(() => {
     if (view) {
-      rememberEvent({ host, pin, name: view.event.name, slug: view.channel.slug, at: Date.now() });
+      rememberEvent({ host, pin, name: view.event.name, at: Date.now() });
     }
   }, [view, host, pin]);
-
-  const refresh = (
-    <RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} />
-  );
 
   if (query.isError) {
     const message = eventErrorMessage(query.error);
@@ -64,85 +69,121 @@ export default function ChannelScreen() {
   const copy = channelCopy(reading);
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.content}
-      contentInsetAdjustmentBehavior="automatic"
-      refreshControl={refresh}
-    >
-      <View style={styles.header}>
-        <Text style={[type.meta, { color: colors.mutedForeground }]}>
-          {view ? `${view.event.name} · ${pin}` : ' '}
-        </Text>
-        {/* The slot is held in every state, the withheld one included. */}
-        <View style={styles.badgeSlot}>
-          {copy.badge ? (
-            <LiveBadge live={reading === 'on-air'} label={copy.badge} />
-          ) : (
-            <Text style={[type.meta, { color: colors.mutedForeground }]}>
-              {copy.accessibleBadge}
-            </Text>
-          )}
-        </View>
-        <Text style={[type.hero, { color: colors.foreground }]}>{view?.channel.name ?? ' '}</Text>
-      </View>
-
-      <View style={styles.stage}>
-        <ListenTarget label={LISTEN_LABEL} disabled />
-        <ConnectionLine />
-        <Text style={[type.note, styles.centred, { color: colors.mutedForeground }]}>
-          {copy.note}
-        </Text>
-        <Text style={[type.meta, styles.centred, { color: colors.mutedForeground }]}>
-          {LISTEN_UNAVAILABLE_NOTE}
-        </Text>
-      </View>
-
-      {/* Two unrelated jobs, so two surfaces rather than one row of buttons. */}
-      <View style={styles.actions}>
-        <GlassSurface style={styles.audioSurface}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={AUDIO_ACTION_LABEL}
-            onPress={() => router.push(audioSheetHref(host, pin, slug))}
-            style={styles.audioPress}
-          >
-            <Icon name="audio" size={20} color={colors.primary} />
-            <View style={styles.audioText}>
-              <Text style={[type.section, { color: colors.foreground }]}>{AUDIO_ACTION_LABEL}</Text>
+    <>
+      <Stack.Screen options={{ headerTitle: view?.event.name ?? '' }} />
+      <View style={styles.screen}>
+        {/* The stage takes the height the screen has: the target sits in the middle of it,
+            and the two actions stay at the thumb line however tall the phone is. */}
+        <ScrollView
+          contentContainerStyle={styles.stage}
+          contentInsetAdjustmentBehavior="never"
+          refreshControl={
+            <RefreshControl
+              refreshing={query.isRefetching}
+              onRefresh={() => void query.refetch()}
+            />
+          }
+        >
+          <View style={styles.badgeSlot}>
+            {copy.badge ? (
+              <LiveBadge live={reading === 'on-air'} label={copy.badge} />
+            ) : (
               <Text style={[type.meta, { color: colors.mutedForeground }]}>
+                {copy.accessibleBadge}
+              </Text>
+            )}
+          </View>
+
+          <Text numberOfLines={2} style={[type.hero, styles.centred, { color: colors.foreground }]}>
+            {view?.channel.name ?? ' '}
+          </Text>
+
+          <ListenTarget label={LISTEN_LABEL} disabled />
+
+          <ConnectionLine />
+
+          <Text style={[type.body, styles.note, { color: colors.mutedForeground }]}>
+            {copy.note}
+          </Text>
+          <Text style={[type.meta, styles.note, { color: colors.mutedForeground }]}>
+            {LISTEN_UNAVAILABLE_NOTE}
+          </Text>
+        </ScrollView>
+
+        {/* Two unrelated jobs, so a wide surface and a separate one rather than a stack of
+            equal buttons: the audio control reads its own state in its face. */}
+        <View style={styles.thumbLine}>
+          <GlassSurface style={styles.audioSurface}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={AUDIO_ACTION_LABEL}
+              accessibilityHint={AUDIO_ACTION_DETAIL}
+              onPress={() => router.push(audioSheetHref(host, pin, slug))}
+              style={styles.audioPress}
+            >
+              <Icon name="headphones" size={20} color={colors.foreground} strokeWidth={2.25} />
+              <Text
+                numberOfLines={1}
+                style={[type.section, styles.audioLabel, { color: colors.foreground }]}
+              >
                 {AUDIO_ACTION_DETAIL}
               </Text>
-            </View>
-            <Icon name="forward" size={18} color={colors.mutedForeground} />
-          </Pressable>
-        </GlassSurface>
+            </Pressable>
+          </GlassSurface>
 
-        <ActionButton
-          label={REPORT_ACTION_LABEL}
-          icon="report"
-          variant="outlined"
-          onPress={() => router.push(reportSheetHref(host, pin, slug))}
-        />
+          <GlassSurface style={IOS ? styles.reportRound : styles.reportSquircle}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={REPORT_ACTION_LABEL}
+              onPress={() => router.push(reportSheetHref(host, pin, slug))}
+              style={styles.reportPress}
+            >
+              <Icon name="report" size={21} color={colors.foreground} strokeWidth={2.1} />
+            </Pressable>
+          </GlassSurface>
+        </View>
       </View>
-    </ScrollView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: spacing.gutter, paddingBottom: 36, gap: 22 },
+  screen: { flex: 1 },
+  stage: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 22,
+    paddingHorizontal: 32,
+    paddingBottom: 96,
+  },
   centred: { textAlign: 'center' },
-  header: { alignItems: 'center', gap: 8, paddingTop: 4 },
-  badgeSlot: { minHeight: 26, justifyContent: 'center' },
-  stage: { alignItems: 'center', gap: 12 },
-  actions: { gap: 10 },
-  audioSurface: { borderRadius: radius.lg },
+  badgeSlot: { minHeight: 34, justifyContent: 'center' },
+  note: { maxWidth: 300, textAlign: 'center' },
+  thumbLine: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: IOS ? 34 : 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  audioSurface: { flex: 1, minWidth: 0, borderRadius: radius.full },
   audioPress: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    minHeight: spacing.touch + 16,
-    paddingHorizontal: spacing.panel,
-    paddingVertical: 14,
+    gap: 11,
+    height: 56,
+    paddingHorizontal: 20,
   },
-  audioText: { flex: 1 },
+  audioLabel: { flex: 1, minWidth: 0 },
+  reportRound: { width: 56, height: 56, borderRadius: radius.full },
+  reportSquircle: { width: 56, height: 56, borderRadius: 18 },
+  reportPress: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

@@ -3,19 +3,21 @@
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import Check from 'lucide-react-native/icons/check';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import CircleAlert from 'lucide-react-native/icons/circle-alert';
 import Flashlight from 'lucide-react-native/icons/flashlight';
 import FlashlightOff from 'lucide-react-native/icons/flashlight-off';
+import Headphones from 'lucide-react-native/icons/headphones';
 import Link from 'lucide-react-native/icons/link';
-import MessageSquareWarning from 'lucide-react-native/icons/message-square-warning';
-import Pin from 'lucide-react-native/icons/pin';
 import Play from 'lucide-react-native/icons/play';
 import QrCode from 'lucide-react-native/icons/qr-code';
 import RefreshCw from 'lucide-react-native/icons/refresh-cw';
 import SlidersHorizontal from 'lucide-react-native/icons/sliders-horizontal';
 import Speaker from 'lucide-react-native/icons/speaker';
+import Star from 'lucide-react-native/icons/star';
 import Trash from 'lucide-react-native/icons/trash';
 import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
 import Volume2 from 'lucide-react-native/icons/volume-2';
+import VolumeX from 'lucide-react-native/icons/volume-x';
 import WifiOff from 'lucide-react-native/icons/wifi-off';
 import X from 'lucide-react-native/icons/x';
 import type { ComponentType } from 'react';
@@ -31,17 +33,19 @@ export type IconProps = SvgProps & { size?: number; color?: string; strokeWidth?
 export const icons = {
   scan: QrCode,
   link: Link,
-  pin: Pin,
+  pin: Star,
   remove: Trash,
   forward: ChevronRight,
   back: ArrowLeft,
   close: X,
   torchOn: Flashlight,
   torchOff: FlashlightOff,
+  headphones: Headphones,
   listen: Play,
   audio: SlidersHorizontal,
-  report: MessageSquareWarning,
+  report: CircleAlert,
   volume: Volume2,
+  muted: VolumeX,
   output: Speaker,
   confirm: Check,
   warn: TriangleAlert,

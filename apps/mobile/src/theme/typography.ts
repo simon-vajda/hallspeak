@@ -1,4 +1,4 @@
-import type { TextStyle } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 
 /**
  * The type ramp from `docs/design/mobile-app/_ds/.../tokens/typography.css`, with every
@@ -12,6 +12,13 @@ import type { TextStyle } from 'react-native';
  * synthesise 600 from a regular one.
  */
 export const DISPLAY_FONT = 'SpaceGrotesk_600SemiBold';
+
+/**
+ * A host is read character by character to check it against the card at a venue, which is
+ * what the design sets it in a monospace face for. React Native has no `ui-monospace`, so
+ * each platform's own is named.
+ */
+export const MONO_FONT = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
 export type TypeStep =
   | 'body'
