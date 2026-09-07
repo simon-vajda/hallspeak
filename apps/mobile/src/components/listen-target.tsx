@@ -21,7 +21,10 @@ const IOS = Platform.OS === 'ios';
 // inside a stage that leaves room for the rings to expand into.
 const DIAMETER = IOS ? 172 : 180;
 const RING_WIDTH = IOS ? 2 : 3;
-const STAGE = DIAMETER + 40;
+// The rings expand inside the stage rather than past it, so neither the channel name above
+// nor the connection line below is ever touched.
+const RING_TRAVEL = 0.3;
+const STAGE = Math.ceil(DIAMETER * (1 + RING_TRAVEL));
 const GLYPH = IOS ? 54 : 58;
 const GLOW = STAGE * 2;
 
@@ -124,7 +127,7 @@ function Ring({ color, delayed = false }: { color: string; delayed?: boolean }) 
   }, [frame.animated, delayed, progress]);
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + progress.value * 0.55 }],
+    transform: [{ scale: 1 + progress.value * RING_TRAVEL }],
     opacity: frame.opacity * (1 - progress.value),
   }));
 
