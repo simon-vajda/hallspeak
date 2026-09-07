@@ -1,15 +1,33 @@
-// `roots` reaches the workspace root because pnpm keeps every real package under
-// `<repo>/node_modules/.pnpm`, outside this package's tree. Without it, jest-runtime
-// refuses the first hoisted import with "outside of the scope of the test code".
+const preset = require('jest-expo/jest-preset');
+
+// jest-expo's own pattern already admits pnpm's `.pnpm/<name>@<version>` segment so the
+// package name after it decides. This is that list plus `lucide-react-native`, which is
+// otherwise left untransformed.
+const ALLOWED = [
+  '.pnpm',
+  'react-native',
+  '@react-native',
+  '@react-native-community',
+  'expo',
+  '@expo',
+  '@expo-google-fonts',
+  'react-navigation',
+  '@react-navigation',
+  'lucide-react-native',
+].join('|');
+
 module.exports = {
   preset: 'jest-expo',
-  roots: ['<rootDir>', '<rootDir>/../..'],
   testMatch: ['<rootDir>/**/*.test.ts', '<rootDir>/**/*.test.tsx'],
-  // A pnpm path is `node_modules/.pnpm/<name>@<version>/node_modules/<name>/…`, so the
-  // stock pattern matches at the first segment and nothing under the store is ever
-  // transpiled — a failure that reads as a syntax error inside a dependency. Admitting
-  // `.pnpm` lets the second segment decide, which is the name the pattern is about.
+  transform: {
+    ...preset.transform,
+    // lucide-react-native resolves to `.mjs` under the `react-native` condition, and the
+    // preset's transform keys stop at `.tsx`, so nothing would compile those files.
+    '\\.mjs$': preset.transform['\\.[jt]sx?$'],
+  },
   transformIgnorePatterns: [
-    'node_modules/(?!\\.pnpm|(?:jest-)?react-native|@react-native|expo|@expo|react-navigation|@react-navigation|@linguacast)',
+    `/node_modules/(?!(${ALLOWED}))`,
+    '/node_modules/react-native-reanimated/plugin/',
+    '/node_modules/@react-native/babel-preset/',
   ],
 };

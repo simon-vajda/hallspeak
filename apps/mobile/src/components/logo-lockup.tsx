@@ -1,0 +1,27 @@
+import { StyleSheet, Text, View } from 'react-native';
+import { useColors } from '@/theme/provider';
+import { DISPLAY_FONT } from '@/theme/typography';
+
+/** The wordmark, in Space Grotesk, with the teal mark that means what can be pressed. */
+export function LogoLockup() {
+  const colors = useColors();
+
+  return (
+    <View style={styles.lockup}>
+      <View style={[styles.mark, { backgroundColor: colors.primary }]} />
+      <Text style={[styles.wordmark, { color: colors.foreground }]}>LinguaCast</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  lockup: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  mark: { width: 14, height: 14, borderRadius: 4 },
+  wordmark: {
+    fontFamily: DISPLAY_FONT,
+    fontSize: 17,
+    lineHeight: 20,
+    letterSpacing: -0.4,
+    fontWeight: '600',
+  },
+});
