@@ -6,8 +6,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { registerGlobals } from 'react-native-webrtc';
 import { SHEET_OPTIONS } from '@/components/sheet-options';
 import { ThemeProvider, useTheme } from '@/theme/provider';
+
+// Before anything can construct a mediasoup device: it reads the WebRTC constructors off
+// the global object, and a device built before this call would find none of them.
+registerGlobals();
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Already hidden, which is not a failure worth showing a listener.

@@ -20,7 +20,11 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -35,6 +39,12 @@
       ],
       [
         "expo-camera",
+        {
+          "cameraPermission": "LinguaCast uses the camera to scan an event's QR code."
+        }
+      ],
+      [
+        "@config-plugins/react-native-webrtc",
         {
           "cameraPermission": "LinguaCast uses the camera to scan an event's QR code."
         }
