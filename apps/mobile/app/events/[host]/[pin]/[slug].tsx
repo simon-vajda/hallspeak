@@ -29,6 +29,7 @@ import {
   AUDIO_ACTION_LABEL,
   channelCopy,
   REPORT_ACTION_LABEL,
+  showListenRings,
   TRY_AGAIN_LABEL,
   targetLabel,
 } from '@/screens/channel-copy';
@@ -171,8 +172,8 @@ export default function ChannelScreen() {
         <ListenTarget
           label={targetLabel(listener.actionState)}
           active={listener.actionState === 'playing'}
-          // The rings claim a resumed consumer, not a press.
-          rings={listener.isPlaying}
+          // Muting keeps the consumer open but stops audible samples, so it stops the rings.
+          rings={showListenRings(listener.isPlaying, channelStatus?.muted ?? null)}
           disabled={listener.actionState === 'unavailable'}
           onPress={listener.actionState === 'playing' ? listener.stop : listener.start}
         />
