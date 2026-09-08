@@ -8,7 +8,7 @@ import {
   projectOnlineStatuses,
   resetStatusOrdering,
   rollbackMutedAfterFailure,
-} from './channel-status';
+} from './status';
 
 describe('channel status reconciliation', () => {
   it('uses HTTP only for liveness and leaves mute unknown for an online producer', () => {

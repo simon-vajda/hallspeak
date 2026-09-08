@@ -1,3 +1,4 @@
+import { shouldThrowSettledQueryError } from '@linguacast/client-core/query-retry';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
@@ -10,7 +11,6 @@ import { MICRO_LABEL } from '@/components/micro-label';
 import { Button } from '@/components/ui/button';
 import { ADMIN_EVENT_TABLE_COLUMNS, summariseAdminEvents } from '@/lib/admin-event-list';
 import { eventsListQueryOptions, useAdminLive } from '@/lib/admin-queries';
-import { shouldThrowSettledQueryError } from '@/lib/query-retry';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin/events/')({

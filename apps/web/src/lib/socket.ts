@@ -1,4 +1,4 @@
-import { createSocket, type SocketAuth, type SocketClient } from '@/socket/client';
+import { createSocket, type SocketAuth, type SocketClient } from '@linguacast/client-core/socket';
 import { CLIENT_VERSION } from '@/version';
 
 /**

@@ -1,8 +1,8 @@
+import { apiProblemCode } from '@linguacast/client-core/query-retry';
 import type { ErrorComponentProps } from '@tanstack/react-router';
 import { Link } from '@tanstack/react-router';
 import { GuestMessage, GuestMessageAction } from '@/components/guest/guest-message';
 import { Button } from '@/components/ui/button';
-import { apiProblemCode } from '@/lib/query-retry';
 import { useRouteQueryRetry } from '@/lib/use-route-query-retry';
 
 export function EventRouteError({ error }: ErrorComponentProps) {

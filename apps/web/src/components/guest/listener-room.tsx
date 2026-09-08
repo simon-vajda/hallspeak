@@ -1,3 +1,22 @@
+import type { SentMap } from '@linguacast/client-core/channel';
+import {
+  badgeHasLiveDot,
+  badgeLabel,
+  hasRequestedAudio,
+  type ListenIntentState,
+  listenActionState,
+  listenerMediaPlayAction,
+  playTargetLabel,
+  reconcileListenIntent,
+  statusNote,
+} from '@linguacast/client-core/channel';
+import {
+  consumerPlan,
+  isLinkUp,
+  mayAttachConsumerTrack,
+  resolveLinkState,
+} from '@linguacast/client-core/media';
+import type { SocketClient, SocketStatus } from '@linguacast/client-core/socket';
 import type { components } from '@linguacast/contract/openapi';
 import type { ReportCategory } from '@linguacast/contract/socket';
 import { Link } from '@tanstack/react-router';
@@ -18,24 +37,8 @@ import { useAudioVolume } from '@/lib/audio/use-audio-volume';
 import { useListenerMediaSession } from '@/lib/audio/use-listener-media-session';
 import { useMediaSessionCarrier } from '@/lib/audio/use-media-session-carrier';
 import { formatPin } from '@/lib/format';
-import { isLinkUp, resolveLinkState } from '@/lib/media/link-state';
-import { consumerPlan, mayAttachConsumerTrack } from '@/lib/media/media-state';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
-import type { SocketStatus } from '@/lib/use-socket';
 import { cn } from '@/lib/utils';
-import type { SocketClient } from '@/socket/client';
-import {
-  badgeHasLiveDot,
-  badgeLabel,
-  hasRequestedAudio,
-  type ListenIntentState,
-  listenActionState,
-  listenerMediaPlayAction,
-  playTargetLabel,
-  reconcileListenIntent,
-  statusNote,
-} from './listen-state';
-import type { SentMap } from './report-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 

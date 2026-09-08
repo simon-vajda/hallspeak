@@ -1,6 +1,7 @@
+import { useSocket } from '@linguacast/client-core/socket';
 import type { components } from '@linguacast/contract/openapi';
 import { SpeakerStudio } from '@/components/speaker/speaker-studio';
-import { useSocket } from '@/lib/use-socket';
+import { connectSocket } from '@/lib/socket';
 
 type PublicChannelView = components['schemas']['PublicChannelView'];
 
@@ -20,10 +21,13 @@ export function SpeakerChannel({
     reportResolutions,
     reportsKnown,
     socket,
-  } = useSocket({
-    pin: view.event.pin,
-    speakerCode,
-  });
+  } = useSocket(
+    {
+      pin: view.event.pin,
+      speakerCode,
+    },
+    connectSocket,
+  );
   return (
     <SpeakerStudio
       eventName={view.event.name}

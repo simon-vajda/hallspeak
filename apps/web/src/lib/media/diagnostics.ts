@@ -1,5 +1,8 @@
+import {
+  hasCandidateAddressFamilyMismatch,
+  ICE_RECOVERY_DELAY_MS,
+} from '@linguacast/client-core/media';
 import type { types } from 'mediasoup-client';
-import { hasCandidateAddressFamilyMismatch, ICE_RECOVERY_DELAY_MS } from './media-state';
 
 interface OfferedCandidate {
   address?: unknown;

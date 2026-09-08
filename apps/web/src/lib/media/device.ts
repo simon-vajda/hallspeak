@@ -1,5 +1,5 @@
+import type { Signalling } from '@linguacast/client-core/media';
 import { Device } from 'mediasoup-client';
-import type { Signalling } from './signalling';
 
 /**
  * One `Device` per socket connection. It is loaded from the router's capabilities and is

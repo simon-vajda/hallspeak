@@ -1,6 +1,5 @@
+import { BAR_COUNT, filledBars, type LinkState, linkLabel } from '@linguacast/client-core/media';
 import { Loader2, OctagonX } from 'lucide-react';
-import { filledBars, type LinkState, linkLabel } from '@/lib/media/link-state';
-import { BAR_COUNT } from '@/lib/media/stats';
 import { cn } from '@/lib/utils';
 
 /**

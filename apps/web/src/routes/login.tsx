@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { apiProblemCode, apiProblemMessage } from '@linguacast/client-core/query-retry';
 import { PASSWORD_MAX_LENGTH } from '@linguacast/contract/patterns';
 import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
@@ -13,7 +14,6 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { type LoginFormValues, loginFormSchema } from '@/lib/auth-forms';
 import { internalPath, sessionKey, sessionQueryOptions } from '@/lib/auth-queries';
-import { apiProblemCode, apiProblemMessage } from '@/lib/query-retry';
 
 export const Route = createFileRoute('/login')({
   validateSearch: (search: Record<string, unknown>): { redirect?: string } => {

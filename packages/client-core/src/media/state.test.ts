@@ -19,7 +19,7 @@ import {
   type MediaState,
   mayAttachConsumerTrack,
   producerOpened,
-} from './media-state';
+} from './state';
 
 const live: MediaState = {
   generation: 3,

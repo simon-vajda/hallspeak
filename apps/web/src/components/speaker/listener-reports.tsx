@@ -1,6 +1,3 @@
-import { Check } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { MICRO_LABEL } from '@/components/micro-label';
 import {
   type AnchoredResolution,
   type AnchoredRow,
@@ -8,7 +5,10 @@ import {
   reportLabel,
   reportTone,
   sortReportRows,
-} from '@/lib/reports';
+} from '@linguacast/client-core/channel';
+import { Check } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { MICRO_LABEL } from '@/components/micro-label';
 import { cn } from '@/lib/utils';
 import { reconcileReportRows, removeLeavingReportRows } from './report-row-presence';
 

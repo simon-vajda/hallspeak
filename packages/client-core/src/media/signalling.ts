@@ -1,5 +1,5 @@
 import { unwrap } from '@linguacast/contract/socket';
-import type { SocketClient } from '@/socket/client';
+import type { SocketClient } from '../socket/client';
 
 /**
  * The socket calls the media layer makes, collapsed to plain promises. `unwrap` turns the

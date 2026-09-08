@@ -1,5 +1,5 @@
 import type { ReportCategory } from '@linguacast/contract/socket';
-import { REPORT_CATEGORIES, reportAgeLabel } from '@/lib/reports';
+import { REPORT_CATEGORIES, reportAgeLabel } from './reports';
 
 /** The same two minutes the server enforces, so the two never disagree visibly. */
 export const REPORT_DISABLE_MS = 2 * 60 * 1000;

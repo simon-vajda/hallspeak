@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { apiProblemMessage } from '@linguacast/client-core/query-retry';
 import { PASSWORD_MAX_LENGTH } from '@linguacast/contract/patterns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
@@ -13,7 +14,6 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { type SetupFormValues, setupFormSchema } from '@/lib/auth-forms';
 import { sessionKey } from '@/lib/auth-queries';
-import { apiProblemMessage } from '@/lib/query-retry';
 
 export function SetupCredentialsForm() {
   const navigate = useNavigate();

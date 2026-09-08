@@ -1,3 +1,4 @@
+import { shouldThrowSettledQueryError } from '@linguacast/client-core/query-retry';
 import { formatChannelPageTitle } from '@linguacast/contract/page-titles';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
@@ -8,7 +9,6 @@ import { ListenerChannel } from '@/components/guest/listener-channel';
 import { SpeakerChannel } from '@/components/speaker/speaker-channel';
 import { loadPublicChannelRoute } from '@/lib/public-channel-route';
 import { publicChannelQueryOptions } from '@/lib/public-queries';
-import { shouldThrowSettledQueryError } from '@/lib/query-retry';
 import { useDocumentTitle } from '@/lib/use-document-title';
 
 // One route for both roles: removing speaker_code degrades a speaker URL into a listener URL.

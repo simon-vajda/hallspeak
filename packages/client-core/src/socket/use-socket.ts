@@ -1,6 +1,12 @@
 import { unwrap } from '@linguacast/contract/socket';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
+  type AnchoredResolution,
+  type AnchoredRow,
+  anchorResolution,
+  anchorRows,
+} from '../channel/reports';
+import {
   applyJoinStatus,
   applyRealtimeStatus,
   beginChannelJoin,
@@ -9,18 +15,14 @@ import {
   projectOnlineStatuses,
   resetStatusesForAuth,
   resetStatusOrdering,
-} from '@/lib/channel-status';
-import {
-  type AnchoredResolution,
-  type AnchoredRow,
-  anchorResolution,
-  anchorRows,
-} from '@/lib/reports';
-import { connectSocket } from '@/lib/socket';
-import { initialSocketConnectionState, socketConnectionState } from '@/lib/socket-state';
-import type { SocketAuth, SocketClient } from '@/socket/client';
+} from '../channel/status';
+import type { SocketAuth, SocketClient } from './client';
+import { initialSocketConnectionState, socketConnectionState } from './state';
 
-export type { SocketStatus } from '@/lib/socket-state';
+export type { SocketStatus } from './state';
+
+/** Opens a connected socket for `auth`. Each app binds its own client version and url. */
+export type SocketFactory = (auth: SocketAuth) => SocketClient;
 
 /**
  * Callers pass `auth` only after their HTTP GET has returned 200, never in parallel with it:
@@ -28,7 +30,7 @@ export type { SocketStatus } from '@/lib/socket-state';
  * A first-connect error is therefore never a 404; it is version drift, channel_busy, or the
  * admin disabling the event in the gap. Retry errors stay in the reconnecting phase.
  */
-export function useSocket(auth: SocketAuth | null) {
+export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
   const [{ status, error, hasConnected }, dispatchConnection] = useReducer(
     socketConnectionState,
     initialSocketConnectionState,
@@ -71,7 +73,7 @@ export function useSocket(auth: SocketAuth | null) {
 
     updateChannelStatuses(resetStatusesForAuth);
     dispatchConnection({ type: 'start' });
-    const s = connectSocket(speakerCode === null ? { pin } : { pin, speakerCode });
+    const s = connect(speakerCode === null ? { pin } : { pin, speakerCode });
     setSocket(s);
 
     s.on('connect', () => {
@@ -138,7 +140,7 @@ export function useSocket(auth: SocketAuth | null) {
       setSocket(null);
       dispatchConnection({ type: 'stop' });
     };
-  }, [pin, speakerCode, updateChannelStatuses]);
+  }, [pin, speakerCode, connect, updateChannelStatuses]);
 
   const joinChannel = useCallback(
     async (slug: string, httpOnline: boolean) => {

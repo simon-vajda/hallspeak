@@ -1,3 +1,5 @@
+import { shouldThrowSettledQueryError } from '@linguacast/client-core/query-retry';
+import { useSocket } from '@linguacast/client-core/socket';
 import { formatEventPageTitle } from '@linguacast/contract/page-titles';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
@@ -7,9 +9,8 @@ import { EventRouteError } from '@/components/guest/event-route-error';
 import { GuestMessage, GuestShell } from '@/components/guest/guest-message';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { publicEventQueryOptions } from '@/lib/public-queries';
-import { shouldThrowSettledQueryError } from '@/lib/query-retry';
+import { connectSocket } from '@/lib/socket';
 import { useDocumentTitle } from '@/lib/use-document-title';
-import { useSocket } from '@/lib/use-socket';
 
 export const Route = createFileRoute('/events/$pin/')({
   loader: ({ context, params }) =>
@@ -27,7 +28,7 @@ function EventPage() {
   useDocumentTitle(formatEventPageTitle(data.name));
 
   // Only after the GET returns 200, never in parallel with it.
-  const { online } = useSocket(data ? { pin } : null);
+  const { online } = useSocket(data ? { pin } : null, connectSocket);
 
   if (shouldThrowSettledQueryError(error, isFetching)) {
     throw error;
