@@ -1,5 +1,3 @@
-import { OUTPUT_UNKNOWN_LABEL, outputLabel } from './output';
-
 export const MIN_VOLUME = 0;
 export const MAX_VOLUME = 100;
 
@@ -21,6 +19,18 @@ export function volumeLabel(volume: number): string {
 }
 
 /**
+ * The label for a route the platform reported. A name nobody gave is not printed as one, on
+ * the same terms as the channel badge: the line states what it has.
+ */
+export const OUTPUT_UNKNOWN_LABEL = 'Output';
+
+export function outputLabel(route: string | null | undefined): string {
+  const named = typeof route === 'string' ? route.trim() : '';
+
+  return named === '' ? OUTPUT_UNKNOWN_LABEL : named;
+}
+
+/**
  * What the Channel screen's audio line says: where the audio is going and how loud the
  * device is, both of them read from the platform rather than set by this app.
  *
@@ -35,5 +45,3 @@ export function audioStatus(input: { route: string | null; volume: number }): st
     ? level
     : `${outputLabel(input.route)} · ${level}`;
 }
-
-export { OUTPUT_UNKNOWN_LABEL };
