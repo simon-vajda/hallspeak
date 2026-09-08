@@ -35,7 +35,8 @@ export function channelCopy(input: (ListenBadgeInput & ListenNoteInput) | 'unkno
     return { badge: null, accessibleBadge: UNKNOWN_BADGE, note: UNKNOWN_NOTE };
   }
 
-  const badge = badgeLabel(input);
+  const sharedBadge = badgeLabel(input);
+  const badge = sharedBadge === 'Muted' ? 'On air · muted' : sharedBadge;
 
   return { badge, accessibleBadge: badge, note: statusNote(input) };
 }

@@ -50,14 +50,14 @@ describe('channel copy', () => {
 
   it('separates the states the socket now supplies', () => {
     expect(channelCopy(LIVE_AND_FLOWING).badge).toBe('On air');
-    expect(channelCopy({ ...LIVE_AND_FLOWING, muted: true }).badge).toBe('Muted');
+    expect(channelCopy({ ...LIVE_AND_FLOWING, muted: true }).badge).toBe('On air · muted');
     expect(channelCopy({ ...LIVE_AND_FLOWING, live: false, holding: true }).badge).toBe(
       'Speaker dropped off',
     );
   });
 
   it('reports muted for a paused producer, and offline whenever the link is down', () => {
-    expect(channelCopy({ ...LIVE_AND_FLOWING, muted: true }).badge).toBe('Muted');
+    expect(channelCopy({ ...LIVE_AND_FLOWING, muted: true }).badge).toBe('On air · muted');
     expect(channelCopy({ ...LIVE_AND_FLOWING, muted: true, linkConnected: false }).badge).toBe(
       'Offline',
     );
