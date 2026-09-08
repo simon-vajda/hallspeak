@@ -37,9 +37,8 @@ const GLOW_HEIGHT = STAGE * 2.75;
  * It carries the glyph alone, as the design draws it — the word belongs to the screen reader,
  * which is why `label` is the accessibility label rather than visible text.
  *
- * `rings` means the listener has asked for this channel's audio. This run ships no audio
- * path, so nothing downstream of the press exists yet; the note under the target is what
- * says so, and no copy anywhere claims samples are arriving.
+ * `rings` means a resumed consumer exists — samples are arriving — rather than that the
+ * control was pressed, so they claim audio the guest can actually hear.
  */
 export function ListenTarget({
   label,

@@ -5,12 +5,11 @@ import { useColors } from '@/theme/provider';
 const BARS = [5, 8, 11, 14, 16, 14, 11, 8, 5];
 
 /**
- * The nine-bar link indicator. `filled` is how many bars the link is carrying, and it is 0
- * in this run for every state: the bars are graded from WebRTC statistics on the web, and
- * this app has no media leg behind them yet.
+ * The nine-bar link indicator. `filled` is how many bars the link is carrying, graded from
+ * real WebRTC statistics and from the socket's own health together.
  *
- * The slot is reserved at the design's height either way, so the audio round that fills
- * these in moves nothing below them.
+ * The slot is reserved at the design's height in every state, so a link changing is a data
+ * change and never a re-layout.
  */
 export function ConnectionLine({ filled = 0 }: { filled?: number }) {
   const colors = useColors();

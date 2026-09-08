@@ -1,0 +1,191 @@
+import {
+  hasCandidateAddressFamilyMismatch,
+  ICE_RECOVERY_DELAY_MS,
+} from '@linguacast/client-core/media';
+import type { types } from 'mediasoup-client';
+
+interface OfferedCandidate {
+  address?: unknown;
+  ip?: unknown;
+}
+
+/**
+ * The client half of the silent-failure telemetry the server carries in
+ * `core/media/diagnostics.ts`. The failure worth naming is the one where every signalling
+ * call succeeds and no audio ever moves — an unreachable announced address, a blocked RTC
+ * port, a carrier offering only an address family the server never announced. Nothing
+ * throws for any of them, so the log is the only place it can be seen.
+ */
+
+function log(message: string, ...rest: unknown[]): void {
+  console.info(`media: ${message}`, ...rest);
+}
+
+/** One direction exists here, so the tag is a constant rather than a parameter. */
+const TAG = 'recv transport';
+
+export function watchTransport(
+  transport: types.Transport,
+  remoteCandidates: OfferedCandidate[],
+  onCandidateAddressFamilyMismatch?: () => void,
+): void {
+  const tag = TAG;
+  log(`${tag} created`);
+
+  transport.on('icegatheringstatechange', (gathering) => {
+    log(`${tag} ice gathering ${gathering}`);
+    if (gathering === 'complete') {
+      void reportLocalCandidates(transport, tag);
+    }
+  });
+
+  transport.on('icecandidateerror', (event) => {
+    console.warn(`media: ${tag} ice candidate error`, event.errorCode, event.errorText, event.url);
+  });
+
+  transport.on('connectionstatechange', (next) => {
+    if (next === 'failed' || next === 'disconnected') {
+      console.warn(`media: ${tag} connection ${next}`);
+    } else {
+      log(`${tag} connection ${next}`);
+    }
+  });
+
+  // A transport stuck short of connected is the whole failure mode; the selected pair is
+  // what says which path won, and its absence is what says none did.
+  setTimeout(() => {
+    if (transport.closed) {
+      return;
+    }
+    void reportPath(transport, tag, remoteCandidates).then((result) => {
+      if (result === 'candidate-address-family-mismatch') {
+        onCandidateAddressFamilyMismatch?.();
+      }
+    });
+  }, ICE_RECOVERY_DELAY_MS);
+}
+
+/** Names a recovery step as it happens; without it a stuck transport leaves no trace of what was tried. */
+export function logIceRecovery(message: string, ...rest: unknown[]): void {
+  log(`${TAG} ${message}`, ...rest);
+}
+
+/** The same snapshot the creation deadline takes, for a caller that has just tried a recovery. */
+export function reportTransportPath(transport: types.Transport): Promise<void> {
+  return reportPath(transport, TAG).then(() => undefined);
+}
+
+type TransportPathReport = 'connected' | 'no-rtp' | 'no-pair' | 'candidate-address-family-mismatch';
+
+async function reportPath(
+  transport: types.Transport,
+  tag: string,
+  remoteCandidates: OfferedCandidate[] = [],
+): Promise<TransportPathReport | null> {
+  const report = await transport.getStats().catch(() => null);
+  if (!report) {
+    return null;
+  }
+
+  log(`${tag} local candidates ${describeCandidateType(report, 'local-candidate')}`);
+
+  let bytes = 0;
+  let pair: string | null = null;
+  let candidatePairCount = 0;
+  const localAddresses: string[] = [];
+  for (const entry of report.values()) {
+    if (entry.type === 'inbound-rtp') {
+      bytes += Number(entry.bytesReceived ?? 0);
+    }
+    if (entry.type === 'candidate-pair') {
+      candidatePairCount += 1;
+      if (entry.state === 'succeeded' && entry.nominated) {
+        pair = `${entry.localCandidateId} -> ${entry.remoteCandidateId}`;
+      }
+    }
+    if (entry.type === 'local-candidate' && typeof entry.address === 'string') {
+      localAddresses.push(entry.address);
+    }
+  }
+
+  if (pair === null) {
+    console.warn(
+      `media: ${tag} has no nominated candidate pair after ${ICE_RECOVERY_DELAY_MS}ms — ` +
+        'ICE never connected. A blocked RTC port and a carrier offering only an address ' +
+        'family the server never announced both look exactly like this.',
+      describeCandidates(report),
+    );
+    const remoteAddresses = remoteCandidates.flatMap((candidate) => {
+      const address = candidate.address ?? candidate.ip;
+      return typeof address === 'string' ? [address] : [];
+    });
+    return hasCandidateAddressFamilyMismatch({
+      localAddresses,
+      remoteAddresses,
+      candidatePairCount,
+    })
+      ? 'candidate-address-family-mismatch'
+      : 'no-pair';
+  }
+  if (bytes === 0) {
+    console.warn(`media: ${tag} connected on ${pair} but no RTP has moved.`);
+    return 'no-rtp';
+  }
+  log(`${tag} carrying RTP on ${pair} (${bytes} bytes)`);
+  return 'connected';
+}
+
+async function reportLocalCandidates(transport: types.Transport, tag: string): Promise<void> {
+  const report = await transport.getStats().catch(() => null);
+  if (!report || transport.closed) {
+    return;
+  }
+  log(`${tag} local candidates ${describeCandidateType(report, 'local-candidate')}`);
+}
+
+function describeCandidateType(
+  report: RTCStatsReport,
+  type: 'local-candidate' | 'remote-candidate',
+): string {
+  const candidates: string[] = [];
+  for (const entry of report.values()) {
+    if (entry.type !== type) {
+      continue;
+    }
+    const where = `${entry.candidateType}/${entry.protocol} ${entry.address ?? '?'}:${entry.port ?? '?'}`;
+    candidates.push(entry.networkType === undefined ? where : `${where} (${entry.networkType})`);
+  }
+  return `[${candidates.join(', ') || 'none'}]`;
+}
+
+/**
+ * What ICE had to work with. A handoff that leaves the browser gathering on an interface
+ * that is already gone reads as no local candidates at all, which is indistinguishable
+ * from a suppressed-candidate shield until the two sides are counted separately.
+ */
+function describeCandidates(report: RTCStatsReport): string {
+  const pairs: string[] = [];
+  for (const entry of report.values()) {
+    if (entry.type === 'candidate-pair') {
+      pairs.push(String(entry.state));
+    }
+  }
+  // Joined rather than returned as arrays: a log line collapses an object, and these
+  // strings are the whole diagnosis — an address family that cannot pair reads as nothing
+  // at all until the candidates themselves are on screen.
+  return (
+    `local ${describeCandidateType(report, 'local-candidate')} ` +
+    `remote ${describeCandidateType(report, 'remote-candidate')} ` +
+    `pairs [${pairs.join(', ') || 'none'}]`
+  );
+}
+
+/** A receive track that never unmutes is the listener-side symptom of RTP not arriving. */
+export function watchConsumerTrack(track: MediaStreamTrack, slug: string): void {
+  log(`consumer track for ${slug} ${track.muted ? 'muted' : 'live'}`);
+  track.addEventListener('unmute', () =>
+    log(`consumer track for ${slug} unmuted — audio arriving`),
+  );
+  track.addEventListener('mute', () => console.warn(`media: consumer track for ${slug} muted`));
+  track.addEventListener('ended', () => console.warn(`media: consumer track for ${slug} ended`));
+}

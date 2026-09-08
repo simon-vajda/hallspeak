@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import {
   Platform,
   Pressable,
@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { channelQueryOptions } from '@/api/queries';
+import { ActionButton } from '@/components/action-button';
 import { ConnectionLine } from '@/components/connection-line';
 import { ErrorState } from '@/components/error-state';
 import { GlassSurface } from '@/components/glass-surface';
@@ -20,15 +21,15 @@ import { LiveBadge } from '@/components/live-badge';
 import { ScreenHeader } from '@/components/screen-header';
 import { rememberEvent } from '@/history/store';
 import { audioSheetHref, eventHref, readChannelParams, reportSheetHref } from '@/links/route';
+import { useListener } from '@/media/use-listener';
 import {
-  AUDIO_ACTION_DETAIL,
   AUDIO_ACTION_LABEL,
   channelCopy,
-  LISTEN_LABEL,
   REPORT_ACTION_LABEL,
-  STOP_LABEL,
+  TRY_AGAIN_LABEL,
+  targetLabel,
 } from '@/screens/channel-copy';
-import { BAD_ROUTE_MESSAGE, channelReadingFor, eventErrorMessage } from '@/screens/event-view';
+import { BAD_ROUTE_MESSAGE, eventErrorMessage } from '@/screens/event-view';
 import { useEventSocket } from '@/socket/provider';
 import { currentChannelStatus } from '@/socket/status';
 import { useColors } from '@/theme/provider';
@@ -52,10 +53,6 @@ export default function ChannelScreen() {
   });
   const view = query.data;
   const { socket, status, channelStatuses, joinChannel, leaveChannel } = useEventSocket();
-
-  // Whether this guest has asked for the channel's audio. Intent and nothing more: no
-  // consumer exists to derive it from yet, which is why a channel leaving the air clears it.
-  const [listening, setListening] = useState(false);
 
   // Reaching a channel writes its event down; the channel itself is not remembered.
   useEffect(() => {
@@ -81,16 +78,16 @@ export default function ChannelScreen() {
   }, [socket, status, slug, httpOnline, joinChannel, leaveChannel]);
 
   const channelStatus = currentChannelStatus(channelStatuses[slug], httpOnline);
-  const reading = channelReadingFor(channelStatus);
-  const onAir = reading === 'on-air';
 
-  // A channel leaving the air ends the intent with it, so the rings never outlive the
-  // broadcast they were asked for.
-  useEffect(() => {
-    if (!onAir) {
-      setListening(false);
-    }
-  }, [onAir]);
+  // Intent is reconciled against the live facts rather than toggled by the press, so a
+  // broadcast ending clears it, an interpreter dropping holds it, and a lost link outlives
+  // it — the audio resumes by itself rather than asking the guest to press Listen again.
+  const listener = useListener({
+    slug,
+    live: channelStatus?.online ?? false,
+    muted: channelStatus?.muted ?? null,
+    ...(channelStatus?.reason === undefined ? {} : { closeReason: channelStatus.reason }),
+  });
 
   if (route === null) {
     return (
@@ -111,7 +108,18 @@ export default function ChannelScreen() {
     );
   }
 
-  const copy = channelCopy(reading);
+  const copy = channelCopy(
+    channelStatus === undefined
+      ? 'unknown'
+      : {
+          live: channelStatus.online,
+          muted: channelStatus.muted,
+          holding: listener.holding,
+          linkConnected: listener.linkConnected,
+          isPlaying: listener.isPlaying,
+          ...(channelStatus.reason === undefined ? {} : { closeReason: channelStatus.reason }),
+        },
+  );
 
   return (
     <View style={styles.screen}>
@@ -127,7 +135,7 @@ export default function ChannelScreen() {
       >
         <View style={styles.badgeSlot}>
           {copy.badge ? (
-            <LiveBadge live={reading === 'on-air'} label={copy.badge} />
+            <LiveBadge live={listener.hasLiveDot} label={copy.badge} />
           ) : (
             <Text style={[type.meta, { color: colors.mutedForeground }]}>
               {copy.accessibleBadge}
@@ -140,16 +148,43 @@ export default function ChannelScreen() {
         </Text>
 
         <ListenTarget
-          label={listening ? STOP_LABEL : LISTEN_LABEL}
-          active={listening}
-          rings={listening}
-          disabled={!onAir}
-          onPress={() => setListening((was) => !was)}
+          label={targetLabel(listener.actionState)}
+          active={listener.actionState === 'playing'}
+          // The rings claim a resumed consumer, not a press.
+          rings={listener.isPlaying}
+          disabled={listener.actionState === 'unavailable'}
+          onPress={listener.actionState === 'playing' ? listener.stop : listener.start}
         />
 
-        <ConnectionLine />
+        {/* The slot is held in every state, `idle` included: the line's shapes differ in
+            height, so an unreserved slot moves everything below it the moment audio starts. */}
+        <View style={styles.lineSlot}>
+          <ConnectionLine filled={listener.filledBars} />
+          {listener.link.kind === 'idle' ? null : (
+            <Text style={[type.meta, { color: colors.mutedForeground }]}>{listener.linkLabel}</Text>
+          )}
+        </View>
 
-        <Text style={[type.body, styles.note, { color: colors.mutedForeground }]}>{copy.note}</Text>
+        {/* Held rather than conditional for the same reason: a note appearing must not
+            move the target above it. */}
+        <View style={styles.noteSlot}>
+          {copy.note ? (
+            <Text style={[type.body, styles.note, { color: colors.mutedForeground }]}>
+              {copy.note}
+            </Text>
+          ) : null}
+        </View>
+
+        {/* The ladder restarted ICE, rebuilt the transport and still found no pair. There is
+            no document to reload here, so what is offered is a fresh session. */}
+        {listener.restartRecommended ? (
+          <ActionButton
+            label={TRY_AGAIN_LABEL}
+            icon="retry"
+            variant="tonal"
+            onPress={listener.restart}
+          />
+        ) : null}
       </ScrollView>
 
       {/* Two unrelated jobs, so a wide surface and a separate one rather than a stack of
@@ -159,7 +194,7 @@ export default function ChannelScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={AUDIO_ACTION_LABEL}
-            accessibilityHint={AUDIO_ACTION_DETAIL}
+            accessibilityHint={AUDIO_ACTION_LABEL}
             onPress={() => router.push(audioSheetHref(host, pin, slug))}
             style={styles.audioPress}
           >
@@ -168,15 +203,15 @@ export default function ChannelScreen() {
               numberOfLines={1}
               style={[type.section, styles.audioLabel, { color: colors.foreground }]}
             >
-              {AUDIO_ACTION_DETAIL}
+              {AUDIO_ACTION_LABEL}
             </Text>
           </Pressable>
         </GlassSurface>
 
-        {/* Only a listener may report a problem: someone who has not pressed Listen has
-            nothing to describe, and the five categories all name a fault in audio they
-            would be receiving. */}
-        {listening ? (
+        {/* Only a listener may report a problem, and a consumer being open is what makes
+            someone one: the five categories all name a fault in audio they would be
+            receiving, so a press with nothing arriving has nothing to describe. */}
+        {listener.isPlaying ? (
           <GlassSurface interactive raised style={IOS ? styles.reportRound : styles.reportSquircle}>
             <Pressable
               accessibilityRole="button"
@@ -205,6 +240,8 @@ const styles = StyleSheet.create({
   },
   centred: { textAlign: 'center' },
   badgeSlot: { minHeight: 34, justifyContent: 'center' },
+  lineSlot: { minHeight: 48, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  noteSlot: { minHeight: 40, justifyContent: 'center' },
   note: { maxWidth: 300, textAlign: 'center' },
   thumbLine: {
     position: 'absolute',
