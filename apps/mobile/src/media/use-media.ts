@@ -309,6 +309,12 @@ export function useMedia(socket: SocketClient | null) {
         }
         if (iceRecoveryStep(attempts, next) === 'give-up') {
           setHealth('failed');
+          // The ladder is spent whatever the diagnosis. Offered here as well as on the
+          // address-family mismatch, or a give-up nobody could name leaves the screen with
+          // a dead link and nothing to press — and React Native has no document to reload.
+          if (session.current === active) {
+            setRestartRecommended(true);
+          }
         } else {
           setHealth('trouble');
         }

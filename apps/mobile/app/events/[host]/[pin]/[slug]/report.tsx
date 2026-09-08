@@ -50,7 +50,7 @@ export default function ReportSheet() {
     muted: status?.muted ?? null,
     live: status?.online ?? false,
   });
-  const open = hasOpenReport(send, reports.sent);
+  const open = hasOpenReport(send, reports.open);
 
   const rows = reportRows({
     sent: reports.sent,

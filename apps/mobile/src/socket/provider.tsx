@@ -187,8 +187,10 @@ export function EventSocketProvider({
     async (slug: string) => {
       const outcome = await resolveReports(socket, slug);
 
+      // The episode closes; the cooldown does not. The server retains the hidden timestamps
+      // of the categories this connection sent, so clearing them here would re-enable rows
+      // it will still refuse.
       if (outcome.ok) {
-        setSent({});
         setReportOpen(false);
       }
 

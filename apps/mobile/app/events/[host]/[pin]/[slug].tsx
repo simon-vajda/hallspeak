@@ -96,6 +96,7 @@ export default function ChannelScreen() {
   // routed back into the same handlers — so the two can never disagree.
   useNowPlaying(
     systemControls({
+      listening: listener.listening,
       actionState: listener.actionState,
       isPlaying: listener.isPlaying,
       channelName: view?.channel.name ?? '',

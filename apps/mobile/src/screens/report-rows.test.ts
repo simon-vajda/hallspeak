@@ -113,12 +113,12 @@ describe('report sheet copy', () => {
 
 describe('the positive signal', () => {
   it('appears only once this connection has an open report', () => {
-    expect(hasOpenReport(IDLE_SEND, {})).toBe(false);
-    expect(hasOpenReport(IDLE_SEND, { quiet: 1 })).toBe(true);
+    expect(hasOpenReport(IDLE_SEND, false)).toBe(false);
+    expect(hasOpenReport(IDLE_SEND, true)).toBe(true);
   });
 
   it('is gone again once the guest says it is fixed', () => {
-    expect(hasOpenReport({ kind: 'resolved' }, { quiet: 1 })).toBe(false);
+    expect(hasOpenReport({ kind: 'resolved' }, true)).toBe(false);
   });
 
   it('renames the sheet and the category heading while a report is open', () => {

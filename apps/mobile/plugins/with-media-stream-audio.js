@@ -1,6 +1,7 @@
 const { withMainApplication } = require('expo/config-plugins');
 
 const CALL = 'app.linguacast.audio.MediaStreamAudioInstaller.install(this)';
+const ANCHOR = '    loadReactNative(this)';
 
 /**
  * Moves remote WebRTC audio off Android's voice-call stream and onto its media stream.
@@ -20,10 +21,20 @@ module.exports = function withMediaStreamAudio(config) {
       return mod;
     }
 
-    mod.modResults.contents = mod.modResults.contents.replace(
-      '    loadReactNative(this)',
-      `    ${CALL}\n    loadReactNative(this)`,
-    );
+    // Asserted rather than attempted. A missed anchor is the one failure here that produces
+    // a working build: prebuild succeeds, and the audio is silently back on the call stream,
+    // under the call volume keys and biased to the earpiece, with nothing to notice.
+    const next = mod.modResults.contents.replace(ANCHOR, `    ${CALL}\n${ANCHOR}`);
+
+    if (next === mod.modResults.contents) {
+      throw new Error(
+        `with-media-stream-audio: could not find ${JSON.stringify(ANCHOR)} in MainApplication. ` +
+          'Without this call, remote audio plays on the voice-call stream instead of the ' +
+          'media stream. Update the anchor to match the current Expo template.',
+      );
+    }
+
+    mod.modResults.contents = next;
 
     return mod;
   });
