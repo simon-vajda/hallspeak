@@ -52,7 +52,8 @@
           "cameraPermission": "LinguaCast uses the camera to scan an event's QR code."
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "./plugins/with-media-stream-audio"
     ],
     "experiments": {
       "typedRoutes": true,
