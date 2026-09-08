@@ -19,6 +19,7 @@ import expo.modules.kotlin.modules.ModuleDefinition
  */
 class LinguacastAudioModule : Module() {
   private var active = false
+  private var playing = false
 
   private val context: Context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
@@ -29,7 +30,18 @@ class LinguacastAudioModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("LinguacastAudio")
 
-    Events("onRouteChange")
+    Events("onRouteChange", "onRemotePlay", "onRemotePause")
+
+    OnCreate {
+      ListeningService.remote = { command ->
+        sendEvent(
+          when (command) {
+            ListeningService.RemoteCommand.PLAY -> "onRemotePlay"
+            ListeningService.RemoteCommand.PAUSE -> "onRemotePause"
+          }
+        )
+      }
+    }
 
     AsyncFunction("activate") {
       setSession(true)
@@ -47,7 +59,40 @@ class LinguacastAudioModule : Module() {
       routeName()
     }
 
+    AsyncFunction("setNowPlaying") { info: Map<String, Any?> ->
+      ListeningService.title = info["title"] as? String ?: ""
+      ListeningService.subtitle = info["artist"] as? String ?: ""
+      ListeningService.active?.publish(playing)
+    }
+
+    AsyncFunction("clearNowPlaying") {
+      ListeningService.title = ""
+      ListeningService.subtitle = ""
+      playing = false
+    }
+
+    AsyncFunction("setPlaybackState") { next: Boolean ->
+      playing = next
+      ListeningService.active?.publish(next)
+    }
+
+    /**
+     * Android's output switcher is reached from the media session this service owns, so the
+     * app opens the panel the platform draws rather than listing devices itself.
+     */
+    AsyncFunction("presentOutputPicker") {
+      val intent = Intent(MEDIA_OUTPUT_SWITCHER)
+        .putExtra(EXTRA_PACKAGE_NAME, context.packageName)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+      runCatching { context.startActivity(intent) }.onFailure {
+        // The panel is not a documented public surface on every build. A device without it
+        // leaves the guest the system volume panel's own switcher, which is one press away.
+      }
+    }
+
     OnDestroy {
+      ListeningService.remote = null
       if (active) {
         setSession(false)
       }
@@ -69,6 +114,7 @@ class LinguacastAudioModule : Module() {
       audioManager.mode = AudioManager.MODE_NORMAL
       context.startForegroundService(intent)
     } else {
+      playing = false
       context.stopService(intent)
     }
 
@@ -92,5 +138,10 @@ class LinguacastAudioModule : Module() {
       AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_WIRED_HEADSET -> "Headphones"
       else -> device.productName?.toString()?.takeIf { it.isNotBlank() }
     }
+  }
+
+  private companion object {
+    const val MEDIA_OUTPUT_SWITCHER = "com.android.settings.panel.action.MEDIA_OUTPUT"
+    const val EXTRA_PACKAGE_NAME = "com.android.settings.panel.extra.PACKAGE_NAME"
   }
 }

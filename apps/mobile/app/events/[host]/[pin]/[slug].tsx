@@ -11,6 +11,11 @@ import {
   View,
 } from 'react-native';
 import { channelQueryOptions } from '@/api/queries';
+import { systemControls } from '@/audio/now-playing';
+import { audioActionDetail } from '@/audio/output';
+import { useTrackGain } from '@/audio/use-listener-volume';
+import { useNowPlaying } from '@/audio/use-now-playing';
+import { volumeLabel } from '@/audio/volume';
 import { ActionButton } from '@/components/action-button';
 import { ConnectionLine } from '@/components/connection-line';
 import { ErrorState } from '@/components/error-state';
@@ -52,7 +57,8 @@ export default function ChannelScreen() {
     enabled: route !== null,
   });
   const view = query.data;
-  const { socket, status, channelStatuses, joinChannel, leaveChannel } = useEventSocket();
+  const { socket, status, channelStatuses, joinChannel, leaveChannel, volume, output } =
+    useEventSocket();
 
   // Reaching a channel writes its event down; the channel itself is not remembered.
   useEffect(() => {
@@ -89,6 +95,23 @@ export default function ChannelScreen() {
     ...(channelStatus?.reason === undefined ? {} : { closeReason: channelStatus.reason }),
   });
 
+  // Re-applied on every track the session opens: a transport rebuild and a channel switch
+  // each produce a new one, and a new track starts at the library's default rather than the
+  // guest's own level.
+  useTrackGain(listener.track, volume.state.volume);
+
+  // The platform's own controls, held in step with the same intent the target reads, and
+  // routed back into the same handlers — so the two can never disagree.
+  useNowPlaying(
+    systemControls({
+      actionState: listener.actionState,
+      isPlaying: listener.isPlaying,
+      channelName: view?.channel.name ?? '',
+      eventName: view?.event.name ?? '',
+    }),
+    { onPlay: listener.start, onPause: listener.stop },
+  );
+
   if (route === null) {
     return (
       <ErrorState title={BAD_ROUTE_MESSAGE.title} body={BAD_ROUTE_MESSAGE.body} icon="badLink" />
@@ -107,6 +130,11 @@ export default function ChannelScreen() {
       />
     );
   }
+
+  const audioDetail = audioActionDetail({
+    route: output.route,
+    volumeLabel: volumeLabel(volume.state),
+  });
 
   const copy = channelCopy(
     channelStatus === undefined
@@ -194,7 +222,7 @@ export default function ChannelScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={AUDIO_ACTION_LABEL}
-            accessibilityHint={AUDIO_ACTION_LABEL}
+            accessibilityHint={audioDetail}
             onPress={() => router.push(audioSheetHref(host, pin, slug))}
             style={styles.audioPress}
           >
@@ -203,7 +231,7 @@ export default function ChannelScreen() {
               numberOfLines={1}
               style={[type.section, styles.audioLabel, { color: colors.foreground }]}
             >
-              {AUDIO_ACTION_LABEL}
+              {audioDetail}
             </Text>
           </Pressable>
         </GlassSurface>

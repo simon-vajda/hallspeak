@@ -1,29 +1,21 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { hasNamedOutput, outputLabel } from '@/audio/output';
+import { isSilent, MAX_VOLUME, MIN_VOLUME, volumeLabel } from '@/audio/volume';
 import { Icon } from '@/components/icon';
 import { NativeSlider } from '@/components/native-controls';
-import { SheetChoice } from '@/components/sheet-choice';
 import { SheetChrome } from '@/components/sheet-chrome';
-import { SheetOptions } from '@/components/sheet-list';
+import { SheetOption, SheetOptions } from '@/components/sheet-list';
 import {
   AUDIO_SHEET_TITLE,
-  AUDIO_SHEET_UNAVAILABLE_NOTE,
-  DEFAULT_OUTPUTS,
-  DEFAULT_VOLUME_STATE,
-  isSilent,
-  MAX_VOLUME,
-  MIN_VOLUME,
+  CHANGE_OUTPUT_LABEL,
   MUTE_LABEL,
   OUTPUT_NOTE,
   OUTPUT_SECTION_TITLE,
-  selectOutput,
-  setVolume,
-  toggleMute,
   UNMUTE_LABEL,
   VOLUME_SECTION_TITLE,
-  volumeLabel,
 } from '@/screens/audio-sheet';
+import { useEventSocket } from '@/socket/provider';
 import { useColors } from '@/theme/provider';
 import { type } from '@/theme/typography';
 
@@ -33,10 +25,9 @@ const SPEAKER = ANDROID ? 48 : 44;
 export default function AudioSheet() {
   const colors = useColors();
   const router = useRouter();
-  const [outputs, setOutputs] = useState(DEFAULT_OUTPUTS);
-  const [volume, setVolumeState] = useState(DEFAULT_VOLUME_STATE);
+  const { volume, output } = useEventSocket();
 
-  const silent = isSilent(volume);
+  const silent = isSilent(volume.state);
 
   return (
     <SheetChrome title={AUDIO_SHEET_TITLE} onDone={() => router.back()}>
@@ -44,17 +35,22 @@ export default function AudioSheet() {
         <Text style={[type.label, { color: colors.mutedForeground }]}>
           {OUTPUT_SECTION_TITLE.toUpperCase()}
         </Text>
+        {/* One row, not a list: neither platform lets an app enumerate outputs, and the
+            name is withheld rather than invented when the platform reported none. */}
         <SheetOptions>
-          {outputs.map((output, index) => (
-            <SheetChoice
-              key={output.id}
-              index={index}
-              count={outputs.length}
-              label={output.label}
-              selected={output.selected}
-              onPress={() => setOutputs(selectOutput(outputs, output.id))}
-            />
-          ))}
+          <SheetOption
+            index={0}
+            count={1}
+            label={outputLabel(output.route)}
+            {...(hasNamedOutput(output.route)
+              ? {}
+              : { tone: { background: colors.card, foreground: colors.mutedForeground } })}
+            trailing={
+              <Icon name="forward" size={18} color={colors.mutedForeground} strokeWidth={2.25} />
+            }
+            hint={CHANGE_OUTPUT_LABEL}
+            onPress={output.present}
+          />
         </SheetOptions>
         <Text style={[type.note, { color: colors.mutedForeground }]}>{OUTPUT_NOTE}</Text>
       </View>
@@ -64,7 +60,9 @@ export default function AudioSheet() {
           <Text style={[type.label, { color: colors.mutedForeground }]}>
             {VOLUME_SECTION_TITLE.toUpperCase()}
           </Text>
-          <Text style={[styles.readout, { color: colors.foreground }]}>{volumeLabel(volume)}</Text>
+          <Text style={[styles.readout, { color: colors.foreground }]}>
+            {volumeLabel(volume.state)}
+          </Text>
         </View>
 
         <View style={styles.volumeRow}>
@@ -74,7 +72,7 @@ export default function AudioSheet() {
             accessibilityRole="button"
             accessibilityLabel={silent ? UNMUTE_LABEL : MUTE_LABEL}
             accessibilityState={{ selected: silent }}
-            onPress={() => setVolumeState(toggleMute(volume))}
+            onPress={volume.toggleMute}
             style={[styles.speaker, { backgroundColor: colors.card }]}
           >
             <Icon
@@ -87,18 +85,14 @@ export default function AudioSheet() {
 
           <View style={styles.slider}>
             <NativeSlider
-              value={volume.volume}
+              value={volume.state.volume}
               min={MIN_VOLUME}
               max={MAX_VOLUME}
-              onValueChange={(next) => setVolumeState(setVolume(volume, next))}
+              onValueChange={volume.setVolume}
             />
           </View>
         </View>
       </View>
-
-      <Text style={[type.meta, { color: colors.mutedForeground }]}>
-        {AUDIO_SHEET_UNAVAILABLE_NOTE}
-      </Text>
     </SheetChrome>
   );
 }
