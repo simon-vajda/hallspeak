@@ -1,9 +1,9 @@
 import { describe, expect, it } from '@jest/globals';
-import { ALL_CHANNEL_COPY, channelCopy } from './channel-copy';
+import { ALL_CHANNEL_COPY, channelCopy, targetLabel, UNKNOWN_BADGE } from './channel-copy';
 
 /**
- * The rule R29 states, expressed as data. A phrase reaching this list means the screen would
- * be telling a listener that audio is moving when this run ships none.
+ * The rule R31 states, expressed as data. A phrase reaching this list means the screen would
+ * be telling a listener that audio is moving when no consumer is open.
  */
 const FORBIDDEN = [
   'you are hearing',
@@ -15,9 +15,16 @@ const FORBIDDEN = [
   'people are listening',
   'has been on air for',
   'updates on its own',
-  'updating',
-  'connected to the interpreter',
+  'not available',
 ];
+
+const LIVE_AND_FLOWING = {
+  live: true,
+  muted: false,
+  holding: false,
+  linkConnected: true,
+  isPlaying: true,
+};
 
 describe('channel copy', () => {
   it('never claims anybody is hearing audio, in any state', () => {
@@ -32,25 +39,49 @@ describe('channel copy', () => {
     }
   });
 
-  it('separates the two readings and withholds the third', () => {
-    expect(channelCopy('on-air').badge).toBe('On air');
-    expect(channelCopy('offline').badge).toBe('Offline');
-    expect(channelCopy('unknown').badge).toBe(null);
-    expect(channelCopy('unknown').accessibleBadge).toBe('Status unknown');
+  it('enumerates something to check', () => {
+    expect(ALL_CHANNEL_COPY.length).toBeGreaterThan(10);
   });
 
-  it('no longer says listening is unavailable, now that a socket supplies the state', () => {
-    for (const line of ALL_CHANNEL_COPY) {
-      expect(`"${line}" unavailable: ${line.includes('not available')}`).toBe(
-        `"${line}" unavailable: false`,
-      );
+  it('withholds both labels for a reading nobody has taken', () => {
+    expect(channelCopy('unknown').badge).toBe(null);
+    expect(channelCopy('unknown').accessibleBadge).toBe(UNKNOWN_BADGE);
+  });
+
+  it('separates the states the socket now supplies', () => {
+    expect(channelCopy(LIVE_AND_FLOWING).badge).toBe('On air');
+    expect(channelCopy({ ...LIVE_AND_FLOWING, muted: true }).badge).toBe('Muted');
+    expect(channelCopy({ ...LIVE_AND_FLOWING, live: false, holding: true }).badge).toBe(
+      'Speaker dropped off',
+    );
+  });
+
+  it('reports muted for a paused producer, and offline whenever the link is down', () => {
+    expect(channelCopy({ ...LIVE_AND_FLOWING, muted: true }).badge).toBe('Muted');
+    expect(channelCopy({ ...LIVE_AND_FLOWING, muted: true, linkConnected: false }).badge).toBe(
+      'Offline',
+    );
+    expect(channelCopy({ ...LIVE_AND_FLOWING, linkConnected: false }).badge).toBe('Offline');
+  });
+
+  it('names no broadcast state in the note for a link that is down', () => {
+    const note = channelCopy({ ...LIVE_AND_FLOWING, linkConnected: false }).note ?? '';
+
+    for (const word of ['on air', 'muted', 'broadcasting', 'interpreter']) {
+      expect(`${word}: ${note.toLowerCase().includes(word)}`).toBe(`${word}: false`);
     }
   });
 
-  it('says nobody is broadcasting without promising to notice a change', () => {
-    const note = channelCopy('offline').note;
+  it('says audio resumes by itself while holding, and claims none is arriving', () => {
+    const note = channelCopy({ ...LIVE_AND_FLOWING, live: false, holding: true }).note;
 
-    expect(note).toContain('Nobody is broadcasting');
-    expect(note).toContain('Pull down');
+    expect(note).toContain('resumes by itself');
+  });
+
+  it('gives the target the word for the state rather than for the press', () => {
+    expect(targetLabel('ready')).toBe('Listen');
+    expect(targetLabel('unavailable')).toBe('Listen');
+    expect(targetLabel('playing')).toBe('Stop listening');
+    expect(targetLabel('holding')).toBe('Holding');
   });
 });

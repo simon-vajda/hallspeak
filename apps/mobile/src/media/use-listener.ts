@@ -1,0 +1,224 @@
+import {
+  badgeHasLiveDot,
+  type ListenActionState,
+  type ListenIntentState,
+  listenActionState,
+  reconcileListenIntent,
+} from '@linguacast/client-core/channel';
+import {
+  consumerPlan,
+  filledBars,
+  isLinkUp,
+  type LinkState,
+  linkLabel,
+  mayAttachConsumerTrack,
+  resolveLinkState,
+} from '@linguacast/client-core/media';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEventSocket } from '@/socket/provider';
+import { isSuperseded } from './use-media';
+
+export interface ListenerView {
+  actionState: ListenActionState;
+  /** A resumed consumer exists — samples are arriving — not that the target was pressed. */
+  isPlaying: boolean;
+  holding: boolean;
+  linkConnected: boolean;
+  link: LinkState;
+  /** Empty in the idle state, where the line renders nothing at all. */
+  linkLabel: string;
+  /** The nine bars, graded from real statistics. */
+  filledBars: number;
+  hasLiveDot: boolean;
+  /** The ladder is spent; only a fresh session can help. */
+  restartRecommended: boolean;
+  start: () => void;
+  stop: () => void;
+  restart: () => void;
+}
+
+function sameIntent(a: ListenIntentState, b: ListenIntentState): boolean {
+  return a.intent === b.intent && a.holdDeadline === b.holdDeadline;
+}
+
+/**
+ * The listener half of the Channel screen, kept out of the screen so the screen stays a
+ * layout. Every decision here comes from the shared listen and media state; what is local
+ * is the effect ordering and the timer.
+ *
+ * There is no audio element on React Native: a consumed remote track plays as soon as it is
+ * added to the peer connection. Attachment is therefore holding the track rather than
+ * assigning a source, and `mayAttachConsumerTrack` still decides whether it is kept.
+ */
+export function useListener(input: {
+  slug: string;
+  live: boolean;
+  muted: boolean | null;
+  closeReason?: 'ended' | 'dropped';
+}): ListenerView & { track: MediaStreamTrack | null } {
+  const { status, hasConnected, media } = useEventSocket();
+  const [playback, setPlayback] = useState<ListenIntentState>({
+    intent: 'idle',
+    holdDeadline: null,
+  });
+  const [track, setTrack] = useState<MediaStreamTrack | null>(null);
+
+  const link = resolveLinkState({
+    socketStatus: status,
+    hasConnected,
+    mediaHealth: media.health,
+    stats: media.stats,
+    // The guest's own stored request, not the reconciled one: reconciling needs the link,
+    // and a guest who has not asked for audio has no media leg for the line to report on.
+    mediaWanted: playback.intent !== 'idle',
+  });
+  const linkConnected = isLinkUp(link);
+  const isPlaying = media.state.consumers[input.slug] !== undefined;
+
+  const playingSnapshot = useRef({ slug: input.slug, isPlaying });
+  const wasPlaying =
+    playingSnapshot.current.slug === input.slug && playingSnapshot.current.isPlaying;
+  useLayoutEffect(() => {
+    playingSnapshot.current = { slug: input.slug, isPlaying };
+  }, [input.slug, isPlaying]);
+
+  const { live, closeReason } = input;
+  const now = Date.now();
+  const resolved = reconcileListenIntent(playback, {
+    live,
+    ...(closeReason === undefined ? {} : { closeReason }),
+    linkConnected,
+    wasPlaying,
+    now,
+  });
+
+  useLayoutEffect(() => {
+    setPlayback((current) => {
+      const next = reconcileListenIntent(current, {
+        live,
+        ...(closeReason === undefined ? {} : { closeReason }),
+        linkConnected,
+        wasPlaying,
+        now: Date.now(),
+      });
+      return sameIntent(current, next) ? current : next;
+    });
+  }, [live, closeReason, linkConnected, wasPlaying]);
+
+  // An absolute deadline rather than a countdown, so a phone throttling timers in the
+  // background cannot extend the hold past the window it promised.
+  useEffect(() => {
+    if (playback.intent !== 'holding' || playback.holdDeadline === null) {
+      return;
+    }
+
+    const deadline = playback.holdDeadline;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const remaining = deadline - Date.now();
+      if (remaining > 0) {
+        timer = setTimeout(tick, remaining);
+        return;
+      }
+      setPlayback((current) => {
+        const next = reconcileListenIntent(current, {
+          live,
+          ...(closeReason === undefined ? {} : { closeReason }),
+          linkConnected,
+          wasPlaying,
+          now: Date.now(),
+        });
+        return sameIntent(current, next) ? current : next;
+      });
+    };
+    timer = setTimeout(tick, Math.max(0, deadline - Date.now()));
+    return () => clearTimeout(timer);
+  }, [playback.intent, playback.holdDeadline, live, closeReason, linkConnected, wasPlaying]);
+
+  /**
+   * What to open and what to close is `consumerPlan`'s decision, not this effect's: a
+   * channel switch, an interpreter dropping and a hold overlap, and deciding them
+   * separately here is how the previous channel's consumer gets left open.
+   */
+  const { startConsuming, stopConsuming } = media;
+  const consumers = media.state.consumers;
+  const activeSlug =
+    resolved.intent === 'playing' || resolved.intent === 'holding' ? input.slug : null;
+  const online = live && linkConnected;
+  const intentRef = useRef({ activeSlug, online });
+  useLayoutEffect(() => {
+    intentRef.current = { activeSlug, online };
+  }, [activeSlug, online]);
+
+  useEffect(() => {
+    const plan = consumerPlan({ consumers, activeSlug, online });
+    for (const slug of plan.close) {
+      setTrack(null);
+      void stopConsuming(slug);
+    }
+    if (!plan.consume) {
+      return;
+    }
+
+    const requestedSlug = plan.consume;
+    void startConsuming(requestedSlug)
+      .then((consumed) => {
+        if (
+          !mayAttachConsumerTrack({
+            requestedSlug,
+            ...intentRef.current,
+            trackEnded: consumed.readyState === 'ended',
+          })
+        ) {
+          return;
+        }
+        setTrack(consumed);
+      })
+      .catch((cause) => {
+        // Swallowed silently, a failed consume left the screen claiming it was waiting.
+        if (
+          intentRef.current.activeSlug === requestedSlug &&
+          intentRef.current.online &&
+          !isSuperseded(cause)
+        ) {
+          console.error('media: could not listen', cause);
+        }
+      });
+  }, [consumers, activeSlug, online, startConsuming, stopConsuming]);
+
+  const actionState = listenActionState({
+    ...resolved,
+    live,
+    isPlaying,
+    linkConnected,
+    now,
+  });
+
+  const start = useCallback(() => {
+    setPlayback({ intent: 'playing', holdDeadline: null });
+  }, []);
+
+  const stop = useCallback(() => {
+    setPlayback((current) =>
+      current.intent === 'idle' ? current : { intent: 'idle', holdDeadline: null },
+    );
+  }, []);
+
+  const holding = resolved.intent === 'holding';
+
+  return {
+    actionState,
+    isPlaying,
+    holding,
+    linkConnected,
+    link,
+    linkLabel: linkLabel(link),
+    filledBars: filledBars(link),
+    hasLiveDot: badgeHasLiveDot({ live, muted: input.muted, holding, linkConnected }),
+    restartRecommended: media.restartRecommended,
+    start,
+    stop,
+    restart: media.restartSession,
+    track,
+  };
+}

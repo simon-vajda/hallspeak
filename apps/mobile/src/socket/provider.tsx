@@ -1,5 +1,11 @@
 import type { ChannelStatus } from '@linguacast/client-core/channel';
 import {
+  initialMediaState,
+  type MediaHealth,
+  type MediaState,
+  type MediaStats,
+} from '@linguacast/client-core/media';
+import {
   createSocket,
   type SocketAuth,
   type SocketClient,
@@ -10,6 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createContext, type ReactNode, useCallback, useContext, useMemo } from 'react';
 import { apiOrigin } from '@/api/client';
 import { eventQueryOptions } from '@/api/queries';
+import { useMedia } from '@/media/use-media';
 import { CLIENT_VERSION } from '@/version';
 import { useAppStateReconnect } from './use-app-state-reconnect';
 
@@ -23,6 +30,17 @@ export interface EventSocket {
   channelStatuses: Record<string, ChannelStatus>;
   joinChannel: (slug: string, httpOnline: boolean) => Promise<void>;
   leaveChannel: (slug: string) => void;
+  /** The media leg. One session per connection, so it belongs to the same owner. */
+  media: {
+    state: MediaState;
+    health: MediaHealth;
+    stats: MediaStats | null;
+    /** The ladder is spent: only a fresh session can recover this direction. */
+    restartRecommended: boolean;
+    startConsuming: (slug: string) => Promise<MediaStreamTrack>;
+    stopConsuming: (slug: string) => Promise<void>;
+    restartSession: () => void;
+  };
 }
 
 const IDLE: EventSocket = {
@@ -33,6 +51,15 @@ const IDLE: EventSocket = {
   channelStatuses: {},
   joinChannel: async () => {},
   leaveChannel: () => {},
+  media: {
+    state: initialMediaState,
+    health: 'idle',
+    stats: null,
+    restartRecommended: false,
+    startConsuming: () => Promise.reject(new Error('No socket.')),
+    stopConsuming: async () => {},
+    restartSession: () => {},
+  },
 };
 
 const EventSocketContext = createContext<EventSocket>(IDLE);
@@ -76,6 +103,29 @@ export function EventSocketProvider({
 
   useAppStateReconnect(socket);
 
+  const {
+    state: mediaState,
+    health,
+    stats,
+    restartRecommended,
+    startConsuming,
+    stopConsuming,
+    restartSession,
+  } = useMedia(socket);
+
+  const media = useMemo(
+    () => ({
+      state: mediaState,
+      health,
+      stats,
+      restartRecommended,
+      startConsuming,
+      stopConsuming,
+      restartSession,
+    }),
+    [mediaState, health, stats, restartRecommended, startConsuming, stopConsuming, restartSession],
+  );
+
   const value = useMemo(
     () => ({
       status,
@@ -85,8 +135,9 @@ export function EventSocketProvider({
       channelStatuses,
       joinChannel,
       leaveChannel,
+      media,
     }),
-    [status, error, hasConnected, socket, channelStatuses, joinChannel, leaveChannel],
+    [status, error, hasConnected, socket, channelStatuses, joinChannel, leaveChannel, media],
   );
 
   return <EventSocketContext.Provider value={value}>{children}</EventSocketContext.Provider>;
