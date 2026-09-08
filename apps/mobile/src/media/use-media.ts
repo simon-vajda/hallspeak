@@ -61,7 +61,13 @@ interface Session {
    * fact off the transport would hand every rebuild the long first-gather deadline.
    */
   iceConnectedOnce: Partial<Record<TransportDirection, boolean>>;
-  pendingConsumers: Map<string, Promise<MediaStreamTrack>>;
+  /**
+   * Keyed with the generation it began in. A rebuild bumps that, so a consume started
+   * against the discarded transport is no longer a valid answer for the replacement — and
+   * dropping the entry outright would let a second consume negotiate on the same transport
+   * while the first is still in flight, which is what `SessionDescription is NULL` is.
+   */
+  pendingConsumers: Map<string, { generation: number; promise: Promise<MediaStreamTrack> }>;
 }
 
 /**
@@ -266,10 +272,6 @@ export function useMedia(socket: SocketClient | null) {
         delete active.transports[direction];
       }
       active.consumers.clear();
-      // The in-flight ones go with them. Left here, the effect that re-opens this direction
-      // would be handed back a promise already negotiating against the closed peer
-      // connection, and adopt its failure as the answer for the replacement transport.
-      active.pendingConsumers.clear();
       try {
         // Before the state that re-opens it, not after: the server permits one transport
         // per direction, so an effect reaching `createTransport` while it still holds this
@@ -339,7 +341,7 @@ export function useMedia(socket: SocketClient | null) {
       }
       setHealth(next === 'failed' || attempts > 0 ? 'trouble' : 'connecting');
 
-      active.iceRecoveryTimers[direction] = setTimeout(() => {
+      const runRecoveryStep = () => {
         delete active.iceRecoveryTimers[direction];
         if (session.current !== active || transport.closed) {
           return;
@@ -390,7 +392,19 @@ export function useMedia(socket: SocketClient | null) {
               armIceRecovery(transport.connectionState as TransportConnectionState);
             }
           });
-      }, delay);
+      };
+
+      // React Native pauses JavaScript timers while the app is not visible on Android, so a
+      // deadline armed behind a locked screen fires when the guest unlocks the phone rather
+      // than when it is due — which is the one moment this recovery exists for. Native
+      // events still arrive, and `failed` is one the browser raises on its own, so the step
+      // that needs no wait runs on the event itself instead of through a timer.
+      if (delay === 0) {
+        runRecoveryStep();
+        return;
+      }
+
+      active.iceRecoveryTimers[direction] = setTimeout(runRecoveryStep, delay);
     };
 
     transport.on('connectionstatechange', armIceRecovery);
@@ -403,11 +417,16 @@ export function useMedia(socket: SocketClient | null) {
 
   const startConsuming = useCallback(
     async (slug: string): Promise<MediaStreamTrack> => {
+      // Snapshotted before anything is awaited, so a consume that began before a rebuild
+      // carries the generation it began in rather than the one it wakes up into.
+      const generation = stateRef.current.generation;
       const started = session.current?.pendingConsumers.get(slug);
       // The effect that drives this depends on the consumers map, which a close mutates
-      // synchronously — so it re-enters while the first consume is still awaiting.
-      if (started) {
-        return started;
+      // synchronously — so it re-enters while the first consume is still awaiting. An entry
+      // from an older generation is not an answer to this request and is left to fail on
+      // its own guards rather than being adopted or cancelled.
+      if (started && started.generation === generation) {
+        return started.promise;
       }
 
       const consume = (async () => {
@@ -417,7 +436,6 @@ export function useMedia(socket: SocketClient | null) {
           throw new Error(SUPERSEDED);
         }
 
-        const generation = stateRef.current.generation;
         const api = signalling(socket);
         const params = await api.consume(slug, active.device.rtpCapabilities);
 
@@ -461,11 +479,16 @@ export function useMedia(socket: SocketClient | null) {
 
       const active = session.current;
       if (active) {
-        active.pendingConsumers.set(slug, consume);
+        active.pendingConsumers.set(slug, { generation, promise: consume });
         void consume
           .catch(() => {})
           .finally(() => {
-            if (session.current === active) {
+            // Only its own entry: a newer generation's consume may already have taken the
+            // slot, and clearing that one would leave the map lying about what is in flight.
+            if (
+              session.current === active &&
+              active.pendingConsumers.get(slug)?.promise === consume
+            ) {
               active.pendingConsumers.delete(slug);
             }
           });
