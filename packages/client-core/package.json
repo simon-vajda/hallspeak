@@ -1,0 +1,31 @@
+{
+  "name": "@linguacast/client-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./socket": "./src/socket/index.ts",
+    "./channel": "./src/channel/index.ts",
+    "./media": "./src/media/index.ts",
+    "./query-retry": "./src/query-retry.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p test",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@linguacast/contract": "workspace:*",
+    "socket.io-client": "4.8.3"
+  },
+  "peerDependencies": {
+    "react": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "26.2.0",
+    "@types/react": "19.2.18",
+    "react": "19.2.3",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}

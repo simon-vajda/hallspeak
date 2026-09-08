@@ -1,3 +1,4 @@
+import type { LinkState } from '@linguacast/client-core/media';
 import type { components } from '@linguacast/contract/openapi';
 import { Mic } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
@@ -11,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { formatPin } from '@/lib/format';
-import type { LinkState } from '@/lib/media/link-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 

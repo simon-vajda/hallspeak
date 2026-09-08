@@ -1,12 +1,11 @@
+import { reportLabel, reportRows, type SentMap, selfCheck } from '@linguacast/client-core/channel';
 import type { ReportCategory } from '@linguacast/contract/socket';
 import { Check, MessageCircleWarning } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { ResponsiveSurface } from '@/components/responsive-surface';
 import { Button } from '@/components/ui/button';
-import { reportLabel } from '@/lib/reports';
 import { cn } from '@/lib/utils';
-import { reportRows, type SentMap, selfCheck } from './report-state';
 
 /** Fast enough that `Sent 30s ago` is never a second behind what the listener sees. */
 const TICK_MS = 1_000;

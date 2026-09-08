@@ -1,4 +1,4 @@
-import type { SocketStatus } from '@/lib/socket-state';
+import type { SocketStatus } from '../socket/state';
 import { BAR_COUNT, type ConnectionGrade, gradeStats, type MediaStats } from './stats';
 
 /**

@@ -1,6 +1,6 @@
+import { apiProblemCode } from '@linguacast/client-core/query-retry';
 import type { ErrorComponentProps } from '@tanstack/react-router';
 import { MissingEvent } from '@/components/admin/missing-event';
-import { apiProblemCode } from '@/lib/query-retry';
 import { useRouteQueryRetry } from '@/lib/use-route-query-retry';
 
 export function EventDetailRouteError({ error }: ErrorComponentProps) {

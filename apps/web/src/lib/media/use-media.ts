@@ -1,9 +1,4 @@
-import type { types } from 'mediasoup-client';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SocketClient } from '@/socket/client';
-import { loadDevice } from './device';
-import { logIceRecovery, reportTransportPath, watchConsumerTrack } from './diagnostics';
-import type { MediaHealth } from './link-state';
+import type { MediaHealth } from '@linguacast/client-core/media';
 import {
   afterConnect,
   beginRebuild,
@@ -15,15 +10,22 @@ import {
   initialMediaState,
   isCurrent,
   type MediaState,
+  type MediaStats,
   type ProducerControlIdentity,
   producerClosed,
   producerOpened,
+  type StatsSample,
+  signalling,
+  summarise,
   type TransportConnectionState,
   type TransportDirection,
   transportOpened,
-} from './media-state';
-import { signalling } from './signalling';
-import { type MediaStats, type StatsSample, summarise } from './stats';
+} from '@linguacast/client-core/media';
+import type { SocketClient } from '@linguacast/client-core/socket';
+import type { types } from 'mediasoup-client';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { loadDevice } from './device';
+import { logIceRecovery, reportTransportPath, watchConsumerTrack } from './diagnostics';
 import { openTransport } from './transport';
 
 /**

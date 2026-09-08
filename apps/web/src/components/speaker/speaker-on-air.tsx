@@ -1,3 +1,5 @@
+import type { AnchoredResolution, AnchoredRow } from '@linguacast/client-core/channel';
+import { isLinkUp, type LinkState } from '@linguacast/client-core/media';
 import type { components } from '@linguacast/contract/openapi';
 import { Mic, MicOff } from 'lucide-react';
 import { useState } from 'react';
@@ -15,8 +17,6 @@ import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
-import { isLinkUp, type LinkState } from '@/lib/media/link-state';
-import type { AnchoredResolution, AnchoredRow } from '@/lib/reports';
 import type { BroadcastState } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];

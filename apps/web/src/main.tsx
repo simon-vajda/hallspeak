@@ -1,3 +1,4 @@
+import { shouldRetryApiQuery } from '@linguacast/client-core/query-retry';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
@@ -5,7 +6,6 @@ import { createRoot } from 'react-dom/client';
 import { setUnauthenticatedHandler } from './api/client';
 import { ThemeProvider } from './components/theme-provider';
 import { sessionKey } from './lib/auth-queries';
-import { shouldRetryApiQuery } from './lib/query-retry';
 import { routeTree } from './routeTree.gen';
 import './index.css';
 

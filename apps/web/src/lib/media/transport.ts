@@ -1,6 +1,6 @@
+import type { Signalling } from '@linguacast/client-core/media';
 import type { Device, types } from 'mediasoup-client';
 import { logIceRecovery, watchTransport } from './diagnostics';
-import type { Signalling } from './signalling';
 
 /**
  * Creates a transport and wires the two callbacks it exists for: `connect` carries the

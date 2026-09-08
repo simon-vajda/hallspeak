@@ -1,3 +1,10 @@
+import type { AnchoredResolution, AnchoredRow } from '@linguacast/client-core/channel';
+import {
+  type ChannelStatusEntry,
+  rollbackMutedAfterFailure,
+} from '@linguacast/client-core/channel';
+import { isLinkUp, resolveLinkState } from '@linguacast/client-core/media';
+import type { SocketClient, SocketStatus } from '@linguacast/client-core/socket';
 import type { components } from '@linguacast/contract/openapi';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SpeakerDisplaced } from '@/components/speaker/speaker-displaced';
@@ -6,12 +13,7 @@ import { SpeakerPreflight } from '@/components/speaker/speaker-preflight';
 import { levelStatus, meterLevel, rms } from '@/lib/audio/level';
 import { useAudioPreferences } from '@/lib/audio/use-audio-preferences';
 import { useMicCapture } from '@/lib/audio/use-mic-capture';
-import { type ChannelStatusEntry, rollbackMutedAfterFailure } from '@/lib/channel-status';
-import { isLinkUp, resolveLinkState } from '@/lib/media/link-state';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
-import type { AnchoredResolution, AnchoredRow } from '@/lib/reports';
-import type { SocketStatus } from '@/lib/use-socket';
-import type { SocketClient } from '@/socket/client';
 import {
   type BroadcastEnd,
   broadcastState,

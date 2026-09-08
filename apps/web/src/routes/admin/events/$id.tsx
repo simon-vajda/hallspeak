@@ -1,3 +1,4 @@
+import { shouldThrowSettledQueryError } from '@linguacast/client-core/query-retry';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { Pencil, Trash2 } from 'lucide-react';
@@ -10,7 +11,6 @@ import { EventFormDialog } from '@/components/admin/event-form-dialog';
 import { PinCard } from '@/components/admin/pin-card';
 import { Button } from '@/components/ui/button';
 import { eventDetailQueryOptions } from '@/lib/admin-queries';
-import { shouldThrowSettledQueryError } from '@/lib/query-retry';
 
 export const Route = createFileRoute('/admin/events/$id')({
   // Typed at the route, not coerced in the component: a URL carrying anything but a positive

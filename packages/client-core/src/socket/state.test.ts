@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initialSocketConnectionState, socketConnectionState } from './socket-state';
+import { initialSocketConnectionState, socketConnectionState } from './state';
 
 describe('socketConnectionState', () => {
   it('orders a retryable drop before the reconnect attempt and successful recovery', () => {
