@@ -1,14 +1,12 @@
-import { useRouter } from 'expo-router';
+import { type ReportCategory, reportLabel } from '@linguacast/client-core/channel';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ActionButton } from '@/components/action-button';
 import { Icon } from '@/components/icon';
 import { SheetChrome } from '@/components/sheet-chrome';
 import { SheetCard, SheetCardRow, SheetOption, SheetOptions } from '@/components/sheet-list';
-import type { SentMap } from '@/lib/report-state';
-import type { ReportCategory } from '@/lib/reports';
-import { reportLabel } from '@/lib/reports';
-import { DEFAULT_VOLUME } from '@/screens/audio-sheet';
+import { readChannelParams } from '@/links/route';
 import {
   CHECK_FIRST_TITLE,
   DONE_LABEL,
@@ -19,11 +17,11 @@ import {
   isBusy,
   pendingCategory,
   REPORT_FOOTER,
-  REPORT_UNAVAILABLE_NOTE,
   RESOLUTION_LABEL,
   RESOLVED_CONFIRMATION_BODY,
   reportRows,
   reportSheetTitle,
+  resolveRefusal,
   SENT_CONFIRMATION_BODY,
   type SendState,
   STILL_A_PROBLEM_TITLE,
@@ -31,49 +29,56 @@ import {
   WHAT_IS_WRONG_TITLE,
   YOUR_VOLUME_LABEL,
 } from '@/screens/report-rows';
+import { useEventSocket } from '@/socket/provider';
 import { useColors } from '@/theme/provider';
 import { spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 
-/** Long enough to see the transition, short enough not to feel like a hang. */
-const STUB_SEND_MS = 400;
-
 export default function ReportSheet() {
   const colors = useColors();
   const router = useRouter();
-  const [sent, setSent] = useState<SentMap>({});
+  const params = useLocalSearchParams<{ host: string; pin: string; slug: string }>();
+  const slug = readChannelParams(params.host, params.pin, params.slug)?.slug ?? '';
+  const { channelStatuses, volume, reports } = useEventSocket();
   const [send, setSend] = useState<SendState>(IDLE_SEND);
 
-  // Placeholder readings: the guest's own volume and the interpreter's mute state both need
-  // a mechanism this run does not build, and the interpreter's is deliberately unknown
-  // rather than reported as unmuted.
-  const check = selfCheck({ volume: DEFAULT_VOLUME, muted: null, live: true });
-  const open = hasOpenReport(send, sent);
+  const status = channelStatuses[slug];
+  // The interpreter's mute is genuinely unknown until the socket reports it, and is never
+  // rendered as unmuted; the guest's own level is their real one.
+  const check = selfCheck({
+    volume: volume.state.volume,
+    muted: status?.muted ?? null,
+    live: status?.online ?? false,
+  });
+  const open = hasOpenReport(send, reports.sent);
 
   const rows = reportRows({
-    sent,
+    sent: reports.sent,
     pending: pendingCategory(send),
-    failed: null,
-    live: true,
+    // The server's own reason, carried onto the row that was pressed.
+    failed: send.kind === 'refused' ? { category: send.category, message: send.message } : null,
+    live: status?.online ?? false,
     now: Date.now(),
   });
 
-  // No transport in this run; the delay is what exercises the sheet's own transitions.
   const submit = (category: ReportCategory) => {
     setSend({ kind: 'sending', category });
-    setTimeout(() => {
-      const at = Date.now();
-      setSent((previous) => ({ ...previous, [category]: at }));
-      setSend({ kind: 'sent', category, at });
-    }, STUB_SEND_MS);
+    void reports.send(slug, category).then((outcome) => {
+      setSend(
+        outcome.ok
+          ? { kind: 'sent', category, at: Date.now() }
+          : { kind: 'refused', category, message: outcome.message },
+      );
+    });
   };
 
   const resolve = () => {
     setSend({ kind: 'resolving' });
-    setTimeout(() => {
-      setSent({});
-      setSend({ kind: 'resolved' });
-    }, STUB_SEND_MS);
+    void reports.resolve(slug).then((outcome) => {
+      setSend(
+        outcome.ok ? { kind: 'resolved' } : { kind: 'resolve-refused', message: outcome.message },
+      );
+    });
   };
 
   if (send.kind === 'sent' || send.kind === 'resolved') {
@@ -131,6 +136,7 @@ export default function ReportSheet() {
               count={1}
               label={RESOLUTION_LABEL}
               disabled={isBusy(send)}
+              {...(resolveRefusal(send) === null ? {} : { note: resolveRefusal(send) ?? '' })}
               tone={{ background: colors.liveMuted, foreground: colors.liveOnMuted }}
               leading={
                 <Icon name="confirm" size={17} color={colors.liveOnMuted} strokeWidth={2.5} />
@@ -161,7 +167,6 @@ export default function ReportSheet() {
       </View>
 
       <Text style={[type.note, { color: colors.mutedForeground }]}>{REPORT_FOOTER}</Text>
-      <Text style={[type.meta, { color: colors.mutedForeground }]}>{REPORT_UNAVAILABLE_NOTE}</Text>
     </SheetChrome>
   );
 }

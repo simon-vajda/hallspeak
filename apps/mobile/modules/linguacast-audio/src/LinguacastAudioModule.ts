@@ -1,5 +1,5 @@
 import { NativeModule, requireNativeModule } from 'expo';
-import type { LinguacastAudioModuleEvents } from './LinguacastAudio.types';
+import type { LinguacastAudioModuleEvents, NowPlayingInfo } from './LinguacastAudio.types';
 
 declare class LinguacastAudioModule extends NativeModule<LinguacastAudioModuleEvents> {
   /**
@@ -18,8 +18,26 @@ declare class LinguacastAudioModule extends NativeModule<LinguacastAudioModuleEv
   /** Whether a session is currently held. */
   isActive(): boolean;
 
+  /**
+   * Publishes the platform's media controls. Play and pause only: no seek command is
+   * enabled and the content is declared live, so no scrubber and no progress bar appear.
+   */
+  setNowPlaying(info: NowPlayingInfo): Promise<void>;
+
+  /** Withdraws the controls. */
+  clearNowPlaying(): Promise<void>;
+
+  /** What the controls report. Paused is a state they show, not a reason to withdraw them. */
+  setPlaybackState(playing: boolean): Promise<void>;
+
   /** The name the platform gives the output currently carrying the audio. */
   currentRoute(): string | null;
+
+  /**
+   * Presents the platform's own output chooser. Neither platform offers an app a general
+   * enumerable list, so this app draws none and hands the question over.
+   */
+  presentOutputPicker(): Promise<void>;
 }
 
 export default requireNativeModule<LinguacastAudioModule>('LinguacastAudio');

@@ -1,5 +1,8 @@
 import type { ReportCategory, ReportResolution, ReportRow } from '@linguacast/contract/socket';
 
+/** Re-exported so a consumer takes the whole report vocabulary from one place. */
+export type { ReportCategory };
+
 export type ReportTone = 'warn' | 'severe';
 
 /** A row anchored to this client's clock at receipt. */

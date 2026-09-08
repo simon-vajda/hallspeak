@@ -1,8 +1,13 @@
-import type { SentMap } from '@/lib/report-state';
-import type { ReportCategory } from '@/lib/reports';
+import type { ReportCategory, SentMap } from '@linguacast/client-core/channel';
 
-export type { ReportRowState, SelfCheck } from '@/lib/report-state';
-export { LOW_VOLUME, REPORT_DISABLE_MS, reportRows, selfCheck } from '@/lib/report-state';
+export type { ReportRowState, SelfCheck } from '@linguacast/client-core/channel';
+export {
+  LOW_VOLUME,
+  REPORT_DISABLE_MS,
+  reportRows,
+  selfCheck,
+} from '@linguacast/client-core/channel';
+export type { ReportCategory };
 
 /**
  * The positive signal is its own affordance, never a sixth category. It says this listener's
@@ -41,15 +46,21 @@ export function reportSheetTitle(open: boolean): string {
 }
 export const REPORT_FOOTER =
   'Nothing identifies you, and the interpreter sees a count rather than a message.';
-export const REPORT_UNAVAILABLE_NOTE = 'Reports are not sent to the interpreter in this version.';
 
-/** The states a send can be in, so the sheet's own transitions are exercisable. */
+/** The states a send can be in. A refusal names the category it was refused for, so the
+ * message lands on the row that was pressed rather than as a failure of the sheet. */
 export type SendState =
   | { kind: 'idle' }
   | { kind: 'sending'; category: ReportCategory }
   | { kind: 'sent'; category: ReportCategory; at: number }
+  | { kind: 'refused'; category: ReportCategory; message: string }
   | { kind: 'resolving' }
-  | { kind: 'resolved' };
+  | { kind: 'resolved' }
+  | { kind: 'resolve-refused'; message: string };
+
+export function resolveRefusal(state: SendState): string | null {
+  return state.kind === 'resolve-refused' ? state.message : null;
+}
 
 export const IDLE_SEND: SendState = { kind: 'idle' };
 
@@ -74,5 +85,4 @@ export const ALL_REPORT_SHEET_COPY: string[] = [
   RESOLVED_CONFIRMATION_BODY,
   DONE_LABEL,
   REPORT_FOOTER,
-  REPORT_UNAVAILABLE_NOTE,
 ];

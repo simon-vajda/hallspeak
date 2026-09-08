@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { REPORT_CATEGORIES } from '../lib/reports';
+import { REPORT_CATEGORIES } from '@linguacast/client-core/channel';
 import {
   ALL_REPORT_SHEET_COPY,
   hasOpenReport,
