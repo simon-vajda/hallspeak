@@ -25,11 +25,12 @@ import {
   AUDIO_ACTION_LABEL,
   channelCopy,
   LISTEN_LABEL,
-  LISTEN_UNAVAILABLE_NOTE,
   REPORT_ACTION_LABEL,
   STOP_LABEL,
 } from '@/screens/channel-copy';
-import { BAD_ROUTE_MESSAGE, channelReading, eventErrorMessage } from '@/screens/event-view';
+import { BAD_ROUTE_MESSAGE, channelReadingFor, eventErrorMessage } from '@/screens/event-view';
+import { useEventSocket } from '@/socket/provider';
+import { currentChannelStatus } from '@/socket/status';
 import { useColors } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
@@ -50,10 +51,10 @@ export default function ChannelScreen() {
     enabled: route !== null,
   });
   const view = query.data;
+  const { socket, status, channelStatuses, joinChannel, leaveChannel } = useEventSocket();
 
-  // Whether this guest has asked for the channel's audio. It is intent and nothing more —
-  // no consumer exists to derive it from yet — which is why the target's note still says
-  // listening is unavailable, and why a channel leaving the air clears it below.
+  // Whether this guest has asked for the channel's audio. Intent and nothing more: no
+  // consumer exists to derive it from yet, which is why a channel leaving the air clears it.
   const [listening, setListening] = useState(false);
 
   // Reaching a channel writes its event down; the channel itself is not remembered.
@@ -63,13 +64,33 @@ export default function ChannelScreen() {
     }
   }, [view, host, pin]);
 
-  // A refresh that finds the channel off the air ends the intent with it, so the rings never
-  // outlive the broadcast they were asked for.
+  const httpOnline = view?.channel.online;
+
+  // A speaker is already in its channel room from the handshake; a listener has to ask. The
+  // join is what makes this channel's status arrive, so it is re-issued on every reconnect.
   useEffect(() => {
-    if (view && !view.channel.online) {
+    if (!socket || status !== 'connected' || slug === '' || httpOnline === undefined) {
+      return;
+    }
+
+    void joinChannel(slug, httpOnline).catch(() => {
+      // The status stays at its seed. Nothing here may print offline for a failed join.
+    });
+
+    return () => leaveChannel(slug);
+  }, [socket, status, slug, httpOnline, joinChannel, leaveChannel]);
+
+  const channelStatus = currentChannelStatus(channelStatuses[slug], httpOnline);
+  const reading = channelReadingFor(channelStatus);
+  const onAir = reading === 'on-air';
+
+  // A channel leaving the air ends the intent with it, so the rings never outlive the
+  // broadcast they were asked for.
+  useEffect(() => {
+    if (!onAir) {
       setListening(false);
     }
-  }, [view]);
+  }, [onAir]);
 
   if (route === null) {
     return (
@@ -90,9 +111,7 @@ export default function ChannelScreen() {
     );
   }
 
-  const reading = channelReading(view?.channel.online, query.isSuccess);
   const copy = channelCopy(reading);
-  const onAir = reading === 'on-air';
 
   return (
     <View style={styles.screen}>
@@ -131,9 +150,6 @@ export default function ChannelScreen() {
         <ConnectionLine />
 
         <Text style={[type.body, styles.note, { color: colors.mutedForeground }]}>{copy.note}</Text>
-        <Text style={[type.meta, styles.note, { color: colors.mutedForeground }]}>
-          {LISTEN_UNAVAILABLE_NOTE}
-        </Text>
       </ScrollView>
 
       {/* Two unrelated jobs, so a wide surface and a separate one rather than a stack of

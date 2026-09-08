@@ -9,8 +9,12 @@ import { unavailable } from './problem';
  *
  * HTTPS is not a choice the app offers: every LinguaCast server is reachable over it.
  */
+export function apiOrigin(host: string): string {
+  return `https://${host}`;
+}
+
 export function apiBaseUrl(host: string): string {
-  return `https://${host}/api`;
+  return `${apiOrigin(host)}/api`;
 }
 
 /** `fetchImpl` exists so the two middlewares can be driven without a network. */

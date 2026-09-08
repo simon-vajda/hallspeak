@@ -1,10 +1,10 @@
-import { apiProblemCode } from '@/lib/query-retry';
+import { apiProblemCode } from '@linguacast/client-core/query-retry';
 
 /**
- * On-air is a reading taken when the fetch answered, and frozen after. Nothing on this
- * screen updates itself, so `unknown` is a real state rather than a loading detail: before a
- * reading exists the row withholds instead of printing the negative, because an unknown
- * reading is not an offline one.
+ * On-air is what the socket last said, seeded by the fetch until it speaks. `unknown` is a
+ * real state rather than a loading detail: before a reading exists the row withholds instead
+ * of printing the negative, because an unknown reading is not an offline one — and a socket
+ * that dropped keeps what it last said rather than falling back to offline.
  */
 export type ChannelReading = 'on-air' | 'offline' | 'unknown';
 
@@ -14,6 +14,19 @@ export function channelReading(online: boolean | undefined, known: boolean): Cha
   }
 
   return online ? 'on-air' : 'offline';
+}
+
+/**
+ * The reading for a channel the socket may already have spoken about. A status present is a
+ * status read, whether it came from the socket or seeded the socket from the fetch; absent
+ * is the withheld case, which includes a fetch that has not landed.
+ */
+export function channelReadingFor(status: { online: boolean } | undefined): ChannelReading {
+  if (status === undefined) {
+    return 'unknown';
+  }
+
+  return status.online ? 'on-air' : 'offline';
 }
 
 /** Null is the withheld case: the badge's slot stays, so a data change is not a re-layout. */
@@ -61,9 +74,7 @@ export const BAD_ROUTE_MESSAGE: EventErrorMessage = {
   body: 'Check the link, or scan the code at your venue again.',
 };
 
-/** The web app's "it updates on its own" line would be a false promise without a socket. */
-export const EVENT_REFRESH_NOTE =
-  'Channel status was read when this screen loaded. Pull down to read it again.';
+export const EVENT_REFRESH_NOTE = 'Channels turn on when their interpreter connects.';
 
 export const NO_CHANNELS_TITLE = 'No channels yet';
 export const NO_CHANNELS_BODY =

@@ -13,12 +13,14 @@ import { channelHref, readEventParams } from '@/links/route';
 import {
   BAD_ROUTE_MESSAGE,
   CHOOSE_A_CHANNEL,
-  channelReading,
+  channelReadingFor,
   EVENT_REFRESH_NOTE,
   eventErrorMessage,
   NO_CHANNELS_BODY,
   NO_CHANNELS_TITLE,
 } from '@/screens/event-view';
+import { useEventSocket } from '@/socket/provider';
+import { currentChannelStatus } from '@/socket/status';
 import { useColors } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
@@ -35,6 +37,7 @@ export default function EventScreen() {
 
   const query = useQuery({ ...eventQueryOptions(host, pin), enabled: route !== null });
   const event = query.data;
+  const { channelStatuses } = useEventSocket();
 
   // Opening the event is what writes it down, and what clears an earlier failure to reach
   // it. A failure marks the row when one exists and invents nothing when it does not.
@@ -135,7 +138,9 @@ export default function EventScreen() {
                     <ChannelRow
                       key={channel.slug}
                       name={channel.name}
-                      reading={channelReading(channel.online, query.isSuccess)}
+                      reading={channelReadingFor(
+                        currentChannelStatus(channelStatuses[channel.slug], channel.online),
+                      )}
                       index={index}
                       count={channels.length}
                       onPress={() => router.push(channelHref(host, pin, channel.slug))}
