@@ -23,4 +23,6 @@ android {
 
 dependencies {
   implementation "androidx.media:media:1.7.0"
+  // The audio device module this module replaces, and the options object it is handed to.
+  implementation project(":react-native-webrtc")
 }

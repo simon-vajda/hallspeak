@@ -2,6 +2,7 @@ package app.linguacast.audio
 
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
@@ -122,25 +123,42 @@ class LinguacastAudioModule : Module() {
   }
 
   /**
-   * The device actually carrying the audio, or nothing. A name is never invented: the sheet
+   * The device the media stream is going to, or nothing. A name is never invented: the sheet
    * withholds a label rather than printing one the platform did not give.
+   *
+   * Android exposes no public "which output is media on" call — `getDevicesForAttributes` is
+   * a system API — so the connected outputs are read and the one the platform would route to
+   * is picked by the same precedence Android itself applies: a wired headset over Bluetooth,
+   * Bluetooth over the speaker. The earpiece is deliberately absent: media never goes there.
    */
   private fun routeName(): String? {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-      return null
+    val outputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+
+    for (type in ROUTE_PRECEDENCE) {
+      val device = outputs.firstOrNull { it.type == type } ?: continue
+
+      return when (type) {
+        AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_WIRED_HEADSET -> "Headphones"
+        AudioDeviceInfo.TYPE_USB_HEADSET -> "USB headphones"
+        AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "Speaker"
+        else -> device.productName?.toString()?.takeIf { it.isNotBlank() } ?: "Bluetooth"
+      }
     }
 
-    val device = audioManager.communicationDevice ?: return null
-
-    return when (device.type) {
-      AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "Speaker"
-      AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> "Earpiece"
-      AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_WIRED_HEADSET -> "Headphones"
-      else -> device.productName?.toString()?.takeIf { it.isNotBlank() }
-    }
+    return null
   }
 
   private companion object {
+    /** Android's own routing order for media, which is what the row has to agree with. */
+    val ROUTE_PRECEDENCE = listOf(
+      AudioDeviceInfo.TYPE_BLE_HEADSET,
+      AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+      AudioDeviceInfo.TYPE_WIRED_HEADSET,
+      AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+      AudioDeviceInfo.TYPE_USB_HEADSET,
+      AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,
+    )
+
     const val MEDIA_OUTPUT_SWITCHER = "com.android.settings.panel.action.MEDIA_OUTPUT"
     const val EXTRA_PACKAGE_NAME = "com.android.settings.panel.extra.PACKAGE_NAME"
   }

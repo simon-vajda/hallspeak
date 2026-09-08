@@ -44,7 +44,7 @@ class ListeningService : Service() {
     }
 
     session = created
-    active = created
+    active = this
     publish(playing = false)
   }
 
