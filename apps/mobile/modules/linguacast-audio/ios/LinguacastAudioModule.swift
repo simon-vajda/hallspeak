@@ -6,14 +6,10 @@ import WebRTC
 /**
  Owns the listening session on iOS.
 
- libwebrtc's `RTCAudioSession` defaults to a call posture — `playAndRecord` with the
- voice-chat mode — and fights any other library that sets a category, so this module is the
- one owner: `expo-audio` is deliberately not installed. Two things here are defensive rather
- than merely conventional, because a receive-only peer connection is the case libwebrtc is
- least exercised on. The configuration asks for a playback posture, so the audio arrives on
- the media volume rather than the call volume and does not bias toward the earpiece; and the
- session is activated explicitly rather than left to auto-activation on track arrival, which
- has a long history of producing a live track with no sound.
+ libwebrtc's `RTCAudioSession` fights any other library that sets a category, so this module
+ is the one owner: `expo-audio` is deliberately not installed. The session is also activated
+ explicitly rather than left to auto-activation on track arrival, which has a long history of
+ producing a live track with no sound on a receive-only connection.
  */
 struct NowPlayingInfo: Record {
   @Field var title: String = ""
@@ -36,9 +32,19 @@ public class LinguacastAudioModule: Module {
     // ignored.
     OnCreate {
       let configuration = RTCAudioSessionConfiguration.webRTC()
-      configuration.category = AVAudioSession.Category.playback.rawValue
+      // playAndRecord, not playback, even though nothing here records: libwebrtc plays
+      // through a voice-processing audio unit, and that unit cannot start under a
+      // playback-only category — measured as AUIOClient_StartIO failing with -66637 and a
+      // live track that makes no sound.
+      //
+      // What is changed off libwebrtc's default is the mode and the options: the default
+      // voice-chat mode applies call processing to interpreted speech and routes to the
+      // earpiece, so the mode drops to default and .defaultToSpeaker moves it to the
+      // speaker. Bluetooth is A2DP only — allowing HFP as well would drag a headset back
+      // down to call quality.
+      configuration.category = AVAudioSession.Category.playAndRecord.rawValue
       configuration.mode = AVAudioSession.Mode.default.rawValue
-      configuration.categoryOptions = [.allowBluetoothA2DP, .allowAirPlay]
+      configuration.categoryOptions = [.defaultToSpeaker, .allowBluetoothA2DP, .allowAirPlay]
       RTCAudioSessionConfiguration.setWebRTC(configuration)
 
       NotificationCenter.default.addObserver(
