@@ -159,7 +159,10 @@ export function useListener(input: {
   useEffect(() => {
     const plan = consumerPlan({ consumers, activeSlug, online });
     for (const slug of plan.close) {
-      void stopConsuming(slug);
+      // The local consumer is closed synchronously; only telling the server can fail, and a
+      // socket that is already gone is the usual reason. Caught rather than left floating:
+      // an unhandled rejection is a red box over a screen that recovered by itself.
+      void stopConsuming(slug).catch(() => {});
     }
     if (!plan.consume) {
       return;
@@ -185,7 +188,7 @@ export function useListener(input: {
   stopRef.current = stopConsuming;
   useEffect(
     () => () => {
-      void stopRef.current(input.slug);
+      void stopRef.current(input.slug).catch(() => {});
     },
     [input.slug],
   );
