@@ -21,7 +21,6 @@ import expo.modules.kotlin.modules.ModuleDefinition
  */
 class LinguacastAudioModule : Module() {
   private var active = false
-  private var playing = false
 
   private val context: Context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
@@ -64,18 +63,21 @@ class LinguacastAudioModule : Module() {
     AsyncFunction("setNowPlaying") { info: Map<String, Any?> ->
       ListeningService.title = info["title"] as? String ?: ""
       ListeningService.subtitle = info["artist"] as? String ?: ""
-      ListeningService.active?.publish(playing)
+      ListeningService.active?.publish()
     }
 
     AsyncFunction("clearNowPlaying") {
       ListeningService.title = ""
       ListeningService.subtitle = ""
-      playing = false
+      ListeningService.playing = false
     }
 
+    // Written to the shared state whether or not a service exists yet: activation is
+    // asynchronous, so this routinely arrives first, and a service that then published its
+    // own default would show a play button over audio that is already flowing.
     AsyncFunction("setPlaybackState") { next: Boolean ->
-      playing = next
-      ListeningService.active?.publish(next)
+      ListeningService.playing = next
+      ListeningService.active?.publish()
     }
 
     /**
@@ -116,7 +118,7 @@ class LinguacastAudioModule : Module() {
       audioManager.mode = AudioManager.MODE_NORMAL
       context.startForegroundService(intent)
     } else {
-      playing = false
+      ListeningService.playing = false
       context.stopService(intent)
     }
 

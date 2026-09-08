@@ -3,6 +3,7 @@ package app.linguacast.audio
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.Build
@@ -10,6 +11,7 @@ import android.os.IBinder
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import androidx.core.app.NotificationCompat
 import androidx.media.session.MediaButtonReceiver
 
 /**
@@ -45,7 +47,10 @@ class ListeningService : Service() {
 
     session = created
     active = this
-    publish(playing = false)
+    // From the shared state rather than from a parameter: the module sets what it wants
+    // before the service exists, and a service that published its own idea of the state
+    // would show a play button over audio that is already flowing.
+    publish()
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -55,6 +60,7 @@ class ListeningService : Service() {
   }
 
   override fun onDestroy() {
+    session?.isActive = false
     session?.release()
     session = null
     active = null
@@ -65,7 +71,7 @@ class ListeningService : Service() {
    * Play and pause only, and a duration the platform reads as unknown, which is what keeps
    * a seek bar out of the notification and off the lock screen.
    */
-  fun publish(playing: Boolean) {
+  fun publish() {
     val current = session ?: return
 
     current.setMetadata(
@@ -87,16 +93,12 @@ class ListeningService : Service() {
         .build()
     )
 
-    if (session != null) {
-      getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification())
-    }
+    getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification())
   }
 
   private fun notification(): Notification {
-    val manager = getSystemService(NotificationManager::class.java)
-
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      manager.createNotificationChannel(
+      getSystemService(NotificationManager::class.java).createNotificationChannel(
         NotificationChannel(CHANNEL_ID, "Listening", NotificationManager.IMPORTANCE_LOW).apply {
           setShowBadge(false)
         }
@@ -104,16 +106,53 @@ class ListeningService : Service() {
     }
 
     val label = applicationInfo.loadLabel(packageManager).toString()
+    val toggle = if (playing) {
+      NotificationCompat.Action(
+        android.R.drawable.ic_media_pause,
+        "Pause",
+        MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PAUSE)
+      )
+    } else {
+      NotificationCompat.Action(
+        android.R.drawable.ic_media_play,
+        "Play",
+        MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY)
+      )
+    }
 
-    return Notification.Builder(this, CHANNEL_ID)
-      .setContentTitle(title.ifBlank { label })
-      .setContentText(subtitle)
+    return NotificationCompat.Builder(this, CHANNEL_ID)
       .setSmallIcon(applicationInfo.icon)
+      .setContentTitle(title.ifBlank { label })
+      // The event, and the app's own name beside it: a notification a guest meets on a lock
+      // screen has to say which app is holding their audio.
+      .setContentText(subtitle.ifBlank { label })
+      .setSubText(label)
+      // Reopens the app where the guest left it, which is the channel they are listening to.
+      .setContentIntent(reopen())
       .setOngoing(true)
+      .setShowWhen(false)
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+      .addAction(toggle)
       .setStyle(
-        Notification.MediaStyle().setMediaSession(session?.sessionToken?.token as? android.media.session.MediaSession.Token)
+        androidx.media.app.NotificationCompat.MediaStyle()
+          .setMediaSession(session?.sessionToken)
+          .setShowActionsInCompactView(0)
       )
       .build()
+  }
+
+  private fun reopen(): PendingIntent? {
+    val intent = packageManager.getLaunchIntentForPackage(packageName) ?: return null
+    // Brings the existing task forward rather than starting a second copy of the app, so the
+    // guest lands back on the channel they were listening to.
+    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+
+    return PendingIntent.getActivity(
+      this,
+      0,
+      intent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
   }
 
   enum class RemoteCommand { PLAY, PAUSE }
@@ -125,9 +164,13 @@ class ListeningService : Service() {
     /** MediaSession reads a negative duration as unknown, which is what withholds the bar. */
     private const val DURATION_UNKNOWN = -1L
 
-    /** Set by the module before the service starts, and read back by the notification. */
+    /**
+     * What the controls should say, held here rather than on the instance: the module sets
+     * all three before `startForegroundService` has produced a service to receive them.
+     */
     var title: String = ""
     var subtitle: String = ""
+    var playing: Boolean = false
 
     /** The module's own handler, so a lock-screen press reaches JavaScript. */
     var remote: ((RemoteCommand) -> Unit)? = null
