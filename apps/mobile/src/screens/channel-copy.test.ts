@@ -39,6 +39,14 @@ describe('channel copy', () => {
     expect(channelCopy('unknown').accessibleBadge).toBe('Status unknown');
   });
 
+  it('no longer says listening is unavailable, now that a socket supplies the state', () => {
+    for (const line of ALL_CHANNEL_COPY) {
+      expect(`"${line}" unavailable: ${line.includes('not available')}`).toBe(
+        `"${line}" unavailable: false`,
+      );
+    }
+  });
+
   it('says nobody is broadcasting without promising to notice a change', () => {
     const note = channelCopy('offline').note;
 

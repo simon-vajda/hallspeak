@@ -14,6 +14,7 @@
   "dependencies": {
     "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@expo/ui": "~57.0.16",
+    "@linguacast/client-core": "workspace:*",
     "@linguacast/contract": "workspace:*",
     "@tanstack/react-query": "5.101.4",
     "expo": "~57.0.20",
@@ -38,6 +39,7 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
+    "socket.io-client": "4.8.3",
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
