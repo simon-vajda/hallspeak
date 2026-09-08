@@ -108,6 +108,11 @@ export function playTargetLabel(state: ListenActionState): string {
   }
 }
 
+/** Rings mean audible samples, so a muted interpreter stops them without closing playback. */
+export function showListenRings(isPlaying: boolean, muted: boolean | null): boolean {
+  return isPlaying && muted !== true;
+}
+
 export interface ListenBadgeInput {
   /** A Producer exists on this channel. */
   live: boolean;

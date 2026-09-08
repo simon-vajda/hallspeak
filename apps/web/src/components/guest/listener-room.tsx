@@ -8,6 +8,7 @@ import {
   listenerMediaPlayAction,
   playTargetLabel,
   reconcileListenIntent,
+  showListenRings,
   statusNote,
 } from '@linguacast/client-core/channel';
 import {
@@ -367,7 +368,7 @@ export function ListenerRoom({
           <PlayTarget
             icon={<PlayIcon state={actionState} />}
             label={playTargetLabel(actionState)}
-            rings={actionState === 'playing'}
+            rings={showListenRings(actionState === 'playing', muted)}
             className={cn(actionState === 'holding' && 'disabled:opacity-100')}
             disabled={actionState === 'unavailable' || actionState === 'holding'}
             onClick={() => {

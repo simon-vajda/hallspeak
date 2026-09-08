@@ -8,6 +8,7 @@ import {
   listenerMediaPlayAction,
   playTargetLabel,
   reconcileListenIntent,
+  showListenRings,
   statusNote,
 } from './listen-state';
 
@@ -58,6 +59,13 @@ describe('bounded playback intent', () => {
 
     expect(action).toBe('playing');
     expect(playTargetLabel(action)).toBe('Pause');
+  });
+
+  it('stops listen rings while the interpreter is muted', () => {
+    expect(showListenRings(true, false)).toBe(true);
+    expect(showListenRings(true, null)).toBe(true);
+    expect(showListenRings(true, true)).toBe(false);
+    expect(showListenRings(false, false)).toBe(false);
   });
 
   it('enters a 30 second hold only when a dropped producer interrupts playback', () => {

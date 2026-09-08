@@ -1,11 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import {
-  ALL_CHANNEL_COPY,
-  channelCopy,
-  showListenRings,
-  targetLabel,
-  UNKNOWN_BADGE,
-} from './channel-copy';
+import { ALL_CHANNEL_COPY, channelCopy, targetLabel, UNKNOWN_BADGE } from './channel-copy';
 
 /**
  * The rule R31 states, expressed as data. A phrase reaching this list means the screen would
@@ -89,12 +83,5 @@ describe('channel copy', () => {
     expect(targetLabel('unavailable')).toBe('Listen');
     expect(targetLabel('playing')).toBe('Stop listening');
     expect(targetLabel('holding')).toBe('Holding');
-  });
-
-  it('stops listen rings while the interpreter is muted', () => {
-    expect(showListenRings(true, false)).toBe(true);
-    expect(showListenRings(true, null)).toBe(true);
-    expect(showListenRings(true, true)).toBe(false);
-    expect(showListenRings(false, false)).toBe(false);
   });
 });
