@@ -48,7 +48,8 @@ export const STOP_LABEL = 'Stop listening';
 /** Offered when the recovery ladder has given up: only a fresh session can help now. */
 export const TRY_AGAIN_LABEL = 'Try again';
 
-export const AUDIO_ACTION_LABEL = 'Audio';
+/** Names the line for a screen reader; the line's own text is the route and the level. */
+export const AUDIO_ACTION_LABEL = 'Audio output';
 export const REPORT_ACTION_LABEL = 'Report a problem';
 
 /** The target's own label follows the shared action state, not the press. */

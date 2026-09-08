@@ -25,11 +25,8 @@ import {
 } from 'react';
 import { apiOrigin } from '@/api/client';
 import { eventQueryOptions } from '@/api/queries';
-import type { AudioOutput } from '@/audio/use-audio-output';
-import { useAudioOutput } from '@/audio/use-audio-output';
-import type { ListenerVolume } from '@/audio/use-listener-volume';
-import { useListenerVolume } from '@/audio/use-listener-volume';
-import { DEFAULT_VOLUME_STATE } from '@/audio/volume';
+import type { SystemAudio } from '@/audio/use-system-audio';
+import { useSystemAudio } from '@/audio/use-system-audio';
 import { useMedia } from '@/media/use-media';
 import { CLIENT_VERSION } from '@/version';
 import { type ChannelReports, resolveReports, sendReport } from './reports';
@@ -57,11 +54,11 @@ export interface EventSocket {
     restartSession: () => void;
   };
   /**
-   * The guest's own level and where the audio is going. Owned here because the Audio sheet
-   * is a separate route: two copies would disagree the moment either moved.
+   * Where the audio is going and how loud the device is, both read from the platform. Held
+   * here rather than on the Channel screen because the Report sheet is a separate route and
+   * its self-check reads the same level.
    */
-  volume: ListenerVolume;
-  output: AudioOutput;
+  audio: SystemAudio;
   /**
    * Owned here rather than in the sheet, so closing and reopening it keeps the disable. The
    * server scopes both the cooldown and resolution eligibility to one connection, so this
@@ -87,12 +84,7 @@ const IDLE: EventSocket = {
     stopConsuming: async () => {},
     restartSession: () => {},
   },
-  volume: {
-    state: DEFAULT_VOLUME_STATE,
-    setVolume: () => {},
-    toggleMute: () => {},
-  },
-  output: { route: null, present: () => {} },
+  audio: { route: null, volume: 0 },
   reports: {
     sent: {},
     open: false,
@@ -210,10 +202,7 @@ export function EventSocketProvider({
     [sent, reportOpen, send, resolve],
   );
 
-  const volume = useListenerVolume();
-  // Subscribed for as long as the event is open: a route change while the sheet is closed
-  // is still the change the sheet must already know about when it opens.
-  const output = useAudioOutput(true);
+  const audio = useSystemAudio();
 
   const value = useMemo(
     () => ({
@@ -225,8 +214,7 @@ export function EventSocketProvider({
       joinChannel,
       leaveChannel,
       media,
-      volume,
-      output,
+      audio,
       reports,
     }),
     [
@@ -238,8 +226,7 @@ export function EventSocketProvider({
       joinChannel,
       leaveChannel,
       media,
-      volume,
-      output,
+      audio,
       reports,
     ],
   );

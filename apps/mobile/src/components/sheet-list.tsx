@@ -84,7 +84,6 @@ export function SheetOption({
   tone,
   leading,
   trailing,
-  hint,
   onPress,
 }: {
   label: string;
@@ -98,8 +97,6 @@ export function SheetOption({
   tone?: { background: string; foreground: string };
   leading?: ReactNode;
   trailing?: ReactNode;
-  /** What pressing the row does, where the label names a thing rather than an action. */
-  hint?: string;
   onPress: () => void;
 }) {
   const colors = useColors();
@@ -110,7 +107,6 @@ export function SheetOption({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled, selected }}
-      {...(hint === undefined ? {} : { accessibilityHint: hint })}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [

@@ -12,10 +12,8 @@ import {
 } from 'react-native';
 import { channelQueryOptions } from '@/api/queries';
 import { systemControls } from '@/audio/now-playing';
-import { audioActionDetail } from '@/audio/output';
-import { useTrackGain } from '@/audio/use-listener-volume';
+import { audioStatus } from '@/audio/system-audio';
 import { useNowPlaying } from '@/audio/use-now-playing';
-import { volumeLabel } from '@/audio/volume';
 import { ActionButton } from '@/components/action-button';
 import { ConnectionLine } from '@/components/connection-line';
 import { ErrorState } from '@/components/error-state';
@@ -25,7 +23,7 @@ import { ListenTarget } from '@/components/listen-target';
 import { LiveBadge } from '@/components/live-badge';
 import { ScreenHeader } from '@/components/screen-header';
 import { rememberEvent } from '@/history/store';
-import { audioSheetHref, eventHref, readChannelParams, reportSheetHref } from '@/links/route';
+import { eventHref, readChannelParams, reportSheetHref } from '@/links/route';
 import { useListener } from '@/media/use-listener';
 import {
   AUDIO_ACTION_LABEL,
@@ -57,8 +55,7 @@ export default function ChannelScreen() {
     enabled: route !== null,
   });
   const view = query.data;
-  const { socket, status, channelStatuses, joinChannel, leaveChannel, volume, output } =
-    useEventSocket();
+  const { socket, status, channelStatuses, joinChannel, leaveChannel, audio } = useEventSocket();
 
   // Reaching a channel writes its event down; the channel itself is not remembered.
   useEffect(() => {
@@ -95,11 +92,6 @@ export default function ChannelScreen() {
     ...(channelStatus?.reason === undefined ? {} : { closeReason: channelStatus.reason }),
   });
 
-  // Re-applied on every track the session opens: a transport rebuild and a channel switch
-  // each produce a new one, and a new track starts at the library's default rather than the
-  // guest's own level.
-  useTrackGain(listener.track, volume.state.volume);
-
   // The platform's own controls, held in step with the same intent the target reads, and
   // routed back into the same handlers — so the two can never disagree.
   useNowPlaying(
@@ -131,10 +123,9 @@ export default function ChannelScreen() {
     );
   }
 
-  const audioDetail = audioActionDetail({
-    route: output.route,
-    volumeLabel: volumeLabel(volume.state),
-  });
+  // Stated, not offered: neither platform lets an app choose the media output, and a level
+  // of this app's own could only sit under the volume keys the guest already has.
+  const audioDetail = audioStatus({ route: audio.route, volume: audio.volume });
 
   const copy = channelCopy(
     channelStatus === undefined
@@ -215,15 +206,13 @@ export default function ChannelScreen() {
         ) : null}
       </ScrollView>
 
-      {/* Two unrelated jobs, so a wide surface and a separate one rather than a stack of
-          equal buttons: the audio control reads its own state in its face. */}
+      {/* The audio line states where the audio is going and how loud the phone is; both
+          belong to the platform, so it is a reading rather than a control. */}
       <View style={styles.thumbLine}>
-        <GlassSurface interactive raised style={styles.audioSurface}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={AUDIO_ACTION_LABEL}
-            accessibilityHint={audioDetail}
-            onPress={() => router.push(audioSheetHref(host, pin, slug))}
+        <GlassSurface raised style={styles.audioSurface}>
+          <View
+            accessible
+            accessibilityLabel={`${AUDIO_ACTION_LABEL}: ${audioDetail}`}
             style={styles.audioPress}
           >
             <Icon name="headphones" size={20} color={colors.foreground} strokeWidth={2.25} />
@@ -233,7 +222,7 @@ export default function ChannelScreen() {
             >
               {audioDetail}
             </Text>
-          </Pressable>
+          </View>
         </GlassSurface>
 
         {/* Only a listener may report a problem, and a consumer being open is what makes

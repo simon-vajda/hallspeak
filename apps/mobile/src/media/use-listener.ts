@@ -11,7 +11,6 @@ import {
   isLinkUp,
   type LinkState,
   linkLabel,
-  mayAttachConsumerTrack,
   resolveLinkState,
 } from '@linguacast/client-core/media';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -46,22 +45,21 @@ function sameIntent(a: ListenIntentState, b: ListenIntentState): boolean {
  * layout. Every decision here comes from the shared listen and media state; what is local
  * is the effect ordering and the timer.
  *
- * There is no audio element on React Native: a consumed remote track plays as soon as it is
- * added to the peer connection. Attachment is therefore holding the track rather than
- * assigning a source, and `mayAttachConsumerTrack` still decides whether it is kept.
+ * There is no audio element on React Native and nothing to attach a track to: a consumed
+ * remote track plays as soon as it is added to the peer connection, so the consumer is the
+ * whole handle and `consumerPlan` deciding what to open and close is the whole control.
  */
 export function useListener(input: {
   slug: string;
   live: boolean;
   muted: boolean | null;
   closeReason?: 'ended' | 'dropped';
-}): ListenerView & { track: MediaStreamTrack | null } {
+}): ListenerView {
   const { status, hasConnected, media } = useEventSocket();
   const [playback, setPlayback] = useState<ListenIntentState>({
     intent: 'idle',
     holdDeadline: null,
   });
-  const [track, setTrack] = useState<MediaStreamTrack | null>(null);
 
   const link = resolveLinkState({
     socketStatus: status,
@@ -153,7 +151,6 @@ export function useListener(input: {
   useEffect(() => {
     const plan = consumerPlan({ consumers, activeSlug, online });
     for (const slug of plan.close) {
-      setTrack(null);
       void stopConsuming(slug);
     }
     if (!plan.consume) {
@@ -161,29 +158,16 @@ export function useListener(input: {
     }
 
     const requestedSlug = plan.consume;
-    void startConsuming(requestedSlug)
-      .then((consumed) => {
-        if (
-          !mayAttachConsumerTrack({
-            requestedSlug,
-            ...intentRef.current,
-            trackEnded: consumed.readyState === 'ended',
-          })
-        ) {
-          return;
-        }
-        setTrack(consumed);
-      })
-      .catch((cause) => {
-        // Swallowed silently, a failed consume left the screen claiming it was waiting.
-        if (
-          intentRef.current.activeSlug === requestedSlug &&
-          intentRef.current.online &&
-          !isSuperseded(cause)
-        ) {
-          console.error('media: could not listen', cause);
-        }
-      });
+    void startConsuming(requestedSlug).catch((cause) => {
+      // Swallowed silently, a failed consume left the screen claiming it was waiting.
+      if (
+        intentRef.current.activeSlug === requestedSlug &&
+        intentRef.current.online &&
+        !isSuperseded(cause)
+      ) {
+        console.error('media: could not listen', cause);
+      }
+    });
   }, [consumers, activeSlug, online, startConsuming, stopConsuming]);
 
   const actionState = listenActionState({
@@ -219,6 +203,5 @@ export function useListener(input: {
     start,
     stop,
     restart: media.restartSession,
-    track,
   };
 }

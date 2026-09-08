@@ -42,10 +42,6 @@ export function channelHref(host: string, pin: string, slug: string): Href {
   return buildChannelPath(host, pin, slug) as Href;
 }
 
-export function audioSheetHref(host: string, pin: string, slug: string): Href {
-  return `${buildChannelPath(host, pin, slug)}/audio` as Href;
-}
-
 export function reportSheetHref(host: string, pin: string, slug: string): Href {
   return `${buildChannelPath(host, pin, slug)}/report` as Href;
 }
