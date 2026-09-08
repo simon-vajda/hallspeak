@@ -1,5 +1,24 @@
 import { describe, expect, it } from '@jest/globals';
-import { audioStatus, normalizeVolume, volumeLabel } from './system-audio';
+import {
+  audioStatus,
+  normalizeVolume,
+  OUTPUT_UNKNOWN_LABEL,
+  outputLabel,
+  volumeLabel,
+} from './system-audio';
+
+describe('outputLabel', () => {
+  it('names the route the platform gave', () => {
+    expect(outputLabel('AirPods Pro')).toBe('AirPods Pro');
+  });
+
+  it('withholds rather than fabricating one when the platform reported nothing', () => {
+    expect(outputLabel(null)).toBe(OUTPUT_UNKNOWN_LABEL);
+    expect(outputLabel(undefined)).toBe(OUTPUT_UNKNOWN_LABEL);
+    expect(outputLabel('')).toBe(OUTPUT_UNKNOWN_LABEL);
+    expect(outputLabel('   ')).toBe(OUTPUT_UNKNOWN_LABEL);
+  });
+});
 
 describe('normalizeVolume', () => {
   it('keeps a level the platform reported', () => {

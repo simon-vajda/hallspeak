@@ -42,7 +42,7 @@ export function channelCopy(input: (ListenBadgeInput & ListenNoteInput) | 'unkno
 
 export const UNKNOWN_NOTE = 'This channel could not be read. Pull down to try again.';
 
-export const LISTEN_LABEL = 'Listen';
+/** The word for a target that is playing. Every other state's word is the shared state's. */
 export const STOP_LABEL = 'Stop listening';
 
 /** Offered when the recovery ladder has given up: only a fresh session can help now. */
@@ -99,7 +99,6 @@ export const ALL_CHANNEL_COPY: string[] = [
     [badge, accessibleBadge, note].filter((value): value is string => value !== null),
   ),
   ...ACTION_STATES.map(targetLabel),
-  LISTEN_LABEL,
   STOP_LABEL,
   TRY_AGAIN_LABEL,
   AUDIO_ACTION_LABEL,
