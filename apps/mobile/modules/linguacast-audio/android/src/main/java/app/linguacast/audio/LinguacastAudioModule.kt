@@ -14,9 +14,10 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * Owns the listening session on Android: the media playback foreground service that keeps
  * the audio alive behind another app, and the audio manager's mode.
  *
- * The mode is set to normal rather than left at libwebrtc's communication default, so the
- * audio is a media stream a guest controls with the volume keys they already use, rather
- * than a call under the call volume with a bias toward the earpiece.
+ * The mode is set to normal rather than left at libwebrtc's communication default. That
+ * alone does not move the audio — the track's own attributes decide that, which is what
+ * `MediaStreamAudioInstaller` is for — but leaving the mode at communication would still
+ * duck other audio and hold the routing a call expects.
  */
 class LinguacastAudioModule : Module() {
   private var active = false
