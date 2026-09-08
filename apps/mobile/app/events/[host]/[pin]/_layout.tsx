@@ -25,7 +25,6 @@ export default function EventLayout() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
-        <Stack.Screen name="[slug]/audio" options={SHEET_OPTIONS} />
         <Stack.Screen name="[slug]/report" options={SHEET_OPTIONS} />
       </Stack>
     </EventSocketProvider>

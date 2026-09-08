@@ -34,10 +34,11 @@ declare class LinguacastAudioModule extends NativeModule<LinguacastAudioModuleEv
   currentRoute(): string | null;
 
   /**
-   * Presents the platform's own output chooser. Neither platform offers an app a general
-   * enumerable list, so this app draws none and hands the question over.
+   * The device's own media volume, 0 to 100. Read rather than set: routing and level both
+   * belong to the platform here, and the app states what they are instead of offering a
+   * second control for the same job.
    */
-  presentOutputPicker(): Promise<void>;
+  systemVolume(): number;
 }
 
 export default requireNativeModule<LinguacastAudioModule>('LinguacastAudio');

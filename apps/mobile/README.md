@@ -4,8 +4,8 @@ The LinguaCast app for iOS and Android: Expo SDK 57, React Native 0.86, `expo-ro
 
 ## What it does today
 
-Four screens — Home, Scanner, Event, Channel — and four sheets: link entry, Appearance, Audio
-and Report. Home is device-local memory of the events this phone has opened; a row opens that
+Four screens — Home, Scanner, Event, Channel — and three sheets: link entry, Appearance and
+Report. Home is device-local memory of the events this phone has opened; a row opens that
 event's channel picker, and no channel is remembered. Event and Channel read the public REST
 API of whichever server the link names.
 
@@ -13,8 +13,10 @@ It listens. One Socket.IO connection per event, opened by the event's route layo
 live on-air and mute state to both screens and both sheets; pressing Listen opens a mediasoup
 consumer and plays the interpreter. The audio survives a locked screen and a backgrounded app,
 recovers by itself across a network change, and is controlled from the phone's own lock-screen
-controls. The Audio sheet's volume is this listener's own, independent of the device volume,
-and its Output row opens the platform's chooser. Reports reach the interpreter's studio.
+controls. Audio settings are the phone's own: the Channel screen states which output is
+carrying the audio and how loud the device is, and offers no control of its own, because
+Android lets an app choose the output only for call-stream audio and this is on the media
+stream. Reports reach the interpreter's studio.
 
 The speaker studio is not built: there is no microphone path anywhere in this app.
 

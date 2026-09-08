@@ -21,11 +21,12 @@ public class LinguacastAudioModule: Module {
   private var playing = false
   private var playTarget: Any?
   private var pauseTarget: Any?
+  private var volumeObservation: NSKeyValueObservation?
 
   public func definition() -> ModuleDefinition {
     Name("LinguacastAudio")
 
-    Events("onRouteChange", "onRemotePlay", "onRemotePause")
+    Events("onRouteChange", "onVolumeChange", "onRemotePlay", "onRemotePause")
 
     // Before any peer connection exists: libwebrtc reads this configuration when it builds
     // its audio unit, and a configuration set afterwards is a configuration it has already
@@ -53,10 +54,14 @@ public class LinguacastAudioModule: Module {
         name: AVAudioSession.routeChangeNotification,
         object: nil
       )
+
+      self.observeVolume()
     }
 
     OnDestroy {
       NotificationCenter.default.removeObserver(self)
+      self.volumeObservation?.invalidate()
+      self.volumeObservation = nil
       self.disableRemoteCommands()
     }
 
@@ -74,6 +79,11 @@ public class LinguacastAudioModule: Module {
 
     Function("currentRoute") { () -> String? in
       Self.routeName()
+    }
+
+    /// Read rather than set: routing and level both belong to the platform here.
+    Function("systemVolume") { () -> Int in
+      Self.currentVolume()
     }
 
     AsyncFunction("setNowPlaying") { (info: NowPlayingInfo) in
@@ -106,9 +116,6 @@ public class LinguacastAudioModule: Module {
       }
     }
 
-    AsyncFunction("presentOutputPicker") {
-      Self.presentRoutePicker()
-    }.runOnQueue(.main)
   }
 
   /**
@@ -116,6 +123,26 @@ public class LinguacastAudioModule: Module {
    left at its default: an enabled command the app cannot honour is a control a guest can
    press for nothing, and on iOS an enabled seek command is what adds the scrubber.
    */
+  /// Idempotent in both directions: the playback hold keeps the session across a producer
+  /// that closed, and asking again for what is already held must not disturb it.
+  private func setSession(active: Bool) throws {
+    if active == self.active {
+      return
+    }
+
+    let session = RTCAudioSession.sharedInstance()
+    session.lockForConfiguration()
+    defer { session.unlockForConfiguration() }
+
+    if active {
+      try session.setConfiguration(RTCAudioSessionConfiguration.webRTC(), active: true)
+    } else {
+      try session.setActive(false)
+    }
+
+    self.active = active
+  }
+
   private func enableRemoteCommands() {
     let center = MPRemoteCommandCenter.shared()
 
@@ -172,52 +199,6 @@ public class LinguacastAudioModule: Module {
     ]
   }
 
-  /**
-   iOS exposes its output chooser only as a view, so the picker is mounted offscreen and its
-   own button is pressed. There is no API that presents it directly.
-   */
-  private static func presentRoutePicker() {
-    guard
-      let window = UIApplication.shared.connectedScenes
-        .compactMap({ $0 as? UIWindowScene })
-        .flatMap({ $0.windows })
-        .first(where: { $0.isKeyWindow })
-    else {
-      return
-    }
-
-    let picker = AVRoutePickerView(frame: .zero)
-    picker.isHidden = true
-    window.addSubview(picker)
-
-    for control in picker.subviews.compactMap({ $0 as? UIButton }) {
-      control.sendActions(for: .touchUpInside)
-    }
-
-    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-      picker.removeFromSuperview()
-    }
-  }
-
-  /// Idempotent in both directions: the playback hold keeps the session across a producer
-  /// that closed, and asking again for what is already held must not disturb it.
-  private func setSession(active: Bool) throws {
-    if active == self.active {
-      return
-    }
-
-    let session = RTCAudioSession.sharedInstance()
-    session.lockForConfiguration()
-    defer { session.unlockForConfiguration() }
-
-    if active {
-      try session.setConfiguration(RTCAudioSessionConfiguration.webRTC(), active: true)
-    } else {
-      try session.setActive(false)
-    }
-
-    self.active = active
-  }
 
   @objc private func routeChanged(_ notification: Notification) {
     sendEvent("onRouteChange", ["name": Self.routeName() as Any])
@@ -225,6 +206,21 @@ public class LinguacastAudioModule: Module {
 
   /// The port actually carrying the audio, or nothing. A name is never invented: the sheet
   /// withholds a label rather than printing one the platform did not give.
+  /**
+   No notification exists for the device's own volume, so the session's property is observed.
+   Without it the level the screen states would be frozen at whatever it read on mount.
+   */
+  private func observeVolume() {
+    volumeObservation = AVAudioSession.sharedInstance().observe(\.outputVolume, options: [.new]) {
+      [weak self] _, _ in
+      self?.sendEvent("onVolumeChange", ["volume": Self.currentVolume()])
+    }
+  }
+
+  private static func currentVolume() -> Int {
+    Int((AVAudioSession.sharedInstance().outputVolume * 100).rounded())
+  }
+
   private static func routeName() -> String? {
     AVAudioSession.sharedInstance().currentRoute.outputs.first?.portName
   }

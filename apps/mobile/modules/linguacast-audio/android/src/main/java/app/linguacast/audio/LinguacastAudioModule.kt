@@ -2,10 +2,13 @@ package app.linguacast.audio
 
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
+import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
-import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.database.ContentObserver
+import android.provider.Settings
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -21,6 +24,7 @@ import expo.modules.kotlin.modules.ModuleDefinition
  */
 class LinguacastAudioModule : Module() {
   private var active = false
+  private var lastVolume = -1
 
   private val context: Context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
@@ -31,9 +35,19 @@ class LinguacastAudioModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("LinguacastAudio")
 
-    Events("onRouteChange", "onRemotePlay", "onRemotePause")
+    Events("onRouteChange", "onVolumeChange", "onRemotePlay", "onRemotePause")
 
     OnCreate {
+      // Android emits no route change of its own, so without this the sheet's Output row
+      // keeps whatever it read when it mounted — a headset connected afterwards never
+      // reaches it, and the row names a device the audio has already left.
+      audioManager.registerAudioDeviceCallback(routeWatcher, Handler(Looper.getMainLooper()))
+      context.contentResolver.registerContentObserver(
+        Settings.System.CONTENT_URI,
+        true,
+        volumeWatcher
+      )
+
       ListeningService.remote = { command ->
         sendEvent(
           when (command) {
@@ -80,22 +94,13 @@ class LinguacastAudioModule : Module() {
       ListeningService.active?.publish()
     }
 
-    /**
-     * Android's output switcher is reached from the media session this service owns, so the
-     * app opens the panel the platform draws rather than listing devices itself.
-     */
-    AsyncFunction("presentOutputPicker") {
-      val intent = Intent(MEDIA_OUTPUT_SWITCHER)
-        .putExtra(EXTRA_PACKAGE_NAME, context.packageName)
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
-      runCatching { context.startActivity(intent) }.onFailure {
-        // The panel is not a documented public surface on every build. A device without it
-        // leaves the guest the system volume panel's own switcher, which is one press away.
-      }
+    Function("systemVolume") {
+      systemVolume()
     }
 
     OnDestroy {
+      audioManager.unregisterAudioDeviceCallback(routeWatcher)
+      context.contentResolver.unregisterContentObserver(volumeWatcher)
       ListeningService.remote = null
       if (active) {
         setSession(false)
@@ -151,6 +156,45 @@ class LinguacastAudioModule : Module() {
     return null
   }
 
+  /**
+   * Android has no public broadcast for a volume change, so the setting itself is observed.
+   * Without it the level the screen states would be frozen at whatever it read on mount, in
+   * the same way the route was.
+   */
+  private val volumeWatcher = object : ContentObserver(Handler(Looper.getMainLooper())) {
+    override fun onChange(selfChange: Boolean) {
+      // The whole settings table is observed, because the volume key itself is not public,
+      // so most of what arrives here is some other setting. Only a real change is emitted.
+      val next = systemVolume()
+
+      if (next != lastVolume) {
+        lastVolume = next
+        sendEvent("onVolumeChange", mapOf("volume" to next))
+      }
+    }
+  }
+
+  /** The device's own media volume as a percentage, which is the only level there now is. */
+  private fun systemVolume(): Int {
+    val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+
+    if (max <= 0) {
+      return 0
+    }
+
+    return audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) * 100 / max
+  }
+
+  private val routeWatcher = object : AudioDeviceCallback() {
+    override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) = emitRoute()
+
+    override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) = emitRoute()
+  }
+
+  private fun emitRoute() {
+    sendEvent("onRouteChange", mapOf("name" to routeName()))
+  }
+
   private companion object {
     /** Android's own routing order for media, which is what the row has to agree with. */
     val ROUTE_PRECEDENCE = listOf(
@@ -161,8 +205,5 @@ class LinguacastAudioModule : Module() {
       AudioDeviceInfo.TYPE_USB_HEADSET,
       AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,
     )
-
-    const val MEDIA_OUTPUT_SWITCHER = "com.android.settings.panel.action.MEDIA_OUTPUT"
-    const val EXTRA_PACKAGE_NAME = "com.android.settings.panel.extra.PACKAGE_NAME"
   }
 }

@@ -19,7 +19,7 @@ export const RESOLUTION_LABEL = 'Audio sounds good now';
 export const REPORT_SHEET_TITLE = 'Report a problem';
 export const UPDATE_REPORT_TITLE = 'Update report';
 export const CHECK_FIRST_TITLE = 'Check first';
-export const YOUR_VOLUME_LABEL = 'Your volume';
+export const YOUR_VOLUME_LABEL = 'Phone volume';
 export const INTERPRETER_LABEL = 'The interpreter';
 export const WHAT_IS_WRONG_TITLE = 'What is wrong';
 /**

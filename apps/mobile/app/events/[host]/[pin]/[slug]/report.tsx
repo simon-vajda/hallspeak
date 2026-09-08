@@ -39,14 +39,14 @@ export default function ReportSheet() {
   const router = useRouter();
   const params = useLocalSearchParams<{ host: string; pin: string; slug: string }>();
   const slug = readChannelParams(params.host, params.pin, params.slug)?.slug ?? '';
-  const { channelStatuses, volume, reports } = useEventSocket();
+  const { channelStatuses, audio, reports } = useEventSocket();
   const [send, setSend] = useState<SendState>(IDLE_SEND);
 
   const status = channelStatuses[slug];
   // The interpreter's mute is genuinely unknown until the socket reports it, and is never
-  // rendered as unmuted; the guest's own level is their real one.
+  // rendered as unmuted; the level is the phone's own, which is the only one there now is.
   const check = selfCheck({
-    volume: volume.state.volume,
+    volume: audio.volume,
     muted: status?.muted ?? null,
     live: status?.online ?? false,
   });
