@@ -266,6 +266,10 @@ export function useMedia(socket: SocketClient | null) {
         delete active.transports[direction];
       }
       active.consumers.clear();
+      // The in-flight ones go with them. Left here, the effect that re-opens this direction
+      // would be handed back a promise already negotiating against the closed peer
+      // connection, and adopt its failure as the answer for the replacement transport.
+      active.pendingConsumers.clear();
       try {
         // Before the state that re-opens it, not after: the server permits one transport
         // per direction, so an effect reaching `createTransport` while it still holds this
@@ -413,14 +417,37 @@ export function useMedia(socket: SocketClient | null) {
           throw new Error(SUPERSEDED);
         }
 
+        const generation = stateRef.current.generation;
         const api = signalling(socket);
         const params = await api.consume(slug, active.device.rtpCapabilities);
+
+        // A rebuild or a socket connect landed while the server was answering, so this
+        // transport is already closed. Negotiating against it surfaces as
+        // `SessionDescription is NULL` — a native error nothing above can act on, reported
+        // to a guest whose audio the replacement transport is about to recover anyway.
+        if (
+          session.current !== active ||
+          active.transports.recv !== transport ||
+          transport.closed ||
+          !isCurrent(stateRef.current, generation)
+        ) {
+          throw new Error(SUPERSEDED);
+        }
+
         const consumer = await transport.consume({
           id: params.consumerId,
           producerId: params.producerId,
           kind: params.kind,
           rtpParameters: params.rtpParameters,
         });
+
+        // The same race, one await later: a consumer adopted onto a discarded transport is
+        // one nothing will close.
+        if (session.current !== active || active.transports.recv !== transport) {
+          consumer.close();
+          throw new Error(SUPERSEDED);
+        }
+
         active.consumers.set(slug, consumer);
         setState((prev) => consumerOpened(prev, slug, consumer.id));
 
