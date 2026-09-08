@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import LinguacastAudio from '../../modules/linguacast-audio';
 import { normalizeVolume } from './system-audio';
 
@@ -18,20 +19,36 @@ export function useSystemAudio(): SystemAudio {
   const [route, setRoute] = useState<string | null>(null);
   const [volume, setVolume] = useState(0);
 
-  useEffect(() => {
+  const read = useCallback(() => {
     setRoute(LinguacastAudio.currentRoute());
     setVolume(normalizeVolume(LinguacastAudio.systemVolume()));
+  }, []);
 
-    const routes = LinguacastAudio.addListener('onRouteChange', ({ name }) => setRoute(name));
+  useEffect(() => {
+    read();
+
     const volumes = LinguacastAudio.addListener('onVolumeChange', (event) =>
       setVolume(normalizeVolume(event.volume)),
     );
+    // Read the level again rather than only the name: iOS keeps a volume per route, so a
+    // headset arriving changes both at once and the level it reports is the old route's.
+    const routes = LinguacastAudio.addListener('onRouteChange', read);
+
+    // The change events do not arrive while the process is suspended, and Control Centre
+    // and the volume keys both work over a backgrounded app — so what is on screen when a
+    // guest comes back would otherwise be whatever was true when they left.
+    const foreground = AppState.addEventListener('change', (next) => {
+      if (next === 'active') {
+        read();
+      }
+    });
 
     return () => {
       routes.remove();
       volumes.remove();
+      foreground.remove();
     };
-  }, []);
+  }, [read]);
 
   return { route, volume };
 }
