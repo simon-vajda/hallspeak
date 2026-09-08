@@ -9,15 +9,25 @@ and Report. Home is device-local memory of the events this phone has opened; a r
 event's channel picker, and no channel is remembered. Event and Channel read the public REST
 API of whichever server the link names.
 
-The socket and media layers are not built yet, so a channel's on-air state is for now a reading
-taken when the fetch answered, and the Audio and Report sheets are drawn ahead of the state
-they will read. Nothing in the app claims that anybody is hearing audio, and three test files
-enforce that rather than review — that rule outlives this stage and is not scaffolding.
+It listens. One Socket.IO connection per event, opened by the event's route layout, supplies
+live on-air and mute state to both screens and both sheets; pressing Listen opens a mediasoup
+consumer and plays the interpreter. The audio survives a locked screen and a backgrounded app,
+recovers by itself across a network change, and is controlled from the phone's own lock-screen
+controls. The Audio sheet's volume is this listener's own, independent of the device volume,
+and its Output row opens the platform's chooser. Reports reach the interpreter's studio.
+
+The speaker studio is not built: there is no microphone path anywhere in this app.
+
+Nothing in the app claims that anybody is hearing audio unless a consumer is open, and three
+test files enforce that rather than review — that rule is not scaffolding.
 
 ## Running it
 
-This app needs a **custom dev client** and cannot run in Expo Go: `expo-camera`, `expo-sqlite`
-and `react-native-svg` are native modules.
+This app needs a **custom dev client** and cannot run in Expo Go: `expo-camera`, `expo-sqlite`,
+`react-native-svg`, `react-native-webrtc` and the local audio module under `modules/` are all
+native. **Pulling a change that touches any of them means rebuilding the dev client** — Metro
+alone will not pick a native module up, and the symptom is a red screen naming a module that
+is right there in the tree.
 
 ```sh
 pnpm install                                # from the repo root
@@ -45,7 +55,9 @@ root test command runs two runners: Vitest for the server, the web app and the c
 - `jest` is pinned to **29**. `jest-expo@57` is built against that line, and under 30 every
   suite fails inside Expo's winter runtime before a test reaches an assertion.
 - The suite is **helper-only** and must never render a component, which is why each screen
-  keeps its logic in a pure module beside it under `src/screens/`.
+  keeps its logic in a pure module beside it under `src/screens/`, and so do the socket, media
+  and audio layers (`src/socket/reconnect.ts`, `status.ts`, `src/media/stats-entry.ts`,
+  `src/audio/volume.ts`, `now-playing.ts`, `output.ts`).
 - Tests import `describe`/`it`/`expect` from `@jest/globals`, and import siblings by relative
   path: Jest does not use Metro's tsconfig-path resolution, so `@/` resolves in the app and not
   in a test.
@@ -61,9 +73,28 @@ later entry wins on a shared key. `expo/tsconfig.base` contributes `customCondit
 `lib` and `allowJs` and raises `target`, and sets none of the repo base's strictness flags — so
 `strict`, `verbatimModuleSyntax`, `isolatedModules` and `noUncheckedIndexedAccess` survive.
 
-## Importing the contract
+## Importing the workspace packages
 
-`@linguacast/contract` is consumed as TypeScript source; Metro transpiles what it resolves, so
-no build step is added to that package. Import its subpaths, never the root barrel, which pulls
-in Hono — and note `./schemas` does too. This app uses `./openapi` (types only), `./patterns`,
-and a **type-only** import of `./socket`. `__tests__/contract-resolution.test.ts` guards it.
+`@linguacast/contract` and `@linguacast/client-core` are both consumed as TypeScript source;
+Metro transpiles what it resolves, so neither has a build step. Import the contract's subpaths,
+never its root barrel, which pulls in Hono — and note `./schemas` does too. This app uses
+`./openapi` (types only), `./patterns`, and `./socket` for the report vocabulary.
+`__tests__/contract-resolution.test.ts` guards that seam.
+
+`@linguacast/client-core` holds the decision logic shared with the web app: the socket
+lifecycle and its hook, channel status, listen intent, the report helpers, and the media state
+machine with its recovery ladder. It imports no platform of any kind, which its own boundary
+test enforces. Anything coupled to `react-native-webrtc`, to `mediasoup-client` or to a
+platform media API stays here, under `src/media/`, `src/audio/` and `modules/`.
+
+React must stay at one version across this app and `apps/web`. pnpm links a single copy of a
+workspace peer dependency, and two pins would give this app a second React the moment it
+mounts a hook from the shared package — an invalid-hook-call with no obvious cause.
+
+## The local audio module
+
+`modules/linguacast-audio` is tracked in git and autolinked by prebuild, unlike `ios/` and
+`android/`. It owns the audio session, the Android `mediaPlayback` foreground service, the
+system media controls and the output route. Editing it needs a dev client rebuild, and on iOS
+it links against the same WebRTC framework `react-native-webrtc` does — the session it
+configures is libwebrtc's own, not a second one beside it.
