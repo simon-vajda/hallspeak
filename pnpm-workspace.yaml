@@ -28,3 +28,4 @@ minimumReleaseAgeExclude:
   - '@tanstack/router-core@1.171.21'
   - '@tanstack/router-generator@1.167.27'
   - '@tanstack/router-plugin@1.168.29'
+  - babel-preset-expo@57.0.11
