@@ -1,4 +1,4 @@
-import type { ReportCategory, SentMap } from '@linguacast/client-core/channel';
+import type { ReportCategory } from '@linguacast/client-core/channel';
 
 export type { ReportRowState, SelfCheck } from '@linguacast/client-core/channel';
 export {
@@ -36,9 +36,13 @@ export const RESOLVED_CONFIRMATION_BODY =
   'The interpreter sees your confirmation without learning who sent it.';
 export const DONE_LABEL = 'Done';
 
-/** A connection with a problem it has reported and not yet said is fixed. */
-export function hasOpenReport(state: SendState, sent: SentMap): boolean {
-  return state.kind !== 'resolved' && Object.keys(sent).length > 0;
+/**
+ * A connection with a problem it has reported and not yet said is fixed. Read from the
+ * episode rather than from the cooldown map: a resolution closes the episode while the
+ * server keeps refusing the categories it already heard.
+ */
+export function hasOpenReport(state: SendState, open: boolean): boolean {
+  return state.kind !== 'resolved' && open;
 }
 
 export function reportSheetTitle(open: boolean): string {

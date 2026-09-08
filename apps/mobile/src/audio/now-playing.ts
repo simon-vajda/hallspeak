@@ -26,18 +26,22 @@ const WITHDRAWN: SystemControls = { active: false, nowPlaying: null, playing: fa
  * What the platform's media controls should say, derived from state that already exists.
  * Kept pure and beside the hook so every state is covered without rendering anything.
  *
- * The session spans the playback hold deliberately: Android refuses to start a foreground
- * service from the background, so a hold that deactivated could not start one again when
- * the interpreter returned.
+ * The session follows the guest's own request rather than the consumer, and spans both the
+ * playback hold and a dropped link: Android refuses to start a foreground service from the
+ * background, so anything that deactivates while the phone is in a pocket cannot start one
+ * again. `playing` still follows the consumer, so an outage reports paused rather than
+ * withdrawing the control a guest reaches for exactly then.
  */
 export function systemControls(input: {
+  /** The guest asked for audio and has not stopped — not that any is arriving. */
+  listening: boolean;
   actionState: ListenActionState;
   /** A resumed consumer exists, not that the target was pressed. */
   isPlaying: boolean;
   channelName: string;
   eventName: string;
 }): SystemControls {
-  if (input.actionState === 'unavailable' || input.actionState === 'ready') {
+  if (!input.listening) {
     return WITHDRAWN;
   }
 

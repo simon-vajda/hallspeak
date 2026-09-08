@@ -1,5 +1,6 @@
 import {
   badgeHasLiveDot,
+  hasRequestedAudio,
   type ListenActionState,
   type ListenIntentState,
   listenActionState,
@@ -21,6 +22,11 @@ export interface ListenerView {
   actionState: ListenActionState;
   /** A resumed consumer exists — samples are arriving — not that the target was pressed. */
   isPlaying: boolean;
+  /**
+   * The guest asked for audio and has not stopped. Outlives a dropped link and the playback
+   * hold, both of which the action state reports as something other than playing.
+   */
+  listening: boolean;
   holding: boolean;
   linkConnected: boolean;
   link: LinkState;
@@ -170,6 +176,18 @@ export function useListener(input: {
     });
   }, [consumers, activeSlug, online, startConsuming, stopConsuming]);
 
+  // Leaving the channel room does not close media, so without this the consumer and its
+  // remote track outlive the screen that opened them. Held in a ref so a new socket
+  // identity does not re-run the teardown while the screen is still open.
+  const stopRef = useRef(stopConsuming);
+  stopRef.current = stopConsuming;
+  useEffect(
+    () => () => {
+      void stopRef.current(input.slug);
+    },
+    [input.slug],
+  );
+
   const actionState = listenActionState({
     ...resolved,
     live,
@@ -193,6 +211,7 @@ export function useListener(input: {
   return {
     actionState,
     isPlaying,
+    listening: hasRequestedAudio(resolved),
     holding,
     linkConnected,
     link,

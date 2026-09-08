@@ -136,8 +136,9 @@ class LinguacastAudioModule : Module() {
    *
    * Android exposes no public "which output is media on" call — `getDevicesForAttributes` is
    * a system API — so the connected outputs are read and the one the platform would route to
-   * is picked by the same precedence Android itself applies: a wired headset over Bluetooth,
-   * Bluetooth over the speaker. The earpiece is deliberately absent: media never goes there.
+   * is picked by the same precedence Android itself applies to the media strategy: Bluetooth
+   * over a wired headset, a wired headset over the speaker. The earpiece is deliberately
+   * absent: media never goes there.
    */
   private fun routeName(): String? {
     val outputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
