@@ -31,17 +31,23 @@ const WITHDRAWN: SystemControls = { active: false, nowPlaying: null, playing: fa
  * background, so anything that deactivates while the phone is in a pocket cannot start one
  * again. `playing` still follows the consumer, so an outage reports paused rather than
  * withdrawing the control a guest reaches for exactly then.
+ *
+ * A pause holds the session for the same reason and one more: the controls are what the
+ * guest presses to resume, so withdrawing them turns Pause into Stop. The consumer is
+ * already closed by then, so what is held costs a notification rather than a stream.
  */
 export function systemControls(input: {
   /** The guest asked for audio and has not stopped — not that any is arriving. */
   listening: boolean;
+  /** The guest stopped a channel that is still broadcasting, so Play can resume it. */
+  paused: boolean;
   actionState: ListenActionState;
   /** A resumed consumer exists, not that the target was pressed. */
   isPlaying: boolean;
   channelName: string;
   eventName: string;
 }): SystemControls {
-  if (!input.listening) {
+  if (!input.listening && !input.paused) {
     return WITHDRAWN;
   }
 

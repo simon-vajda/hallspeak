@@ -27,6 +27,8 @@ export interface ListenerView {
    * hold, both of which the action state reports as something other than playing.
    */
   listening: boolean;
+  /** The guest stopped a channel that is still broadcasting, so Play can resume it. */
+  paused: boolean;
   holding: boolean;
   linkConnected: boolean;
   link: LinkState;
@@ -196,11 +198,29 @@ export function useListener(input: {
     now,
   });
 
+  /**
+   * The guest stopped a channel that is still broadcasting, which is a pause rather than a
+   * departure. Screen-local, because it is about this control rather than about the audio:
+   * the intent this reads from is already idle, and the shared state machine has no fourth
+   * state that both clients need.
+   */
+  const [pausedByGuest, setPausedByGuest] = useState(false);
+
+  // A channel that stopped broadcasting is not paused, it is over. Clearing here withdraws
+  // the controls rather than leaving a Play the guest could press for nothing.
+  useEffect(() => {
+    if (!live) {
+      setPausedByGuest(false);
+    }
+  }, [live]);
+
   const start = useCallback(() => {
+    setPausedByGuest(false);
     setPlayback({ intent: 'playing', holdDeadline: null });
   }, []);
 
   const stop = useCallback(() => {
+    setPausedByGuest(true);
     setPlayback((current) =>
       current.intent === 'idle' ? current : { intent: 'idle', holdDeadline: null },
     );
@@ -212,6 +232,7 @@ export function useListener(input: {
     actionState,
     isPlaying,
     listening: hasRequestedAudio(resolved),
+    paused: pausedByGuest && live,
     holding,
     linkConnected,
     link,

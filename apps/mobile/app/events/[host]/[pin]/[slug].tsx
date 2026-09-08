@@ -97,6 +97,7 @@ export default function ChannelScreen() {
   useNowPlaying(
     systemControls({
       listening: listener.listening,
+      paused: listener.paused,
       actionState: listener.actionState,
       isPlaying: listener.isPlaying,
       channelName: view?.channel.name ?? '',
