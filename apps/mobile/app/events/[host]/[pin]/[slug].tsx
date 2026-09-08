@@ -177,13 +177,19 @@ export default function ChannelScreen() {
           onPress={listener.actionState === 'playing' ? listener.stop : listener.start}
         />
 
-        {/* The slot is held in every state, `idle` included: the line's shapes differ in
-            height, so an unreserved slot moves everything below it the moment audio starts. */}
+        {/* Keep the slot's height stable, but show its contents only after Listen. Pausing
+            withdraws intent, so the indicator disappears until the guest starts again. */}
         <View style={styles.lineSlot}>
-          <ConnectionLine filled={listener.filledBars} />
-          {listener.link.kind === 'idle' ? null : (
-            <Text style={[type.meta, { color: colors.mutedForeground }]}>{listener.linkLabel}</Text>
-          )}
+          {listener.listening ? (
+            <>
+              <ConnectionLine filled={listener.filledBars} />
+              {listener.link.kind === 'idle' ? null : (
+                <Text style={[type.meta, { color: colors.mutedForeground }]}>
+                  {listener.linkLabel}
+                </Text>
+              )}
+            </>
+          ) : null}
         </View>
 
         {/* Held rather than conditional for the same reason: a note appearing must not
