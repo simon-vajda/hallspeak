@@ -1,0 +1,17 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <application>
+    <!--
+      mediaPlayback and not microphone: this is a receive-only listener, and the wrong type
+      invites a store review question the product cannot answer. Declared here rather than in
+      app.json so the app's configuration does not have to carry the module's own needs.
+    -->
+    <service
+      android:name=".ListeningService"
+      android:exported="false"
+      android:foregroundServiceType="mediaPlayback" />
+  </application>
+</manifest>
