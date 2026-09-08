@@ -58,11 +58,6 @@ export function targetLabel(state: ListenActionState): string {
   return state === 'playing' ? STOP_LABEL : playTargetLabel(state);
 }
 
-/** Rings mean audible samples, so a muted interpreter stops them without closing playback. */
-export function showListenRings(isPlaying: boolean, muted: boolean | null): boolean {
-  return isPlaying && muted !== true;
-}
-
 const BOOLEANS = [true, false];
 const MUTES: (boolean | null)[] = [true, false, null];
 const REASONS: (ListenNoteInput['closeReason'] | undefined)[] = ['ended', 'dropped', undefined];

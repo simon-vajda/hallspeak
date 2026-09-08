@@ -1,3 +1,4 @@
+import { showListenRings } from '@linguacast/client-core/channel';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
@@ -29,7 +30,6 @@ import {
   AUDIO_ACTION_LABEL,
   channelCopy,
   REPORT_ACTION_LABEL,
-  showListenRings,
   TRY_AGAIN_LABEL,
   targetLabel,
 } from '@/screens/channel-copy';
