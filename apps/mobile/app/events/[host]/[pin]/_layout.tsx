@@ -25,6 +25,15 @@ export default function EventLayout() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
+        {/*
+          Declared in the order the guest meets them, and the sheet last. Expo Router hands
+          React Navigation its explicitly declared screens before the rest, and this
+          navigator is given no initial route name of its own — so a sheet declared first
+          becomes the route the stack starts on, and opening an event lands on the report
+          sheet drawn as a full screen.
+        */}
+        <Stack.Screen name="index" />
+        <Stack.Screen name="[slug]" />
         <Stack.Screen name="[slug]/report" options={SHEET_OPTIONS} />
       </Stack>
     </EventSocketProvider>
