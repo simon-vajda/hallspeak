@@ -97,6 +97,8 @@ Keep this file current as decisions are made.
 
 ## Product context
 
+- Mobile's `ListenTarget` shows a native loading spinner during the listener's `holding` grace period, keeps the target at full opacity, and disables taps while exposing its busy state to accessibility services, matching the web target's waiting behavior.
+
 LinguaCast is a self-hosted, open-source simultaneous-interpretation platform for live in-person events; low audio latency is the core requirement. It targets one modest server run by a church or educational institution, a handful of concurrent events, and tens to low hundreds of listeners. Prefer simple operation over scale; horizontal scaling, multi-tenancy, sharding, and cloud-managed dependencies are out of scope.
 
 There is one authenticated Admin. Events own Channels; an Event PIN grants listening, while a per-Channel Speaker code grants broadcasting. Speakers and listeners have no accounts: possession of the link or code is the entire authorization. Preserve that property and question features that appear to need listener identity. `CONCEPTS.md` is the authoritative domain vocabulary.
