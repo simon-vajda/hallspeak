@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { shouldReconnectOnForeground } from './reconnect';
+import { shouldReconnectOnForeground, shouldReconnectOnTick } from './reconnect';
 
 describe('shouldReconnectOnForeground', () => {
   it('reconnects a disconnected socket returning to the foreground', () => {
@@ -30,5 +30,15 @@ describe('shouldReconnectOnForeground', () => {
     expect(
       shouldReconnectOnForeground({ previous: 'inactive', next: 'active', connected: false }),
     ).toBe(true);
+  });
+});
+
+describe('shouldReconnectOnTick', () => {
+  it('reopens a socket the heartbeat finds disconnected', () => {
+    expect(shouldReconnectOnTick({ connected: false })).toBe(true);
+  });
+
+  it('leaves a live socket alone, so a tick never drops audio that is playing', () => {
+    expect(shouldReconnectOnTick({ connected: true })).toBe(false);
   });
 });

@@ -2,6 +2,8 @@ package app.linguacast.audio
 
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -25,6 +27,7 @@ import expo.modules.kotlin.modules.ModuleDefinition
 class LinguacastAudioModule : Module() {
   private var active = false
   private var lastVolume = -1
+  private var lastNetwork: Long? = null
 
   private val context: Context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
@@ -32,10 +35,20 @@ class LinguacastAudioModule : Module() {
   private val audioManager: AudioManager
     get() = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
+  private val connectivityManager: ConnectivityManager
+    get() = context.getSystemService(ConnectivityManager::class.java)
+
   override fun definition() = ModuleDefinition {
     Name("LinguacastAudio")
 
-    Events("onRouteChange", "onVolumeChange", "onRemotePlay", "onRemotePause")
+    Events(
+      "onRouteChange",
+      "onVolumeChange",
+      "onRemotePlay",
+      "onRemotePause",
+      "onTick",
+      "onNetworkChange"
+    )
 
     OnCreate {
       // Android emits no route change of its own, so without this the sheet's Output row
@@ -47,6 +60,12 @@ class LinguacastAudioModule : Module() {
         true,
         volumeWatcher
       )
+
+      ListeningService.onTick = { sendEvent("onTick", emptyMap<String, Any>()) }
+
+      // The moment a guest leaves Wi-Fi is the moment their audio path is gone, and it is
+      // knowable here immediately — every deadline downstream is a guess at it.
+      connectivityManager.registerDefaultNetworkCallback(networkWatcher)
 
       ListeningService.remote = { command ->
         sendEvent(
@@ -102,6 +121,8 @@ class LinguacastAudioModule : Module() {
       audioManager.unregisterAudioDeviceCallback(routeWatcher)
       context.contentResolver.unregisterContentObserver(volumeWatcher)
       ListeningService.remote = null
+      ListeningService.onTick = null
+      connectivityManager.unregisterNetworkCallback(networkWatcher)
       if (active) {
         setSession(false)
       }
@@ -184,6 +205,23 @@ class LinguacastAudioModule : Module() {
     }
 
     return audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) * 100 / max
+  }
+
+  /**
+   * The default network the device carries traffic on. Only a change of network is reported:
+   * the callback fires on registration and on every capability change, and neither says the
+   * path a connection is holding has gone.
+   */
+  private val networkWatcher = object : ConnectivityManager.NetworkCallback() {
+    override fun onAvailable(network: Network) {
+      val handle = network.networkHandle
+
+      if (lastNetwork != null && lastNetwork != handle) {
+        sendEvent("onNetworkChange", emptyMap<String, Any>())
+      }
+
+      lastNetwork = handle
+    }
   }
 
   private val routeWatcher = object : AudioDeviceCallback() {

@@ -17,3 +17,17 @@ export function shouldReconnectOnForeground(input: {
 }): boolean {
   return input.next === 'active' && input.previous !== 'active' && !input.connected;
 }
+
+/**
+ * Whether the listening session's heartbeat should reopen the connection.
+ *
+ * Socket.IO schedules its own reconnection with a JavaScript timer, which Android stops
+ * servicing while the app is not visible — so a link dropped by a network change behind a
+ * locked screen is never retried until the guest opens the app. The heartbeat is a clock the
+ * platform keeps, and a disconnected socket is the whole condition: `connect()` on a socket
+ * already trying again is a no-op, and one that never went away is left alone for the same
+ * reason the foreground check leaves it alone.
+ */
+export function shouldReconnectOnTick(input: { connected: boolean }): boolean {
+  return !input.connected;
+}

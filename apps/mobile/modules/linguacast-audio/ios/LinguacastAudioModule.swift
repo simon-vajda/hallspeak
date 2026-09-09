@@ -1,5 +1,6 @@
 import AVFoundation
 import ExpoModulesCore
+import Network
 import MediaPlayer
 import WebRTC
 
@@ -22,11 +23,21 @@ public class LinguacastAudioModule: Module {
   private var playTarget: Any?
   private var pauseTarget: Any?
   private var volumeObservation: NSKeyValueObservation?
+  private var ticker: Timer?
+  private var pathMonitor: NWPathMonitor?
+  private var lastInterface: NWInterface.InterfaceType?
 
   public func definition() -> ModuleDefinition {
     Name("LinguacastAudio")
 
-    Events("onRouteChange", "onVolumeChange", "onRemotePlay", "onRemotePause")
+    Events(
+      "onRouteChange",
+      "onVolumeChange",
+      "onRemotePlay",
+      "onRemotePause",
+      "onTick",
+      "onNetworkChange"
+    )
 
     // Before any peer connection exists: libwebrtc reads this configuration when it builds
     // its audio unit, and a configuration set afterwards is a configuration it has already
@@ -56,10 +67,14 @@ public class LinguacastAudioModule: Module {
       )
 
       self.observeVolume()
+      self.watchNetwork()
     }
 
     OnDestroy {
       NotificationCenter.default.removeObserver(self)
+      self.pathMonitor?.cancel()
+      self.pathMonitor = nil
+      self.stopTicking()
       self.volumeObservation?.invalidate()
       self.volumeObservation = nil
       self.disableRemoteCommands()
@@ -136,11 +151,55 @@ public class LinguacastAudioModule: Module {
 
     if active {
       try session.setConfiguration(RTCAudioSessionConfiguration.webRTC(), active: true)
+      startTicking()
     } else {
       try session.setActive(false)
+      stopTicking()
     }
 
     self.active = active
+  }
+
+  /**
+   The heartbeat the listener's recovery runs on, emitted here for the same reason Android
+   emits it: the deadlines that recover a dropped link belong to a clock the platform keeps,
+   not to JavaScript timers a backgrounded runtime stops servicing.
+   */
+  private func startTicking() {
+    stopTicking()
+    let timer = Timer(timeInterval: Self.tickInterval, repeats: true) { [weak self] _ in
+      self?.sendEvent("onTick")
+    }
+    // Common modes, so a scroll or a presentation does not hold the tick until it finishes.
+    RunLoop.main.add(timer, forMode: .common)
+    ticker = timer
+  }
+
+  private func stopTicking() {
+    ticker?.invalidate()
+    ticker = nil
+  }
+
+  /**
+   The moment a guest leaves Wi-Fi is the moment their audio path is gone, and it is knowable
+   here at once — every deadline downstream is a guess at it. Only a change of interface is
+   reported: the monitor also fires on ordinary path updates, which say nothing about the
+   connection a listener is holding.
+   */
+  private func watchNetwork() {
+    let monitor = NWPathMonitor()
+    monitor.pathUpdateHandler = { [weak self] path in
+      guard let self else { return }
+      let current = path.availableInterfaces.first?.type
+
+      if let previous = self.lastInterface, previous != current {
+        self.sendEvent("onNetworkChange")
+      }
+
+      self.lastInterface = current
+    }
+    monitor.start(queue: DispatchQueue.main)
+    pathMonitor = monitor
   }
 
   private func enableRemoteCommands() {
@@ -224,4 +283,7 @@ public class LinguacastAudioModule: Module {
   private static func routeName() -> String? {
     AVAudioSession.sharedInstance().currentRoute.outputs.first?.portName
   }
+
+  /// Often enough that a dropped link recovers within a sentence, rare enough to ignore.
+  private static let tickInterval: TimeInterval = 2
 }

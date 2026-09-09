@@ -7,7 +7,10 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.PowerManager
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
@@ -26,6 +29,14 @@ import androidx.media.session.MediaButtonReceiver
  */
 class ListeningService : Service() {
   private var session: MediaSessionCompat? = null
+  private var wakeLock: PowerManager.WakeLock? = null
+  private val ticker = Handler(Looper.getMainLooper())
+  private val tick = object : Runnable {
+    override fun run() {
+      onTick?.invoke()
+      ticker.postDelayed(this, TICK_MS)
+    }
+  }
 
   override fun onBind(intent: Intent?): IBinder? = null
 
@@ -47,6 +58,8 @@ class ListeningService : Service() {
 
     session = created
     active = this
+    holdCpu()
+    ticker.postDelayed(tick, TICK_MS)
     // From the shared state rather than from a parameter: the module sets what it wants
     // before the service exists, and a service that published its own idea of the state
     // would show a play button over audio that is already flowing.
@@ -60,11 +73,28 @@ class ListeningService : Service() {
   }
 
   override fun onDestroy() {
+    ticker.removeCallbacks(tick)
+    wakeLock?.takeIf { it.isHeld }?.release()
+    wakeLock = null
     session?.isActive = false
     session?.release()
     session = null
     active = null
     super.onDestroy()
+  }
+
+  /**
+   * Android suspends the CPU behind a locked screen unless something holds it, and a
+   * foreground service is not that something. While audio is flowing the audio path keeps
+   * the device awake on its own; the moment a network change stops it, nothing does — which
+   * is exactly the moment the recovery has work to do.
+   */
+  private fun holdCpu() {
+    val manager = getSystemService(PowerManager::class.java) ?: return
+    wakeLock = manager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).apply {
+      setReferenceCounted(false)
+      acquire()
+    }
   }
 
   /**
@@ -161,6 +191,11 @@ class ListeningService : Service() {
     const val CHANNEL_ID = "linguacast-listening"
     const val NOTIFICATION_ID = 4711
 
+    private const val WAKE_LOCK_TAG = "linguacast:listening"
+
+    /** Often enough that a dropped link recovers within a sentence, rare enough to ignore. */
+    private const val TICK_MS = 2_000L
+
     /** MediaSession reads a negative duration as unknown, which is what withholds the bar. */
     private const val DURATION_UNKNOWN = -1L
 
@@ -174,6 +209,14 @@ class ListeningService : Service() {
 
     /** The module's own handler, so a lock-screen press reaches JavaScript. */
     var remote: ((RemoteCommand) -> Unit)? = null
+
+    /**
+     * The heartbeat the recovery runs on. React Native pauses JavaScript timers while the
+     * app is not visible, so every deadline the listener owns — the ICE ladder's, and the
+     * socket's own reconnection backoff — stops being due until a guest looks at the phone.
+     * A native tick is a clock the operating system does not pause.
+     */
+    var onTick: (() -> Unit)? = null
 
     /** The running instance, so the module can republish without binding. */
     var active: ListeningService? = null

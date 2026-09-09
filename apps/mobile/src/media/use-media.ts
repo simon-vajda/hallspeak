@@ -20,8 +20,10 @@ import {
 import type { SocketClient } from '@linguacast/client-core/socket';
 import type { types } from 'mediasoup-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSessionTick } from '@/audio/use-session-tick';
 import { loadDevice } from './device';
 import { logIceRecovery, reportTransportPath, watchConsumerTrack } from './diagnostics';
+import { dueDeadlines, stalledSteps } from './ice-clock';
 import { inboundEntry } from './stats-entry';
 import { openTransport } from './transport';
 
@@ -55,6 +57,20 @@ interface Session {
    */
   iceRecoveryAttempts: Partial<Record<TransportDirection, number>>;
   iceRecoveryTimers: Partial<Record<TransportDirection, ReturnType<typeof setTimeout>>>;
+  /**
+   * The same deadline as the timer above, as an absolute time the heartbeat can read. The
+   * timer is the precise clock while the app is visible; behind a locked screen React Native
+   * stops servicing it, and this is what the session's native tick runs instead.
+   */
+  iceRecoveryDue: Partial<Record<TransportDirection, { at: number; run: () => void }>>;
+  /**
+   * When the recovery step in flight began. Every step is a signalling round trip, and its
+   * deadline is Socket.IO's own ack timer — which is a JavaScript timer, and so is the
+   * heartbeat that would have told the socket its transport is gone. Behind a locked screen
+   * a socket can therefore go on reporting itself connected over a network that no longer
+   * exists, and the ladder waits on an answer that will never come.
+   */
+  iceRecoveryStartedAt: Partial<Record<TransportDirection, number>>;
   /**
    * Whether this direction has ever reached connected, for the same reason the attempt
    * count lives here: a rebuilt transport has no first gather to protect, and reading the
@@ -111,6 +127,7 @@ export function useMedia(socket: SocketClient | null) {
     for (const timer of Object.values(current.iceRecoveryTimers)) {
       clearTimeout(timer);
     }
+    current.iceRecoveryDue = {};
     for (const transport of Object.values(current.transports)) {
       transport?.close();
     }
@@ -182,6 +199,42 @@ export function useMedia(socket: SocketClient | null) {
     return () => clearInterval(timer);
   }, [state.recvTransportId]);
 
+  /**
+   * The heartbeat's half of the ladder. Every step's timer is armed with `setTimeout`, which
+   * Android stops servicing behind a locked screen — which is where a network change is most
+   * likely to happen and least likely to be noticed. A deadline that has passed runs here
+   * instead, on a clock the platform keeps.
+   */
+  useSessionTick(() => {
+    const active = session.current;
+    if (!active) {
+      return;
+    }
+
+    const now = Date.now();
+
+    // A step whose answer is this overdue is a step waiting on a socket that has not
+    // noticed its own transport is gone: the ack deadline and the heartbeat that would
+    // have told it are both JavaScript timers. Cycling the connection is what makes the
+    // loss real, and its `connect` renegotiates the whole session from nothing.
+    // A transport the browser has already declared dead is not waiting on a slow server, so
+    // the generous bound buys nothing there and costs a listener ten seconds of silence.
+    const failed = active.transports.recv?.connectionState === 'failed';
+    const limit = failed ? FAILED_STEP_MS : STALLED_STEP_MS;
+
+    if (socket && stalledSteps(active.iceRecoveryStartedAt, now, limit) > 0) {
+      logIceRecovery('a recovery step went unanswered — cycling the connection');
+      active.iceRecoveryStartedAt = {};
+      socket.disconnect();
+      socket.connect();
+      return;
+    }
+
+    for (const due of dueDeadlines(active.iceRecoveryDue, now)) {
+      due.run();
+    }
+  });
+
   const ensureSession = useCallback(async (): Promise<Session> => {
     if (session.current) {
       return session.current;
@@ -204,6 +257,8 @@ export function useMedia(socket: SocketClient | null) {
           pendingIceRestarts: {},
           iceRecoveryAttempts: {},
           iceRecoveryTimers: {},
+          iceRecoveryDue: {},
+          iceRecoveryStartedAt: {},
           iceConnectedOnce: {},
           pendingConsumers: new Map(),
         };
@@ -273,10 +328,18 @@ export function useMedia(socket: SocketClient | null) {
       }
       active.consumers.clear();
       try {
+        // Only over a live socket. The ack deadline is a JavaScript timer, so behind a
+        // locked screen a call made over a dropped connection neither answers nor times
+        // out, and the rebuild waits on it for as long as the guest leaves the phone in a
+        // pocket. A reconnect voids the server's peer state wholesale, so there is nothing
+        // left to release in that case anyway.
+        //
         // Before the state that re-opens it, not after: the server permits one transport
         // per direction, so an effect reaching `createTransport` while it still holds this
         // one is refused with `transport_exists` and the rebuild dies there.
-        await signalling(socket).closeTransport(transport.id);
+        if (socket.connected) {
+          await signalling(socket).closeTransport(transport.id);
+        }
       } catch (cause) {
         // The local transport is already closed, so a direction left holding its id here
         // would never reopen and never reach `failed` — no replacement, and no Reconnect
@@ -284,11 +347,16 @@ export function useMedia(socket: SocketClient | null) {
         // a socket that never comes back voids this state wholesale on its next connect.
         console.error('media: could not release the transport server-side', cause);
       } finally {
-        // Renegotiating, not in trouble. Left at `trouble` the link reads as down, `online`
-        // is false, and the effects that would open the replacement decline to — the
-        // rebuild would tear the transport down and nothing would ever ask for another.
-        setHealth('connecting');
-        setState((prev) => beginRebuild(prev, direction));
+        // A reconnect landing mid-rebuild has already replaced this session; bumping the
+        // generation now would date out the replacement's own transport instead.
+        if (session.current === active) {
+          // Renegotiating, not in trouble. Left at `trouble` the link reads as down,
+          // `online` is false, and the effects that would open the replacement decline to —
+          // the rebuild would tear the transport down and nothing would ever ask for
+          // another.
+          setHealth('connecting');
+          setState((prev) => beginRebuild(prev, direction));
+        }
       }
     };
 
@@ -298,6 +366,7 @@ export function useMedia(socket: SocketClient | null) {
         clearTimeout(armed);
         delete active.iceRecoveryTimers[direction];
       }
+      delete active.iceRecoveryDue[direction];
       if (session.current !== active || transport.closed) {
         return;
       }
@@ -342,7 +411,14 @@ export function useMedia(socket: SocketClient | null) {
       setHealth(next === 'failed' || attempts > 0 ? 'trouble' : 'connecting');
 
       const runRecoveryStep = () => {
+        // Cleared rather than only forgotten: whichever clock got here first, the other one
+        // is still armed for the same step and would run it a second time.
+        const pending = active.iceRecoveryTimers[direction];
+        if (pending !== undefined) {
+          clearTimeout(pending);
+        }
         delete active.iceRecoveryTimers[direction];
+        delete active.iceRecoveryDue[direction];
         if (session.current !== active || transport.closed) {
           return;
         }
@@ -352,6 +428,8 @@ export function useMedia(socket: SocketClient | null) {
         const step = iceRecoveryStep(taken, next);
         const attempt = taken + 1;
         active.iceRecoveryAttempts[direction] = attempt;
+
+        active.iceRecoveryStartedAt[direction] = Date.now();
 
         const restart = (async () => {
           // Snapshot before either recovery, not after: what ICE was working with is the
@@ -387,6 +465,7 @@ export function useMedia(socket: SocketClient | null) {
           .finally(() => {
             if (active.pendingIceRestarts[direction] === restart) {
               delete active.pendingIceRestarts[direction];
+              delete active.iceRecoveryStartedAt[direction];
             }
             if (session.current === active && !transport.closed) {
               armIceRecovery(transport.connectionState as TransportConnectionState);
@@ -404,6 +483,9 @@ export function useMedia(socket: SocketClient | null) {
         return;
       }
 
+      // Both clocks, because neither covers the other: the timer is precise while the app
+      // is visible, and the deadline is what the session's heartbeat reads when it is not.
+      active.iceRecoveryDue[direction] = { at: Date.now() + delay, run: runRecoveryStep };
       active.iceRecoveryTimers[direction] = setTimeout(runRecoveryStep, delay);
     };
 
@@ -539,3 +621,13 @@ export function useMedia(socket: SocketClient | null) {
 
 /** Often enough that a line going bad shows up within a sentence, cheap enough to ignore. */
 const STATS_POLL_MS = 2_000;
+
+/**
+ * How long a recovery step may go unanswered before the connection carrying it is treated as
+ * dead. Above Socket.IO's own 10s ack deadline, so a socket whose timers are running still
+ * reports the failure itself and this never fires over a merely slow server.
+ */
+const STALLED_STEP_MS = 12_000;
+
+/** The same judgement over a path the browser has already given up on. */
+const FAILED_STEP_MS = 3_000;
