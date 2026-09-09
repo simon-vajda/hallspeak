@@ -1,7 +1,7 @@
-/** Bumped when the HTTP contract changes incompatibly. */
-export const API_VERSION = '1.0.0';
+import serverManifest from '../package.json' with { type: 'json' };
 
-/** Oldest client build this server will talk to; enforced in the socket handshake. */
-export const MIN_CLIENT_VERSION = '0.2.0';
+/** One release version for server and bundled web. Canonical value lives in package.json. */
+export const SERVER_VERSION = serverManifest.version;
 
-export const SERVER_VERSION = '0.2.0';
+/** Oldest independently released mobile app this server accepts. */
+export const MIN_MOBILE_VERSION = '0.1.0';

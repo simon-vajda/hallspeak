@@ -747,7 +747,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Server and minimum supported client versions */
+        /** Server and minimum supported mobile versions */
         get: {
             parameters: {
                 query?: never;
@@ -1039,9 +1039,8 @@ export interface components {
             authenticated: boolean;
         };
         VersionResponse: {
-            apiVersion: string;
-            minClientVersion: string;
             serverVersion: string;
+            minMobileVersion: string;
         };
         LoginBody: {
             username: string;

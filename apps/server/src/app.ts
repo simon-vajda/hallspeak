@@ -6,6 +6,7 @@ import { defaultHook } from './http/default-hook';
 import { apiRoutes } from './http/routes';
 import { createSpaRoutes } from './http/spa.routes';
 import { toProblem } from './lib/problem';
+import { SERVER_VERSION } from './version';
 
 export const app = new OpenAPIHono({ defaultHook });
 
@@ -15,7 +16,7 @@ app.onError((err, c) => c.json(toProblem(err), 500));
 // Invisible from here: src/socket intercepts /api/socket.io/* on the underlying http.Server
 // before Hono runs, so that path never reaches the /api/* 404 below.
 app.route('/api', apiRoutes);
-app.get('/api/openapi.json', (c) => c.json(buildOpenApiDocument()));
+app.get('/api/openapi.json', (c) => c.json(buildOpenApiDocument(SERVER_VERSION)));
 app.get('/api/docs', Scalar({ url: '/api/openapi.json' }));
 
 // Before static serving: otherwise an unmatched /api/typo falls through to the SPA

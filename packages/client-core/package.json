@@ -8,6 +8,7 @@
     "./socket": "./src/socket/index.ts",
     "./channel": "./src/channel/index.ts",
     "./media": "./src/media/index.ts",
+    "./server": "./src/server/index.ts",
     "./query-retry": "./src/query-retry.ts"
   },
   "scripts": {

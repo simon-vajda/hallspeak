@@ -1,11 +1,11 @@
-name: Release
+name: Server release
 
 # The only triggers that publish an image. A pull request runs nothing here, so a
 # change to the Dockerfile is reviewed before it can reach the registry.
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    tags: ['server-v*']
 
 concurrency:
   group: release-${{ github.ref }}
@@ -16,9 +16,7 @@ env:
 
 jobs:
   # The Dockerfile's `pnpm build` catches a compile error and nothing else, so without
-  # this a red main still publishes a pullable image. `pnpm check` is deliberately not
-  # here yet: biome.json fails its own formatter on main and fixing that is not this
-  # workflow's job.
+  # this a red main still publishes a pullable image.
   verify:
     runs-on: ubuntu-latest
     steps:
@@ -29,6 +27,9 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - if: startsWith(github.ref, 'refs/tags/server-v')
+        run: node scripts/versioning.mjs release-tag server "$GITHUB_REF_NAME"
+      - run: pnpm version:check
       - run: pnpm typecheck
       # typecheck runs `pnpm gen` first, so a dirty tree here is generated-file drift:
       # openapi.json or api.d.ts committed out of step with the schemas.
@@ -39,11 +40,22 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - id: version
+        if: startsWith(github.ref, 'refs/tags/server-v')
+        run: |
+          version="$(node scripts/versioning.mjs release-tag server "$GITHUB_REF_NAME")"
+          {
+            echo "version=$version"
+            echo "minor=${version%.*}"
+          } >> "$GITHUB_OUTPUT"
 
       # QEMU is what lets one runner emit both architectures. It is only the small
       # native-dependency stage that runs emulated: the application build is pinned to
@@ -61,13 +73,15 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE }}
-          # A v* tag cuts the stable channel; main cuts the edge channel. `latest` is
-          # enabled explicitly rather than by default branch, or every push to main
-          # would move the tag operators pin against.
+          # A server-v* tag cuts the stable channel; main cuts the edge channel. The two
+          # stable tags are raw rather than semver-patterned: the tag name carries a
+          # `server-v` prefix no semver parser accepts, and the version step has already
+          # proved it against the manifest. `latest` is enabled explicitly rather than by
+          # default branch, or every push to main would move the tag operators pin against.
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ startsWith(github.ref, 'refs/tags/server-v') }}
+            type=raw,value=${{ steps.version.outputs.minor }},enable=${{ startsWith(github.ref, 'refs/tags/server-v') }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/server-v') }}
             type=edge,branch=main
             type=sha,format=short,enable=${{ github.ref == 'refs/heads/main' }}
 
@@ -84,3 +98,17 @@ jobs:
           provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/server-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Not the second row of the sorted list: the tag being released is not always the
+          # highest one, and notes would then start from the wrong release.
+          previous="$(git tag --list 'server-v*' --sort=-v:refname | grep -vx "$GITHUB_REF_NAME" | head -n1)"
+          if [ -n "$previous" ]; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --latest --generate-notes --notes-start-tag "$previous" --title "LinguaCast Server ${{ steps.version.outputs.version }}"
+          else
+            gh release create "$GITHUB_REF_NAME" --verify-tag --latest --generate-notes --title "LinguaCast Server ${{ steps.version.outputs.version }}"
+          fi

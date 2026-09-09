@@ -3,9 +3,13 @@ import { PIN_PATTERN, SEMVER_PATTERN, SLUG_PATTERN } from './patterns';
 
 /**
  * Sent as `socket.handshake.auth`; authorization is established here once, not per message.
- * Rejecting prerelease versions is what lets the gate's `semverLt` be a numeric tuple compare.
+ * Rejecting prerelease versions keeps release compatibility comparisons numeric.
  */
 export const Handshake = z.object({
+  // Defaulted rather than required: a tab still holding a bundle from before this field
+  // existed must reach the version gate and be told to reload, not fail schema parsing and
+  // get the generic invalid-handshake message instead.
+  clientType: z.enum(['web', 'mobile']).default('web'),
   clientVersion: z.string().regex(SEMVER_PATTERN),
   pin: z.string().regex(PIN_PATTERN),
   speakerCode: z.string().min(1).optional(),

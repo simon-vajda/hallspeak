@@ -15,7 +15,7 @@ export interface GateSocket {
 
 /**
  * The Error message reaches the client as `connect_error`'s Error.message, which is how
- * 'channel_busy' and 'client_too_old' become distinct client-side states. Unlike a
+ * version errors and 'channel_busy' become distinct client-side states. Unlike a
  * per-packet failure, next(err) is right here: there is no ack to strand.
  */
 export function handshakeGate(socket: GateSocket, next: (err?: Error) => void): void {

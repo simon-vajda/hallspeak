@@ -24,12 +24,13 @@ import {
   useState,
 } from 'react';
 import { apiOrigin } from '@/api/client';
-import { eventQueryOptions } from '@/api/queries';
+import { eventQueryOptions, serverVersionQueryOptions } from '@/api/queries';
 import type { SystemAudio } from '@/audio/use-system-audio';
 import { useSystemAudio } from '@/audio/use-system-audio';
 import { useMedia } from '@/media/use-media';
 import { CLIENT_VERSION } from '@/version';
 import { type ChannelReports, resolveReports, sendReport } from './reports';
+import { type ServerCheck, serverCheck } from './server-check';
 import { useAppStateReconnect } from './use-app-state-reconnect';
 
 export interface EventSocket {
@@ -95,6 +96,18 @@ const IDLE: EventSocket = {
 
 const EventSocketContext = createContext<EventSocket>(IDLE);
 
+export interface ServerGate {
+  check: ServerCheck;
+  refreshing: boolean;
+  recheck: () => void;
+}
+
+const ServerGateContext = createContext<ServerGate>({
+  check: { state: 'checking' },
+  refreshing: false,
+  recheck: () => {},
+});
+
 /**
  * One connection per event, opened here rather than on either screen. A stack navigator keeps
  * the Event screen mounted underneath the Channel screen, so a per-screen socket would hold
@@ -111,12 +124,67 @@ export function EventSocketProvider({
   children: ReactNode;
 }) {
   const enabled = host !== '' && pin !== '';
-  const { data } = useQuery({ ...eventQueryOptions(host, pin), enabled });
+  const version = useQuery({
+    ...serverVersionQueryOptions(host),
+    enabled,
+    // One read per host for the life of the app. A version that moves under a running guest
+    // is a server restart, which every socket here already recovers from on its own.
+    staleTime: Number.POSITIVE_INFINITY,
+  });
 
-  // Bound to this event's host. A version constant of its own, never the one in app.json.
+  const check = useMemo(
+    () =>
+      enabled
+        ? serverCheck({
+            info: version.data,
+            failed: version.isError,
+            mobileVersion: CLIENT_VERSION,
+          })
+        : ({ state: 'checking' } as ServerCheck),
+    [enabled, version.data, version.isError],
+  );
+
+  const gate = useMemo<ServerGate>(
+    () => ({
+      check,
+      refreshing: version.isRefetching,
+      recheck: () => void version.refetch(),
+    }),
+    [check, version.isRefetching, version.refetch],
+  );
+
+  // The navigator stays mounted through every verdict. Rendering the failure in this
+  // component's place would take the stack with it, leaving the guest on a screen with no
+  // header and no way back; each screen renders the gate's message inside its own chrome.
+  return (
+    <ServerGateContext.Provider value={gate}>
+      {check.state === 'ready' ? (
+        <CompatibleEventSocketProvider host={host} pin={pin}>
+          {children}
+        </CompatibleEventSocketProvider>
+      ) : (
+        children
+      )}
+    </ServerGateContext.Provider>
+  );
+}
+
+function CompatibleEventSocketProvider({
+  host,
+  pin,
+  children,
+}: {
+  host: string;
+  pin: string;
+  children: ReactNode;
+}) {
+  const { data } = useQuery(eventQueryOptions(host, pin));
+
+  // Bound to this event's host and independently versioned mobile artifact.
   const connect = useCallback(
     (auth: SocketAuth) => {
       const socket = createSocket({
+        clientType: 'mobile',
         clientVersion: CLIENT_VERSION,
         auth,
         url: apiOrigin(host),
@@ -238,4 +306,9 @@ export function EventSocketProvider({
 
 export function useEventSocket(): EventSocket {
   return useContext(EventSocketContext);
+}
+
+/** Read by both public screens: no event request may run before this reports `ready`. */
+export function useServerGate(): ServerGate {
+  return useContext(ServerGateContext);
 }

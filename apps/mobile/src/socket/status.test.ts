@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { PIN_PATTERN, SEMVER_PATTERN } from '@linguacast/contract/patterns';
-import app from '../../app.json';
+import mobileManifest from '../../package.json';
 import { CLIENT_VERSION } from '../version';
 import { currentChannelStatus } from './status';
 
@@ -37,9 +37,9 @@ describe('currentChannelStatus', () => {
   });
 });
 
-describe('the protocol version', () => {
-  it('is not the version a store shows a guest', () => {
-    expect(CLIENT_VERSION).not.toBe(app.expo.version);
+describe('mobile version', () => {
+  it('uses the canonical mobile artifact version in the handshake', () => {
+    expect(CLIENT_VERSION).toBe(mobileManifest.version);
   });
 
   it('satisfies the handshake schema, which rejects anything else outright', () => {

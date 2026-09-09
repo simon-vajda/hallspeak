@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Db } from '../db/client';
 import { createTestDb } from '../db/testing';
-import { MIN_CLIENT_VERSION } from '../version';
+import { MIN_MOBILE_VERSION, SERVER_VERSION } from '../version';
 import { authorizeHandshake } from './access';
 import { createChannel } from './channels.service';
 import { createEvent } from './events.service';
@@ -42,8 +42,18 @@ afterEach(() => {
   cleanup();
 });
 
+// Derived, never written down: a literal one release ahead becomes the server's own version
+// the moment that release is cut, and the test asserting it is refused then fails the bump.
+const NEWER_THAN_SERVER = `${Number(SERVER_VERSION.split('.')[0]) + 1}.0.0`;
+const OLDER_THAN_SERVER = '0.0.1';
+
 const auth = (payload: Record<string, unknown>, socketId = 'socket-1') =>
-  authorizeHandshake(db, presence, { clientVersion: MIN_CLIENT_VERSION, ...payload }, socketId);
+  authorizeHandshake(
+    db,
+    presence,
+    { clientType: 'web', clientVersion: SERVER_VERSION, ...payload },
+    socketId,
+  );
 
 describe('authorizeHandshake', () => {
   it('admits a listener with a valid pin', () => {
@@ -66,14 +76,75 @@ describe('authorizeHandshake', () => {
     expect(auth({ pin: hidden.pin })).toEqual({ ok: false, error: 'not_found' });
   });
 
-  // The version gate fires before the database is touched.
-  it('rejects the previous socket protocol and admits the current one', () => {
-    expect(authorizeHandshake(db, presence, { clientVersion: '0.1.0', pin }, 'old')).toEqual({
+  // Version gates fire before the database is touched.
+  it('requires an exact server version from bundled web clients', () => {
+    expect(
+      authorizeHandshake(
+        db,
+        presence,
+        { clientType: 'web', clientVersion: OLDER_THAN_SERVER, pin },
+        'old',
+      ),
+    ).toEqual({
       ok: false,
-      error: 'client_too_old',
+      error: 'web_version_mismatch',
     });
     expect(
-      authorizeHandshake(db, presence, { clientVersion: '0.2.0', pin }, 'current'),
+      authorizeHandshake(
+        db,
+        presence,
+        { clientType: 'web', clientVersion: NEWER_THAN_SERVER, pin },
+        'newer',
+      ),
+    ).toEqual({
+      ok: false,
+      error: 'web_version_mismatch',
+    });
+    expect(
+      authorizeHandshake(
+        db,
+        presence,
+        { clientType: 'web', clientVersion: SERVER_VERSION, pin },
+        'current',
+      ),
+    ).toMatchObject({ ok: true, data: { pin } });
+  });
+
+  // A bundle from before clientType existed maps only `client_too_old` to the reload
+  // message, so it gets that code rather than the one its own copy cannot render.
+  it('answers a handshake with no client type in the vocabulary that bundle knows', () => {
+    expect(
+      authorizeHandshake(db, presence, { clientVersion: OLDER_THAN_SERVER, pin }, 'legacy'),
+    ).toEqual({ ok: false, error: 'client_too_old' });
+    expect(
+      authorizeHandshake(db, presence, { clientVersion: SERVER_VERSION, pin }, 'legacy-current'),
+    ).toMatchObject({ ok: true, data: { pin } });
+  });
+
+  it('enforces only the configured floor for mobile clients', () => {
+    expect(
+      authorizeHandshake(
+        db,
+        presence,
+        { clientType: 'mobile', clientVersion: '0.0.1', pin },
+        'old-mobile',
+      ),
+    ).toEqual({ ok: false, error: 'mobile_version_too_old' });
+    expect(
+      authorizeHandshake(
+        db,
+        presence,
+        { clientType: 'mobile', clientVersion: MIN_MOBILE_VERSION, pin },
+        'current-mobile',
+      ),
+    ).toMatchObject({ ok: true, data: { pin } });
+    expect(
+      authorizeHandshake(
+        db,
+        presence,
+        { clientType: 'mobile', clientVersion: '99.0.0', pin },
+        'future-mobile',
+      ),
     ).toMatchObject({ ok: true, data: { pin } });
   });
 
@@ -87,6 +158,10 @@ describe('authorizeHandshake', () => {
       error: 'invalid_handshake',
     });
     expect(auth({ pin: '12345' })).toEqual({ ok: false, error: 'invalid_handshake' });
+    expect(auth({ clientType: 'desktop', pin })).toEqual({
+      ok: false,
+      error: 'invalid_handshake',
+    });
   });
 
   it('admits a speaker with the matching code', () => {

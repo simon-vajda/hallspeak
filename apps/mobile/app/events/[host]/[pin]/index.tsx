@@ -19,7 +19,7 @@ import {
   NO_CHANNELS_BODY,
   NO_CHANNELS_TITLE,
 } from '@/screens/event-view';
-import { useEventSocket } from '@/socket/provider';
+import { useEventSocket, useServerGate } from '@/socket/provider';
 import { currentChannelStatus } from '@/socket/status';
 import { useColors } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
@@ -35,7 +35,13 @@ export default function EventScreen() {
   const host = route?.host ?? '';
   const pin = route?.pin ?? '';
 
-  const query = useQuery({ ...eventQueryOptions(host, pin), enabled: route !== null });
+  const gate = useServerGate();
+
+  // No event request runs before the server's version has been read and accepted.
+  const query = useQuery({
+    ...eventQueryOptions(host, pin),
+    enabled: route !== null && gate.check.state === 'ready',
+  });
   const event = query.data;
   const { channelStatuses } = useEventSocket();
 
@@ -59,6 +65,24 @@ export default function EventScreen() {
   if (route === null) {
     return (
       <ErrorState title={BAD_ROUTE_MESSAGE.title} body={BAD_ROUTE_MESSAGE.body} icon="badLink">
+        <ActionButton
+          label="Back to your events"
+          icon="back"
+          variant="tonal"
+          onPress={() => router.dismissTo('/')}
+        />
+      </ErrorState>
+    );
+  }
+
+  if (gate.check.state === 'blocked') {
+    return (
+      <ErrorState
+        title={gate.check.title}
+        body={gate.check.body}
+        refreshing={gate.refreshing}
+        onRefresh={gate.check.retryable ? () => gate.recheck() : undefined}
+      >
         <ActionButton
           label="Back to your events"
           icon="back"
