@@ -7,6 +7,9 @@ import android.net.Network
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import androidx.media.AudioAttributesCompat
+import androidx.media.AudioFocusRequestCompat
+import androidx.media.AudioManagerCompat
 import android.os.Handler
 import android.os.Looper
 import android.database.ContentObserver
@@ -23,11 +26,18 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * alone does not move the audio — the track's own attributes decide that, which is what
  * `MediaStreamAudioInstaller` is for — but leaving the mode at communication would still
  * duck other audio and hold the routing a call expects.
+ *
+ * It also holds the audio focus, which is the only thing that makes another app's playback
+ * and this one exclusive. A media session is not a focus request: focus is a registration,
+ * so an app that never asks is never told when another app starts, and the two streams play
+ * over each other.
  */
 class LinguacastAudioModule : Module() {
   private var active = false
   private var lastVolume = -1
   private var lastNetwork: Long? = null
+  private var focus: AudioFocusRequestCompat? = null
+  private var pausedByFocusLoss = false
 
   private val context: Context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
@@ -109,6 +119,13 @@ class LinguacastAudioModule : Module() {
     // asynchronous, so this routinely arrives first, and a service that then published its
     // own default would show a play button over audio that is already flowing.
     AsyncFunction("setPlaybackState") { next: Boolean ->
+      // Claimed again on the way to playing, because a permanent loss abandons the request:
+      // without this the guest's next press resumes the audio underneath whatever took it.
+      if (next) {
+        pausedByFocusLoss = false
+        claimFocus()
+      }
+
       ListeningService.playing = next
       ListeningService.active?.publish()
     }
@@ -142,13 +159,81 @@ class LinguacastAudioModule : Module() {
 
     if (next) {
       audioManager.mode = AudioManager.MODE_NORMAL
+      claimFocus()
       context.startForegroundService(intent)
     } else {
       ListeningService.playing = false
+      releaseFocus()
       context.stopService(intent)
     }
 
     active = next
+  }
+
+  /**
+   * Asks for the audio focus other apps read before they start playing, and holds it for the
+   * session. Granting is not checked for: a refusal is transient and the loss listener is
+   * what acts on the outcome either way, while treating it as fatal would silence a guest
+   * over a state the platform resolves on its own.
+   */
+  private fun claimFocus() {
+    if (focus != null) {
+      return
+    }
+
+    val request = AudioFocusRequestCompat.Builder(AudioManagerCompat.AUDIOFOCUS_GAIN)
+      .setAudioAttributes(
+        AudioAttributesCompat.Builder()
+          .setUsage(AudioAttributesCompat.USAGE_MEDIA)
+          .setContentType(AudioAttributesCompat.CONTENT_TYPE_SPEECH)
+          .build()
+      )
+      // Ducking interpreted speech leaves it present and unfollowable, and this app owns no
+      // volume control to duck with. A duckable loss is taken as a pause instead.
+      .setWillPauseWhenDucked(true)
+      .setOnAudioFocusChangeListener(focusListener)
+      .build()
+
+    AudioManagerCompat.requestAudioFocus(audioManager, request)
+    focus = request
+  }
+
+  private fun releaseFocus() {
+    val held = focus ?: return
+    focus = null
+    pausedByFocusLoss = false
+    AudioManagerCompat.abandonAudioFocusRequest(audioManager, held)
+  }
+
+  /**
+   * Routed through the same events the lock-screen controls use, so the platform's pause and
+   * this one reach the same handler and the notification republishes as paused rather than
+   * being left claiming audio that has stopped.
+   *
+   * A transient loss is resumed from and a permanent one is not: the app that took the focus
+   * outright is the one the guest chose, and returning over it would be the bug this fixes
+   * wearing the other hat.
+   */
+  private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
+    when (change) {
+      AudioManager.AUDIOFOCUS_LOSS -> {
+        releaseFocus()
+        sendEvent("onRemotePause", emptyMap<String, Any>())
+      }
+
+      AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+      AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+        pausedByFocusLoss = true
+        sendEvent("onRemotePause", emptyMap<String, Any>())
+      }
+
+      AudioManager.AUDIOFOCUS_GAIN -> {
+        if (pausedByFocusLoss) {
+          pausedByFocusLoss = false
+          sendEvent("onRemotePlay", emptyMap<String, Any>())
+        }
+      }
+    }
   }
 
   /**
