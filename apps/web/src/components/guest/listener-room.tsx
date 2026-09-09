@@ -87,7 +87,15 @@ export function ListenerRoom({
   const [sentReports, setSentReports] = useState<SentMap>({});
   const [reportOpen, setReportOpen] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
-  const { audio: carrierAudio, play: playCarrier, pause: pauseCarrier } = useMediaSessionCarrier();
+  // Read through a ref because the handler is defined below the hook that reports it. An
+  // interruption can only follow a carrier the guest has already started, so the assignment
+  // below always precedes it.
+  const pauseListeningRef = useRef<(() => void) | null>(null);
+  const {
+    audio: carrierAudio,
+    play: playCarrier,
+    pause: pauseCarrier,
+  } = useMediaSessionCarrier(() => pauseListeningRef.current?.());
   const output = useAudioOutput();
   const volume = useAudioVolume(audio);
   useAudioSink(audio, output.deviceId, output.clearSelection);
@@ -171,6 +179,10 @@ export function ListenerRoom({
       current.intent === 'idle' ? current : { intent: 'idle', holdDeadline: null },
     );
   }, [pauseCarrier]);
+  useEffect(() => {
+    pauseListeningRef.current = pauseListening;
+  }, [pauseListening]);
+
   useListenerMediaSession({
     audio,
     available: actionState === 'ready' || actionState === 'playing',
