@@ -2,6 +2,12 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <!--
+    The recovery clock. A foreground service keeps the process, not the CPU: with no audio
+    flowing there is nothing else holding the device awake, and a suspended CPU is a
+    JavaScript runtime that cannot notice a network change until the guest looks at it.
+  -->
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
 
   <application>
     <!--
