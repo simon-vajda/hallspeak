@@ -193,6 +193,7 @@ export default function ChannelScreen() {
         <ListenTarget
           label={targetLabel(listener.actionState)}
           active={listener.actionState === 'playing'}
+          loading={listener.actionState === 'holding'}
           // Muting keeps the consumer open but stops audible samples, so it stops the rings.
           rings={showListenRings(listener.isPlaying, channelStatus?.muted ?? null)}
           disabled={listener.actionState === 'unavailable'}

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -43,6 +43,7 @@ const GLOW_HEIGHT = STAGE * 2.75;
 export function ListenTarget({
   label,
   active = false,
+  loading = false,
   rings = false,
   disabled = false,
   onPress,
@@ -50,6 +51,7 @@ export function ListenTarget({
   label: string;
   /** Swaps the glyph to the stop shape, the way the web target does while it is playing. */
   active?: boolean;
+  loading?: boolean;
   rings?: boolean;
   disabled?: boolean;
   onPress?: () => void;
@@ -83,8 +85,8 @@ export function ListenTarget({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
-        accessibilityState={{ disabled }}
-        disabled={disabled}
+        accessibilityState={{ disabled: disabled || loading, busy: loading }}
+        disabled={disabled || loading}
         onPress={onPress}
         style={({ pressed }) => [
           styles.target,
@@ -96,12 +98,16 @@ export function ListenTarget({
           },
         ]}
       >
-        <Icon
-          name={active ? 'stop' : 'listen'}
-          size={GLYPH}
-          color={colors.primaryForeground}
-          filled
-        />
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primaryForeground} />
+        ) : (
+          <Icon
+            name={active ? 'stop' : 'listen'}
+            size={GLYPH}
+            color={colors.primaryForeground}
+            filled
+          />
+        )}
       </Pressable>
     </View>
   );
