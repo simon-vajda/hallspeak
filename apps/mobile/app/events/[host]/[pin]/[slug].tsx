@@ -34,7 +34,7 @@ import {
   targetLabel,
 } from '@/screens/channel-copy';
 import { BAD_ROUTE_MESSAGE, eventErrorMessage } from '@/screens/event-view';
-import { useEventSocket } from '@/socket/provider';
+import { useEventSocket, useServerGate } from '@/socket/provider';
 import { currentChannelStatus } from '@/socket/status';
 import { useColors } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
@@ -51,9 +51,12 @@ export default function ChannelScreen() {
   const pin = route?.pin ?? '';
   const slug = route?.slug ?? '';
 
+  const gate = useServerGate();
+
+  // No channel request runs before the server's version has been read and accepted.
   const query = useQuery({
     ...channelQueryOptions(host, pin, slug),
-    enabled: route !== null,
+    enabled: route !== null && gate.check.state === 'ready',
   });
   const view = query.data;
   const { socket, status, channelStatuses, joinChannel, leaveChannel, audio } = useEventSocket();
@@ -110,6 +113,24 @@ export default function ChannelScreen() {
   if (route === null) {
     return (
       <ErrorState title={BAD_ROUTE_MESSAGE.title} body={BAD_ROUTE_MESSAGE.body} icon="badLink" />
+    );
+  }
+
+  if (gate.check.state === 'blocked') {
+    return (
+      <ErrorState
+        title={gate.check.title}
+        body={gate.check.body}
+        refreshing={gate.refreshing}
+        onRefresh={gate.check.retryable ? () => gate.recheck() : undefined}
+      >
+        <ActionButton
+          label="Back to this event"
+          icon="back"
+          variant="tonal"
+          onPress={() => router.dismissTo(eventHref(host, pin))}
+        />
+      </ErrorState>
     );
   }
 

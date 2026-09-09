@@ -1,6 +1,6 @@
 {
   "name": "linguacast",
-  "version": "0.4.0",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.5.0",
@@ -11,12 +11,15 @@
     "dev": "pnpm -r --parallel dev",
     "dev:free-ports": "node scripts/free-ports.mjs",
     "gen": "pnpm -F @linguacast/contract gen",
+    "version:check": "node scripts/versioning.mjs check",
+    "version:server": "node scripts/versioning.mjs bump server",
+    "version:mobile": "node scripts/versioning.mjs bump mobile",
     "build": "pnpm gen && pnpm -F @linguacast/web build && pnpm -F @linguacast/server build && pnpm build:assets",
     "build:assets": "node scripts/copy-web-dist.mjs",
     "typecheck": "pnpm gen && pnpm -r typecheck",
-    "check": "biome check .",
+    "check": "biome check . && node scripts/versioning.mjs check",
     "check:fix": "biome check --write .",
-    "test": "pnpm -r test"
+    "test": "node --test scripts/versioning.test.mjs && pnpm -r test"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.7",

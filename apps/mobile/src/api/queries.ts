@@ -13,6 +13,8 @@ export const eventQueryKey = (host: string, pin: string) => ['event', host, pin]
 export const channelQueryKey = (host: string, pin: string, slug: string) =>
   ['channel', host, pin, slug] as const;
 
+export const serverVersionQueryKey = (host: string) => ['server-version', host] as const;
+
 /** The error a query rejects with is always the server's Problem, or the client's own. */
 function unwrap<T>(result: { data?: T; error?: unknown }): T {
   if (result.data === undefined) {
@@ -27,6 +29,12 @@ export const eventQueryOptions = (host: string, pin: string) =>
     queryKey: eventQueryKey(host, pin),
     queryFn: async ({ signal }) =>
       unwrap(await apiFor(host).GET('/events/{pin}', { params: { path: { pin } }, signal })),
+  });
+
+export const serverVersionQueryOptions = (host: string) =>
+  queryOptions({
+    queryKey: serverVersionQueryKey(host),
+    queryFn: async ({ signal }) => unwrap(await apiFor(host).GET('/version', { signal })),
   });
 
 export const channelQueryOptions = (host: string, pin: string, slug: string) =>

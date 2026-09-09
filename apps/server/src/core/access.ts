@@ -1,7 +1,7 @@
 import { Handshake } from '@linguacast/contract/schemas';
 import type { Db } from '../db/client';
 import { semverLt } from '../lib/semver';
-import { MIN_CLIENT_VERSION } from '../version';
+import { MIN_MOBILE_VERSION, SERVER_VERSION } from '../version';
 import { findEnabledChannelBySpeakerCode } from './channels.service';
 import { findEnabledEventByPin } from './events.service';
 import type { PresenceRegistry } from './presence';
@@ -15,7 +15,11 @@ export interface SocketAuth {
 
 export type HandshakeError =
   | 'invalid_handshake'
+  // Emitted only to a bundle that predates `clientType`, which maps no other code to the
+  // reload message. Nothing this repository still ships can receive it.
   | 'client_too_old'
+  | 'web_version_mismatch'
+  | 'mobile_version_too_old'
   | 'not_found'
   | 'invalid_speaker_code'
   | 'channel_busy';
@@ -44,8 +48,21 @@ export function authorizeHandshake(
   if (!parsed.success) {
     return { ok: false, error: 'invalid_handshake' };
   }
-  if (semverLt(parsed.data.clientVersion, MIN_CLIENT_VERSION)) {
-    return { ok: false, error: 'client_too_old' };
+  if (parsed.data.clientType === 'web' && parsed.data.clientVersion !== SERVER_VERSION) {
+    // A tab holding a bundle from before `clientType` existed knows only `client_too_old`,
+    // and would print a generic connection failure at the moment it needs to be told to
+    // reload. The field is defaulted rather than required so that tab reaches this gate at
+    // all; the old code is what makes reaching it useful. Both go once no bundle predating
+    // server 0.4.0 can still be open.
+    const declaredType = typeof auth === 'object' && auth !== null && 'clientType' in auth;
+
+    return { ok: false, error: declaredType ? 'web_version_mismatch' : 'client_too_old' };
+  }
+  if (
+    parsed.data.clientType === 'mobile' &&
+    semverLt(parsed.data.clientVersion, MIN_MOBILE_VERSION)
+  ) {
+    return { ok: false, error: 'mobile_version_too_old' };
   }
 
   const event = findEnabledEventByPin(db, parsed.data.pin);

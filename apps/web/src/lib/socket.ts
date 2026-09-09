@@ -7,7 +7,7 @@ import { CLIENT_VERSION } from '@/version';
  * and would be rejected outright on the home page, which has no PIN.
  */
 export function connectSocket(auth: SocketAuth): SocketClient {
-  const socket = createSocket({ clientVersion: CLIENT_VERSION, auth });
+  const socket = createSocket({ clientType: 'web', clientVersion: CLIENT_VERSION, auth });
   socket.connect();
   return socket;
 }

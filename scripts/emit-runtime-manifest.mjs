@@ -44,7 +44,17 @@ const target = path.join(outDir, 'package.json');
 await mkdir(outDir, { recursive: true });
 await writeFile(
   target,
-  `${JSON.stringify({ name: 'linguacast-runtime', private: true, type: 'module', dependencies }, null, 2)}\n`,
+  `${JSON.stringify(
+    {
+      name: 'linguacast-runtime',
+      version: serverManifest.version,
+      private: true,
+      type: 'module',
+      dependencies,
+    },
+    null,
+    2,
+  )}\n`,
 );
 
 console.log(`wrote ${target}`);

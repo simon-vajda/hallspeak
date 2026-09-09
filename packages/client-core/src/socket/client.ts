@@ -23,6 +23,7 @@ export interface SocketAuth {
  * resolves to same-origin.
  */
 export function createSocket(opts: {
+  clientType: 'web' | 'mobile';
   clientVersion: string;
   auth: SocketAuth;
   url?: string;
@@ -42,6 +43,6 @@ export function createSocket(opts: {
 
     // Replayed verbatim on every reconnect, which is why the server re-establishes room
     // membership in its connect handler rather than assuming it sticks.
-    auth: { clientVersion: opts.clientVersion, ...opts.auth },
+    auth: { clientType: opts.clientType, clientVersion: opts.clientVersion, ...opts.auth },
   }) as SocketClient;
 }
