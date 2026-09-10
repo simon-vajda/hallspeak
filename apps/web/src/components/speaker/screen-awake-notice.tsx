@@ -40,7 +40,7 @@ export function ScreenAwakeNotice({ className }: { className?: string }) {
           screen locks. Leave this page in the foreground and the phone unlocked for the whole
           broadcast.
         </DialogDescription>
-        <div className="mt-1.5 flex flex-wrap gap-2.5">
+        <div className="mt-1.5 flex flex-wrap justify-center gap-2.5">
           <DialogClose render={<Button size="action" />} className="focus-visible:ring-offset-2">
             Got it
           </DialogClose>
