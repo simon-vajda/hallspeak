@@ -1,15 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+
+/** `unknown` only until the first request settles, which takes a tick at most. */
+export type ScreenWakeLockStatus = 'unknown' | 'held' | 'unavailable';
 
 /**
  * Holds a screen wake lock for the calling component's lifetime. Every call is best
  * effort: an unsupported API or a refused request leaves the screen behaving normally
- * and surfaces nothing. A browser drops the lock whenever the document is hidden, so a
- * fresh one is taken each time it becomes visible again.
+ * and surfaces nothing beyond the returned status. A browser drops the lock whenever
+ * the document is hidden, so a fresh one is taken each time it becomes visible again.
  */
-export function useScreenWakeLock(): void {
+export function useScreenWakeLock(): ScreenWakeLockStatus {
+  const [status, setStatus] = useState<ScreenWakeLockStatus>('unknown');
+
   useEffect(() => {
     const api = navigator.wakeLock;
     if (!api) {
+      setStatus('unavailable');
       return;
     }
 
@@ -33,8 +39,12 @@ export function useScreenWakeLock(): void {
           return;
         }
         sentinel = next;
+        setStatus('held');
       } catch {
         // Refused or unavailable; the screen keeps its own timeout.
+        if (!released) {
+          setStatus('unavailable');
+        }
       } finally {
         pending = false;
       }
@@ -56,4 +66,6 @@ export function useScreenWakeLock(): void {
       sentinel = null;
     };
   }, []);
+
+  return status;
 }

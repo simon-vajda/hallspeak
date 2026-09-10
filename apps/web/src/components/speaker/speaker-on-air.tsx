@@ -73,7 +73,7 @@ export function SpeakerOnAir({
   preferences: AudioPreferences;
   onPreferencesChange: (patch: Partial<AudioPreferences>) => void;
 }) {
-  useScreenWakeLock();
+  const wakeLock = useScreenWakeLock();
   const [confirming, setConfirming] = useState(false);
   const isMuted = state === 'muted';
   // A producer this screen still holds locally is not reaching anyone while signalling is
@@ -103,7 +103,7 @@ export function SpeakerOnAir({
         </header>
 
         <h1 className="mt-4 text-screen lg:mt-3.5 lg:mb-7.5 lg:text-hero">{channel.name}</h1>
-        <ScreenAwakeNotice className="mt-4.5" />
+        <ScreenAwakeNotice status={wakeLock} className="mt-4.5" />
 
         <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-0 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start xl:grid-cols-[minmax(0,1fr)_340px] lg:gap-x-8.5 lg:gap-y-4">
           {/* Separate desktop grid rows keep growing reports from moving the controls. */}
