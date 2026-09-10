@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
+import { VersionFooter } from '@/components/version-footer';
 
 /**
  * The frame both guest routes put their non-screen states in. The listener room does not use
@@ -19,6 +20,8 @@ export function GuestShell({ children }: { children: ReactNode }) {
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-7 pb-gutter lg:px-10 lg:pt-15 lg:pb-16.5">
         {children}
       </main>
+
+      <VersionFooter />
     </div>
   );
 }

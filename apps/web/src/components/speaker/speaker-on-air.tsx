@@ -15,6 +15,7 @@ import { ListenerReports } from '@/components/speaker/listener-reports';
 import { OnAirStats } from '@/components/speaker/on-air-stats';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
+import { VersionFooter } from '@/components/version-footer';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
 import type { BroadcastState } from './speaker-studio-state';
@@ -175,6 +176,8 @@ export function SpeakerOnAir({
           />
         </div>
       </main>
+
+      <VersionFooter />
 
       <EndBroadcastDialog
         open={confirming}

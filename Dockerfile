@@ -38,6 +38,11 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
+# The build context excludes .git, so the commit the web footer prints can only come from
+# outside. Unset is valid: the footer then prints the version alone.
+ARG GIT_COMMIT
+ENV GIT_COMMIT=${GIT_COMMIT}
+
 # Chains contract generation, the Vite build, tsdown, the migration copy and the SPA
 # copy. The SPA's placement lives in scripts/copy-web-dist.mjs alone — this image
 # must never duplicate that knowledge, or a laptop run and a container run diverge.

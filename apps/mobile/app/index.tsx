@@ -13,15 +13,11 @@ import { Snackbar } from '@/components/snackbar';
 import type { HistoryEntry } from '@/history/history';
 import { listHistorySync, removeEvent, restoreEvent, setEventPinned } from '@/history/store';
 import { eventHref } from '@/links/route';
-import {
-  EMPTY_HISTORY_BODY,
-  EMPTY_HISTORY_TITLE,
-  HISTORY_FOOTER,
-  sectionHistory,
-} from '@/screens/home-list';
+import { EMPTY_HISTORY_BODY, EMPTY_HISTORY_TITLE, sectionHistory } from '@/screens/home-list';
 import { useColors, useSurfaces } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
+import { BUILD_LABEL } from '@/version';
 
 const IOS = Platform.OS === 'ios';
 
@@ -171,8 +167,11 @@ export default function HomeScreen() {
           </>
         )}
 
-        <Text style={[type.meta, styles.centred, { color: colors.mutedForeground }]}>
-          {HISTORY_FOOTER}
+        <Text
+          selectable
+          style={[type.meta, styles.centred, styles.footer, { color: colors.mutedForeground }]}
+        >
+          {BUILD_LABEL}
         </Text>
       </ScrollView>
 
@@ -190,7 +189,10 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: spacing.gutter, paddingBottom: 44, gap: 26 },
+  // flexGrow with the footer's auto margin is what puts the footer at the bottom of a short
+  // list and after the content of a long one.
+  content: { flexGrow: 1, paddingHorizontal: spacing.gutter, paddingBottom: 44, gap: 26 },
+  footer: { marginTop: 'auto' },
   // The design gives the wordmark room above it and sets the title well clear of both the
   // mark and the line under it; the cramped version had all three on one 6px rhythm.
   header: { gap: 8, paddingTop: 22, paddingBottom: 4, paddingHorizontal: 4 },

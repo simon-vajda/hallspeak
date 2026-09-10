@@ -7,6 +7,7 @@ import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { VersionFooter } from '@/components/version-footer';
 import { sessionQueryOptions } from '@/lib/auth-queries';
 import { type PinFormValues, pinFormSchema } from '@/lib/pin-form';
 import { cn } from '@/lib/utils';
@@ -116,6 +117,8 @@ function IndexPage() {
           </Button>
         </form>
       </main>
+
+      <VersionFooter />
     </div>
   );
 }
