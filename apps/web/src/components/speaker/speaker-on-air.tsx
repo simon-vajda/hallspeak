@@ -103,7 +103,7 @@ export function SpeakerOnAir({
         </header>
 
         <h1 className="mt-4 text-screen lg:mt-3.5 lg:text-hero">{channel.name}</h1>
-        <ScreenAwakeNotice status={wakeLock} className="mt-4.5 lg:mt-4 lg:justify-start" />
+        <ScreenAwakeNotice status={wakeLock} className="mt-4.5 lg:mt-4" />
 
         <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-7.5 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start xl:grid-cols-[minmax(0,1fr)_340px] lg:gap-x-8.5 lg:gap-y-4">
           {/* Separate desktop grid rows keep growing reports from moving the controls. */}
