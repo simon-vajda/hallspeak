@@ -1,6 +1,7 @@
 import { AppHeader } from '@/components/app-header';
 import { LiveBadge } from '@/components/live-badge';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
+import { VersionFooter } from '@/components/version-footer';
 
 /** A takeover is a dead end: reclaiming automatically would alternate between two devices. */
 export function SpeakerDisplaced({
@@ -34,6 +35,8 @@ export function SpeakerDisplaced({
           try again, and ask the organiser if the link no longer works.
         </p>
       </main>
+
+      <VersionFooter />
     </div>
   );
 }

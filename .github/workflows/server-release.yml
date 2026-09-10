@@ -90,6 +90,10 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          # The build context excludes .git, so the commit the web footer prints has to be
+          # handed in here.
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # Off so the published tag resolves to a two-entry manifest list. With

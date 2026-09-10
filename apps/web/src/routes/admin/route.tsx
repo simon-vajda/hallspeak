@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router'
 import { SignOutButton } from '@/components/admin/sign-out-button';
 import { LogoLockup } from '@/components/logo-lockup';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
+import { VersionFooter } from '@/components/version-footer';
 import { sessionQueryOptions } from '@/lib/auth-queries';
 
 export const Route = createFileRoute('/admin')({
@@ -23,7 +24,7 @@ export const Route = createFileRoute('/admin')({
 // a promise the app can't keep.
 function AdminLayout() {
   return (
-    <div className="min-h-dvh">
+    <div className="flex min-h-dvh flex-col">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-shell items-center justify-between px-gutter py-4 lg:px-10">
           <Link to="/admin/events">
@@ -42,9 +43,11 @@ function AdminLayout() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-shell px-gutter py-8 lg:px-10 lg:py-9">
+      <main className="mx-auto w-full max-w-shell grow px-gutter py-8 lg:px-10 lg:py-9">
         <Outlet />
       </main>
+
+      <VersionFooter />
     </div>
   );
 }

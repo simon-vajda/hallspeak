@@ -75,9 +75,6 @@ export const EMPTY_HISTORY_TITLE = 'No events yet';
 export const EMPTY_HISTORY_BODY =
   'Scan the code at your venue, or enter its link. Events you open are kept on this phone.';
 
-export const HISTORY_FOOTER =
-  'Kept on this phone only. Each event is remembered with the address that hosts it.';
-
 /** Named per row so a screen reader announces which event an action applies to. */
 export function pinActionLabel(entry: HistoryEntry): string {
   return entry.pinned ? `Unpin ${entry.name}` : `Pin ${entry.name}`;

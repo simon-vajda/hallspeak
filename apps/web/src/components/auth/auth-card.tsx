@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { LogoLockup } from '@/components/logo-lockup';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
+import { VersionFooter } from '@/components/version-footer';
 import { cn } from '@/lib/utils';
 
 /**
@@ -28,6 +29,8 @@ export function AuthCard({ children, className }: { children: ReactNode; classNa
           {children}
         </div>
       </main>
+
+      <VersionFooter />
     </div>
   );
 }

@@ -31,6 +31,7 @@ import { LiveBadge } from '@/components/live-badge';
 import { PlayTarget } from '@/components/play-target';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
+import { VersionFooter } from '@/components/version-footer';
 import { useListenerMediaSession } from '@/lib/audio/use-listener-media-session';
 import { useMediaSessionCarrier } from '@/lib/audio/use-media-session-carrier';
 import { formatPin } from '@/lib/format';
@@ -434,6 +435,8 @@ export function ListenerRoom({
           ) : null}
         </div>
       </div>
+
+      <VersionFooter />
     </div>
   );
 }

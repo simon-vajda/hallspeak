@@ -9,6 +9,7 @@ import { ListenerPageLink } from '@/components/speaker/listener-page-link';
 import { MicPanel } from '@/components/speaker/mic-panel';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
+import { VersionFooter } from '@/components/version-footer';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { formatPin } from '@/lib/format';
@@ -113,6 +114,8 @@ export function SpeakerPreflight({
           </div>
         </div>
       </main>
+
+      <VersionFooter />
     </div>
   );
 }
