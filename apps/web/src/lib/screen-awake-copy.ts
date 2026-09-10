@@ -19,10 +19,13 @@ export function screenAwakeLabel(status: ScreenWakeLockStatus): string {
 export function screenAwakeNote(status: ScreenWakeLockStatus): string | null {
   switch (status) {
     case 'held':
-      return 'This browser is holding the screen on for you, so it will not dim on its own.';
+      return 'This browser is keeping the screen on, so the phone will not dim it on its own.';
     case 'unavailable':
-      return 'This browser cannot hold the screen on, so give the phone a longer screen timeout before you start.';
+      return 'This browser cannot keep the screen on. Give the phone a longer screen timeout before you start.';
     default:
       return null;
   }
 }
+
+export const SCREEN_AWAKE_WARNING =
+  'A phone takes the microphone away as soon as the browser goes to the background or the screen locks. Leave this page in the foreground and the phone unlocked for the whole broadcast.';
