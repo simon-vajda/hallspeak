@@ -14,12 +14,18 @@ export function useScreenWakeLock(): void {
     }
 
     let released = false;
+    let pending = false;
     let sentinel: WakeLockSentinel | null = null;
 
     const request = async () => {
-      if (released || sentinel || document.visibilityState !== 'visible') {
+      // `pending` is what keeps a visibility change from starting a second request while
+      // the first is still awaiting: `sentinel` is null for that whole window, so it
+      // cannot hold the lock alone. A sentinel the browser already released is not one.
+      const held = sentinel !== null && !sentinel.released;
+      if (released || pending || held || document.visibilityState !== 'visible') {
         return;
       }
+      pending = true;
       try {
         const next = await api.request('screen');
         if (released) {
@@ -27,13 +33,10 @@ export function useScreenWakeLock(): void {
           return;
         }
         sentinel = next;
-        next.addEventListener('release', () => {
-          if (sentinel === next) {
-            sentinel = null;
-          }
-        });
       } catch {
         // Refused or unavailable; the screen keeps its own timeout.
+      } finally {
+        pending = false;
       }
     };
 

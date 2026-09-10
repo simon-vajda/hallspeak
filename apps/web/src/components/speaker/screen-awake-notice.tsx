@@ -41,10 +41,7 @@ export function ScreenAwakeNotice({ className }: { className?: string }) {
           broadcast.
         </DialogDescription>
         <div className="mt-1.5 flex flex-wrap gap-2.5">
-          <DialogClose
-            render={<Button size="action" />}
-            className="focus-visible:ring-offset-2 lg:h-touch"
-          >
+          <DialogClose render={<Button size="action" />} className="focus-visible:ring-offset-2">
             Got it
           </DialogClose>
         </div>
