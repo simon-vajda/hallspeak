@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screenAwakeLabel, screenAwakeNote } from './screen-awake-copy';
+import { SCREEN_AWAKE_WARNING, screenAwakeLabel, screenAwakeNote } from './screen-awake-copy';
 import type { ScreenWakeLockStatus } from './use-screen-wake-lock';
 
 const STATUSES: ScreenWakeLockStatus[] = ['unknown', 'held', 'unavailable'];
@@ -26,6 +26,7 @@ describe('screen awake copy', () => {
     const copy = [
       ...STATUSES.map(screenAwakeLabel),
       ...STATUSES.map(screenAwakeNote).filter((note) => note !== null),
+      SCREEN_AWAKE_WARNING,
     ].join(' ');
     expect(copy).not.toMatch(/listener|hearing|listening|on air/i);
   });

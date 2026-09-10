@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { isPhoneBrowser } from '@/lib/phone-browser';
-import { screenAwakeLabel, screenAwakeNote } from '@/lib/screen-awake-copy';
+import { SCREEN_AWAKE_WARNING, screenAwakeLabel, screenAwakeNote } from '@/lib/screen-awake-copy';
 import type { ScreenWakeLockStatus } from '@/lib/use-screen-wake-lock';
 
 export function ScreenAwakeNotice({
@@ -45,12 +45,14 @@ export function ScreenAwakeNotice({
         className="w-[calc(100%-var(--spacing-gutter)*2)] max-w-100 gap-3 p-panel sm:max-w-100"
       >
         <DialogTitle className="text-section">Keep the screen awake</DialogTitle>
-        <DialogDescription>
-          A phone takes the microphone away as soon as the browser goes to the background or the
-          screen locks. Leave this page in the foreground and the phone unlocked for the whole
-          broadcast.
-          {note ? ` ${note}` : ''}
-        </DialogDescription>
+        {note ? (
+          <>
+            <DialogDescription className="text-foreground">{note}</DialogDescription>
+            <p className="text-note text-muted-foreground">{SCREEN_AWAKE_WARNING}</p>
+          </>
+        ) : (
+          <DialogDescription>{SCREEN_AWAKE_WARNING}</DialogDescription>
+        )}
         <div className="mt-1.5 flex flex-wrap justify-center gap-2.5">
           <DialogClose render={<Button size="action" />} className="focus-visible:ring-offset-2">
             Got it
