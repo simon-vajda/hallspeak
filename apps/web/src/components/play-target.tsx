@@ -1,4 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
+import { PlayTargetRing } from '@/components/play-target-ring';
 import { cn } from '@/lib/utils';
 
 /**
@@ -21,6 +22,7 @@ export function PlayTarget({
   iconOnly = false,
   variant = 'action',
   rings = false,
+  muted = false,
   className,
   ...props
 }: {
@@ -30,6 +32,8 @@ export function PlayTarget({
   iconOnly?: boolean;
   variant?: keyof typeof VARIANTS;
   rings?: boolean;
+  /** Listener-only: let the existing rings settle when the interpreter mutes. */
+  muted?: boolean;
 } & Omit<ComponentProps<'button'>, 'children'>) {
   return (
     <button
@@ -46,17 +50,24 @@ export function PlayTarget({
       )}
       {...props}
     >
-      {rings && (
+      {iconOnly ? (
         <>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-0 animate-ring rounded-full border-2 border-primary"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-0 animate-ring-delayed rounded-full border-2 border-primary"
-          />
+          <PlayTargetRing running={rings} settling={muted} />
+          <PlayTargetRing running={rings} settling={muted} delayed />
         </>
+      ) : (
+        rings && (
+          <>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 animate-ring rounded-full border-2 border-primary"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 animate-ring-delayed rounded-full border-2 border-primary"
+            />
+          </>
+        )
       )}
       {icon}
       {!iconOnly && (
