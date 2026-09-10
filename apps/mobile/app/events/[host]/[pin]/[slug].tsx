@@ -2,15 +2,7 @@ import { showListenRings } from '@linguacast/client-core/channel';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import {
-  Platform,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { channelQueryOptions } from '@/api/queries';
 import { systemControls } from '@/audio/now-playing';
 import { useNowPlaying } from '@/audio/use-now-playing';
@@ -117,12 +109,7 @@ export default function ChannelScreen() {
 
   if (gate.check.state === 'blocked') {
     return (
-      <ErrorState
-        title={gate.check.title}
-        body={gate.check.body}
-        refreshing={gate.refreshing}
-        onRefresh={gate.check.retryable ? () => gate.recheck() : undefined}
-      >
+      <ErrorState title={gate.check.title} body={gate.check.body}>
         <ActionButton
           label="Back to this event"
           icon="back"
@@ -136,14 +123,7 @@ export default function ChannelScreen() {
   if (query.isError && view === undefined) {
     const message = eventErrorMessage(query.error);
 
-    return (
-      <ErrorState
-        title={message.title}
-        body={message.body}
-        refreshing={query.isRefetching}
-        onRefresh={() => void query.refetch()}
-      />
-    );
+    return <ErrorState title={message.title} body={message.body} />;
   }
 
   const copy = channelCopy(
@@ -164,13 +144,7 @@ export default function ChannelScreen() {
       <ScreenHeader backHref={eventHref(host, pin)} title={view?.event.name} />
       {/* The stage takes the height the screen has: the target sits in the middle of it,
           and the report action stays at the thumb line however tall the phone is. */}
-      <ScrollView
-        contentContainerStyle={styles.stage}
-        contentInsetAdjustmentBehavior="never"
-        refreshControl={
-          <RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} />
-        }
-      >
+      <ScrollView contentContainerStyle={styles.stage} contentInsetAdjustmentBehavior="never">
         <View style={styles.badgeSlot}>
           {copy.badge ? (
             <LiveBadge live={listener.hasLiveDot} label={copy.badge} />

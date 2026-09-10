@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionButton } from '@/components/action-button';
@@ -30,9 +30,8 @@ export default function HomeScreen() {
   const [entries, setEntries] = useState<HistoryEntry[]>(listHistorySync);
   const [removed, setRemoved] = useState<HistoryEntry | null>(null);
 
-  // Re-read on focus as well as on pull: an event opened and returned from is already in
-  // memory, and asking the guest to pull for a row they just created is a lie about where
-  // the list comes from. Both paths open no connection.
+  // Re-read on focus: an event opened and returned from is already in memory, so the row
+  // appears as soon as the guest comes back. This opens no connection.
   const reload = useCallback(() => setEntries(listHistorySync()), []);
 
   useFocusEffect(reload);
@@ -127,10 +126,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]} edges={['top']}>
       <ScreenGlow variant="home" />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={reload} />}
-      >
+      <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <View style={styles.brandRow}>
             <LogoLockup />
