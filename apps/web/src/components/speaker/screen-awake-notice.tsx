@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { isPhoneBrowser } from '@/lib/phone-browser';
+import { isHandheldBrowser } from '@/lib/phone-browser';
 import { SCREEN_AWAKE_WARNING, screenAwakeLabel, screenAwakeNote } from '@/lib/screen-awake-copy';
 import type { ScreenWakeLockStatus } from '@/lib/use-screen-wake-lock';
 
@@ -20,10 +20,12 @@ export function ScreenAwakeNotice({
   status: ScreenWakeLockStatus;
   className?: string;
 }) {
-  const [phone] = useState(() => isPhoneBrowser(navigator.userAgent));
+  const [handheld] = useState(() =>
+    isHandheldBrowser(navigator.userAgent, navigator.maxTouchPoints),
+  );
   const [open, setOpen] = useState(false);
 
-  if (!phone) {
+  if (!handheld) {
     return null;
   }
 
