@@ -10,6 +10,7 @@ import { Icon } from '@/components/icon';
 import { LogoLockup } from '@/components/logo-lockup';
 import { ScreenGlow } from '@/components/screen-glow';
 import { Snackbar } from '@/components/snackbar';
+import { VersionLabel } from '@/components/version-label';
 import type { HistoryEntry } from '@/history/history';
 import { listHistorySync, removeEvent, restoreEvent, setEventPinned } from '@/history/store';
 import { eventHref } from '@/links/route';
@@ -17,7 +18,6 @@ import { EMPTY_HISTORY_BODY, EMPTY_HISTORY_TITLE, sectionHistory } from '@/scree
 import { useColors, useSurfaces } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
-import { BUILD_LABEL } from '@/version';
 
 const IOS = Platform.OS === 'ios';
 
@@ -163,12 +163,7 @@ export default function HomeScreen() {
           </>
         )}
 
-        <Text
-          selectable
-          style={[type.meta, styles.centred, styles.footer, { color: colors.mutedForeground }]}
-        >
-          {BUILD_LABEL}
-        </Text>
+        <VersionLabel style={styles.footer} />
       </ScrollView>
 
       {removed ? (
