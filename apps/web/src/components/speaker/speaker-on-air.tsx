@@ -103,7 +103,6 @@ export function SpeakerOnAir({
         </header>
 
         <h1 className="mt-4 text-screen lg:mt-3.5 lg:mb-7.5 lg:text-hero">{channel.name}</h1>
-        <ScreenAwakeNotice className="mt-3" />
 
         <div className="mt-4.5 flex flex-1 flex-col gap-2.5 lg:mt-0 lg:grid lg:flex-none lg:grid-cols-[300px_1fr] lg:items-start xl:grid-cols-[minmax(0,1fr)_340px] lg:gap-x-8.5 lg:gap-y-4">
           {/* Separate desktop grid rows keep growing reports from moving the controls. */}
@@ -114,6 +113,7 @@ export function SpeakerOnAir({
               className="order-4 lg:order-none lg:col-start-2 lg:row-start-1"
             />
             <div className="order-1 flex flex-1 flex-col items-center justify-center gap-4 py-10 lg:order-none lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:flex-none lg:self-center lg:py-0">
+              <ScreenAwakeNotice className="mb-1" />
               <PlayTarget
                 icon={isMuted ? <MicOff /> : <Mic />}
                 label={TARGET_LABEL[state]}
