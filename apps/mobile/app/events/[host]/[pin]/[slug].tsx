@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { channelQueryOptions } from '@/api/queries';
 import { systemControls } from '@/audio/now-playing';
-import { audioStatus } from '@/audio/system-audio';
 import { useNowPlaying } from '@/audio/use-now-playing';
 import { ActionButton } from '@/components/action-button';
 import { ConnectionLine } from '@/components/connection-line';
@@ -27,7 +26,6 @@ import { rememberEvent } from '@/history/store';
 import { eventHref, readChannelParams, reportSheetHref } from '@/links/route';
 import { useListener } from '@/media/use-listener';
 import {
-  AUDIO_ACTION_LABEL,
   channelCopy,
   REPORT_ACTION_LABEL,
   TRY_AGAIN_LABEL,
@@ -36,7 +34,7 @@ import {
 import { BAD_ROUTE_MESSAGE, eventErrorMessage } from '@/screens/event-view';
 import { useEventSocket, useServerGate } from '@/socket/provider';
 import { currentChannelStatus } from '@/socket/status';
-import { useColors } from '@/theme/provider';
+import { useColors, useSurfaces } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 
@@ -44,6 +42,7 @@ const IOS = Platform.OS === 'ios';
 
 export default function ChannelScreen() {
   const colors = useColors();
+  const surfaces = useSurfaces();
   const router = useRouter();
   const params = useLocalSearchParams<{ host: string; pin: string; slug: string }>();
   const route = readChannelParams(params.host, params.pin, params.slug);
@@ -59,7 +58,7 @@ export default function ChannelScreen() {
     enabled: route !== null && gate.check.state === 'ready',
   });
   const view = query.data;
-  const { socket, status, channelStatuses, joinChannel, leaveChannel, audio } = useEventSocket();
+  const { socket, status, channelStatuses, joinChannel, leaveChannel } = useEventSocket();
 
   // Reaching a channel writes its event down; the channel itself is not remembered.
   useEffect(() => {
@@ -147,10 +146,6 @@ export default function ChannelScreen() {
     );
   }
 
-  // Stated, not offered: neither platform lets an app choose the media output, and a level
-  // of this app's own could only sit under the volume keys the guest already has.
-  const audioDetail = audioStatus({ route: audio.route, volume: audio.volume });
-
   const copy = channelCopy(
     channelStatus === undefined
       ? 'unknown'
@@ -168,7 +163,7 @@ export default function ChannelScreen() {
     <View style={styles.screen}>
       <ScreenHeader backHref={eventHref(host, pin)} title={view?.event.name} />
       {/* The stage takes the height the screen has: the target sits in the middle of it,
-          and the two actions stay at the thumb line however tall the phone is. */}
+          and the report action stays at the thumb line however tall the phone is. */}
       <ScrollView
         contentContainerStyle={styles.stage}
         contentInsetAdjustmentBehavior="never"
@@ -237,30 +232,16 @@ export default function ChannelScreen() {
         ) : null}
       </ScrollView>
 
-      {/* The audio line states where the audio is going and how loud the phone is; both
-          belong to the platform, so it is a reading rather than a control. */}
       <View style={styles.thumbLine}>
-        <GlassSurface raised style={styles.audioSurface}>
-          <View
-            accessible
-            accessibilityLabel={`${AUDIO_ACTION_LABEL}: ${audioDetail}`}
-            style={styles.audioPress}
+        {/* Intent makes reporting available, including while the consumer is opening or
+            the interpreter is briefly reconnecting. Matches the web's hasRequestedAudio. */}
+        {listener.listening ? (
+          <GlassSurface
+            interactive
+            raised
+            fallbackColor={IOS ? colors.card : surfaces.high}
+            style={styles.reportSurface}
           >
-            <Icon name="headphones" size={20} color={colors.foreground} strokeWidth={2.25} />
-            <Text
-              numberOfLines={1}
-              style={[type.section, styles.audioLabel, { color: colors.foreground }]}
-            >
-              {audioDetail}
-            </Text>
-          </View>
-        </GlassSurface>
-
-        {/* Only a listener may report a problem, and a consumer being open is what makes
-            someone one: the five categories all name a fault in audio they would be
-            receiving, so a press with nothing arriving has nothing to describe. */}
-        {listener.isPlaying ? (
-          <GlassSurface interactive raised style={IOS ? styles.reportRound : styles.reportSquircle}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={REPORT_ACTION_LABEL}
@@ -268,6 +249,9 @@ export default function ChannelScreen() {
               style={styles.reportPress}
             >
               <Icon name="report" size={21} color={colors.foreground} strokeWidth={2.1} />
+              <Text style={[type.section, { color: colors.foreground }]}>
+                {REPORT_ACTION_LABEL}
+              </Text>
             </Pressable>
           </GlassSurface>
         ) : null}
@@ -300,24 +284,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  audioSurface: { flex: 1, minWidth: 0, borderRadius: radius.full },
-  audioPress: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
+  reportSurface: {
+    flex: 1,
+    borderRadius: radius.full,
     height: spacing.control,
-    paddingHorizontal: 20,
+    ...(IOS ? {} : { borderWidth: 0 }),
   },
-  audioLabel: { flex: 1, minWidth: 0 },
-  reportRound: {
-    width: spacing.control,
-    height: spacing.control,
-    borderRadius: spacing.control / 2,
-  },
-  reportSquircle: { width: spacing.control, height: spacing.control, borderRadius: 18 },
   reportPress: {
-    width: spacing.control,
     height: spacing.control,
+    flexDirection: 'row',
+    gap: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },

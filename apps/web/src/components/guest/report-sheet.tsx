@@ -14,7 +14,6 @@ type Stage = { kind: 'list' } | { kind: 'sent'; category: ReportCategory };
 type ReportStage = Stage | { kind: 'resolved' };
 
 export function ReportSheet({
-  volume,
   muted,
   live,
   sent,
@@ -22,8 +21,6 @@ export function ReportSheet({
   onSend,
   onResolve,
 }: {
-  /** The listener's own volume, 0-100. */
-  volume: number;
   /** Socket-authoritative; null while it is still unknown. */
   muted: boolean | null;
   live: boolean;
@@ -110,7 +107,7 @@ export function ReportSheet({
   }, [onResolve]);
 
   const rows = reportRows({ sent, pending, failed, live, now });
-  const check = selfCheck({ volume, muted, live });
+  const check = selfCheck({ muted, live });
   const firstEnabled = rows.find((row) => !row.disabled)?.key;
 
   return (
@@ -129,11 +126,11 @@ export function ReportSheet({
           setResolving(false);
         }
       }}
-      triggerClassName="flex cursor-pointer items-center gap-1.75 rounded-sm px-1 py-1.5 text-note font-semibold whitespace-nowrap text-muted-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+      triggerClassName="hover:overlay flex h-13 w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-secondary text-base font-semibold text-foreground focus-visible:ring-3 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
       trigger={
         <>
-          <MessageCircleWarning className="size-4" />
-          {hasOpenReport ? 'Update report' : 'Report a problem'}
+          <MessageCircleWarning aria-hidden className="size-4.5" />
+          Report a problem
         </>
       }
     >
@@ -172,17 +169,6 @@ export function ReportSheet({
           <div className="rounded-lg bg-check-surface px-4 pt-3.5 pb-3.75">
             <span className={cn(MICRO_LABEL, 'block')}>Check first</span>
             <div className="mt-2.75 flex items-baseline justify-between gap-3">
-              <span className="text-sm leading-normal">Your volume</span>
-              <span
-                className={cn(
-                  'font-mono font-semibold text-sm',
-                  check.volumeWarn ? 'text-warn-on-muted' : 'text-foreground',
-                )}
-              >
-                {check.volumeLabel}
-              </span>
-            </div>
-            <div className="mt-2.25 flex items-baseline justify-between gap-3 border-border border-t pt-2.25">
               <span className="text-sm leading-normal">The interpreter</span>
               <span
                 className={cn(

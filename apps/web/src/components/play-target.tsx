@@ -18,6 +18,7 @@ const VARIANTS = {
 export function PlayTarget({
   icon,
   label,
+  iconOnly = false,
   variant = 'action',
   rings = false,
   className,
@@ -25,16 +26,20 @@ export function PlayTarget({
 }: {
   icon: ReactNode;
   label: string;
+  /** Compact listener control; speakers keep their visible state label. */
+  iconOnly?: boolean;
   variant?: keyof typeof VARIANTS;
   rings?: boolean;
 } & Omit<ComponentProps<'button'>, 'children'>) {
   return (
     <button
       type="button"
+      aria-label={label}
       className={cn(
-        'relative flex size-49 cursor-pointer flex-col items-center justify-center gap-2 rounded-full',
+        'relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-full',
         // Sized here, so callers pass a bare lucide icon.
-        '[&_svg]:pointer-events-none [&_svg]:size-9.75 [&_svg]:stroke-[2.4]',
+        '[&_svg]:pointer-events-none [&_svg]:stroke-[2.4]',
+        iconOnly ? 'size-45 [&_svg]:size-13.5' : 'size-49 [&_svg]:size-9.75',
         'transition-transform duration-120 active:scale-96 disabled:pointer-events-none disabled:opacity-50',
         VARIANTS[variant],
         className,
@@ -54,7 +59,9 @@ export function PlayTarget({
         </>
       )}
       {icon}
-      <span className="text-base leading-none font-semibold tracking-[-0.01em]">{label}</span>
+      {!iconOnly && (
+        <span className="text-base leading-none font-semibold tracking-[-0.01em]">{label}</span>
+      )}
     </button>
   );
 }

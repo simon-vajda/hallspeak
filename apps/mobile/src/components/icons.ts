@@ -4,12 +4,12 @@ import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import Check from 'lucide-react-native/icons/check';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
-import CircleAlert from 'lucide-react-native/icons/circle-alert';
 import Flashlight from 'lucide-react-native/icons/flashlight';
 import FlashlightOff from 'lucide-react-native/icons/flashlight-off';
 import Headphones from 'lucide-react-native/icons/headphones';
 import Link from 'lucide-react-native/icons/link';
 import Link2Off from 'lucide-react-native/icons/link-2-off';
+import MessageCircleWarning from 'lucide-react-native/icons/message-circle-warning';
 import Pause from 'lucide-react-native/icons/pause';
 import Play from 'lucide-react-native/icons/play';
 import QrCode from 'lucide-react-native/icons/qr-code';
@@ -51,7 +51,7 @@ export const icons = {
   listen: Play,
   stop: Pause,
   audio: SlidersHorizontal,
-  report: CircleAlert,
+  report: MessageCircleWarning,
   volume: Volume2,
   muted: VolumeX,
   output: Speaker,

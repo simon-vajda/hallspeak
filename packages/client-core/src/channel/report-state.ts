@@ -93,12 +93,13 @@ export function selfCheck({
   muted,
   live,
 }: {
-  volume: number;
+  /** Omitted by web, which has no system-volume reading. */
+  volume?: number;
   muted: boolean | null;
   live: boolean;
 }): SelfCheck {
-  const volumeLabel = `${Math.round(volume)}%`;
-  const volumeWarn = volume < LOW_VOLUME;
+  const volumeLabel = volume === undefined ? '—' : `${Math.round(volume)}%`;
+  const volumeWarn = volume !== undefined && volume < LOW_VOLUME;
 
   // Nobody broadcasting outranks any mute state: there is no interpreter to be muted.
   if (!live) {

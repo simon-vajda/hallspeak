@@ -233,7 +233,12 @@ describe('listener broadcast badge', () => {
       { ...offline, holding: true },
     ];
 
-    expect(inputs.map(badgeLabel)).toEqual(['Offline', 'On air', 'Muted', 'Speaker dropped off']);
+    expect(inputs.map(badgeLabel)).toEqual([
+      'Offline',
+      'On air',
+      'On air · muted',
+      'Speaker dropped off',
+    ]);
     expect(inputs.map(badgeHasLiveDot)).toEqual([false, true, true, false]);
   });
 
@@ -258,7 +263,7 @@ describe('listener broadcast badge', () => {
       }
     }
 
-    expect(labels).toEqual(new Set(['Offline', 'On air', 'Muted', 'Speaker dropped off']));
+    expect(labels).toEqual(new Set(['Offline', 'On air', 'On air · muted', 'Speaker dropped off']));
   });
 });
 
