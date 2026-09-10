@@ -143,7 +143,7 @@ export function badgeLabel(input: ListenBadgeInput): string {
     case 'on-air':
       return 'On air';
     case 'muted':
-      return 'Muted';
+      return 'On air · muted';
     case 'speaker-dropped-off':
       return 'Speaker dropped off';
   }

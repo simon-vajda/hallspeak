@@ -61,6 +61,13 @@ describe('reportRows', () => {
 });
 
 describe('selfCheck', () => {
+  it('does not invent a volume reading when the platform does not expose one', () => {
+    expect(selfCheck({ muted: false, live: true })).toMatchObject({
+      volumeLabel: '—',
+      volumeWarn: false,
+      interpreterLabel: 'Not muted',
+    });
+  });
   it('flags a volume below 40 and not at 40', () => {
     expect(selfCheck({ volume: 39, muted: false, live: true })).toMatchObject({
       volumeLabel: '39%',

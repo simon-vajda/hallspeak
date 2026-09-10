@@ -1,29 +1,18 @@
 import { channelStatusFromHttp } from '@linguacast/client-core/channel';
 import { socketMessage, useSocket } from '@linguacast/client-core/socket';
 import type { components } from '@linguacast/contract/openapi';
-import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { GuestMessage, GuestMessageAction } from '@/components/guest/guest-message';
 import { ListenerRoom } from '@/components/guest/listener-room';
-import { publicEventQueryOptions } from '@/lib/public-queries';
 import { connectSocket } from '@/lib/socket';
 
 type PublicChannelView = components['schemas']['PublicChannelView'];
 
 export function ListenerChannel({ view }: { view: PublicChannelView }) {
   const [joinFailed, setJoinFailed] = useState(false);
-  const { data: event } = useQuery(publicEventQueryOptions(view.event.pin));
-  const {
-    status,
-    error,
-    hasConnected,
-    online,
-    channelStatuses,
-    socket,
-    joinChannel,
-    leaveChannel,
-  } = useSocket({ pin: view.event.pin }, connectSocket);
+  const { status, error, hasConnected, channelStatuses, socket, joinChannel, leaveChannel } =
+    useSocket({ pin: view.event.pin }, connectSocket);
   const slug = view.channel.slug;
 
   // A speaker is already in its channel room from the handshake; a listener has to ask.
@@ -66,10 +55,6 @@ export function ListenerChannel({ view }: { view: PublicChannelView }) {
       eventName={view.event.name}
       pin={view.event.pin}
       channel={view.channel}
-      channels={(event?.channels ?? []).map((channel) => ({
-        ...channel,
-        online: online[channel.slug] ?? channel.online,
-      }))}
       live={currentStatus.online}
       muted={currentStatus.muted}
       closeReason={currentStatus.reason}

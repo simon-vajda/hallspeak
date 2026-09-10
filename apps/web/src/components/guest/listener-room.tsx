@@ -25,16 +25,12 @@ import { ChevronLeft, Loader2, Pause, Play } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
-import { ChannelStrip } from '@/components/guest/channel-strip';
-import { ListenerAudioSettings } from '@/components/guest/listener-audio-settings';
+import { AppNotice } from '@/components/guest/app-notice';
 import { ReportSheet } from '@/components/guest/report-sheet';
 import { LiveBadge } from '@/components/live-badge';
 import { PlayTarget } from '@/components/play-target';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
-import { useAudioOutput } from '@/lib/audio/use-audio-output';
-import { useAudioSink } from '@/lib/audio/use-audio-sink';
-import { useAudioVolume } from '@/lib/audio/use-audio-volume';
 import { useListenerMediaSession } from '@/lib/audio/use-listener-media-session';
 import { useMediaSessionCarrier } from '@/lib/audio/use-media-session-carrier';
 import { formatPin } from '@/lib/format';
@@ -54,7 +50,6 @@ export function ListenerRoom({
   eventName,
   pin,
   channel,
-  channels,
   live,
   muted,
   closeReason,
@@ -66,8 +61,6 @@ export function ListenerRoom({
   eventName: string;
   pin: string;
   channel: PublicChannel;
-  /** Every channel of the event. Empty until its query lands. */
-  channels: PublicChannel[];
   live: boolean;
   /** Socket-authoritative; null while an online REST seed is reconciled. */
   muted: boolean | null;
@@ -96,9 +89,6 @@ export function ListenerRoom({
     play: playCarrier,
     pause: pauseCarrier,
   } = useMediaSessionCarrier(() => pauseListeningRef.current?.());
-  const output = useAudioOutput();
-  const volume = useAudioVolume(audio);
-  useAudioSink(audio, output.deviceId, output.clearSelection);
 
   // Server scopes cooldown and resolution eligibility to one live socket connection.
   useEffect(() => {
@@ -351,35 +341,35 @@ export function ListenerRoom({
           </>
         }
       />
-      <ChannelStrip channels={channels} currentSlug={channel.slug} pin={pin} />
-
-      {/* The phone's way back to the selector; from `lg` the channel strip is it. */}
-      <div className="mx-auto flex w-full max-w-shell items-center gap-3 px-gutter pt-4.5 lg:hidden">
+      <div className="mx-auto flex w-full max-w-shell items-center gap-3 px-gutter pt-4.5 lg:px-10">
         <Link
           to="/events/$pin"
           params={{ pin }}
-          aria-label="Back to channels"
-          className="flex size-9.5 items-center justify-center rounded-full bg-secondary focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+          aria-label={`Back to ${eventName}`}
+          className="hover:overlay flex h-9.5 min-w-0 max-w-57.5 items-center gap-2 rounded-full bg-secondary pr-action-x pl-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 lg:max-w-80"
         >
-          <ChevronLeft className="size-4.5 stroke-[2.25]" />
+          <ChevronLeft aria-hidden className="size-4.5 shrink-0 stroke-[2.25]" />
+          <span className="truncate">{eventName}</span>
         </Link>
-        <span className="flex-1 truncate text-meta text-muted-foreground">{meta}</span>
-        {/* In the row rather than floated over it, so it centres on the back button. */}
-        <TempThemeToggle />
+        <div className="ml-auto lg:hidden">
+          <TempThemeToggle />
+        </div>
       </div>
+      <AppNotice />
 
-      <main className="mx-auto flex w-full max-w-shell grow shrink-0 flex-col items-center justify-center gap-y-6 px-8 py-6 text-center lg:gap-y-8 lg:px-10 lg:py-10">
+      <main className="mx-auto flex w-full max-w-shell grow shrink-0 flex-col items-center justify-center gap-y-6 px-8 pt-6 pb-3.5 text-center lg:gap-y-8 lg:px-10 lg:pt-10">
         <LiveBadge live={badgeHasLiveDot(badgeInput)} label={badgeLabel(badgeInput)} />
 
         <h1 className={cn(TITLE)}>{channel.name}</h1>
 
         {/* A listener can start only while a Producer is available. The padding is the
-            ripple's room: it peaks at 1.35 of a 196px target, so anything less lets the
+            ripple's room: it peaks at 1.35 of a 180px target, so anything less lets the
             ring cross the title and the connection line while it is still visible. */}
         <div className="py-3 lg:py-5">
           <PlayTarget
             icon={<PlayIcon state={actionState} />}
             label={playTargetLabel(actionState)}
+            iconOnly
             rings={showListenRings(actionState === 'playing', muted)}
             className={cn(actionState === 'holding' && 'disabled:opacity-100')}
             disabled={actionState === 'unavailable' || actionState === 'holding'}
@@ -428,14 +418,11 @@ export function ListenerRoom({
         <audio ref={carrierAudio} loop preload="auto" className="hidden" />
       </main>
 
-      <div className="mx-auto mt-auto flex w-full max-w-shell shrink-0 flex-col items-center gap-5 px-gutter pb-8.5 text-center lg:pb-16.5">
-        <ListenerAudioSettings output={output} volume={volume} className="max-w-105" />
-        {/* Keep the trigger's 32px row even before Listen, so intent changes do not move
-            the audio settings or the room above it. Unmounting still closes an open surface. */}
-        <div className="flex min-h-8 items-center">
+      <div className="mx-auto mt-auto flex w-full max-w-shell shrink-0 flex-col items-center px-gutter pb-8.5 text-center lg:pb-16.5">
+        {/* Hold the pill's space before Listen so starting audio does not move the stage. */}
+        <div className="flex min-h-13 w-full max-w-105 items-center">
           {hasRequestedAudio(resolvedPlayback) ? (
             <ReportSheet
-              volume={volume.volume}
               muted={muted}
               live={live}
               sent={sentReports}
