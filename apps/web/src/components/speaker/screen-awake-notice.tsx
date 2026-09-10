@@ -21,7 +21,7 @@ export function ScreenAwakeNotice({ className }: { className?: string }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div className={`flex justify-center ${className ?? ''}`}>
+      <div className={`flex ${className ?? ''}`}>
         <DialogTrigger
           render={<Button variant="secondary" />}
           className="h-9.5 gap-1.75 rounded-full px-3.75 text-note font-semibold focus-visible:ring-offset-2"
