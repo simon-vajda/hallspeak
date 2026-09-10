@@ -98,14 +98,10 @@ const EventSocketContext = createContext<EventSocket>(IDLE);
 
 export interface ServerGate {
   check: ServerCheck;
-  refreshing: boolean;
-  recheck: () => void;
 }
 
 const ServerGateContext = createContext<ServerGate>({
   check: { state: 'checking' },
-  refreshing: false,
-  recheck: () => {},
 });
 
 /**
@@ -144,14 +140,7 @@ export function EventSocketProvider({
     [enabled, version.data, version.isError],
   );
 
-  const gate = useMemo<ServerGate>(
-    () => ({
-      check,
-      refreshing: version.isRefetching,
-      recheck: () => void version.refetch(),
-    }),
-    [check, version.isRefetching, version.refetch],
-  );
+  const gate = useMemo<ServerGate>(() => ({ check }), [check]);
 
   // The navigator stays mounted through every verdict. Rendering the failure in this
   // component's place would take the stack with it, leaving the guest on a screen with no

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { eventQueryOptions } from '@/api/queries';
 import { ActionButton } from '@/components/action-button';
 import { ChannelRow } from '@/components/channel-row';
@@ -77,12 +77,7 @@ export default function EventScreen() {
 
   if (gate.check.state === 'blocked') {
     return (
-      <ErrorState
-        title={gate.check.title}
-        body={gate.check.body}
-        refreshing={gate.refreshing}
-        onRefresh={gate.check.retryable ? () => gate.recheck() : undefined}
-      >
+      <ErrorState title={gate.check.title} body={gate.check.body}>
         <ActionButton
           label="Back to your events"
           icon="back"
@@ -97,12 +92,7 @@ export default function EventScreen() {
     const message = eventErrorMessage(query.error);
 
     return (
-      <ErrorState
-        title={message.title}
-        body={message.body}
-        refreshing={query.isRefetching}
-        onRefresh={() => void query.refetch()}
-      >
+      <ErrorState title={message.title} body={message.body}>
         <ActionButton
           label="Back to your events"
           icon="back"
@@ -118,13 +108,7 @@ export default function EventScreen() {
   return (
     <View style={styles.screen}>
       <ScreenHeader backHref="/" />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        contentInsetAdjustmentBehavior="never"
-        refreshControl={
-          <RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} />
-        }
-      >
+      <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="never">
         {event ? (
           <>
             <View style={styles.header}>
