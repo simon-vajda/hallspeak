@@ -13,11 +13,13 @@ import { InputLevelPanel } from '@/components/speaker/input-level-panel';
 import { ListenerPageLink } from '@/components/speaker/listener-page-link';
 import { ListenerReports } from '@/components/speaker/listener-reports';
 import { OnAirStats } from '@/components/speaker/on-air-stats';
+import { ScreenAwakeNotice } from '@/components/speaker/screen-awake-notice';
 import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import { VersionFooter } from '@/components/version-footer';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
+import { useScreenWakeLock } from '@/lib/use-screen-wake-lock';
 import type { BroadcastState } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
@@ -71,6 +73,7 @@ export function SpeakerOnAir({
   preferences: AudioPreferences;
   onPreferencesChange: (patch: Partial<AudioPreferences>) => void;
 }) {
+  useScreenWakeLock();
   const [confirming, setConfirming] = useState(false);
   const isMuted = state === 'muted';
   // A producer this screen still holds locally is not reaching anyone while signalling is
@@ -163,6 +166,7 @@ export function SpeakerOnAir({
                 End broadcast
               </Button>
               <ListenerPageLink pin={pin} slug={channel.slug} className="order-8 mt-2" />
+              <ScreenAwakeNotice className="order-9 mt-3 lg:hidden" />
             </div>
           </div>
 

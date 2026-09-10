@@ -8,12 +8,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  answerAppNotice,
-  appListenerLink,
-  hasAnsweredAppNotice,
-  isPhoneBrowser,
-} from '@/lib/app-notice';
+import { answerAppNotice, appListenerLink, hasAnsweredAppNotice } from '@/lib/app-notice';
+import { isPhoneBrowser } from '@/lib/phone-browser';
 
 export function AppNotice() {
   const [phone] = useState(() => isPhoneBrowser(navigator.userAgent));
