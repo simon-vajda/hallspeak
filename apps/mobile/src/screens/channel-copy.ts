@@ -30,6 +30,9 @@ export type ChannelCopy = {
 /** A reading nobody has taken. Neither label, rather than the negative one. */
 export const UNKNOWN_BADGE = 'Status unknown';
 
+export const OFFLINE_NOTE = 'This channel will update as soon as a speaker goes on air.';
+export const READY_NOTE = 'Press play to start listening.';
+
 export function channelCopy(input: (ListenBadgeInput & ListenNoteInput) | 'unknown'): ChannelCopy {
   if (input === 'unknown') {
     return { badge: null, accessibleBadge: UNKNOWN_BADGE, note: UNKNOWN_NOTE };
@@ -37,7 +40,16 @@ export function channelCopy(input: (ListenBadgeInput & ListenNoteInput) | 'unkno
 
   const badge = badgeLabel(input);
 
-  return { badge, accessibleBadge: badge, note: statusNote(input) };
+  let note = statusNote(input);
+  if (input.linkConnected && !input.holding) {
+    if (!input.live) {
+      note = OFFLINE_NOTE;
+    } else if (!input.isPlaying) {
+      note = READY_NOTE;
+    }
+  }
+
+  return { badge, accessibleBadge: badge, note };
 }
 
 export const UNKNOWN_NOTE = 'This channel could not be read. Pull down to try again.';

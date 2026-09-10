@@ -1,5 +1,12 @@
 import { describe, expect, it } from '@jest/globals';
-import { ALL_CHANNEL_COPY, channelCopy, targetLabel, UNKNOWN_BADGE } from './channel-copy';
+import {
+  ALL_CHANNEL_COPY,
+  channelCopy,
+  OFFLINE_NOTE,
+  READY_NOTE,
+  targetLabel,
+  UNKNOWN_BADGE,
+} from './channel-copy';
 
 /**
  * The rule R31 states, expressed as data. A phrase reaching this list means the screen would
@@ -53,6 +60,23 @@ describe('channel copy', () => {
     expect(channelCopy({ ...LIVE_AND_FLOWING, muted: true }).badge).toBe('On air · muted');
     expect(channelCopy({ ...LIVE_AND_FLOWING, live: false, holding: true }).badge).toBe(
       'Speaker dropped off',
+    );
+  });
+
+  it('guides the listener before a broadcast starts and before playback starts', () => {
+    expect(
+      channelCopy({
+        ...LIVE_AND_FLOWING,
+        live: false,
+        isPlaying: false,
+      }).note,
+    ).toBe(OFFLINE_NOTE);
+    expect(channelCopy({ ...LIVE_AND_FLOWING, isPlaying: false }).note).toBe(READY_NOTE);
+    expect(channelCopy({ ...LIVE_AND_FLOWING, muted: true, isPlaying: false }).note).toBe(
+      READY_NOTE,
+    );
+    expect(channelCopy(LIVE_AND_FLOWING).note).toBe(
+      'Headphones recommended, so the room stays quiet for everyone else.',
     );
   });
 
