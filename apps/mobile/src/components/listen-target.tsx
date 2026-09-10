@@ -1,26 +1,15 @@
-import { useEffect } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { useColors } from '@/theme/provider';
-import { motion, radius } from '@/theme/tokens';
+import { radius } from '@/theme/tokens';
 import { Icon } from './icon';
-import { ringFrame } from './motion';
+import { ListenerRing } from './listener-ring';
 
 const IOS = Platform.OS === 'ios';
 
 // The design draws 172 on iOS and 180 on Android, each sized to its own platform's frame,
 // inside a stage that leaves room for the rings to expand into.
 const DIAMETER = IOS ? 172 : 180;
-const RING_WIDTH = IOS ? 2 : 3;
 // The rings expand inside the stage rather than past it, so neither the channel name above
 // nor the connection line below is ever touched.
 const RING_TRAVEL = 0.3;
@@ -45,6 +34,7 @@ export function ListenTarget({
   active = false,
   loading = false,
   rings = false,
+  muted = false,
   disabled = false,
   onPress,
 }: {
@@ -53,6 +43,8 @@ export function ListenTarget({
   active?: boolean;
   loading?: boolean;
   rings?: boolean;
+  /** A muted producer lets existing rings settle; other stops remain immediate. */
+  muted?: boolean;
   disabled?: boolean;
   onPress?: () => void;
 }) {
@@ -76,12 +68,21 @@ export function ListenTarget({
           </Svg>
         </View>
       ) : null}
-      {rings ? (
-        <>
-          <Ring color={colors.primary} />
-          <Ring color={colors.primary} delayed />
-        </>
-      ) : null}
+      <ListenerRing
+        diameter={DIAMETER}
+        travel={RING_TRAVEL}
+        running={rings}
+        settling={active && muted}
+        color={colors.primary}
+      />
+      <ListenerRing
+        diameter={DIAMETER}
+        travel={RING_TRAVEL}
+        running={rings}
+        settling={active && muted}
+        color={colors.primary}
+        delayed
+      />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -113,36 +114,6 @@ export function ListenTarget({
   );
 }
 
-function Ring({ color, delayed = false }: { color: string; delayed?: boolean }) {
-  const reduceMotion = useReducedMotion();
-  const frame = ringFrame(reduceMotion);
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    if (!frame.animated) {
-      progress.value = 0;
-      return;
-    }
-
-    const run = withRepeat(
-      withTiming(1, { duration: motion.ringMs, easing: Easing.out(Easing.ease) }),
-      -1,
-      false,
-    );
-
-    progress.value = delayed ? withDelay(motion.ringDelayMs, run) : run;
-  }, [frame.animated, delayed, progress]);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + progress.value * RING_TRAVEL }],
-    opacity: frame.opacity * (1 - progress.value),
-  }));
-
-  return (
-    <Animated.View pointerEvents="none" style={[styles.ring, { borderColor: color }, style]} />
-  );
-}
-
 const styles = StyleSheet.create({
   stage: { width: STAGE, height: STAGE, alignItems: 'center', justifyContent: 'center' },
   glow: {
@@ -151,13 +122,6 @@ const styles = StyleSheet.create({
     top: (STAGE - GLOW_HEIGHT) / 2,
     width: GLOW_WIDTH,
     height: GLOW_HEIGHT,
-  },
-  ring: {
-    position: 'absolute',
-    width: DIAMETER,
-    height: DIAMETER,
-    borderRadius: radius.full,
-    borderWidth: RING_WIDTH,
   },
   target: {
     width: DIAMETER,
