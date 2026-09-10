@@ -125,3 +125,5 @@ Non-blocking follow-ups: a coturn/TURN relay deployment and automated `/data` ba
 - The listener broadcast badge says `On air · muted` for a muted producer on both web and mobile, directly from shared `badgeLabel`. The speaker studio uses the same wording; its central mute control and the report self-check retain their shorter `Muted` label.
 
 - Mobile listener rings stop expanding when the interpreter mutes, then shrink and fade into the target over 280ms. The transition is visual only: playback and badge state update immediately. Stopping listening, losing the consumer, and Reduce Motion hide the rings immediately. Ring animations are cancelled while idle and on unmount; unmuting during the transition resumes from the current phase.
+
+- Web listener rings use the same 280ms mute settle as mobile. `PlayTargetRing` pauses each CSS pulse at its current phase and overlays a shrink-to-scale-1/fade-to-zero animation. Unmuting reverses that transition before resuming the pulse; rapid changes reuse it. Stop listening and Reduce Motion hide immediately. Speaker rings retain their existing behaviour.

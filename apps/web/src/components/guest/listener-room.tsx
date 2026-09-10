@@ -371,6 +371,7 @@ export function ListenerRoom({
             label={playTargetLabel(actionState)}
             iconOnly
             rings={showListenRings(actionState === 'playing', muted)}
+            muted={actionState === 'playing' && muted === true}
             className={cn(actionState === 'holding' && 'disabled:opacity-100')}
             disabled={actionState === 'unavailable' || actionState === 'holding'}
             onClick={() => {
