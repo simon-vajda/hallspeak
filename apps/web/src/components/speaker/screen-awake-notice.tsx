@@ -10,14 +10,24 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { isPhoneBrowser } from '@/lib/phone-browser';
+import { screenAwakeLabel, screenAwakeNote } from '@/lib/screen-awake-copy';
+import type { ScreenWakeLockStatus } from '@/lib/use-screen-wake-lock';
 
-export function ScreenAwakeNotice({ className }: { className?: string }) {
+export function ScreenAwakeNotice({
+  status,
+  className,
+}: {
+  status: ScreenWakeLockStatus;
+  className?: string;
+}) {
   const [phone] = useState(() => isPhoneBrowser(navigator.userAgent));
   const [open, setOpen] = useState(false);
 
   if (!phone) {
     return null;
   }
+
+  const note = screenAwakeNote(status);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -27,7 +37,7 @@ export function ScreenAwakeNotice({ className }: { className?: string }) {
           className="h-9.5 gap-1.75 rounded-full px-3.75 text-note font-semibold focus-visible:ring-offset-2"
         >
           <Info aria-hidden className="size-4" />
-          Keep the screen awake
+          {screenAwakeLabel(status)}
         </DialogTrigger>
       </div>
       <DialogContent
@@ -39,6 +49,7 @@ export function ScreenAwakeNotice({ className }: { className?: string }) {
           A phone takes the microphone away as soon as the browser goes to the background or the
           screen locks. Leave this page in the foreground and the phone unlocked for the whole
           broadcast.
+          {note ? ` ${note}` : ''}
         </DialogDescription>
         <div className="mt-1.5 flex flex-wrap justify-center gap-2.5">
           <DialogClose render={<Button size="action" />} className="focus-visible:ring-offset-2">
