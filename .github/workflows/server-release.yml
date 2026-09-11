@@ -5,7 +5,7 @@ name: Server release
 on:
   push:
     branches: [main]
-    tags: ['server-v*']
+    tags: ["server-v*"]
 
 concurrency:
   group: release-${{ github.ref }}
@@ -112,7 +112,7 @@ jobs:
           # highest one, and notes would then start from the wrong release.
           previous="$(git tag --list 'server-v*' --sort=-v:refname | grep -vx "$GITHUB_REF_NAME" | head -n1)"
           if [ -n "$previous" ]; then
-            gh release create "$GITHUB_REF_NAME" --verify-tag --latest --generate-notes --notes-start-tag "$previous" --title "LinguaCast Server ${{ steps.version.outputs.version }}"
+            gh release create "$GITHUB_REF_NAME" --verify-tag --latest --generate-notes --notes-start-tag "$previous" --title "Server v${{ steps.version.outputs.version }}"
           else
-            gh release create "$GITHUB_REF_NAME" --verify-tag --latest --generate-notes --title "LinguaCast Server ${{ steps.version.outputs.version }}"
+            gh release create "$GITHUB_REF_NAME" --verify-tag --latest --generate-notes --title "Server v${{ steps.version.outputs.version }}"
           fi
