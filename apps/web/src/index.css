@@ -91,7 +91,7 @@
    repeats across screens, and would otherwise be re-derived by the next screen. */
 @theme {
   --spacing-gutter: 1.625rem; /* 26px screen gutter; 40px (px-10) from lg up */
-  --spacing-shell: 70rem; /* 1120px application content cap */
+  --spacing-shell: 75rem; /* 1200px application content cap */
 
   /* The four values the controls and panels repeat. `touch` is the minimum hit target a
      control bumps to below `lg`; `action` is the height it settles at from `lg`. */
@@ -275,7 +275,9 @@
   --primary-hover: color-mix(in oklch, var(--primary), white 12%);
 
   --live: oklch(0.836 0.163 148.7); /* #74E68C */
-  --live-on-muted: oklch(0.836 0.163 148.7); /* the mint itself: dark green would vanish here */
+  --live-on-muted: oklch(
+    0.836 0.163 148.7
+  ); /* the mint itself: dark green would vanish here */
   --live-muted: oklch(0.339 0.044 188.5); /* #183F3C */
 
   /* Built on the dark `destructive` hue the same way `live-muted` is built on `live`: a
@@ -301,7 +303,10 @@
 }
 
 @utility overlay-strong {
-  background-image: linear-gradient(var(--hover-overlay-strong), var(--hover-overlay-strong));
+  background-image: linear-gradient(
+    var(--hover-overlay-strong),
+    var(--hover-overlay-strong)
+  );
 }
 
 @keyframes pulse-live {
