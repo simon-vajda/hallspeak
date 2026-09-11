@@ -275,9 +275,7 @@
   --primary-hover: color-mix(in oklch, var(--primary), white 12%);
 
   --live: oklch(0.836 0.163 148.7); /* #74E68C */
-  --live-on-muted: oklch(
-    0.836 0.163 148.7
-  ); /* the mint itself: dark green would vanish here */
+  --live-on-muted: oklch(0.836 0.163 148.7); /* the mint itself: dark green would vanish here */
   --live-muted: oklch(0.339 0.044 188.5); /* #183F3C */
 
   /* Built on the dark `destructive` hue the same way `live-muted` is built on `live`: a
@@ -303,10 +301,7 @@
 }
 
 @utility overlay-strong {
-  background-image: linear-gradient(
-    var(--hover-overlay-strong),
-    var(--hover-overlay-strong)
-  );
+  background-image: linear-gradient(var(--hover-overlay-strong), var(--hover-overlay-strong));
 }
 
 @keyframes pulse-live {
