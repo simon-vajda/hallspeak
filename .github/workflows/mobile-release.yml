@@ -2,7 +2,7 @@ name: Mobile release
 
 on:
   push:
-    tags: ['mobile-v*']
+    tags: ["mobile-v*"]
 
 concurrency:
   group: mobile-release-${{ github.ref }}
@@ -41,7 +41,7 @@ jobs:
           # highest one, and notes would then start from the wrong release.
           previous="$(git tag --list 'mobile-v*' --sort=-v:refname | grep -vx "$GITHUB_REF_NAME" | head -n1)"
           if [ -n "$previous" ]; then
-            gh release create "$GITHUB_REF_NAME" --verify-tag --latest=false --generate-notes --notes-start-tag "$previous" --title "LinguaCast Mobile ${{ steps.version.outputs.version }}"
+            gh release create "$GITHUB_REF_NAME" --verify-tag --latest=false --generate-notes --notes-start-tag "$previous" --title "Mobile v${{ steps.version.outputs.version }}"
           else
-            gh release create "$GITHUB_REF_NAME" --verify-tag --latest=false --generate-notes --title "LinguaCast Mobile ${{ steps.version.outputs.version }}"
+            gh release create "$GITHUB_REF_NAME" --verify-tag --latest=false --generate-notes --title "Mobile v${{ steps.version.outputs.version }}"
           fi
