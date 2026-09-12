@@ -54,6 +54,9 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
+const takeClaim = (channelId: number, socketId: string) =>
+  presence.take({ eventId: EVENT, channelId, sessionId: `${socketId}-studio`, socketId });
+
 const goLive = (socketId: string, channelId = ENGLISH, slug = 'english') =>
   goLiveOn({ eventId: EVENT, socketId, channelId, slug });
 
@@ -526,7 +529,7 @@ describe('a listener whose speaker stops', () => {
 
 describe('revokeChannel', () => {
   it('closes the producer, releases the claim and evicts the holder once', async () => {
-    presence.claim(ENGLISH, 'code-english', 'speaker-a');
+    takeClaim(ENGLISH, 'speaker-a');
     await goLive('speaker-a');
     published = [];
 
@@ -540,7 +543,7 @@ describe('revokeChannel', () => {
   });
 
   it('still evicts the claim holder when no producer exists', () => {
-    presence.claim(ENGLISH, 'code-english', 'speaker-a');
+    takeClaim(ENGLISH, 'speaker-a');
 
     revokeChannel(EVENT, ENGLISH, 'access_revoked');
 
@@ -582,8 +585,8 @@ describe('revokeEvent', () => {
   });
 
   it('closes every producer on the event and releases every claim', async () => {
-    presence.claim(ENGLISH, 'code-english', 'speaker-a');
-    presence.claim(SPANISH, 'code-spanish', 'speaker-b');
+    takeClaim(ENGLISH, 'speaker-a');
+    takeClaim(SPANISH, 'speaker-b');
     await goLive('speaker-a', ENGLISH, 'english');
     await goLive('speaker-b', SPANISH, 'spanish');
 

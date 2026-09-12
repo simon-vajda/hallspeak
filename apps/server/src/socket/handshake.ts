@@ -1,5 +1,4 @@
 import { authorizeHandshake, type SocketAuth } from '../core/access';
-import { notifications } from '../core/notifications';
 import { presence } from '../core/presence';
 import { db } from '../db';
 
@@ -15,8 +14,8 @@ export interface GateSocket {
 
 /**
  * The Error message reaches the client as `connect_error`'s Error.message, which is how
- * version errors and 'channel_busy' become distinct client-side states. Unlike a
- * per-packet failure, next(err) is right here: there is no ack to strand.
+ * version and speaker-code errors become distinct client-side states. Unlike a per-packet
+ * failure, next(err) is right here: there is no ack to strand.
  */
 export function handshakeGate(socket: GateSocket, next: (err?: Error) => void): void {
   const result = authorizeHandshake(db, presence, socket.handshake.auth, socket.id);
@@ -25,16 +24,5 @@ export function handshakeGate(socket: GateSocket, next: (err?: Error) => void): 
     return;
   }
   socket.data = result.data;
-
-  // Published rather than disconnected here, so a takeover ends up on the same tested path
-  // as worker death and admin revocation instead of being a second way to close a socket.
-  if (result.displacedSocketId !== null) {
-    notifications.publish({
-      type: 'peer-evicted',
-      socketId: result.displacedSocketId,
-      reason: 'claim_taken_over',
-    });
-  }
-
   next();
 }

@@ -26,6 +26,7 @@ import {
 
 const EVENT = 1;
 const ENGLISH = 10;
+const STUDIO = 'studio-english';
 
 function fakeIo() {
   const emitted: Array<{ room: string; event: string; payload: unknown }> = [];
@@ -73,10 +74,15 @@ afterEach(async () => {
 });
 
 describe('releaseSocket', () => {
-  const speaker: SocketAuth = { eventId: EVENT, pin: '111111', speakerChannelId: ENGLISH };
+  const speaker: SocketAuth = {
+    eventId: EVENT,
+    pin: '111111',
+    speakerChannelId: ENGLISH,
+    studioSession: STUDIO,
+  };
 
   it('closes a live producer and takes the channel offline', async () => {
-    presence.claim(ENGLISH, 'code-english', 'speaker-a');
+    presence.take({ eventId: EVENT, channelId: ENGLISH, sessionId: STUDIO, socketId: 'speaker-a' });
     await goLive({ eventId: EVENT, socketId: 'speaker-a', channelId: ENGLISH, slug: 'english' });
 
     releaseSocket({ id: 'speaker-a' }, speaker);
@@ -86,14 +92,19 @@ describe('releaseSocket', () => {
   });
 
   it('releases the claim and does nothing else for a session holding no media', () => {
-    presence.claim(ENGLISH, 'code-english', 'speaker-a');
+    presence.take({ eventId: EVENT, channelId: ENGLISH, sessionId: STUDIO, socketId: 'speaker-a' });
 
     expect(() => releaseSocket({ id: 'speaker-a' }, speaker)).not.toThrow();
     expect(presence.holder(ENGLISH)).toBeUndefined();
   });
 
   it('is a no-op for a listener that held nothing at all', () => {
-    const listener: SocketAuth = { eventId: EVENT, pin: '111111', speakerChannelId: null };
+    const listener: SocketAuth = {
+      eventId: EVENT,
+      pin: '111111',
+      speakerChannelId: null,
+      studioSession: null,
+    };
 
     expect(() => releaseSocket({ id: 'guest-a' }, listener)).not.toThrow();
   });
@@ -270,7 +281,7 @@ describe('applyNotification peer eviction', () => {
     applyNotification(io, {
       type: 'peer-evicted',
       socketId: 'speaker-a',
-      reason: 'claim_taken_over',
+      reason: 'access_revoked',
     });
 
     expect(disconnectedSockets).toEqual(['speaker-a']);
@@ -283,24 +294,10 @@ describe('applyNotification peer eviction', () => {
       applyNotification(io, {
         type: 'peer-evicted',
         socketId: 'long-gone',
-        reason: 'claim_taken_over',
+        reason: 'access_revoked',
       }),
     ).not.toThrow();
     expect(disconnectedSockets).toEqual([]);
-  });
-
-  it('evicts the displaced socket on a takeover and leaves the new holder connected', () => {
-    const { io, disconnectedSockets, addSocket } = fakeIo();
-    addSocket('incumbent');
-    addSocket('reconnecting');
-
-    applyNotification(io, {
-      type: 'peer-evicted',
-      socketId: 'incumbent',
-      reason: 'claim_taken_over',
-    });
-
-    expect(disconnectedSockets).toEqual(['incumbent']);
   });
 });
 
@@ -346,7 +343,7 @@ describe('applyNotification listener counts', () => {
    */
   it('emits to the claim holder’s socket and to no room at all', () => {
     const { io, emitted } = fakeIo();
-    presence.claim(ENGLISH, 'code-english', 'speaker-a');
+    presence.take({ eventId: EVENT, channelId: ENGLISH, sessionId: STUDIO, socketId: 'speaker-a' });
 
     applyNotification(io, {
       type: 'listeners-changed',
@@ -365,7 +362,7 @@ describe('applyNotification listener counts', () => {
 
   it('passes the slug and count through unchanged', () => {
     const { io, emitted } = fakeIo();
-    presence.claim(ENGLISH, 'code-english', 'speaker-a');
+    presence.take({ eventId: EVENT, channelId: ENGLISH, sessionId: STUDIO, socketId: 'speaker-a' });
 
     applyNotification(io, {
       type: 'listeners-changed',
@@ -395,7 +392,7 @@ describe('applyNotification listener counts', () => {
 
   it('leaves the producer lifecycle emit untouched', async () => {
     const { io, emitted } = fakeIo();
-    presence.claim(ENGLISH, 'code-english', 'speaker-a');
+    presence.take({ eventId: EVENT, channelId: ENGLISH, sessionId: STUDIO, socketId: 'speaker-a' });
     await goLive({ eventId: EVENT, socketId: 'speaker-a', channelId: ENGLISH, slug: 'english' });
 
     applyNotification(io, {
@@ -464,6 +461,7 @@ describe('sendInitialListenerCount', () => {
       eventId,
       pin: '111111',
       speakerChannelId: channelId,
+      studioSession: STUDIO,
     });
 
     expect(emitted).toEqual([
@@ -479,6 +477,7 @@ describe('sendInitialListenerCount', () => {
       eventId,
       pin: '111111',
       speakerChannelId: channelId,
+      studioSession: STUDIO,
     });
 
     expect(emitted).toEqual([

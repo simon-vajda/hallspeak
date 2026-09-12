@@ -62,7 +62,8 @@ export function releaseSocket(socket: { id: string }, auth: SocketAuth): void {
  * revoked means the session may no longer be here at all, so it is disconnected. A dead
  * worker took the media and nothing else — the PIN is still valid and the claim still
  * held — so those clients are told to discard their identifiers and renegotiate, which
- * is the same path a server restart puts them on.
+ * is the same path a server restart puts them on. A changed claim is neither: nobody is
+ * disconnected for it.
  */
 export function applyNotification(io: LifecycleServer, notification: Notification): void {
   switch (notification.type) {
@@ -123,7 +124,7 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
     }
 
     case 'peer-evicted': {
-      // Already gone is the common case on a takeover; there is nothing to do about it.
+      // A socket that has already gone is ordinary here; there is nothing to do about it.
       io.sockets.sockets.get(notification.socketId)?.disconnect(true);
       return;
     }
