@@ -4,7 +4,7 @@ import {
   rollbackMutedAfterFailure,
 } from '@linguacast/client-core/channel';
 import { isLinkUp, resolveLinkState } from '@linguacast/client-core/media';
-import type { SocketClient, SocketStatus } from '@linguacast/client-core/socket';
+import type { AnchoredHandover, SocketClient, SocketStatus } from '@linguacast/client-core/socket';
 import type { components } from '@linguacast/contract/openapi';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SpeakerDisplaced } from '@/components/speaker/speaker-displaced';
@@ -17,8 +17,12 @@ import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import {
   type BroadcastEnd,
   broadcastState,
+  hasLostClaim,
+  isClaimMoved,
+  isHandingOver,
   LINK_DROP_GRACE_MS,
   onReconnect,
+  preflightAction,
 } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
@@ -43,6 +47,12 @@ export function SpeakerStudio({
   status,
   hasConnected,
   channelStatus,
+  handover,
+  handoverKnown,
+  onRequestHandover,
+  onCancelHandover,
+  onConfirmHandover,
+  onTakeOver,
 }: {
   eventName: string;
   pin: string;
@@ -59,6 +69,14 @@ export function SpeakerStudio({
   hasConnected: boolean;
   /** Current Socket.IO snapshot; REST deliberately carries liveness only. */
   channelStatus: ChannelStatusEntry | undefined;
+  /** This channel's handover snapshot, seen from this studio. */
+  handover: AnchoredHandover | undefined;
+  /** False until the connect-time snapshot lands; the screen withholds rather than guessing. */
+  handoverKnown: boolean;
+  onRequestHandover: () => Promise<void>;
+  onCancelHandover: () => Promise<void>;
+  onConfirmHandover: () => Promise<void>;
+  onTakeOver: () => Promise<void>;
 }) {
   const [goLivePressed, setGoLivePressed] = useState(false);
   // Used before the first server snapshot and while recovering from a rejected control.
@@ -66,6 +84,11 @@ export function SpeakerStudio({
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [displaced, setDisplaced] = useState(false);
   const [lastEnd, setLastEnd] = useState<BroadcastEnd | null>(null);
+  // This studio's own confirm or forced departure, covering the gap before the server
+  // answers; the snapshot takes over as soon as one arrives.
+  const [confirmedHandover, setConfirmedHandover] = useState(false);
+  const [handoverBusy, setHandoverBusy] = useState(false);
+  const [handoverFailed, setHandoverFailed] = useState(false);
   // Latest state applied to the local producer. Unlike the server snapshot, this updates
   // synchronously when the interpreter clicks, so a drop cannot record the previous state.
   const effectiveMutedRef = useRef(false);
@@ -98,10 +121,16 @@ export function SpeakerStudio({
     isLinkUp(link) && channelStatus?.online && channelStatus.muted !== null
       ? channelStatus.muted
       : localMuted;
+  const handingOver = isHandingOver({
+    handoverKnown,
+    handover,
+    confirmed: confirmedHandover,
+  });
   const state = broadcastState({
     goLivePressed,
     hasProducer,
     isMuted,
+    handingOver,
     displaced,
   });
 
@@ -109,9 +138,25 @@ export function SpeakerStudio({
   // Destructured, not the whole hook result: `media` is a fresh object every render, so
   // closing over it would churn this callback's identity and re-fire the effect below on
   // every render rather than when its guards actually change.
-  const { startProducing, replaceProducerTrack } = media;
+  const { startProducing, replaceProducerTrack, abandonProducer } = media;
   // What the producer is currently transmitting, so a capture rebuild is detectable.
   const producedTrack = useRef<MediaStreamTrack | null>(null);
+
+  /**
+   * Where a studio lands when the claim has moved rather than when the broadcast ended:
+   * the successor owns the Producer by then, so it is dropped locally and never closed
+   * server-side, and the screen goes back to pre-flight instead of the terminal one.
+   */
+  const returnToPreflight = useCallback(() => {
+    abandonProducer();
+    producedTrack.current = null;
+    setGoLivePressed(false);
+    setConfirmedHandover(false);
+    setHandoverFailed(false);
+    setEffectiveMuted(false);
+    setStartedAt(null);
+    setLastEnd(null);
+  }, [abandonProducer, setEffectiveMuted]);
 
   const produce = useCallback(
     async (paused: boolean) => {
@@ -122,13 +167,18 @@ export function SpeakerStudio({
         await startProducing(channel.slug, outputTrack, paused);
         producedTrack.current = outputTrack;
       } catch (cause) {
+        // The channel moved on while this was in flight, so there is nothing to retry here.
+        if (isClaimMoved(cause)) {
+          returnToPreflight();
+          return;
+        }
         // A reset landed mid-negotiation; its own renegotiation takes over from here.
         if (!isSuperseded(cause)) {
           console.error('media: could not go live', cause);
         }
       }
     },
-    [startProducing, outputTrack, channel.slug],
+    [startProducing, outputTrack, channel.slug, returnToPreflight],
   );
 
   /**
@@ -241,16 +291,32 @@ export function SpeakerStudio({
   /**
    * After an involuntary drop the client rebuilds and re-produces in the same mute state.
    * After a deliberate end it does nothing — a broadcast somebody chose to stop must not
-   * restart itself because the Wi-Fi blinked.
+   * restart itself because the Wi-Fi blinked. A granted handover arrives here too: the
+   * server hands this studio the channel and the same path puts it on air.
    */
   useEffect(() => {
     if (status !== 'connected' || hasProducer || !outputTrack) {
       return;
     }
-    const action = onReconnect({ goLivePressed, lastEnd, displaced });
+    const action = onReconnect({
+      goLivePressed,
+      lastEnd,
+      displaced,
+      handoverKnown,
+      handover,
+    });
+    if (action.type === 'to-pre-flight') {
+      returnToPreflight();
+      return;
+    }
     if (action.type !== 're-produce') {
       return;
     }
+
+    // A grant reaches a studio that never pressed anything, so the on-air screen and its
+    // elapsed time start here rather than at a press that did not happen.
+    setGoLivePressed(true);
+    setStartedAt((previous) => previous ?? Date.now());
 
     let cancelled = false;
     void produce(action.paused).then(() => {
@@ -270,9 +336,24 @@ export function SpeakerStudio({
     goLivePressed,
     lastEnd,
     displaced,
+    handoverKnown,
+    handover,
     produce,
+    returnToPreflight,
     setEffectiveMuted,
   ]);
+
+  /**
+   * The swap is finished: the claim sits with another studio, so whatever this one still
+   * holds locally is stale. Covers the confirmed and the forced handover alike, and any
+   * other way the channel changed hands while this studio was on air.
+   */
+  useEffect(() => {
+    if (!hasLostClaim({ goLivePressed, displaced, handoverKnown, handover })) {
+      return;
+    }
+    returnToPreflight();
+  }, [goLivePressed, displaced, handoverKnown, handover, returnToPreflight]);
   // Never cleared: the button must not flicker back to disabled during a pause between words.
   const [heardSomething, setHeardSomething] = useState(false);
 
@@ -309,6 +390,22 @@ export function SpeakerStudio({
     };
   }, [suspended, resume]);
 
+  /**
+   * A refusal is reported and then forgotten: every code the server can answer with means
+   * the channel moved on, and the next snapshot is what puts the screen right.
+   */
+  const runHandover = (call: () => Promise<void>) => {
+    setHandoverBusy(true);
+    setHandoverFailed(false);
+    void call()
+      .catch((cause) => {
+        setHandoverFailed(true);
+        setConfirmedHandover(false);
+        console.error('handover: refused', cause);
+      })
+      .finally(() => setHandoverBusy(false));
+  };
+
   if (state === 'displaced') {
     return <SpeakerDisplaced channelName={channel.name} eventName={eventName} />;
   }
@@ -320,13 +417,24 @@ export function SpeakerStudio({
         eventName={eventName}
         pin={pin}
         mic={mic}
-        startedAt={startedAt}
+        // The channel's own clock, not this studio's: an interpreter taking over continues
+        // the broadcast rather than starting a second one. The local press covers only the
+        // gap before the first snapshot.
+        startedAt={handover?.onAirStartedAt ?? startedAt}
         listeners={listeners}
         reports={reports}
         reportResolution={reportResolution}
         reportsKnown={reportsKnown}
         state={state}
         link={link}
+        handoverPending={handoverKnown && handover?.role === 'live' && handover.pending}
+        handoverExpiresAt={handover?.expiresAt ?? null}
+        handoverBusy={handoverBusy}
+        handoverFailed={handoverFailed}
+        onHandOver={() => {
+          setConfirmedHandover(true);
+          runHandover(onConfirmHandover);
+        }}
         onToggleMute={() => {
           const next = !isMuted;
           const requestRevision = channelStatus?.revision ?? 0;
@@ -364,6 +472,12 @@ export function SpeakerStudio({
 
   return (
     <SpeakerPreflight
+      action={preflightAction({ linkUp, handoverKnown, handover })}
+      handoverBusy={handoverBusy}
+      handoverFailed={handoverFailed}
+      onRequestHandover={() => runHandover(onRequestHandover)}
+      onCancelHandover={() => runHandover(onCancelHandover)}
+      onTakeOver={() => runHandover(onTakeOver)}
       eventName={eventName}
       pin={pin}
       channel={channel}

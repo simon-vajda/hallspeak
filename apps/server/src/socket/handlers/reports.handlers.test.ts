@@ -38,10 +38,11 @@ function fakeIo() {
 
 /** The one subscriber the real server installs, so a record reaches a socket here too. */
 function subscribe(io: LifecycleServer) {
-  return notifications.subscribe((notification) => applyNotification(io, notification));
+  return notifications.subscribe((notification) => applyNotification(io, db, notification));
 }
 
 const SPEAKER = 'speaker-a';
+const STUDIO = 'studio-english';
 const LISTENER = 'guest-a';
 
 let db: Db;
@@ -51,7 +52,6 @@ let eventId: number;
 let englishId: number;
 let foreignSlug: string;
 let listener: SocketAuth;
-let speaker: SocketAuth;
 
 beforeEach(async () => {
   vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -62,8 +62,7 @@ beforeEach(async () => {
   const a = createEvent(db, { name: 'A', enabled: true });
   eventId = a.id;
   englishId = createChannel(db, a.id, { slug: 'english', name: 'English', enabled: true }).id;
-  listener = { eventId: a.id, pin: a.pin, speakerChannelId: null };
-  speaker = { eventId: a.id, pin: a.pin, speakerChannelId: englishId };
+  listener = { eventId: a.id, pin: a.pin, speakerChannelId: null, studioSession: null };
 
   const b = createEvent(db, { name: 'B', enabled: true });
   foreignSlug = createChannel(db, b.id, { slug: 'klingon', name: 'Klingon', enabled: true }).slug;
@@ -77,13 +76,22 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-const live = () => goLive({ eventId, socketId: SPEAKER, channelId: englishId, slug: 'english' });
+const live = () =>
+  goLive({
+    eventId,
+    socketId: SPEAKER,
+    channelId: englishId,
+    slug: 'english',
+    sessionId: STUDIO,
+  });
 
 describe('submitReport', () => {
   it('records a report and sends the tally to the claim holder alone', async () => {
     const { io, tallies } = fakeIo();
+    // The claim is taken before the subscription: acquiring it seeds a tally of its own,
+    // and these tests are about the one a report produces.
+    presence.take({ eventId, channelId: englishId, sessionId: STUDIO, socketId: SPEAKER });
     const unsubscribe = subscribe(io);
-    presence.claim(englishId, 'code-english', SPEAKER);
     await live();
 
     const result = submitReport(db, fakeSocket(LISTENER, [channelRoom(englishId)]), listener, {
@@ -107,7 +115,7 @@ describe('submitReport', () => {
   });
 
   it('refuses a socket that never joined the channel room, recording nothing', async () => {
-    presence.claim(englishId, 'code-english', SPEAKER);
+    presence.take({ eventId, channelId: englishId, sessionId: STUDIO, socketId: SPEAKER });
     await live();
 
     expect(() =>
@@ -138,8 +146,10 @@ describe('submitReport', () => {
 
   it('refuses a duplicate inside the cooldown and publishes no second tally', async () => {
     const { io, tallies } = fakeIo();
+    // The claim is taken before the subscription: acquiring it seeds a tally of its own,
+    // and these tests are about the one a report produces.
+    presence.take({ eventId, channelId: englishId, sessionId: STUDIO, socketId: SPEAKER });
     const unsubscribe = subscribe(io);
-    presence.claim(englishId, 'code-english', SPEAKER);
     await live();
     const socket = fakeSocket(LISTENER, [channelRoom(englishId)]);
     const payload = { slug: 'english', category: 'quiet' } as const;
@@ -173,8 +183,10 @@ describe('submitReport', () => {
 describe('resolveReports', () => {
   it('clears this connection’s reports and sends a positive confirmation', async () => {
     const { io, tallies } = fakeIo();
+    // The claim is taken before the subscription: acquiring it seeds a tally of its own,
+    // and these tests are about the one a report produces.
+    presence.take({ eventId, channelId: englishId, sessionId: STUDIO, socketId: SPEAKER });
     const unsubscribe = subscribe(io);
-    presence.claim(englishId, 'code-english', SPEAKER);
     await live();
     const socket = fakeSocket(LISTENER, [channelRoom(englishId)]);
     submitReport(db, socket, listener, { slug: 'english', category: 'quiet' });
@@ -221,15 +233,23 @@ describe('resolveReports', () => {
 });
 
 describe('reports-changed with no claim holder', () => {
-  it('emits to nobody and does not throw', async () => {
+  /**
+   * Going live is what takes the claim, so a tally can only outrun a holder — a window
+   * still open after the interpreter ended or dropped. It is addressed to nobody rather
+   * than fanned out to the channel room, where every listening guest would read it.
+   */
+  it('emits to nobody and does not throw', () => {
     const { io, tallies } = fakeIo();
     const unsubscribe = subscribe(io);
-    await live();
 
     expect(() =>
-      submitReport(db, fakeSocket(LISTENER, [channelRoom(englishId)]), listener, {
+      notifications.publish({
+        type: 'reports-changed',
+        eventId,
+        channelId: englishId,
         slug: 'english',
-        category: 'quiet',
+        rows: [{ category: 'quiet', count: 1, ageMs: 0 }],
+        soundsGood: null,
       }),
     ).not.toThrow();
     expect(tallies()).toEqual([]);
@@ -240,14 +260,19 @@ describe('reports-changed with no claim holder', () => {
 describe('sendInitialReports', () => {
   it('sends the current rows to a studio connecting to a channel with live reports', async () => {
     const emitted: unknown[] = [];
-    presence.claim(englishId, 'code-english', SPEAKER);
+    presence.take({ eventId, channelId: englishId, sessionId: STUDIO, socketId: SPEAKER });
     await live();
     submitReport(db, fakeSocket(LISTENER, [channelRoom(englishId)]), listener, {
       slug: 'english',
       category: 'silent',
     });
 
-    sendInitialReports(db, { emit: (_event, payload) => emitted.push(payload) }, speaker);
+    sendInitialReports(
+      db,
+      { emit: (_event, payload) => emitted.push(payload) },
+      eventId,
+      englishId,
+    );
 
     expect(emitted).toEqual([
       {
@@ -261,7 +286,12 @@ describe('sendInitialReports', () => {
   it('sends an empty tally rather than nothing, so an unheard window is distinguishable', () => {
     const emitted: unknown[] = [];
 
-    sendInitialReports(db, { emit: (_event, payload) => emitted.push(payload) }, speaker);
+    sendInitialReports(
+      db,
+      { emit: (_event, payload) => emitted.push(payload) },
+      eventId,
+      englishId,
+    );
 
     expect(emitted).toEqual([{ slug: 'english', rows: [], soundsGood: null }]);
   });
@@ -273,7 +303,12 @@ describe('sendInitialReports', () => {
     submitReport(db, socket, listener, { slug: 'english', category: 'quiet' });
     resolveReports(db, socket, listener, { slug: 'english' });
 
-    sendInitialReports(db, { emit: (_event, payload) => emitted.push(payload) }, speaker);
+    sendInitialReports(
+      db,
+      { emit: (_event, payload) => emitted.push(payload) },
+      eventId,
+      englishId,
+    );
 
     expect(emitted).toEqual([
       {
@@ -282,14 +317,6 @@ describe('sendInitialReports', () => {
         soundsGood: { count: 1, ageMs: expect.any(Number) },
       },
     ]);
-  });
-
-  it('sends nothing for a socket holding no claim', () => {
-    const emitted: unknown[] = [];
-
-    sendInitialReports(db, { emit: (_event, payload) => emitted.push(payload) }, listener);
-
-    expect(emitted).toEqual([]);
   });
 });
 
@@ -313,7 +340,7 @@ describe('teardown', () => {
   });
 
   it('drops the channel’s tally when the channel is revoked', async () => {
-    presence.claim(englishId, 'code-english', SPEAKER);
+    presence.take({ eventId, channelId: englishId, sessionId: STUDIO, socketId: SPEAKER });
     await live();
     submitReport(db, fakeSocket(LISTENER, [channelRoom(englishId)]), listener, {
       slug: 'english',

@@ -57,6 +57,8 @@ export function ListenerChannel({ view }: { view: PublicChannelView }) {
       channel={view.channel}
       live={currentStatus.online}
       muted={currentStatus.muted}
+      producerId={currentStatus.producerId}
+      incomingProducerId={currentStatus.incomingProducerId}
       closeReason={currentStatus.reason}
       socket={socket}
       status={status}

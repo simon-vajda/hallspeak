@@ -133,22 +133,28 @@ describe('Room producers', () => {
     expect(r.isOnline(1)).toBe(true);
   });
 
-  it('reports one authoritative online and muted snapshot', async () => {
+  it('reports one authoritative online, muted and producer snapshot', async () => {
     const { room: r } = room();
-    expect(r.channelStatus(1)).toEqual({ online: false, muted: false });
+    const offline = { online: false, muted: false, producerId: null, incomingProducerId: null };
+    expect(r.channelStatus(1)).toEqual(offline);
 
     const producer = new FakeProducer('p1');
     r.setProducer(1, as(producer));
-    expect(r.channelStatus(1)).toEqual({ online: true, muted: false });
+    expect(r.channelStatus(1)).toEqual({
+      online: true,
+      muted: false,
+      producerId: 'p1',
+      incomingProducerId: null,
+    });
 
     await producer.pause();
-    expect(r.channelStatus(1)).toEqual({ online: true, muted: true });
+    expect(r.channelStatus(1)).toMatchObject({ online: true, muted: true, producerId: 'p1' });
 
     await producer.resume();
-    expect(r.channelStatus(1)).toEqual({ online: true, muted: false });
+    expect(r.channelStatus(1)).toMatchObject({ online: true, muted: false, producerId: 'p1' });
 
     producer.close();
-    expect(r.channelStatus(1)).toEqual({ online: false, muted: false });
+    expect(r.channelStatus(1)).toEqual(offline);
   });
 
   it('replaces rather than duplicates when one channel produces twice', () => {
@@ -160,6 +166,66 @@ describe('Room producers', () => {
     expect(first.close).toHaveBeenCalledTimes(1);
     expect(r.producer(1)?.id).toBe('p2');
     expect(r.producerCount).toBe(1);
+  });
+
+  it('marks a replaced producer so its close reaches no listener', () => {
+    const { room: r } = room();
+    const first = new FakeProducer('p1');
+    r.setProducer(1, as(first));
+    r.setProducer(1, as(new FakeProducer('p2')));
+
+    expect((first.appData as { closeReason?: string }).closeReason).toBe('replaced');
+  });
+
+  it('holds the incoming producer beside the standing one and names both', () => {
+    const { room: r } = room();
+    r.setProducer(1, as(new FakeProducer('p1')));
+    r.setIncomingProducer(1, as(new FakeProducer('p2')));
+
+    expect(r.channelStatus(1)).toMatchObject({
+      online: true,
+      producerId: 'p1',
+      incomingProducerId: 'p2',
+    });
+    // A guest arriving mid-swap subscribes to the voice that is staying.
+    expect(r.targetProducer(1)?.id).toBe('p2');
+  });
+
+  it('promotes the incoming producer and replaces the outgoing one', () => {
+    const { room: r } = room();
+    const outgoing = new FakeProducer('p1');
+    r.setProducer(1, as(outgoing));
+    r.setIncomingProducer(1, as(new FakeProducer('p2')));
+
+    expect(r.promoteIncoming(1)?.id).toBe('p2');
+    expect(outgoing.close).toHaveBeenCalledTimes(1);
+    expect((outgoing.appData as { closeReason?: string }).closeReason).toBe('replaced');
+    expect(r.channelStatus(1)).toMatchObject({ producerId: 'p2', incomingProducerId: null });
+  });
+
+  it('marks a superseded incoming producer, so its close reaches no listener either', () => {
+    const { room: r } = room();
+    const first = new FakeProducer('p2');
+    r.setProducer(1, as(new FakeProducer('p1')));
+    r.setIncomingProducer(1, as(first));
+    r.setIncomingProducer(1, as(new FakeProducer('p3')));
+
+    expect(first.close).toHaveBeenCalledTimes(1);
+    expect((first.appData as { closeReason?: string }).closeReason).toBe('replaced');
+  });
+
+  it('closes the incoming producer alone when a swap window ends without one', () => {
+    const { room: r } = room();
+    const standing = new FakeProducer('p1');
+    const incoming = new FakeProducer('p2');
+    r.setProducer(1, as(standing));
+    r.setIncomingProducer(1, as(incoming));
+
+    r.closeIncomingProducer(1);
+
+    expect(incoming.close).toHaveBeenCalledTimes(1);
+    expect(standing.close).not.toHaveBeenCalled();
+    expect(r.channelStatus(1)).toMatchObject({ producerId: 'p1', incomingProducerId: null });
   });
 
   it('forgets a producer that closes on its own', () => {

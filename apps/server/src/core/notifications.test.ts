@@ -44,12 +44,38 @@ describe('NotificationHub', () => {
     const seen: Notification[] = [];
     hub.subscribe((n) => seen.push(n));
 
-    hub.publish({ type: 'peer-evicted', socketId: 'socket-a', reason: 'claim_taken_over' });
+    hub.publish({ type: 'peer-evicted', socketId: 'socket-a', reason: 'access_revoked' });
     hub.publish({ type: 'room-evicted', eventId: 2, reason: 'access_revoked' });
 
     expect(seen).toEqual([
-      { type: 'peer-evicted', socketId: 'socket-a', reason: 'claim_taken_over' },
+      { type: 'peer-evicted', socketId: 'socket-a', reason: 'access_revoked' },
       { type: 'room-evicted', eventId: 2, reason: 'access_revoked' },
+    ]);
+  });
+
+  it('delivers handover-changed and handover-granted naming both sessions', () => {
+    const hub = new NotificationHub();
+    const seen: Notification[] = [];
+    hub.subscribe((n) => seen.push(n));
+
+    hub.publish({ type: 'handover-changed', eventId: 1, channelId: 10 });
+    hub.publish({
+      type: 'handover-granted',
+      eventId: 1,
+      channelId: 10,
+      fromSessionId: 'session-a',
+      toSessionId: 'session-b',
+    });
+
+    expect(seen).toEqual([
+      { type: 'handover-changed', eventId: 1, channelId: 10 },
+      {
+        type: 'handover-granted',
+        eventId: 1,
+        channelId: 10,
+        fromSessionId: 'session-a',
+        toSessionId: 'session-b',
+      },
     ]);
   });
 

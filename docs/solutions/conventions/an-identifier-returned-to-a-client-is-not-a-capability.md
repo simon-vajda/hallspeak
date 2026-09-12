@@ -45,8 +45,8 @@ was event-wide, the id did not even have to belong to the channel the guest was 
 
 The near-miss is the instructive part. `media:produce` had the correct guard from the
 beginning and still does: it resolves the slug against the socket's own event and then
-refuses unless the socket holds the claim for exactly that channel
-(`apps/server/src/socket/handlers/media.handlers.ts:77-81`). The plan specified that guard
+refuses unless the caller's own studio session holds the claim for exactly that channel, or
+was granted it by a handover (`apps/server/src/core/media/index.ts`). The plan specified that guard
 for produce. Its three sibling verbs were written without one, and nothing in the code
 connected them. Two independent reviewers flagged it in the review round that produced this
 document — which is the encouraging part: the shape is findable by reading, even though the
@@ -63,11 +63,11 @@ Authorize by what the caller independently holds, then use the id only to confir
 named the thing they were already entitled to. Concretely, the producer verbs now derive the
 channel from the caller's own claim before any lookup happens:
 
-- `claimedChannel(auth)` in `apps/server/src/socket/handlers/media.handlers.ts:94-99` returns
-  `auth.speakerChannelId` or throws `not_speaker` when it is `null`. It is not optional —
-  each of the three verbs passes through it
-  (`media.handlers.ts:106`, `:115`, `:124`). A listener's auth carries
-  `speakerChannelId: null` by construction (`apps/server/src/core/access.ts:56`), so a
+- `claimedChannel(auth)` in `apps/server/src/socket/handlers/media.handlers.ts` resolves the
+  channel from the claim the caller's own studio session currently holds, throwing
+  `not_speaker` for a listener and `channel_taken` for a studio the channel has moved away
+  from. It is not optional — each of the three verbs passes through it. A listener's auth
+  carries `speakerChannelId: null` and `studioSession: null` by construction, so a
   listener cannot reach the lookup at all.
 - `producerOrThrow(ctx, channelId, producerId)` in
   `apps/server/src/core/media/index.ts:377-383` fetches the producer **for that channel** and

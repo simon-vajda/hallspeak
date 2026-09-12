@@ -24,7 +24,7 @@ Enabled carries no direction in time — the same closed state means "not yet" b
 ### Live
 Whether audio is actually being broadcast on a Channel. A Channel is Live for exactly as long as a Producer exists on it — from the deliberate "go live" act until that production ends. Muting does not end it: a muted Speaker is present and still holds the Channel.
 
-Live is distinct from Enabled, which is an admin's decision that a Channel is open at all, and distinct from the Speaker's broadcast claim, which is taken when their page connects and can be held by someone who has not gone Live yet. A Channel can therefore be Enabled, claimed by a Speaker, and still not Live.
+Live is distinct from Enabled, which is an admin's decision that a Channel is open at all, and distinct from the Broadcast claim, which is taken by the same go-live act but outlives a momentary gap in the audio: a Channel is briefly not Live while its Speaker's connection is rebuilding, and the claim stays with them throughout. A Channel can therefore be Enabled, claimed by a Speaker, and still not Live.
 
 ### Muted
 The reversible state in which a Live Channel's Producer is paused, so its Listeners hear no audio even though the broadcast has not ended.
@@ -37,11 +37,24 @@ A reading a surface cannot currently make, reported as its own outcome rather th
 Whether a Channel is on air is learned from a source that can be pending, failing, or stalled, and a source with nothing to say is indistinguishable from one that is not answering. A withheld reading is shown as an absence with the words "status unknown" available to a screen reader, never as nobody broadcasting. Configuration the reading has no bearing on — a disabled or empty Event — is still stated plainly. An action that would end a broadcast says that liveness could not be checked instead of confirming silently, so a withholding never becomes a quiet yes.
 
 ### Broadcast claim
-The exclusive right to speak on one Channel, held by whoever presented its Speaker code first. A Channel has one claim at a time; a second interpreter arriving with a different code is refused as busy.
+The exclusive right to speak on one Channel, taken by going Live and held until that Speaker stops, departs, or hands the Channel over. A Channel has one claim at a time.
 
-The claim is held against the Speaker code rather than a particular connection, so an interpreter whose device drops and returns reclaims their own Channel instead of colliding with the session they just lost. A second device presenting the same code takes the claim over, and the displaced session is told rather than silently retrying.
+Opening the speaker studio takes nothing. Two interpreters working a Channel share its Speaker code and both have the studio open; the one who goes Live first holds it, and the other sees a live Channel rather than an error. Moving it is a Handover and nothing else — there is no way to take the claim from someone who has not agreed or been given time to.
 
-A claim is not Live: it is taken when the studio connects, which is before any audio exists and may be long before any is produced.
+The claim is held against the studio's own page rather than against the Speaker code or a particular connection, so an interpreter whose device drops and returns resumes their own broadcast instead of colliding with the session they just lost, while a colleague's studio presenting the same code is recognisably somebody else. A reload is a different studio: it frees the Channel, or hands it on.
+
+A claim is not Live. It survives a reconnect that Live does not, and a Speaker who ends their broadcast gives it up while their studio stays open.
+
+The claim also carries when the Channel went on air, which is what the studio's elapsed timer reads. A Handover moves that moment with the claim, so an interpreter taking over continues the broadcast's clock rather than starting a second one; only ending the broadcast resets it.
+
+### Handover
+Moving a Channel's Broadcast claim from one interpreter to another without the broadcast ending.
+
+The interpreter who wants the Channel asks for it; the one on air can hand it over at once, and if they do not, the asker may take it after thirty seconds. The wait exists so nobody is cut off mid-sentence and so a studio nobody is sitting at cannot hold a Channel for the rest of an Event. There is no way to decline — a colleague who is ready should not be held off — and only one Handover runs on a Channel at a time.
+
+However it is agreed, the swap itself overlaps: the outgoing interpreter keeps transmitting while the incoming one starts, and each Listener moves across in a single step, so the Channel is never reported off air and nobody hears a gap or two voices at once. Every way the live interpreter leaves while somebody is waiting is a Handover too — confirming, ending the broadcast, closing the page, dropping off the network — because the person waiting has already said they are ready.
+
+A Handover is not an Eviction: neither studio is disconnected, and the one that gave the Channel up lands back where it started, free to ask for it again.
 
 ### Listening
 Actually receiving a Channel's audio: holding an open Consumer on its Producer that the guest's
@@ -143,7 +156,7 @@ A Room comes into being on the first go-live within its Event and on nothing els
 ### Producer
 The server-side carrier of one Speaker's audio into a Room, brought into being by the deliberate go-live act and ending when that Speaker stops. A Channel has at most one Producer, and its existence is exactly what makes that Channel Live.
 
-Pausing a Producer is what muting does: the audio stops without the broadcast ending, so the Channel stays Live throughout. Producing again on a Channel that already has one replaces it rather than adding a second. A Producer's identifier is not a secret — every Listener who consumes that Channel is told it — so holding one grants nothing on its own.
+Pausing a Producer is what muting does: the audio stops without the broadcast ending, so the Channel stays Live throughout. Producing again on a Channel that already has one replaces it rather than adding a second — except during a Handover, where both exist for a moment so Listeners can cross over without a gap. A Producer's identifier is not a secret — every Listener who consumes that Channel is told it, and it is how they follow a replacement — so holding one grants nothing on its own.
 
 ### Consumer
 The server-side carrier of a Room's audio out to one Listener. A Listener holds at most one Consumer per Channel, which is why switching language swaps a Consumer rather than rebuilding the connection underneath it.
@@ -153,4 +166,4 @@ A Consumer is created paused and begins only once the Listener confirms it is re
 ### Eviction
 Ending a session from the server's side, rather than waiting for the client to notice. It is what makes an admin's write true of what is audible and not only of what the API reports: disabling, deleting, or regenerating a code evicts whoever that write took access from.
 
-Eviction is scoped either to one peer, named by its connection, or to a whole Event. The second exists because a Listener who owns no media cannot be named individually — and that Listener is exactly who a regenerated PIN has to remove.
+Eviction is scoped either to one peer, named by its connection, or to a whole Event. Revoking a Channel's Speaker code reaches every studio holding it, not only the one on air: a studio left in pre-flight holds the code that was just revoked. The second exists because a Listener who owns no media cannot be named individually — and that Listener is exactly who a regenerated PIN has to remove.

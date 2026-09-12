@@ -12,6 +12,7 @@ let cleanup: () => void;
 let presence: PresenceRegistry;
 
 // A live event with two enabled channels and one disabled one.
+let eventId: number;
 let pin: string;
 let english: { id: number; speakerCode: string };
 let spanish: { id: number; speakerCode: string };
@@ -24,6 +25,7 @@ beforeEach(() => {
   presence = new PresenceRegistry();
 
   const event = createEvent(db, { name: 'Sunday', enabled: true });
+  eventId = event.id;
   pin = event.pin;
   english = createChannel(db, event.id, { slug: 'english', name: 'English', enabled: true });
   spanish = createChannel(db, event.id, { slug: 'spanish', name: 'Spanish', enabled: true });
@@ -47,13 +49,28 @@ afterEach(() => {
 const NEWER_THAN_SERVER = `${Number(SERVER_VERSION.split('.')[0]) + 1}.0.0`;
 const OLDER_THAN_SERVER = '0.0.1';
 
-const auth = (payload: Record<string, unknown>, socketId = 'socket-1') =>
+// The schema pairs a speaker code with a studio session, so a speaker fixture always
+// carries one and a listener fixture never does. The session defaults to one per socket,
+// which is the ordinary case: one page, one connection.
+const auth = (
+  payload: Record<string, unknown>,
+  socketId = 'socket-1',
+  studioSession = `${socketId}-studio`,
+) =>
   authorizeHandshake(
     db,
     presence,
-    { clientType: 'web', clientVersion: SERVER_VERSION, ...payload },
+    {
+      clientType: 'web',
+      clientVersion: SERVER_VERSION,
+      ...(payload.speakerCode === undefined ? {} : { studioSession }),
+      ...payload,
+    },
     socketId,
   );
+
+const speaker = (socketId: string, studioSession: string, speakerCode = english.speakerCode) =>
+  auth({ pin, speakerCode }, socketId, studioSession);
 
 describe('authorizeHandshake', () => {
   it('admits a listener with a valid pin', () => {
@@ -61,8 +78,7 @@ describe('authorizeHandshake', () => {
 
     expect(result).toEqual({
       ok: true,
-      data: { eventId: expect.any(Number), pin, speakerChannelId: null },
-      displacedSocketId: null,
+      data: { eventId: expect.any(Number), pin, speakerChannelId: null, studioSession: null },
     });
   });
 
@@ -167,7 +183,10 @@ describe('authorizeHandshake', () => {
   it('admits a speaker with the matching code', () => {
     const result = auth({ pin, speakerCode: english.speakerCode });
 
-    expect(result).toMatchObject({ ok: true, data: { speakerChannelId: english.id } });
+    expect(result).toMatchObject({
+      ok: true,
+      data: { speakerChannelId: english.id, studioSession: 'socket-1-studio' },
+    });
   });
 
   it('rejects a speaker code belonging to a different event', () => {
@@ -196,69 +215,86 @@ describe('authorizeHandshake', () => {
   });
 });
 
-describe('speaker exclusivity', () => {
+describe('studio sessions', () => {
   /**
-   * Only reachable by claiming the channel behind the handshake's back: a speaker code
-   * identifies exactly one channel, so no second code can route to this one through
-   * `authorizeHandshake`. The guard still has to hold — the claim outlives a
-   * regenerated code, and the old value must not become a key to somebody else's channel.
+   * Opening the studio is not a request to broadcast. A colleague checking their
+   * microphone must leave the live interpreter's claim and connection alone.
    */
-  it('refuses a different code on a held channel as busy, leaving the holder alone', () => {
-    presence.claim(english.id, 'a-superseded-code', 'squatter');
-
-    expect(auth({ pin, speakerCode: english.speakerCode }, 'latecomer')).toEqual({
-      ok: false,
-      error: 'channel_busy',
+  it('claims nothing, so a second studio on the same code disturbs nobody', () => {
+    speaker('incumbent', 'studio-incumbent');
+    presence.take({
+      eventId,
+      channelId: english.id,
+      sessionId: 'studio-incumbent',
+      socketId: 'incumbent',
     });
-    expect(presence.holder(english.id)).toBe('squatter');
+
+    expect(speaker('colleague', 'studio-colleague').ok).toBe(true);
+    expect(presence.claimOf(english.id)).toMatchObject({
+      sessionId: 'studio-incumbent',
+      socketId: 'incumbent',
+    });
   });
 
   /**
-   * The reconnect case, which is why the claim is keyed on the speaker code: the
+   * The reconnect case, which is why the claim is keyed on a studio session: the
    * interpreter's own dying socket lives for up to the ten-second ping window, and keying
    * on the socket id would refuse them their own channel for that long.
    */
-  it('grants the same code a takeover and names the socket it displaced', () => {
-    auth({ pin, speakerCode: english.speakerCode }, 'incumbent');
+  it('rebinds the claim when the same studio reconnects on a new socket', () => {
+    speaker('first', 'studio-a');
+    presence.take({ eventId, channelId: english.id, sessionId: 'studio-a', socketId: 'first' });
 
-    const result = auth({ pin, speakerCode: english.speakerCode }, 'reconnecting');
-
-    expect(result.ok).toBe(true);
-    expect(result.ok && result.displacedSocketId).toBe('incumbent');
-    expect(presence.holder(english.id)).toBe('reconnecting');
+    expect(speaker('second', 'studio-a').ok).toBe(true);
+    expect(presence.claimOf(english.id)).toMatchObject({
+      sessionId: 'studio-a',
+      socketId: 'second',
+    });
+    expect(presence.release('first')).toBe(null);
+    expect(presence.holder(english.id)).toBe('second');
   });
 
-  it('names nobody as displaced on an ordinary first claim', () => {
-    const result = auth({ pin, speakerCode: english.speakerCode }, 'first');
+  it('registers every connected studio on the channel', () => {
+    speaker('first', 'studio-a');
+    speaker('second', 'studio-b');
 
-    expect(result.ok && result.displacedSocketId).toBe(null);
+    expect(
+      presence
+        .studios(english.id)
+        .map((studio) => studio.sessionId)
+        .sort(),
+    ).toEqual(['studio-a', 'studio-b']);
   });
 
-  it('does not let the displaced socket evict its successor when it finally disconnects', () => {
-    auth({ pin, speakerCode: english.speakerCode }, 'incumbent');
-    auth({ pin, speakerCode: english.speakerCode }, 'reconnecting');
-
-    expect(presence.release('incumbent')).toBe(null);
-    expect(presence.holder(english.id)).toBe('reconnecting');
-  });
-
-  it('admits the same code once the incumbent disconnects', () => {
-    auth({ pin, speakerCode: english.speakerCode }, 'incumbent');
-    presence.release('incumbent');
-
-    expect(auth({ pin, speakerCode: english.speakerCode }, 'latecomer').ok).toBe(true);
-  });
-
-  it('does not let one busy channel block another', () => {
-    auth({ pin, speakerCode: english.speakerCode }, 'incumbent');
-
-    expect(auth({ pin, speakerCode: spanish.speakerCode }, 'other').ok).toBe(true);
-  });
-
-  it('claims nothing for a listener', () => {
+  it('registers nothing for a listener', () => {
     const result = auth({ pin }, 'listener');
 
-    expect(result.ok && result.displacedSocketId).toBe(null);
+    expect(result.ok && result.data.studioSession).toBe(null);
     expect(presence.release('listener')).toBe(null);
+  });
+
+  it('registers a studio per channel, not per event', () => {
+    speaker('english-studio', 'studio-a');
+    speaker('spanish-studio', 'studio-b', spanish.speakerCode);
+
+    expect(presence.studios(english.id).map((studio) => studio.socketId)).toEqual([
+      'english-studio',
+    ]);
+    expect(presence.studios(spanish.id).map((studio) => studio.socketId)).toEqual([
+      'spanish-studio',
+    ]);
+  });
+
+  /**
+   * A channel has exactly one valid speaker code, so there is nothing left for the
+   * handshake to refuse as busy: a wrong code is a wrong code.
+   */
+  it('refuses a superseded code rather than reporting the channel busy', () => {
+    speaker('incumbent', 'studio-incumbent');
+
+    expect(auth({ pin, speakerCode: 'a-superseded-code' }, 'latecomer')).toEqual({
+      ok: false,
+      error: 'invalid_speaker_code',
+    });
   });
 });

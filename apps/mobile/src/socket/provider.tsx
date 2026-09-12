@@ -46,12 +46,15 @@ export interface EventSocket {
   /** The media leg. One session per connection, so it belongs to the same owner. */
   media: {
     state: MediaState;
+    /** Producer each open consumer receives, by slug; what a producer swap is judged against. */
+    consumedProducers: Record<string, string>;
     health: MediaHealth;
     stats: MediaStats | null;
     /** The ladder is spent: only a fresh session can recover this direction. */
     restartRecommended: boolean;
     startConsuming: (slug: string) => Promise<MediaStreamTrack>;
     stopConsuming: (slug: string) => Promise<void>;
+    swapConsumer: (slug: string, outgoing: string) => Promise<MediaStreamTrack>;
     restartSession: () => void;
   };
   /**
@@ -78,11 +81,13 @@ const IDLE: EventSocket = {
   leaveChannel: () => {},
   media: {
     state: initialMediaState,
+    consumedProducers: {},
     health: 'idle',
     stats: null,
     restartRecommended: false,
     startConsuming: () => Promise.reject(new Error('No socket.')),
     stopConsuming: async () => {},
+    swapConsumer: () => Promise.reject(new Error('No socket.')),
     restartSession: () => {},
   },
   audio: { route: null, volume: 0 },
@@ -193,25 +198,39 @@ function CompatibleEventSocketProvider({
 
   const {
     state: mediaState,
+    consumedProducers,
     health,
     stats,
     restartRecommended,
     startConsuming,
     stopConsuming,
+    swapConsumer,
     restartSession,
   } = useMedia(socket);
 
   const media = useMemo(
     () => ({
       state: mediaState,
+      consumedProducers,
       health,
       stats,
       restartRecommended,
       startConsuming,
       stopConsuming,
+      swapConsumer,
       restartSession,
     }),
-    [mediaState, health, stats, restartRecommended, startConsuming, stopConsuming, restartSession],
+    [
+      mediaState,
+      consumedProducers,
+      health,
+      stats,
+      restartRecommended,
+      startConsuming,
+      stopConsuming,
+      swapConsumer,
+      restartSession,
+    ],
   );
 
   const [sent, setSent] = useState<SentMap>({});

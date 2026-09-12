@@ -5,15 +5,28 @@ import { PIN_PATTERN, SEMVER_PATTERN, SLUG_PATTERN } from './patterns';
  * Sent as `socket.handshake.auth`; authorization is established here once, not per message.
  * Rejecting prerelease versions keeps release compatibility comparisons numeric.
  */
-export const Handshake = z.object({
-  // Defaulted rather than required: a tab still holding a bundle from before this field
-  // existed must reach the version gate and be told to reload, not fail schema parsing and
-  // get the generic invalid-handshake message instead.
-  clientType: z.enum(['web', 'mobile']).default('web'),
-  clientVersion: z.string().regex(SEMVER_PATTERN),
-  pin: z.string().regex(PIN_PATTERN),
-  speakerCode: z.string().min(1).optional(),
-});
+export const Handshake = z
+  .object({
+    // Defaulted rather than required: a tab still holding a bundle from before this field
+    // existed must reach the version gate and be told to reload, not fail schema parsing and
+    // get the generic invalid-handshake message instead.
+    clientType: z.enum(['web', 'mobile']).default('web'),
+    clientVersion: z.string().regex(SEMVER_PATTERN),
+    pin: z.string().regex(PIN_PATTERN),
+    speakerCode: z.string().min(1).optional(),
+    /**
+     * Identifies a studio page, never a person: generated once per page load and held in
+     * memory, so a reload or a duplicated tab is a different studio. It is what lets the
+     * server tell a studio's own reconnect from a colleague's studio holding the same code.
+     */
+    studioSession: z.string().min(8).max(64).optional(),
+  })
+  // Paired both ways: a broadcast claim is keyed on the session, so a speaker code without
+  // one cannot be honoured, and a listener has no studio to identify.
+  .refine((h) => (h.speakerCode === undefined) === (h.studioSession === undefined), {
+    error: 'studioSession is required with a speaker code and rejected without one',
+    path: ['studioSession'],
+  });
 
 export const PingPayload = z.object({});
 
@@ -22,16 +35,39 @@ export const PingResponse = z.object({ serverTime: z.int() });
 // Zod, not @hono/zod-openapi: this file must not drag Hono into a browser bundle.
 const SocketSlug = z.string().min(1).max(40).regex(SLUG_PATTERN);
 
+const MediaId = z.string().min(1).max(200);
+
 export const ChannelJoinPayload = z.object({ slug: SocketSlug });
 
-export const ChannelJoinResponse = z.object({ online: z.boolean(), muted: z.boolean() });
+/**
+ * What is being broadcast on one channel, read as a whole so its parts cannot disagree.
+ *
+ * `producerId` is what lets a listener follow a replacement as one message rather than as a
+ * close followed by an open — two messages a single render batch can collapse into silence.
+ * `incomingProducerId` is set only inside a handover's swap window, while both interpreters
+ * are transmitting: a listener consuming `producerId` opens this one paused, then resumes it
+ * and closes the old one together, so it is never subscribed to two voices and hears no gap.
+ * Both are null while offline.
+ */
+const BroadcastSnapshot = z.object({
+  online: z.boolean(),
+  muted: z.boolean(),
+  producerId: MediaId.nullable(),
+  incomingProducerId: MediaId.nullable(),
+});
+
+/**
+ * The join ack is the same snapshot minus the slug the caller already named, so a guest
+ * joining inside a swap window learns about both producers from its ack rather than waiting
+ * for the next status and paying a gap at promotion.
+ */
+export const ChannelJoinResponse = BroadcastSnapshot;
 
 export const ChannelLeavePayload = z.object({ slug: SocketSlug });
 
-export const ChannelStatus = z.object({
+/** The broadcast snapshot addressed to a channel, with why it last went offline. */
+export const ChannelStatus = BroadcastSnapshot.extend({
   slug: SocketSlug,
-  online: z.boolean(),
-  muted: z.boolean(),
   reason: z.enum(['ended', 'dropped']).optional(),
 });
 
@@ -89,14 +125,60 @@ export type ReportRow = z.infer<typeof ChannelReports>['rows'][number];
 export type ReportResolution = z.infer<typeof ChannelReports>['soundsGood'];
 
 /**
+ * Every handover verb carries an empty payload on purpose: the server derives the channel
+ * and the studio session from the caller's own authorization, so nothing a client sends can
+ * name a studio other than itself
+ * (`docs/solutions/conventions/an-identifier-returned-to-a-client-is-not-a-capability.md`).
+ */
+export const HandoverActionPayload = z.strictObject({});
+
+export const HandoverActionResponse = z.object({});
+
+/** Whether this studio holds the channel's broadcast claim, another studio does, or nobody. */
+export const HandoverHolder = z.enum(['self', 'other', 'none']);
+
+export type HandoverHolder = z.infer<typeof HandoverHolder>;
+
+/**
+ * This studio's own part in whatever is happening on the channel. `granted` means it may
+ * produce now; `handing-over` means it is still transmitting while its successor starts.
+ */
+export const HandoverRole = z.enum(['live', 'waiting', 'granted', 'handing-over', 'bystander']);
+
+export type HandoverRole = z.infer<typeof HandoverRole>;
+
+/**
+ * Built per studio socket and sent unconditionally on connect, like the report tally, so a
+ * studio can tell "nothing pending" from "not heard yet". `remainingMs` rather than a
+ * deadline timestamp, anchored at receipt for the same reason `ChannelReports` uses `ageMs`.
+ * `canTakeOver` is the server's answer and never the client's arithmetic.
+ */
+export const HandoverState = z.object({
+  slug: SocketSlug,
+  holder: HandoverHolder,
+  role: HandoverRole,
+  /** True while any request or grant is in flight on the channel, whoever it belongs to. */
+  pending: z.boolean(),
+  remainingMs: z.int().nonnegative().nullable(),
+  canTakeOver: z.boolean(),
+  /**
+   * How long the channel has been on air, across every interpreter who has held it: the
+   * claim carries its start through a handover, so the incoming studio continues the
+   * broadcast's clock rather than starting a second one. Null when nobody holds the
+   * channel. A duration rather than a start time, anchored at receipt like `remainingMs`.
+   */
+  onAirMs: z.int().nonnegative().nullable(),
+});
+
+export type HandoverState = z.infer<typeof HandoverState>;
+
+/**
  * mediasoup's capability, ICE, DTLS and RTP structures cross the wire as validated but
  * opaque objects: this package compiles with `"types": []` and no DOM and must never
  * import mediasoup. Loose rather than strict, so every key survives the round trip —
  * stripping one silently breaks negotiation with no error anywhere.
  */
 const MediaParams = z.looseObject({});
-
-const MediaId = z.string().min(1).max(200);
 
 /** The shape `RTCPeerConnection` takes, so the client hands it straight to mediasoup-client. */
 export const IceServer = z.object({

@@ -2,6 +2,7 @@ import type { types } from 'mediasoup';
 import type { SocketAuth } from '../../core/access';
 import { findEnabledChannelBySlug } from '../../core/channels.service';
 import * as media from '../../core/media';
+import { presence } from '../../core/presence';
 import type { Db } from '../../db/client';
 import { AppError } from '../../lib/problem';
 
@@ -20,7 +21,7 @@ type Wire = Record<string, unknown>;
 const asMediasoup = <T>(value: Wire): T => value as T;
 
 function ctx(socket: MediaSocket, auth: SocketAuth): media.MediaContext {
-  return { eventId: auth.eventId, socketId: socket.id };
+  return { eventId: auth.eventId, socketId: socket.id, sessionId: auth.studioSession };
 }
 
 /**
@@ -94,8 +95,9 @@ export async function startProducing(
   payload: { slug: string; rtpParameters: Wire; paused: boolean },
 ) {
   const channel = channelOrThrow(db, auth, payload.slug);
-  // Holding the claim is the whole authorization to broadcast; the handshake took it.
-  if (auth.speakerChannelId !== channel.id) {
+  // The speaker code says which channel this session may ever broadcast on; the claim says
+  // whether it may right now, and `media.produce` is where that is decided.
+  if (auth.speakerChannelId !== channel.id || auth.studioSession === null) {
     throw new AppError('not_speaker', 'This session may not broadcast on that channel.');
   }
   return media.produce(ctx(socket, auth), {
@@ -110,12 +112,24 @@ export async function startProducing(
  * The channel this session may act on a producer for. Every producer verb goes through
  * here: the consume ack hands a producer id to every listener on the event, so resolving
  * one by id alone would let anybody with the PIN silence any channel.
+ *
+ * Resolved from the claim rather than from the speaker code, so a studio that lost the
+ * channel to a handover cannot go on muting the interpreter who took it over.
  */
-function claimedChannel(auth: SocketAuth): number {
-  if (auth.speakerChannelId === null) {
+function heldChannel(auth: SocketAuth): number | null {
+  if (auth.speakerChannelId === null || auth.studioSession === null) {
     throw new AppError('not_speaker', 'This session may not broadcast.');
   }
-  return auth.speakerChannelId;
+  const claim = presence.claimOf(auth.speakerChannelId);
+  return claim?.sessionId === auth.studioSession ? auth.speakerChannelId : null;
+}
+
+function claimedChannel(auth: SocketAuth): number {
+  const channelId = heldChannel(auth);
+  if (channelId === null) {
+    throw new AppError('channel_taken', 'Somebody else is broadcasting on this channel.');
+  }
+  return channelId;
 }
 
 export async function pauseProducing(
@@ -141,7 +155,12 @@ export async function stopProducing(
   auth: SocketAuth,
   payload: { producerId: string },
 ) {
-  await media.closeProducer(ctx(socket, auth), claimedChannel(auth), payload.producerId);
+  // A studio that no longer holds the channel has nothing left to end, and saying so would
+  // only invite it to retry against an interpreter who has taken over.
+  const channelId = heldChannel(auth);
+  if (channelId !== null) {
+    await media.closeProducer(ctx(socket, auth), channelId, payload.producerId);
+  }
   return {};
 }
 

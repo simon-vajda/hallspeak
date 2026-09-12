@@ -1,7 +1,8 @@
 import type { types } from 'mediasoup';
 import { AppError } from '../../lib/problem';
+import { type GrantCancellation, handover } from '../handover';
 import { type EvictionReason, notifications } from '../notifications';
-import { presence } from '../presence';
+import { presence, type StudioSocket } from '../presence';
 import { reports } from '../reports';
 import { type AddressResolver, AnnouncedAddress } from './announced-address';
 import {
@@ -18,21 +19,35 @@ import { ListenerCountPublisher } from './listeners';
 import type { TransportDirection } from './peer';
 import { discoverReflexiveAddress, reflexiveMismatch } from './reflexive-address';
 import { RoomRegistry } from './registry';
-import type { Room } from './room';
+
+export type { ChannelBroadcastStatus } from './room';
+
+import { type ChannelBroadcastStatus, markClosing, type Room } from './room';
 import { type WorkerFactory, WorkerPool } from './workers';
 
 /** Short enough that a leaked credential is worthless before anyone could use it. */
 const TURN_CREDENTIAL_TTL_SECONDS = 3600;
 
+/**
+ * How long both interpreters may transmit at once when every listener has not yet swapped.
+ * Comfortably above a consume-and-resume round trip on a poor mobile link, and far below
+ * the grant deadline, so a listener whose swap is merely slow is never cut off while the
+ * pair of producers stays on the router for about as long as a sentence.
+ */
+export const SWAP_DEADLINE_MS = 4_000;
+
 export interface MediaContext {
   eventId: number;
   socketId: string;
+  /** The studio page behind this connection; null for a listener, who may not produce. */
+  sessionId?: string | null;
 }
 
 export interface StartMediaOptions {
   net: MediaNetworkConfig;
   turn: TurnConfig;
   graceMs?: number;
+  swapDeadlineMs?: number;
   hostCpuCount?: number;
   createWorker?: WorkerFactory;
   resolveAddress?: AddressResolver;
@@ -47,7 +62,20 @@ interface MediaState {
   turn: TurnConfig;
   listeners: ListenerCountPublisher;
   announced: AnnouncedAddress;
+  swapDeadlineMs: number;
+  unsubscribeGrants: () => void;
 }
+
+/** One channel's overlapping producers, open until every listener has swapped or it expires. */
+interface SwapWindow {
+  eventId: number;
+  channelId: number;
+  slug: string;
+  outgoingProducerId: string;
+  timer: NodeJS.Timeout;
+}
+
+const swaps = new Map<number, SwapWindow>();
 
 // A module singleton, like `db`: handlers and admin routes reach it by import rather than
 // by injection, which is this codebase's standing choice.
@@ -108,7 +136,17 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
     },
   });
 
-  state = { pool, registry, turn: options.turn, listeners, announced };
+  state = {
+    pool,
+    registry,
+    turn: options.turn,
+    listeners,
+    announced,
+    swapDeadlineMs: options.swapDeadlineMs ?? SWAP_DEADLINE_MS,
+    // Registered rather than imported the other way round: `core/handover` must not know
+    // that media exists, and a cancelled grant has a producer to close.
+    unsubscribeGrants: handover.onGrantCancelled(cancelSwap),
+  };
 
   if (isUnroutableAnnouncedAddress(announcedIp)) {
     console.warn(
@@ -144,10 +182,15 @@ export async function stopMedia(): Promise<void> {
   if (!state) {
     return;
   }
-  const { pool, registry, listeners, announced } = state;
+  const { pool, registry, listeners, announced, unsubscribeGrants } = state;
   // Nulled first, so every consumer closed inside closeAll() finds `scheduleRecount` inert
   // rather than scheduling a fresh window behind a drain that already ran.
   state = null;
+  unsubscribeGrants();
+  for (const swap of swaps.values()) {
+    clearTimeout(swap.timer);
+  }
+  swaps.clear();
   announced.close();
   await registry.closeAll();
   listeners.close();
@@ -178,12 +221,16 @@ export function isOnline(eventId: number, channelId: number): boolean {
   return state?.registry.get(eventId)?.isOnline(channelId) ?? false;
 }
 
-/** Current producer existence and pause state, read together so they cannot disagree. */
-export function channelStatus(
-  eventId: number,
-  channelId: number,
-): { online: boolean; muted: boolean } {
-  return state?.registry.get(eventId)?.channelStatus(channelId) ?? { online: false, muted: false };
+/** Current producer existence, pause state and identity, read together so they cannot disagree. */
+export function channelStatus(eventId: number, channelId: number): ChannelBroadcastStatus {
+  return (
+    state?.registry.get(eventId)?.channelStatus(channelId) ?? {
+      online: false,
+      muted: false,
+      producerId: null,
+      incomingProducerId: null,
+    }
+  );
 }
 
 /**
@@ -317,9 +364,68 @@ export interface ProduceInput {
   paused: boolean;
 }
 
+/**
+ * Going live is what takes the channel, and the decision is made before this function's
+ * first `await`: two studios pressing Go live in the same tick are resolved by the order
+ * they arrive in rather than by whichever produce finishes first.
+ */
 export async function produce(
   ctx: MediaContext,
   input: ProduceInput,
+): Promise<{ producerId: string }> {
+  const authorization = authorizeProduce(ctx, input.channelId);
+  try {
+    return await startProducer(ctx, input, authorization);
+  } catch (cause) {
+    if (authorization.claimTaken) {
+      presence.releaseChannel(input.channelId);
+    }
+    throw cause;
+  }
+}
+
+interface ProduceAuthorization {
+  /** `incoming` is the handover case: the standing producer keeps carrying the channel. */
+  mode: 'current' | 'incoming';
+  studio: StudioSocket;
+  granted: boolean;
+  /** True only when this produce took a free channel, so a failure can give it back. */
+  claimTaken: boolean;
+}
+
+function authorizeProduce(ctx: MediaContext, channelId: number): ProduceAuthorization {
+  const sessionId = ctx.sessionId;
+  if (!sessionId) {
+    throw new AppError('not_speaker', 'This session may not broadcast.');
+  }
+  const studio: StudioSocket = {
+    eventId: ctx.eventId,
+    channelId,
+    sessionId,
+    socketId: ctx.socketId,
+  };
+
+  const grant = handover.view(channelId)?.grant ?? null;
+  if (grant && grant.sessionId === sessionId) {
+    const standing = state?.registry.get(ctx.eventId)?.producer(channelId);
+    // A grant is permission to produce and nothing more: the claim moves when the swap
+    // completes, so an interpreter who never produces leaves the live one exactly as live.
+    const mode = standing && !standing.closed ? 'incoming' : 'current';
+    return { mode, studio, granted: true, claimTaken: false };
+  }
+
+  const held = presence.claimOf(channelId);
+  if (grant || (held && held.sessionId !== sessionId)) {
+    throw new AppError('channel_taken', 'Somebody else is broadcasting on this channel.');
+  }
+  presence.take(studio);
+  return { mode: 'current', studio, granted: false, claimTaken: held === undefined };
+}
+
+async function startProducer(
+  ctx: MediaContext,
+  input: ProduceInput,
+  authorization: ProduceAuthorization,
 ): Promise<{ producerId: string }> {
   const room = await roomFor(ctx.eventId, true);
   const transport = room.peerFor(ctx.socketId).transport('send');
@@ -334,24 +440,32 @@ export async function produce(
     appData: { channelId: input.channelId, slug: input.slug },
   });
 
-  room.setProducer(input.channelId, producer);
   watchProducer(producer, ctx.eventId, input.slug);
   producer.observer.once('close', () => {
-    const appData = producer.appData as { closeReason?: unknown };
-    if (appData.closeReason === 'ended') {
-      // A deliberate end closes every listener feedback episode for this broadcast.
-      reports.forgetChannel(ctx.eventId, input.channelId);
+    if (isSilentClose(ctx.eventId, input.channelId, producer)) {
+      clearSwap(input.channelId);
+    } else {
+      publishProducerClosed(ctx.eventId, input.channelId, input.slug, producer.appData);
     }
-    notifications.publish({
-      type: 'producer-closed',
-      eventId: ctx.eventId,
-      channelId: input.channelId,
-      slug: input.slug,
-      reason: appData.closeReason === 'ended' ? 'ended' : 'dropped',
-    });
     // The room may now be idle; the grace timer decides whether the router survives.
     state?.registry.releaseIfIdle(ctx.eventId);
   });
+
+  const outgoing = authorization.mode === 'incoming' ? room.producer(input.channelId) : undefined;
+  if (outgoing) {
+    room.setIncomingProducer(input.channelId, producer);
+  } else {
+    room.setProducer(input.channelId, producer);
+  }
+  if (authorization.granted) {
+    handover.produced(authorization.studio);
+  }
+  if (outgoing) {
+    openSwapWindow(ctx.eventId, input.channelId, input.slug, outgoing.id);
+  } else if (authorization.granted) {
+    // Nothing to swap away from, so the claim moves the moment the incoming voice is up.
+    handover.complete(input.channelId);
+  }
 
   notifications.publish({
     type: 'producer-opened',
@@ -359,7 +473,136 @@ export async function produce(
     channelId: input.channelId,
     slug: input.slug,
   });
+  if (outgoing) {
+    // A channel nobody is consuming has nothing to wait for.
+    settleSwap(input.channelId);
+  }
   return { producerId: producer.id };
+}
+
+/**
+ * A close no listener has a state for: the producer a swap replaced, and the incoming
+ * producer of a window that ended without one. Neither was ever the channel's own, so
+ * reporting either would be reporting an off-air the channel never had.
+ */
+function isSilentClose(eventId: number, channelId: number, producer: types.Producer): boolean {
+  if ((producer.appData as { closeReason?: unknown }).closeReason === 'replaced') {
+    return true;
+  }
+  return state?.registry.get(eventId)?.incomingProducer(channelId) === producer;
+}
+
+function publishProducerClosed(
+  eventId: number,
+  channelId: number,
+  slug: string,
+  appData: unknown,
+): void {
+  const closeReason = (appData as { closeReason?: unknown }).closeReason;
+  if (closeReason === 'ended') {
+    // A deliberate end closes every listener feedback episode for this broadcast.
+    reports.forgetChannel(eventId, channelId);
+  }
+  notifications.publish({
+    type: 'producer-closed',
+    eventId,
+    channelId,
+    slug,
+    reason: closeReason === 'ended' ? 'ended' : 'dropped',
+  });
+}
+
+// --- the swap window ----------------------------------------------------------
+
+function openSwapWindow(
+  eventId: number,
+  channelId: number,
+  slug: string,
+  outgoingProducerId: string,
+): void {
+  clearSwap(channelId);
+  const timer = setTimeout(() => promoteSwap(channelId), state?.swapDeadlineMs ?? SWAP_DEADLINE_MS);
+  timer.unref?.();
+  swaps.set(channelId, { eventId, channelId, slug, outgoingProducerId, timer });
+}
+
+function clearSwap(channelId: number): SwapWindow | undefined {
+  const swap = swaps.get(channelId);
+  if (swap) {
+    clearTimeout(swap.timer);
+    swaps.delete(channelId);
+  }
+  return swap;
+}
+
+/**
+ * Every listener has left the outgoing producer, so the window has done its job. Called
+ * whenever a consumer closes: a listener's swap is a new consumer on the incoming producer
+ * followed by a close of the old one, so the close is what marks them across.
+ */
+function settleSwap(channelId: number): void {
+  const swap = swaps.get(channelId);
+  if (!swap) {
+    return;
+  }
+  if ((state?.registry.get(swap.eventId)?.consumersOn(swap.outgoingProducerId) ?? 0) > 0) {
+    return;
+  }
+  promoteSwap(channelId);
+}
+
+/** The incoming producer becomes the channel's, and only then does the claim move. */
+function promoteSwap(channelId: number): void {
+  const swap = clearSwap(channelId);
+  if (!swap) {
+    return;
+  }
+  state?.registry.get(swap.eventId)?.promoteIncoming(channelId);
+  handover.complete(channelId);
+  notifications.publish({
+    type: 'producer-opened',
+    eventId: swap.eventId,
+    channelId,
+    slug: swap.slug,
+  });
+  // Every listener that swapped is invisible to the count until it is recounted against
+  // the producer they moved to.
+  scheduleRecount(swap.eventId, channelId, swap.slug);
+}
+
+/**
+ * A grant that ended without a swap: the granted studio disconnected, or never produced
+ * before its deadline. Whatever the outgoing interpreter still has stays exactly as it was.
+ */
+function cancelSwap(cancellation: GrantCancellation): void {
+  const { eventId, channelId } = cancellation;
+  const swap = clearSwap(channelId);
+  const room = state?.registry.get(eventId);
+  room?.closeIncomingProducer(channelId);
+
+  const slug = swap?.slug ?? room?.producerSlug(channelId) ?? '';
+  const standing = room?.producer(channelId);
+  if (standing && !standing.closed && !isAbandoned(standing)) {
+    notifications.publish({ type: 'producer-opened', eventId, channelId, slug });
+    return;
+  }
+  // What stands was kept alive only for a handover that is not going to happen, and the
+  // interpreter behind it stopped speaking when they asked to leave.
+  if (standing) {
+    markClosing(standing, 'ended');
+  }
+  room?.closeProducer(channelId);
+  presence.releaseChannel(channelId);
+  state?.registry.releaseIfIdle(eventId);
+}
+
+/** A producer its own interpreter has already stopped speaking into. */
+function markAbandoned(producer: types.Producer): void {
+  (producer.appData as { abandoned?: boolean }).abandoned = true;
+}
+
+function isAbandoned(producer: types.Producer): boolean {
+  return (producer.appData as { abandoned?: boolean }).abandoned === true;
 }
 
 export async function pauseProducer(
@@ -392,6 +635,11 @@ export async function resumeProducer(
   });
 }
 
+/**
+ * End broadcast. With somebody waiting it is a handover rather than an end: the producer
+ * stays standing and silent, so listeners keep their consumer until the incoming
+ * interpreter is up.
+ */
 export async function closeProducer(
   ctx: MediaContext,
   channelId: number,
@@ -403,8 +651,22 @@ export async function closeProducer(
   if (!producer || producer.id !== producerId) {
     return;
   }
-  (producer.appData as { closeReason?: 'ended' }).closeReason = 'ended';
+  // A granted handover owns the standing producer until the swap completes, whoever asks.
+  if (handover.view(channelId)?.grant) {
+    if (presence.claimOf(channelId)?.socketId === ctx.socketId) {
+      // The holder has stopped speaking into it, so a grant that never produces must end
+      // the broadcast rather than put this silent producer back on air.
+      markAbandoned(producer);
+    }
+    return;
+  }
+  if (handover.departed({ eventId: ctx.eventId, channelId }, producer.id)) {
+    markAbandoned(producer);
+    return;
+  }
+  markClosing(producer, 'ended');
   producer.close();
+  presence.releaseChannel(channelId);
 }
 
 export interface ConsumeInput {
@@ -422,7 +684,9 @@ export async function consume(
   rtpParameters: types.RtpParameters;
 }> {
   const room = roomOrThrow(ctx.eventId);
-  const producer = room.producer(input.channelId);
+  // The incoming producer during a swap window: a guest arriving mid-handover subscribes
+  // to the voice that is staying rather than the one about to stop.
+  const producer = room.targetProducer(input.channelId);
   if (!producer || producer.closed) {
     throw new AppError('not_live', 'Nobody is broadcasting on that channel.');
   }
@@ -466,7 +730,10 @@ export async function consume(
   // worker and the producer closing alike: mediasoup closes the consumer for all of them.
   // Registered here and not on the early-return path above, which hands back a consumer
   // that already has one.
-  consumer.observer.once('close', () => scheduleRecount(ctx.eventId, input.channelId, slug));
+  consumer.observer.once('close', () => {
+    scheduleRecount(ctx.eventId, input.channelId, slug);
+    settleSwap(input.channelId);
+  });
 
   return {
     consumerId: consumer.id,
@@ -505,20 +772,24 @@ export async function closeConsumer(ctx: MediaContext, consumerId: string): Prom
 // --- revocation ---------------------------------------------------------------
 
 /**
- * Channel-scoped: disabling or deleting a channel, or regenerating its speaker code. Only
- * the claim holder loses access, so only they are evicted — a listener's PIN is untouched
- * and their consumer dies with the producer anyway.
+ * Channel-scoped: disabling or deleting a channel, or regenerating its speaker code. Every
+ * studio on the channel is evicted and not only the one that was live — they all hold the
+ * code that was just revoked, and one left sitting in pre-flight could otherwise still go
+ * live on it. A listener's PIN is untouched and their consumer dies with the producer.
  */
 export function revokeChannel(eventId: number, channelId: number, reason: EvictionReason): void {
   const room = state?.registry.get(eventId);
+  clearSwap(channelId);
   room?.closeProducer(channelId);
 
   reports.forgetChannel(eventId, channelId);
+  // Nothing can be waiting for a channel nobody may broadcast on any more.
+  handover.forgetChannel(channelId);
 
-  const holder = presence.releaseChannel(channelId);
-  if (holder) {
-    room?.closePeer(holder);
-    notifications.publish({ type: 'peer-evicted', socketId: holder, reason });
+  presence.releaseChannel(channelId);
+  for (const studio of presence.studios(channelId)) {
+    room?.closePeer(studio.socketId);
+    notifications.publish({ type: 'peer-evicted', socketId: studio.socketId, reason });
   }
   state?.registry.releaseIfIdle(eventId);
 }
@@ -531,6 +802,7 @@ export function revokeChannel(eventId: number, channelId: number, reason: Evicti
  */
 export function revokeEvent(eventId: number, channelIds: number[], reason: EvictionReason): void {
   for (const channelId of channelIds) {
+    clearSwap(channelId);
     presence.releaseChannel(channelId);
     reports.forgetChannel(eventId, channelId);
   }
@@ -593,8 +865,8 @@ function producerWithSlugOrThrow(
   producerId: string,
 ): { producer: types.Producer; slug: string } {
   const room = roomOrThrow(ctx.eventId);
-  const producer = room.producer(channelId);
-  if (!producer || producer.id !== producerId) {
+  const producer = room.producerById(channelId, producerId);
+  if (!producer) {
     throw new AppError('no_producer', 'No such producer on this channel.');
   }
   return { producer, slug: room.producerSlug(channelId) ?? '' };

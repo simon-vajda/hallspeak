@@ -248,6 +248,7 @@ export const fakeWorkerFactory = (async () => {
 
 export interface FakeMediaOptions {
   graceMs?: number;
+  swapDeadlineMs?: number;
   turn?: TurnConfig;
   announcedIp?: string;
   resolveAddress?: AddressResolver;
@@ -276,6 +277,7 @@ export async function startFakeMedia(options: FakeMediaOptions = {}): Promise<()
     turn: options.turn ?? {},
     hostCpuCount: 1,
     graceMs: options.graceMs,
+    swapDeadlineMs: options.swapDeadlineMs,
     createWorker: fakeWorkerFactory,
     resolveAddress: options.resolveAddress,
     addressPollMs: options.addressPollMs,
@@ -289,8 +291,14 @@ export async function goLive(input: {
   socketId: string;
   channelId: number;
   slug: string;
+  /** Defaults to one session per socket, which is what a studio page is. */
+  sessionId?: string;
 }): Promise<{ producerId: string }> {
-  const ctx = { eventId: input.eventId, socketId: input.socketId };
+  const ctx = {
+    eventId: input.eventId,
+    socketId: input.socketId,
+    sessionId: input.sessionId ?? `${input.socketId}-studio`,
+  };
   await createTransport(ctx, 'send', { create: true });
   return produce(ctx, {
     channelId: input.channelId,

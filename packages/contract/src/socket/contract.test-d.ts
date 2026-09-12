@@ -13,23 +13,55 @@ export const _leaveTakesNoAck: LeaveParams['length'] = 1;
 export const _joinPayload: JoinParams[0] = { slug: 'english' };
 export const _leavePayload: LeaveParams[0] = { slug: 'english' };
 type JoinAck = Parameters<JoinParams[1]>[0];
-export const _joinResponse: JoinAck = { ok: true, data: { online: true, muted: false } };
+export const _joinResponse: JoinAck = {
+  ok: true,
+  data: { online: true, muted: false, producerId: 'p1', incomingProducerId: null },
+};
 export const _status: Parameters<S2C['channel:status']>[0] = {
   slug: 'english',
   online: true,
   muted: false,
+  producerId: 'p1',
+  incomingProducerId: null,
+};
+export const _swappingStatus: Parameters<S2C['channel:status']>[0] = {
+  slug: 'english',
+  online: true,
+  muted: false,
+  producerId: 'p1',
+  incomingProducerId: 'p2',
+};
+type HandoverParams = Parameters<C2S['handover:request']>;
+export const _handoverTakesAnAck: HandoverParams['length'] = 2;
+export const _handoverPayload: HandoverParams[0] = {};
+export const _handoverState: Parameters<S2C['handover:state']>[0] = {
+  slug: 'english',
+  holder: 'other',
+  role: 'waiting',
+  pending: true,
+  remainingMs: 30_000,
+  canTakeOver: false,
+  onAirMs: 125_000,
 };
 export const _closedStatus: Parameters<S2C['channel:status']>[0] = {
   slug: 'english',
   online: false,
   muted: false,
+  producerId: null,
+  incomingProducerId: null,
   reason: 'dropped',
 };
 
 export const _joinResponseWithReason: JoinAck = {
   ok: true,
-  // @ts-expect-error — join acknowledgements describe current state, not a close.
-  data: { online: false, muted: false, reason: 'ended' },
+  data: {
+    online: false,
+    muted: false,
+    producerId: null,
+    incomingProducerId: null,
+    // @ts-expect-error — join acknowledgements describe current state, not a close.
+    reason: 'ended',
+  },
 };
 
 // @ts-expect-error — the payload is checked against the event's schema.

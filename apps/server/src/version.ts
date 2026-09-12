@@ -4,4 +4,4 @@ import serverManifest from '../package.json' with { type: 'json' };
 export const SERVER_VERSION = serverManifest.version;
 
 /** Oldest independently released mobile app this server accepts. */
-export const MIN_MOBILE_VERSION = '0.1.0';
+export const MIN_MOBILE_VERSION = '0.3.0';

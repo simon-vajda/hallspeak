@@ -53,6 +53,8 @@ export function ListenerRoom({
   channel,
   live,
   muted,
+  producerId,
+  incomingProducerId,
   closeReason,
   socket,
   status,
@@ -65,6 +67,10 @@ export function ListenerRoom({
   live: boolean;
   /** Socket-authoritative; null while an online REST seed is reconciled. */
   muted: boolean | null;
+  /** Producer this listener should be receiving; null until a status names one. */
+  producerId: string | null;
+  /** Set only while a replacement interpreter is transmitting beside the current one. */
+  incomingProducerId: string | null;
   closeReason?: 'ended' | 'dropped';
   socket: SocketClient | null;
   status: SocketStatus;
@@ -241,7 +247,7 @@ export function ListenerRoom({
    * switch, an interpreter dropping and a hold overlap, and deciding them
    * separately here is how the previous channel's consumer gets left open.
    */
-  const { startConsuming, stopConsuming } = media;
+  const { startConsuming, stopConsuming, swapConsumer, consumedProducers } = media;
   const consumers = media.state.consumers;
   const activeSlug =
     resolvedPlayback.intent === 'playing' || resolvedPlayback.intent === 'holding'
@@ -254,46 +260,76 @@ export function ListenerRoom({
   }, [activeSlug, online]);
 
   useEffect(() => {
-    const plan = consumerPlan({ consumers, activeSlug, online });
+    const plan = consumerPlan({
+      consumers,
+      consumedProducers,
+      activeSlug,
+      online,
+      producerId,
+      incomingProducerId,
+    });
     for (const slug of plan.close) {
       void stopConsuming(slug);
     }
+
+    const attach = (requestedSlug: string, track: MediaStreamTrack) => {
+      if (
+        !mayAttachConsumerTrack({
+          requestedSlug,
+          ...playbackIntentRef.current,
+          trackEnded: track.readyState === 'ended',
+        })
+      ) {
+        return;
+      }
+      const element = audio.current;
+      if (!element) {
+        return;
+      }
+      element.srcObject = new MediaStream([track]);
+      void element
+        .play()
+        .catch((cause) => console.error('media: could not start audio playback', cause));
+    };
+
+    const report = (requestedSlug: string, cause: unknown) => {
+      // Swallowed silently, a failed consume left the screen claiming it was waiting.
+      if (
+        playbackIntentRef.current.activeSlug === requestedSlug &&
+        playbackIntentRef.current.online &&
+        !isSuperseded(cause)
+      ) {
+        console.error('media: could not listen', cause);
+      }
+    };
+
+    const swap = plan.swap;
+    if (swap) {
+      void swapConsumer(swap.slug, swap.outgoing)
+        .then((track) => attach(swap.slug, track))
+        .catch((cause) => report(swap.slug, cause));
+      return;
+    }
+
     if (!plan.consume) {
       return;
     }
 
     const requestedSlug = plan.consume;
     void startConsuming(requestedSlug)
-      .then((track) => {
-        if (
-          !mayAttachConsumerTrack({
-            requestedSlug,
-            ...playbackIntentRef.current,
-            trackEnded: track.readyState === 'ended',
-          })
-        ) {
-          return;
-        }
-        const element = audio.current;
-        if (!element) {
-          return;
-        }
-        element.srcObject = new MediaStream([track]);
-        void element
-          .play()
-          .catch((cause) => console.error('media: could not start audio playback', cause));
-      })
-      .catch((cause) => {
-        // Swallowed silently, a failed consume left the screen claiming it was waiting.
-        if (
-          playbackIntentRef.current.activeSlug === requestedSlug &&
-          playbackIntentRef.current.online &&
-          !isSuperseded(cause)
-        ) {
-          console.error('media: could not listen', cause);
-        }
-      });
-  }, [consumers, activeSlug, online, startConsuming, stopConsuming]);
+      .then((track) => attach(requestedSlug, track))
+      .catch((cause) => report(requestedSlug, cause));
+  }, [
+    consumers,
+    consumedProducers,
+    activeSlug,
+    online,
+    producerId,
+    incomingProducerId,
+    startConsuming,
+    stopConsuming,
+    swapConsumer,
+  ]);
 
   const sendReport = useCallback(
     async (category: ReportCategory) => {
