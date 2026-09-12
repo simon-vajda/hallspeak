@@ -54,7 +54,7 @@ afterEach(async () => {
     handover.forgetChannel(channelId);
     presence.releaseChannel(channelId);
   }
-  for (const socketId of ['speaker-a', 'speaker-b', 'speaker-c', 'guest-a', 'guest-b']) {
+  for (const socketId of ['speaker-a', 'speaker-b', 'speaker-c', 'guest-a', 'guest-b', 'nobody']) {
     presence.release(socketId);
   }
   vi.useRealTimers();

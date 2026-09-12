@@ -1,12 +1,15 @@
-import type { ReportCategory } from '@linguacast/contract/socket';
+import type { HandoverState, ReportCategory } from '@linguacast/contract/socket';
 import type { SocketAuth } from '../../core/access';
 import { getChannelById } from '../../core/channels.service';
+import { handover } from '../../core/handover';
 import * as media from '../../core/media';
 import type { Notification } from '../../core/notifications';
 import { presence } from '../../core/presence';
 import { reports } from '../../core/reports';
 import type { Db } from '../../db/client';
 import { channelRoom, eventRoom } from '../lib/rooms';
+import { broadcastHandoverState } from './handover.handlers';
+import { type ReportsSocket, sendInitialReports } from './reports.handlers';
 
 /** The subset of Server this module needs; a real Server satisfies it. */
 export interface LifecycleServer {
@@ -23,6 +26,7 @@ export interface LifecycleServer {
       },
     ): unknown;
     emit(event: 'media:reset', payload: { reason: 'worker_died' }): unknown;
+    emit(event: 'handover:state', payload: HandoverState): unknown;
     emit(event: 'channel:listeners', payload: { slug: string; count: number }): unknown;
     emit(
       event: 'channel:reports',
@@ -50,7 +54,15 @@ export interface LifecycleSocket {
  */
 export function releaseSocket(socket: { id: string }, auth: SocketAuth): void {
   media.releasePeer(auth.eventId, socket.id);
-  presence.release(socket.id);
+  // Whatever this socket was doing in a handover, it can no longer do it.
+  handover.releaseSocket(socket.id);
+  const freed = presence.release(socket.id);
+  if (freed !== null) {
+    // Only a release that actually freed the claim is a departure. A socket the same
+    // studio has already replaced frees nothing, so a reconnect and the drop it replaces
+    // are safe to arrive in either order and neither hands the channel to a colleague.
+    handover.departed({ eventId: auth.eventId, channelId: freed }, null);
+  }
   // Reports stay in the window; cooldown and the right to resolve them go with the socket.
   reports.releaseSocket(socket.id);
 }
@@ -65,7 +77,7 @@ export function releaseSocket(socket: { id: string }, auth: SocketAuth): void {
  * is the same path a server restart puts them on. A changed claim is neither: nobody is
  * disconnected for it.
  */
-export function applyNotification(io: LifecycleServer, notification: Notification): void {
+export function applyNotification(io: LifecycleServer, db: Db, notification: Notification): void {
   switch (notification.type) {
     case 'producer-opened':
       io.to(eventRoom(notification.eventId)).emit('channel:status', {
@@ -123,6 +135,25 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
       return;
     }
 
+    /**
+     * A claim moving is where a studio's audience becomes its own: the count and the
+     * tally are seeded to whoever holds it now, rather than on connect, because a studio
+     * in pre-flight has neither.
+     */
+    case 'claim-changed': {
+      const { eventId, channelId, socketId } = notification;
+      if (socketId !== null) {
+        seedClaimAudience(db, io, eventId, channelId, socketId);
+      }
+      broadcastHandoverState(db, io, channelId);
+      return;
+    }
+
+    case 'handover-changed':
+    case 'handover-granted':
+      broadcastHandoverState(db, io, notification.channelId);
+      return;
+
     case 'peer-evicted': {
       // A socket that has already gone is ordinary here; there is nothing to do about it.
       io.sockets.sockets.get(notification.socketId)?.disconnect(true);
@@ -147,19 +178,19 @@ export function applyNotification(io: LifecycleServer, notification: Notificatio
 }
 
 /**
- * A studio connecting to a channel that is already being listened to must not sit blank
- * until the next change, so it is told the current count on connect. Zero is a number the
- * studio can render; sending nothing is not.
+ * A studio taking the channel must not sit blank until the next change, so it is told the
+ * current count the moment the claim becomes its own. Zero is a number the studio can
+ * render; sending nothing is not.
  *
  * It lives here rather than in `socket/index.ts` because that module is only reachable
  * through `attachSocket(httpServer)` and could not be tested without binding a real server.
  */
-export function sendInitialListenerCount(db: Db, socket: LifecycleSocket, auth: SocketAuth): void {
-  const channelId = auth.speakerChannelId;
-  if (channelId === null) {
-    return;
-  }
-
+export function sendInitialListenerCount(
+  db: Db,
+  socket: LifecycleSocket,
+  eventId: number,
+  channelId: number,
+): void {
   // `socket.data` carries no slug, so the wire's identifier is read back off the row.
   const channel = getChannelById(db, channelId);
   if (!channel) {
@@ -168,6 +199,40 @@ export function sendInitialListenerCount(db: Db, socket: LifecycleSocket, auth: 
 
   socket.emit('channel:listeners', {
     slug: channel.slug,
-    count: media.listenerCount(auth.eventId, channelId),
+    count: media.listenerCount(eventId, channelId),
   });
+}
+
+/**
+ * What a studio is owed the moment the channel's claim becomes its own. Also called at
+ * connection time for a studio that already holds the claim: the rebind is published from
+ * inside the handshake, before Socket.IO has put the socket in a room of its own name, so
+ * that notification reaches nobody.
+ *
+ * One try each. Sharing a block would let a failed count suppress the tally, and a studio
+ * that never hears one withholds its panel for the life of the connection.
+ */
+export function seedClaimAudience(
+  db: Db,
+  io: LifecycleServer,
+  eventId: number,
+  channelId: number,
+  socketId: string,
+): void {
+  const counts: LifecycleSocket = {
+    emit: (event, payload) => io.to(socketId).emit(event, payload),
+  };
+  const tallies: ReportsSocket = {
+    emit: (event, payload) => io.to(socketId).emit(event, payload),
+  };
+  seed(() => sendInitialListenerCount(db, counts, eventId, channelId), socketId, 'listener count');
+  seed(() => sendInitialReports(db, tallies, eventId, channelId), socketId, 'report tally');
+}
+
+function seed(send: () => void, socketId: string, what: string): void {
+  try {
+    send();
+  } catch (cause) {
+    console.error(`socket: could not send the initial ${what} to ${socketId}`, cause);
+  }
 }
