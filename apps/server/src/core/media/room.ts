@@ -149,7 +149,14 @@ export class Room {
    * place of it, so the outgoing interpreter keeps transmitting through the swap.
    */
   setIncomingProducer(channelId: number, producer: types.Producer): void {
-    this.incoming.get(channelId)?.close();
+    const superseded = this.incoming.get(channelId);
+    if (superseded) {
+      // Marked before the map is overwritten: the close handler can no longer recognise it
+      // as the incoming producer by then, and an unmarked close reports an off-air the
+      // channel never had.
+      markClosing(superseded, 'replaced');
+      superseded.close();
+    }
     this.incoming.set(channelId, producer);
     producer.observer.once('close', () => {
       if (this.incoming.get(channelId) === producer) {

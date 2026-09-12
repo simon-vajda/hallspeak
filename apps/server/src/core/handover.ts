@@ -141,8 +141,8 @@ export class HandoverRegistry {
 
   /** A studio in pre-flight asking the live interpreter to hand the channel over. */
   request(caller: StudioSocket): RequestResult {
-    const state = this.stateOf(caller);
-    if (state.request || state.grant) {
+    const existing = this.channels.get(caller.channelId);
+    if (existing?.request || existing?.grant) {
       return 'in_progress';
     }
 
@@ -154,6 +154,8 @@ export class HandoverRegistry {
       return 'holds_claim';
     }
 
+    // Only now, so a channel that has only ever refused requests keeps no entry at all.
+    const state = this.stateOf(caller);
     const requestedAt = this.now();
     state.request = {
       sessionId: caller.sessionId,

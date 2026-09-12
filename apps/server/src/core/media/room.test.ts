@@ -203,6 +203,17 @@ describe('Room producers', () => {
     expect(r.channelStatus(1)).toMatchObject({ producerId: 'p2', incomingProducerId: null });
   });
 
+  it('marks a superseded incoming producer, so its close reaches no listener either', () => {
+    const { room: r } = room();
+    const first = new FakeProducer('p2');
+    r.setProducer(1, as(new FakeProducer('p1')));
+    r.setIncomingProducer(1, as(first));
+    r.setIncomingProducer(1, as(new FakeProducer('p3')));
+
+    expect(first.close).toHaveBeenCalledTimes(1);
+    expect((first.appData as { closeReason?: string }).closeReason).toBe('replaced');
+  });
+
   it('closes the incoming producer alone when a swap window ends without one', () => {
     const { room: r } = room();
     const standing = new FakeProducer('p1');
