@@ -175,6 +175,32 @@ export function isHandingOver(input: HandingOverInput): boolean {
   return input.handover.holder === 'self' && input.handover.role === 'handing-over';
 }
 
+export interface ClaimLostInput extends HandoverSnapshot {
+  goLivePressed: boolean;
+  displaced: boolean;
+}
+
+/**
+ * The swap finished and this studio is not the one holding the channel, so whatever it
+ * still holds locally is stale.
+ *
+ * A granted studio reads `holder: 'other'` too — the claim moves at promotion, not at the
+ * grant, so that the outgoing interpreter stays live if the incoming one never starts —
+ * which is why the role has to be checked as well. Reading the holder alone sends the
+ * incoming interpreter back to pre-flight in the same tick they went on air, and the
+ * producer they abandoned is then promoted silently over the colleague they replaced.
+ */
+export function hasLostClaim(input: ClaimLostInput): boolean {
+  if (!input.goLivePressed || input.displaced || !input.handoverKnown) {
+    return false;
+  }
+  const snapshot = input.handover;
+  if (snapshot === undefined || snapshot.role === 'granted') {
+    return false;
+  }
+  return snapshot.holder === 'other';
+}
+
 /**
  * The produce refusal that means the claim is no longer this studio's. The server
  * authorises a produce on the claim rather than on the handshake, so a studio that lost

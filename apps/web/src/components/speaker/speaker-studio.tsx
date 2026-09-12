@@ -17,6 +17,7 @@ import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import {
   type BroadcastEnd,
   broadcastState,
+  hasLostClaim,
   isClaimMoved,
   isHandingOver,
   LINK_DROP_GRACE_MS,
@@ -348,7 +349,7 @@ export function SpeakerStudio({
    * other way the channel changed hands while this studio was on air.
    */
   useEffect(() => {
-    if (!goLivePressed || displaced || !handoverKnown || handover?.holder !== 'other') {
+    if (!hasLostClaim({ goLivePressed, displaced, handoverKnown, handover })) {
       return;
     }
     returnToPreflight();
