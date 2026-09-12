@@ -67,6 +67,12 @@ export interface AnchoredHandover {
   pending: boolean;
   canTakeOver: boolean;
   expiresAt: number | null;
+  /**
+   * When this channel went on air, on this client's clock. The broadcast belongs to the
+   * channel rather than to one interpreter, so a studio taking it over continues the clock
+   * rather than starting a second one. Null when nobody holds the channel.
+   */
+  onAirStartedAt: number | null;
 }
 
 export function anchorHandover(state: HandoverState, now: number): AnchoredHandover {
@@ -77,5 +83,6 @@ export function anchorHandover(state: HandoverState, now: number): AnchoredHando
     pending: state.pending,
     canTakeOver: state.canTakeOver,
     expiresAt: state.remainingMs === null ? null : now + state.remainingMs,
+    onAirStartedAt: state.onAirMs === null ? null : now - state.onAirMs,
   };
 }

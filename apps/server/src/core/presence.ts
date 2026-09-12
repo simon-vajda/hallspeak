@@ -12,10 +12,18 @@ export interface StudioSocket {
 export interface ClaimHolder {
   sessionId: string;
   socketId: string;
+  /**
+   * When this channel went on air, kept across a handover: the broadcast is the channel's
+   * rather than any one interpreter's, so the studio taking over continues its clock
+   * instead of starting a second one. A reconnect keeps it too; only a deliberate end or a
+   * departure with nobody waiting drops it.
+   */
+  startedAt: number;
 }
 
 export interface PresenceRegistryOptions {
   publish?: (notification: Notification) => void;
+  now?: () => number;
 }
 
 interface Claim extends ClaimHolder {
@@ -36,9 +44,11 @@ export class PresenceRegistry {
   private readonly studiosByChannel = new Map<number, Map<string, StudioSocket>>();
   private readonly studioBySocket = new Map<string, StudioSocket>();
   private readonly publisher: (notification: Notification) => void;
+  private readonly now: () => number;
 
   constructor(options: PresenceRegistryOptions = {}) {
     this.publisher = options.publish ?? ((n) => notifications.publish(n));
+    this.now = options.now ?? (() => Date.now());
   }
 
   holder(channelId: number): string | undefined {
@@ -47,7 +57,9 @@ export class PresenceRegistry {
 
   claimOf(channelId: number): ClaimHolder | undefined {
     const claim = this.claimByChannel.get(channelId);
-    return claim && { sessionId: claim.sessionId, socketId: claim.socketId };
+    return (
+      claim && { sessionId: claim.sessionId, socketId: claim.socketId, startedAt: claim.startedAt }
+    );
   }
 
   /** Every studio currently connected to the channel, holder or not. */
@@ -145,7 +157,11 @@ export class PresenceRegistry {
 
   private setClaim(studio: StudioSocket): void {
     const { eventId, channelId, sessionId, socketId } = studio;
-    this.claimByChannel.set(channelId, { eventId, sessionId, socketId });
+    // Inherited from whatever the claim already was: a rebind is the same broadcast on a
+    // new socket, and a move is the same broadcast under a new interpreter. Only a channel
+    // that nobody held starts the clock.
+    const startedAt = this.claimByChannel.get(channelId)?.startedAt ?? this.now();
+    this.claimByChannel.set(channelId, { eventId, sessionId, socketId, startedAt });
     this.publisher({ type: 'claim-changed', eventId, channelId, sessionId, socketId });
   }
 

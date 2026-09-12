@@ -127,6 +127,7 @@ export function handoverStateFor(studio: StudioSocket, slug: string): HandoverSt
     pending: view !== null,
     remainingMs: handover.remainingMs(channelId),
     canTakeOver: handover.canTakeOver(channelId, sessionId),
+    onAirMs: claim === undefined ? null : Math.max(0, Date.now() - claim.startedAt),
   };
 }
 

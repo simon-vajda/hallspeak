@@ -258,6 +258,7 @@ describe('handover schemas', () => {
       pending: true,
       remainingMs: 30_000,
       canTakeOver: false,
+      onAirMs: 125_000,
     });
     expect(waiting.remainingMs).toBe(30_000);
     expect(
@@ -268,6 +269,7 @@ describe('handover schemas', () => {
         pending: false,
         remainingMs: null,
         canTakeOver: false,
+        onAirMs: null,
       }).remainingMs,
     ).toBeNull();
   });
@@ -280,6 +282,7 @@ describe('handover schemas', () => {
       pending: false,
       remainingMs: null,
       canTakeOver: false,
+      onAirMs: 0,
     };
     expect(HandoverState.parse(base).role).toBe('live');
     expect(HandoverState.safeParse({ ...base, holder: 'someone' }).success).toBe(false);

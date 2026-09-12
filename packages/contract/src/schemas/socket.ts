@@ -161,6 +161,13 @@ export const HandoverState = z.object({
   pending: z.boolean(),
   remainingMs: z.int().nonnegative().nullable(),
   canTakeOver: z.boolean(),
+  /**
+   * How long the channel has been on air, across every interpreter who has held it: the
+   * claim carries its start through a handover, so the incoming studio continues the
+   * broadcast's clock rather than starting a second one. Null when nobody holds the
+   * channel. A duration rather than a start time, anchored at receipt like `remainingMs`.
+   */
+  onAirMs: z.int().nonnegative().nullable(),
 });
 
 export type HandoverState = z.infer<typeof HandoverState>;
