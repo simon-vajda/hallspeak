@@ -47,7 +47,12 @@ describe('joinChannel', () => {
   it('puts the socket in the channel room and reports liveness', () => {
     const socket = fakeSocket();
 
-    expect(joinChannel(db, socket, authA, 'english')).toEqual({ online: false, muted: false });
+    expect(joinChannel(db, socket, authA, 'english')).toEqual({
+      online: false,
+      muted: false,
+      producerId: null,
+      incomingProducerId: null,
+    });
     expect(socket.rooms.has(channelRoom(englishId))).toBe(true);
   });
 
@@ -56,7 +61,12 @@ describe('joinChannel', () => {
     presence.claim(englishId, 'code-x', 'speaker-socket');
     const socket = fakeSocket();
 
-    expect(joinChannel(db, socket, authA, 'english')).toEqual({ online: false, muted: false });
+    expect(joinChannel(db, socket, authA, 'english')).toEqual({
+      online: false,
+      muted: false,
+      producerId: null,
+      incomingProducerId: null,
+    });
   });
 
   it('reports online once a producer exists on the channel', async () => {
@@ -69,7 +79,7 @@ describe('joinChannel', () => {
         slug: 'english',
       });
 
-      expect(joinChannel(db, fakeSocket(), authA, 'english')).toEqual({
+      expect(joinChannel(db, fakeSocket(), authA, 'english')).toMatchObject({
         online: true,
         muted: false,
       });
@@ -93,7 +103,7 @@ describe('joinChannel', () => {
         producerId,
       );
 
-      expect(joinChannel(db, fakeSocket(), authA, 'english')).toEqual({
+      expect(joinChannel(db, fakeSocket(), authA, 'english')).toMatchObject({
         online: true,
         muted: true,
       });

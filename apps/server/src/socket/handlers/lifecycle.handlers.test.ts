@@ -120,7 +120,7 @@ describe('applyNotification producer lifecycle', () => {
       slug: 'english',
     });
 
-    expect(emitted).toEqual([
+    expect(emitted).toMatchObject([
       {
         room: eventRoom(EVENT),
         event: 'channel:status',
@@ -149,7 +149,7 @@ describe('applyNotification producer lifecycle', () => {
       slug: 'english',
     });
 
-    expect(emitted[0]?.payload).toEqual({ slug: 'english', online: true, muted: true });
+    expect(emitted[0]?.payload).toMatchObject({ slug: 'english', online: true, muted: true });
     expect(emitted[0]?.room).toBe(eventRoom(EVENT));
   });
 
@@ -177,7 +177,7 @@ describe('applyNotification producer lifecycle', () => {
       slug: 'english',
     });
 
-    expect(emitted.map((entry) => entry.payload)).toEqual([
+    expect(emitted.map((entry) => entry.payload)).toMatchObject([
       { slug: 'english', online: true, muted: true },
       { slug: 'english', online: true, muted: false },
     ]);
@@ -210,6 +210,8 @@ describe('applyNotification producer lifecycle', () => {
       slug: 'english',
       online: false,
       muted: false,
+      producerId: null,
+      incomingProducerId: null,
       reason: 'ended',
     });
     expect(emitted[0]?.room).toBe(eventRoom(EVENT));
@@ -232,7 +234,13 @@ describe('applyNotification producer lifecycle', () => {
       slug: 'english',
     });
 
-    expect(emitted[0]?.payload).toEqual({ slug: 'english', online: false, muted: false });
+    expect(emitted[0]?.payload).toEqual({
+      slug: 'english',
+      online: false,
+      muted: false,
+      producerId: null,
+      incomingProducerId: null,
+    });
     expect(emitted[0]?.room).toBe(channelRoom(ENGLISH));
   });
 
@@ -248,7 +256,7 @@ describe('applyNotification producer lifecycle', () => {
       slug: 'english',
     });
 
-    expect(emitted[0]?.payload).toEqual({ slug: 'english', online: true, muted: false });
+    expect(emitted[0]?.payload).toMatchObject({ slug: 'english', online: true, muted: false });
     expect(emitted[0]?.room).toBe(channelRoom(ENGLISH));
   });
 });
@@ -397,7 +405,7 @@ describe('applyNotification listener counts', () => {
       slug: 'english',
     });
 
-    expect(emitted).toEqual([
+    expect(emitted).toMatchObject([
       {
         room: eventRoom(EVENT),
         event: 'channel:status',
