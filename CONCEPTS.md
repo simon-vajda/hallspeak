@@ -56,6 +56,8 @@ However it is agreed, the swap itself overlaps: the outgoing interpreter keeps t
 
 A Handover is not an Eviction: neither studio is disconnected, and the one that gave the Channel up lands back where it started, free to ask for it again.
 
+A Handover belongs to the studios taking part, not to their connections. An interpreter whose connection drops and returns while asking for a Channel, or while taking it over, keeps their place, exactly as a live interpreter keeps the Broadcast claim across a reconnect. A studio that does not come back gives up its place.
+
 ### Listening
 Actually receiving a Channel's audio: holding an open Consumer on its Producer that the guest's
 own side has not paused. This is what the listener counts on the Speaker studio and the admin
