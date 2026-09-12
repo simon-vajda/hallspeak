@@ -53,6 +53,32 @@ describe('NotificationHub', () => {
     ]);
   });
 
+  it('delivers handover-changed and handover-granted naming both sessions', () => {
+    const hub = new NotificationHub();
+    const seen: Notification[] = [];
+    hub.subscribe((n) => seen.push(n));
+
+    hub.publish({ type: 'handover-changed', eventId: 1, channelId: 10 });
+    hub.publish({
+      type: 'handover-granted',
+      eventId: 1,
+      channelId: 10,
+      fromSessionId: 'session-a',
+      toSessionId: 'session-b',
+    });
+
+    expect(seen).toEqual([
+      { type: 'handover-changed', eventId: 1, channelId: 10 },
+      {
+        type: 'handover-granted',
+        eventId: 1,
+        channelId: 10,
+        fromSessionId: 'session-a',
+        toSessionId: 'session-b',
+      },
+    ]);
+  });
+
   it('stops delivering after unsubscribe', () => {
     const hub = new NotificationHub();
     const seen: Notification[] = [];
