@@ -4,6 +4,7 @@ import { Mic } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { LiveBadge } from '@/components/live-badge';
+import { HandoverCountdown, useHandoverRemaining } from '@/components/speaker/handover-countdown';
 import { InputLevelPanel } from '@/components/speaker/input-level-panel';
 import { ListenerPageLink } from '@/components/speaker/listener-page-link';
 import { MicPanel } from '@/components/speaker/mic-panel';
@@ -13,6 +14,15 @@ import { VersionFooter } from '@/components/version-footer';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
 import { formatPin } from '@/lib/format';
+import {
+  CANCEL_REQUEST,
+  HANDOVER_FAILED,
+  otherInterpreterLive,
+  preflightActionLabel,
+  preflightBadgeLabel,
+  preflightNote,
+} from '@/lib/handover-copy';
+import type { PreflightAction } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -27,6 +37,12 @@ export function SpeakerPreflight({
   canGoLive,
   onGoLive,
   link,
+  action,
+  handoverBusy,
+  handoverFailed,
+  onRequestHandover,
+  onCancelHandover,
+  onTakeOver,
 }: {
   eventName: string;
   pin: string;
@@ -38,7 +54,19 @@ export function SpeakerPreflight({
   canGoLive: boolean;
   onGoLive: () => void;
   link: LinkState;
+  /** What this studio may do about the channel right now, decided by the server's snapshot. */
+  action: PreflightAction;
+  handoverBusy: boolean;
+  handoverFailed: boolean;
+  onRequestHandover: () => void;
+  onCancelHandover: () => void;
+  onTakeOver: () => void;
 }) {
+  const remaining = useHandoverRemaining(action.type === 'waiting' ? action.expiresAt : null);
+  const note = preflightNote(action.type);
+  // Every variant that puts this studio on air keeps the microphone gate: a handover is
+  // still a Go live, and going live with nothing captured hands over silence.
+  const gated = !canGoLive;
   return (
     <div className="relative flex min-h-dvh flex-col">
       <AppHeader
@@ -55,7 +83,11 @@ export function SpeakerPreflight({
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         <header>
           <div className="flex items-center justify-between gap-3">
-            <LiveBadge live={false} showDot={false} label="Off air" />
+            <LiveBadge
+              live={otherInterpreterLive(action.type)}
+              showDot={otherInterpreterLive(action.type)}
+              label={preflightBadgeLabel(action.type)}
+            />
             <div className="-my-1 lg:hidden">
               <TempThemeToggle />
             </div>
@@ -88,15 +120,60 @@ export function SpeakerPreflight({
                 <ConnectionLine link={link} className="mb-3.5 text-center" />
               )}
 
-              <Button
-                size="pill"
-                disabled={!canGoLive}
-                onClick={onGoLive}
-                className="h-15.5 w-full gap-2.5 text-lg tracking-[-0.02em] shadow-[0_16px_40px] shadow-primary/35"
-              >
-                <Mic className="size-5 stroke-[2.25]" />
-                Go live
-              </Button>
+              {note ? (
+                <p
+                  aria-live="polite"
+                  className="mb-4 rounded-lg bg-secondary px-4 py-3 text-note text-muted-foreground"
+                >
+                  {note}
+                </p>
+              ) : null}
+
+              {action.type === 'waiting' ? (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex h-15.5 w-full items-center justify-center gap-3 rounded-full border border-border border-dashed text-base font-semibold text-muted-foreground">
+                    {preflightActionLabel(action.type)}
+                    {remaining === null ? null : (
+                      <HandoverCountdown remainingMs={remaining} className="text-base" />
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="action"
+                    disabled={handoverBusy}
+                    onClick={onCancelHandover}
+                  >
+                    {CANCEL_REQUEST}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="pill"
+                  disabled={
+                    gated ||
+                    handoverBusy ||
+                    action.type === 'pending-elsewhere' ||
+                    action.type === 'unknown'
+                  }
+                  onClick={
+                    action.type === 'ready'
+                      ? onRequestHandover
+                      : action.type === 'take-over'
+                        ? onTakeOver
+                        : onGoLive
+                  }
+                  className="h-15.5 w-full gap-2.5 text-lg tracking-[-0.02em] shadow-[0_16px_40px] shadow-primary/35"
+                >
+                  <Mic className="size-5 stroke-[2.25]" />
+                  {preflightActionLabel(action.type)}
+                </Button>
+              )}
+
+              {handoverFailed ? (
+                <p role="alert" className="mt-3 text-center text-note text-destructive">
+                  {HANDOVER_FAILED}
+                </p>
+              ) : null}
 
               <p className="mt-5 text-center text-meta font-normal text-muted-foreground">
                 {canGoLive
