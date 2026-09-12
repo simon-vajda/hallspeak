@@ -168,6 +168,55 @@ describe('Room producers', () => {
     expect(r.producerCount).toBe(1);
   });
 
+  it('marks a replaced producer so its close reaches no listener', () => {
+    const { room: r } = room();
+    const first = new FakeProducer('p1');
+    r.setProducer(1, as(first));
+    r.setProducer(1, as(new FakeProducer('p2')));
+
+    expect((first.appData as { closeReason?: string }).closeReason).toBe('replaced');
+  });
+
+  it('holds the incoming producer beside the standing one and names both', () => {
+    const { room: r } = room();
+    r.setProducer(1, as(new FakeProducer('p1')));
+    r.setIncomingProducer(1, as(new FakeProducer('p2')));
+
+    expect(r.channelStatus(1)).toMatchObject({
+      online: true,
+      producerId: 'p1',
+      incomingProducerId: 'p2',
+    });
+    // A guest arriving mid-swap subscribes to the voice that is staying.
+    expect(r.targetProducer(1)?.id).toBe('p2');
+  });
+
+  it('promotes the incoming producer and replaces the outgoing one', () => {
+    const { room: r } = room();
+    const outgoing = new FakeProducer('p1');
+    r.setProducer(1, as(outgoing));
+    r.setIncomingProducer(1, as(new FakeProducer('p2')));
+
+    expect(r.promoteIncoming(1)?.id).toBe('p2');
+    expect(outgoing.close).toHaveBeenCalledTimes(1);
+    expect((outgoing.appData as { closeReason?: string }).closeReason).toBe('replaced');
+    expect(r.channelStatus(1)).toMatchObject({ producerId: 'p2', incomingProducerId: null });
+  });
+
+  it('closes the incoming producer alone when a swap window ends without one', () => {
+    const { room: r } = room();
+    const standing = new FakeProducer('p1');
+    const incoming = new FakeProducer('p2');
+    r.setProducer(1, as(standing));
+    r.setIncomingProducer(1, as(incoming));
+
+    r.closeIncomingProducer(1);
+
+    expect(incoming.close).toHaveBeenCalledTimes(1);
+    expect(standing.close).not.toHaveBeenCalled();
+    expect(r.channelStatus(1)).toMatchObject({ producerId: 'p1', incomingProducerId: null });
+  });
+
   it('forgets a producer that closes on its own', () => {
     const { room: r } = room();
     const producer = new FakeProducer('p1');
