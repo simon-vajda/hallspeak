@@ -1,4 +1,5 @@
 import { authorizeHandshake, type SocketAuth } from '../core/access';
+import { handover } from '../core/handover';
 import { presence } from '../core/presence';
 import { db } from '../db';
 
@@ -22,6 +23,17 @@ export function handshakeGate(socket: GateSocket, next: (err?: Error) => void): 
   if (!result.ok) {
     next(new Error(result.error));
     return;
+  }
+  const { eventId, speakerChannelId, studioSession } = result.data;
+  if (speakerChannelId !== null && studioSession !== null) {
+    // In the same tick as the claim's rebind, so the old socket's disconnect, whenever it
+    // arrives, no longer names anything this studio is waiting for or was granted.
+    handover.rebind({
+      eventId,
+      channelId: speakerChannelId,
+      sessionId: studioSession,
+      socketId: socket.id,
+    });
   }
   socket.data = result.data;
   next();
