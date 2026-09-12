@@ -1,5 +1,6 @@
 import { MicOff } from 'lucide-react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { END_WITH_HANDOVER } from '@/lib/handover-copy';
 
 /**
  * Ending always confirms, which is why End broadcast can be a quiet text button. The design
@@ -9,10 +10,13 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 export function EndBroadcastDialog({
   open,
   onOpenChange,
+  handoverPending,
   onConfirm,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** While somebody is waiting, ending is a handover: the channel does not go off air. */
+  handoverPending: boolean;
   onConfirm: () => void;
 }) {
   return (
@@ -25,8 +29,9 @@ export function EndBroadcastDialog({
       cancelLabel="Stay on air"
       onConfirm={onConfirm}
     >
-      Anyone listening will be disconnected and the channel goes off air until you or another
-      interpreter reconnects.
+      {handoverPending
+        ? END_WITH_HANDOVER
+        : 'Anyone listening will be disconnected and the channel goes off air until you or another interpreter reconnects.'}
     </ConfirmDialog>
   );
 }

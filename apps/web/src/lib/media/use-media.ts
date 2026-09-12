@@ -494,6 +494,22 @@ export function useMedia(socket: SocketClient | null) {
   }, [socket]);
 
   /**
+   * Drops the local sender without telling the server, for the one case where the Producer
+   * is no longer this studio's to close: a completed handover moves the claim, and a
+   * `media:close-producer` here would close the channel the successor is already on.
+   */
+  const abandonProducer = useCallback(() => {
+    const active = session.current;
+    const producer = active?.producer;
+    if (!active || !producer) {
+      return;
+    }
+    active.producer = undefined;
+    producer.close();
+    setState(producerClosed);
+  }, []);
+
+  /**
    * Swaps what the producer transmits without renegotiating. Needed because the capture
    * graph is rebuilt whenever the microphone changes: the old track belongs to an
    * AudioContext that is about to close, and a producer left holding it stays open and
@@ -710,6 +726,7 @@ export function useMedia(socket: SocketClient | null) {
     stats,
     startProducing,
     stopProducing,
+    abandonProducer,
     replaceProducerTrack,
     setProducerPaused,
     setLocalProducerPaused,

@@ -25,6 +25,12 @@ export function SpeakerChannel({
     reports,
     reportResolutions,
     reportsKnown,
+    handover,
+    handoverKnown,
+    requestHandover,
+    cancelHandover,
+    confirmHandover,
+    takeOver,
     socket,
   } = useSocket(
     {
@@ -48,6 +54,12 @@ export function SpeakerChannel({
       status={status}
       hasConnected={hasConnected}
       channelStatus={channelStatuses[view.channel.slug]}
+      handover={handover[view.channel.slug]}
+      handoverKnown={handoverKnown}
+      onRequestHandover={requestHandover}
+      onCancelHandover={cancelHandover}
+      onConfirmHandover={confirmHandover}
+      onTakeOver={takeOver}
     />
   );
 }
