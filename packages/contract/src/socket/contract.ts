@@ -9,6 +9,9 @@ import {
   ChannelResolveReportsPayload,
   ChannelResolveReportsResponse,
   ChannelStatus,
+  HandoverActionPayload,
+  HandoverActionResponse,
+  HandoverState,
   MediaCapabilitiesPayload,
   MediaCapabilitiesResponse,
   MediaCloseTransportPayload,
@@ -60,6 +63,24 @@ export const clientToServer = {
   'channel:resolve-reports': event({
     payload: ChannelResolveReportsPayload,
     response: ChannelResolveReportsResponse,
+  }),
+
+  /**
+   * The four handover verbs. Each is acked, because every refusal is one the interpreter
+   * has to see on the control they pressed: a request while another is pending, a takeover
+   * before the server's deadline, and a confirm from a studio that no longer holds the
+   * channel all resolve to a reason rather than to silence. None carries a payload — the
+   * server reads the channel and the studio session from the caller's own authorization.
+   */
+  'handover:request': event({
+    payload: HandoverActionPayload,
+    response: HandoverActionResponse,
+  }),
+  'handover:cancel': event({ payload: HandoverActionPayload, response: HandoverActionResponse }),
+  'handover:confirm': event({ payload: HandoverActionPayload, response: HandoverActionResponse }),
+  'handover:take-over': event({
+    payload: HandoverActionPayload,
+    response: HandoverActionResponse,
   }),
 
   /** Where every negotiation starts, and restarts from after a reset. */
@@ -136,6 +157,13 @@ export const serverToClient = {
    * a listener has no business seeing what other listeners reported.
    */
   'channel:reports': event({ payload: ChannelReports }),
+
+  /**
+   * To one studio socket, built for that studio: it says who holds the claim and what this
+   * studio's own part in any handover is. Sent unconditionally on connect and again on
+   * every claim or handover change, so a studio never has to infer state from silence.
+   */
+  'handover:state': event({ payload: HandoverState }),
 
   /** Discard every held media identifier and renegotiate; the socket itself survives. */
   'media:reset': event({ payload: MediaReset }),

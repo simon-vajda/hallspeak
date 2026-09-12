@@ -8,6 +8,14 @@ function slugOf(producer: types.Producer): string {
   return typeof slug === 'string' ? slug : '';
 }
 
+export interface ChannelBroadcastStatus {
+  online: boolean;
+  muted: boolean;
+  producerId: string | null;
+  /** Set only inside a handover's swap window, while both interpreters are transmitting. */
+  incomingProducerId: string | null;
+}
+
 export interface RoomInit {
   eventId: number;
   router: types.Router;
@@ -54,13 +62,22 @@ export class Room {
     return producer !== undefined && !producer.closed;
   }
 
-  /** One read of the current producer owns both public broadcast-status bits. */
-  channelStatus(channelId: number): { online: boolean; muted: boolean } {
+  /**
+   * One read of the current producer owns every public broadcast bit, so they cannot
+   * disagree. `producerId` is what lets a listener follow a replacement as one status
+   * rather than as a close followed by an open; it is already public to anyone consuming.
+   */
+  channelStatus(channelId: number): ChannelBroadcastStatus {
     const producer = this.producers.get(channelId);
     if (!producer || producer.closed) {
-      return { online: false, muted: false };
+      return { online: false, muted: false, producerId: null, incomingProducerId: null };
     }
-    return { online: true, muted: producer.paused };
+    return {
+      online: true,
+      muted: producer.paused,
+      producerId: producer.id,
+      incomingProducerId: null,
+    };
   }
 
   /** Producing twice on one channel replaces rather than duplicating. */

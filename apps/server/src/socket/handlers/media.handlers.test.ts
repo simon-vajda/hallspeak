@@ -236,7 +236,7 @@ describe('startProducing', () => {
       paused: true,
     });
 
-    expect(channelStatus(eventId, englishId)).toEqual({ online: true, muted: true });
+    expect(channelStatus(eventId, englishId)).toMatchObject({ online: true, muted: true });
   });
 
   it('refuses a socket that holds the claim for a different channel', async () => {
@@ -291,11 +291,11 @@ describe('pause and resume producing', () => {
 
     await pauseProducing(socket('speaker-a'), speaker, { producerId });
     expect(isOnline(eventId, englishId)).toBe(true);
-    expect(channelStatus(eventId, englishId)).toEqual({ online: true, muted: true });
+    expect(channelStatus(eventId, englishId)).toMatchObject({ online: true, muted: true });
 
     await resumeProducing(socket('speaker-a'), speaker, { producerId });
     expect(isOnline(eventId, englishId)).toBe(true);
-    expect(channelStatus(eventId, englishId)).toEqual({ online: true, muted: false });
+    expect(channelStatus(eventId, englishId)).toMatchObject({ online: true, muted: false });
   });
 
   it('refuses a producer that does not exist', async () => {

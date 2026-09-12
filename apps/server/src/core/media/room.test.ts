@@ -133,22 +133,28 @@ describe('Room producers', () => {
     expect(r.isOnline(1)).toBe(true);
   });
 
-  it('reports one authoritative online and muted snapshot', async () => {
+  it('reports one authoritative online, muted and producer snapshot', async () => {
     const { room: r } = room();
-    expect(r.channelStatus(1)).toEqual({ online: false, muted: false });
+    const offline = { online: false, muted: false, producerId: null, incomingProducerId: null };
+    expect(r.channelStatus(1)).toEqual(offline);
 
     const producer = new FakeProducer('p1');
     r.setProducer(1, as(producer));
-    expect(r.channelStatus(1)).toEqual({ online: true, muted: false });
+    expect(r.channelStatus(1)).toEqual({
+      online: true,
+      muted: false,
+      producerId: 'p1',
+      incomingProducerId: null,
+    });
 
     await producer.pause();
-    expect(r.channelStatus(1)).toEqual({ online: true, muted: true });
+    expect(r.channelStatus(1)).toMatchObject({ online: true, muted: true, producerId: 'p1' });
 
     await producer.resume();
-    expect(r.channelStatus(1)).toEqual({ online: true, muted: false });
+    expect(r.channelStatus(1)).toMatchObject({ online: true, muted: false, producerId: 'p1' });
 
     producer.close();
-    expect(r.channelStatus(1)).toEqual({ online: false, muted: false });
+    expect(r.channelStatus(1)).toEqual(offline);
   });
 
   it('replaces rather than duplicates when one channel produces twice', () => {

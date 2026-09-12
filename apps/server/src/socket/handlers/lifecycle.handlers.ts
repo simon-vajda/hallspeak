@@ -18,6 +18,8 @@ export interface LifecycleServer {
         online: boolean;
         muted: boolean;
         reason?: 'ended' | 'dropped';
+        producerId: string | null;
+        incomingProducerId: string | null;
       },
     ): unknown;
     emit(event: 'media:reset', payload: { reason: 'worker_died' }): unknown;

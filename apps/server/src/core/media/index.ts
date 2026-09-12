@@ -18,7 +18,10 @@ import { ListenerCountPublisher } from './listeners';
 import type { TransportDirection } from './peer';
 import { discoverReflexiveAddress, reflexiveMismatch } from './reflexive-address';
 import { RoomRegistry } from './registry';
-import type { Room } from './room';
+
+export type { ChannelBroadcastStatus } from './room';
+
+import type { ChannelBroadcastStatus, Room } from './room';
 import { type WorkerFactory, WorkerPool } from './workers';
 
 /** Short enough that a leaked credential is worthless before anyone could use it. */
@@ -178,12 +181,16 @@ export function isOnline(eventId: number, channelId: number): boolean {
   return state?.registry.get(eventId)?.isOnline(channelId) ?? false;
 }
 
-/** Current producer existence and pause state, read together so they cannot disagree. */
-export function channelStatus(
-  eventId: number,
-  channelId: number,
-): { online: boolean; muted: boolean } {
-  return state?.registry.get(eventId)?.channelStatus(channelId) ?? { online: false, muted: false };
+/** Current producer existence, pause state and identity, read together so they cannot disagree. */
+export function channelStatus(eventId: number, channelId: number): ChannelBroadcastStatus {
+  return (
+    state?.registry.get(eventId)?.channelStatus(channelId) ?? {
+      online: false,
+      muted: false,
+      producerId: null,
+      incomingProducerId: null,
+    }
+  );
 }
 
 /**

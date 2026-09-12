@@ -51,7 +51,14 @@ const auth = (payload: Record<string, unknown>, socketId = 'socket-1') =>
   authorizeHandshake(
     db,
     presence,
-    { clientType: 'web', clientVersion: SERVER_VERSION, ...payload },
+    {
+      clientType: 'web',
+      clientVersion: SERVER_VERSION,
+      // A speaker code and a studio session are paired in the schema, so every speaker
+      // fixture carries one unless the case under test supplies its own.
+      ...(payload.speakerCode === undefined ? {} : { studioSession: `${socketId}-studio` }),
+      ...payload,
+    },
     socketId,
   );
 

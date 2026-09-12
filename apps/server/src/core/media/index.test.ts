@@ -88,19 +88,19 @@ describe('isOnline', () => {
 
 describe('channelStatus', () => {
   it('tracks mute independently from liveness and clears it on close', async () => {
-    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: false, muted: false });
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({ online: false, muted: false });
 
     const { producerId } = await goLive('speaker-a');
-    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: true, muted: false });
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({ online: true, muted: false });
 
     await pauseProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
-    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: true, muted: true });
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({ online: true, muted: true });
 
     await resumeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
-    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: true, muted: false });
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({ online: true, muted: false });
 
     await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
-    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: false, muted: false });
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({ online: false, muted: false });
   });
 });
 
@@ -215,8 +215,8 @@ describe('produce', () => {
       unsubscribeStatus();
     }
 
-    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: true, muted: true });
-    expect(statusAtOpened).toEqual({ online: true, muted: true });
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({ online: true, muted: true });
+    expect(statusAtOpened).toMatchObject({ online: true, muted: true });
     expect(published.at(-1)).toEqual({
       type: 'producer-opened',
       eventId: EVENT,
@@ -288,7 +288,7 @@ describe('muted listener count', () => {
 
     await pauseProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
 
-    expect(channelStatus(EVENT, ENGLISH)).toEqual({ online: true, muted: true });
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({ online: true, muted: true });
     expect(activeRooms()[0]?.listenerCount(ENGLISH)).toBe(1);
   });
 });
