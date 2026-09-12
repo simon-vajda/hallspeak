@@ -11,9 +11,19 @@ import {
 } from './status';
 
 describe('channel status reconciliation', () => {
-  it('uses HTTP only for liveness and leaves mute unknown for an online producer', () => {
-    expect(channelStatusFromHttp(true)).toEqual({ online: true, muted: null });
-    expect(channelStatusFromHttp(false)).toEqual({ online: false, muted: false });
+  it('uses HTTP only for liveness, leaving mute and producer identity unknown', () => {
+    expect(channelStatusFromHttp(true)).toEqual({
+      online: true,
+      muted: null,
+      producerId: null,
+      incomingProducerId: null,
+    });
+    expect(channelStatusFromHttp(false)).toEqual({
+      online: false,
+      muted: false,
+      producerId: null,
+      incomingProducerId: null,
+    });
   });
 
   it('lets a join acknowledgement correct an HTTP status that became stale', () => {
@@ -21,6 +31,8 @@ describe('channel status reconciliation', () => {
     const reconciled = applyJoinStatus(started.state, started.ticket, {
       online: true,
       muted: true,
+      producerId: 'p1',
+      incomingProducerId: null,
     });
 
     expect(reconciled.channels.english).toMatchObject({ online: true, muted: true });
@@ -31,10 +43,14 @@ describe('channel status reconciliation', () => {
     const realtime = applyRealtimeStatus(started.state, 'english', {
       online: true,
       muted: true,
+      producerId: 'p1',
+      incomingProducerId: null,
     });
     const delayed = applyJoinStatus(realtime, started.ticket, {
       online: true,
       muted: false,
+      producerId: 'p1',
+      incomingProducerId: null,
     });
 
     expect(delayed).toBe(realtime);
@@ -45,12 +61,16 @@ describe('channel status reconciliation', () => {
     const muted = applyRealtimeStatus(initialChannelStatuses, 'english', {
       online: true,
       muted: true,
+      producerId: 'p1',
+      incomingProducerId: null,
     });
 
     expect(
       applyRealtimeStatus(muted, 'english', {
         online: false,
         muted: true,
+        producerId: null,
+        incomingProducerId: null,
         reason: 'ended',
       }).channels.english,
     ).toMatchObject({ online: false, muted: false, reason: 'ended' });
@@ -60,6 +80,8 @@ describe('channel status reconciliation', () => {
     const closed = applyRealtimeStatus(initialChannelStatuses, 'english', {
       online: false,
       muted: false,
+      producerId: null,
+      incomingProducerId: null,
       reason: 'dropped',
     });
 
@@ -76,9 +98,21 @@ describe('channel status reconciliation', () => {
     const muted = applyRealtimeStatus(initialChannelStatuses, 'english', {
       online: true,
       muted: true,
+      producerId: 'p1',
+      incomingProducerId: null,
     });
-    const unmuted = applyRealtimeStatus(muted, 'english', { online: true, muted: false });
-    const offline = applyRealtimeStatus(unmuted, 'spanish', { online: false, muted: true });
+    const unmuted = applyRealtimeStatus(muted, 'english', {
+      online: true,
+      muted: false,
+      producerId: 'p1',
+      incomingProducerId: null,
+    });
+    const offline = applyRealtimeStatus(unmuted, 'spanish', {
+      online: false,
+      muted: true,
+      producerId: null,
+      incomingProducerId: null,
+    });
 
     expect(projectOnlineStatuses(muted.channels)).toEqual({ english: true });
     expect(projectOnlineStatuses(offline.channels)).toEqual({ english: true, spanish: false });
@@ -88,6 +122,8 @@ describe('channel status reconciliation', () => {
     const muted = applyRealtimeStatus(initialChannelStatuses, 'english', {
       online: true,
       muted: true,
+      producerId: 'p1',
+      incomingProducerId: null,
     });
     const reset = resetStatusOrdering(muted);
 
@@ -103,7 +139,13 @@ describe('failed mute control reconciliation', () => {
     expect(
       rollbackMutedAfterFailure({
         requestRevision: 4,
-        current: { online: true, muted: false, revision: 4 },
+        current: {
+          online: true,
+          muted: false,
+          producerId: 'p1',
+          incomingProducerId: null,
+          revision: 4,
+        },
       }),
     ).toBe(true);
   });
@@ -112,7 +154,13 @@ describe('failed mute control reconciliation', () => {
     expect(
       rollbackMutedAfterFailure({
         requestRevision: 4,
-        current: { online: true, muted: true, revision: 4 },
+        current: {
+          online: true,
+          muted: true,
+          producerId: 'p1',
+          incomingProducerId: null,
+          revision: 4,
+        },
       }),
     ).toBe(true);
   });
@@ -121,7 +169,13 @@ describe('failed mute control reconciliation', () => {
     expect(
       rollbackMutedAfterFailure({
         requestRevision: 4,
-        current: { online: true, muted: true, revision: 5 },
+        current: {
+          online: true,
+          muted: true,
+          producerId: 'p1',
+          incomingProducerId: null,
+          revision: 5,
+        },
       }),
     ).toBe(true);
   });

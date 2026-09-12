@@ -18,7 +18,7 @@ describe('GET /version', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       serverVersion: serverManifest.version,
-      minMobileVersion: '0.1.0',
+      minMobileVersion: '0.3.0',
     });
   });
 });

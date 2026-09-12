@@ -97,6 +97,12 @@ interface Session {
  */
 export function useMedia(socket: SocketClient | null) {
   const [state, setState] = useState<MediaState>(initialMediaState);
+  /**
+   * The Producer each open consumer receives, by slug. Held beside the consumer ids rather
+   * than inside `MediaState` because it is the listener's half alone: it is what lets a
+   * Producer replaced mid-broadcast be told apart from the one already playing.
+   */
+  const [consumedProducers, setConsumedProducers] = useState<Record<string, string>>({});
   const [health, setHealth] = useState<MediaHealth>('idle');
   /**
    * The ladder's candidates never paired, so this direction is not going to recover on its
@@ -141,6 +147,7 @@ export function useMedia(socket: SocketClient | null) {
     const reset = () => {
       releaseSession();
       setState(afterConnect);
+      setConsumedProducers({});
       setHealth('connecting');
       setRestartRecommended(false);
       previousSample.current = null;
@@ -154,6 +161,7 @@ export function useMedia(socket: SocketClient | null) {
       socket.off('media:reset', reset);
       releaseSession();
       setState(initialMediaState);
+      setConsumedProducers({});
       setHealth('idle');
       setRestartRecommended(false);
       setStats(null);
@@ -356,6 +364,7 @@ export function useMedia(socket: SocketClient | null) {
           // another.
           setHealth('connecting');
           setState((prev) => beginRebuild(prev, direction));
+          setConsumedProducers({});
         }
       }
     };
@@ -550,6 +559,7 @@ export function useMedia(socket: SocketClient | null) {
 
         active.consumers.set(slug, consumer);
         setState((prev) => consumerOpened(prev, slug, consumer.id));
+        setConsumedProducers((prev) => ({ ...prev, [slug]: params.producerId }));
 
         watchConsumerTrack(consumer.track, slug);
 
@@ -590,9 +600,109 @@ export function useMedia(socket: SocketClient | null) {
       active.consumers.delete(slug);
       consumer.close();
       setState((prev) => consumerClosed(prev, slug));
+      setConsumedProducers((prev) => {
+        const { [slug]: _gone, ...rest } = prev;
+        return rest;
+      });
       await signalling(socket).closeConsumer(consumer.id);
     },
     [socket],
+  );
+
+  /**
+   * Moves a channel's audio from one Producer to its replacement without a gap. The incoming
+   * consumer is negotiated and left paused beside the one still playing — the server creates
+   * every consumer paused — and only the step that resumes it closes the outgoing one, so a
+   * guest is never subscribed to two voices and never hears silence between them.
+   */
+  const swapConsumer = useCallback(
+    async (slug: string, outgoing: string): Promise<MediaStreamTrack> => {
+      const generation = stateRef.current.generation;
+      const started = session.current?.pendingConsumers.get(slug);
+      // The same re-entry a first consume has: the effect driving it depends on state a
+      // close mutates synchronously, so it re-enters while this is still awaiting.
+      if (started && started.generation === generation) {
+        return started.promise;
+      }
+
+      const swap = (async () => {
+        const transport = await ensureTransport();
+        const active = session.current;
+        if (!socket || !active) {
+          throw new Error(SUPERSEDED);
+        }
+        const previous = active.consumers.get(slug);
+        if (!previous || previous.id !== outgoing) {
+          throw new Error(SUPERSEDED);
+        }
+
+        const api = signalling(socket);
+        const params = await api.consume(slug, active.device.rtpCapabilities);
+
+        // A rebuild or a socket connect landed while the server was answering, so the
+        // transport this was negotiated against is already gone — and so is the outgoing
+        // consumer it would have replaced.
+        if (
+          session.current !== active ||
+          active.transports.recv !== transport ||
+          transport.closed ||
+          !isCurrent(stateRef.current, generation) ||
+          active.consumers.get(slug) !== previous
+        ) {
+          throw new Error(SUPERSEDED);
+        }
+
+        const consumer = await transport.consume({
+          id: params.consumerId,
+          producerId: params.producerId,
+          kind: params.kind,
+          rtpParameters: params.rtpParameters,
+        });
+        if (
+          session.current !== active ||
+          active.transports.recv !== transport ||
+          active.consumers.get(slug) !== previous
+        ) {
+          consumer.close();
+          throw new Error(SUPERSEDED);
+        }
+
+        watchConsumerTrack(consumer.track, slug);
+        await api.resumeConsumer(consumer.id);
+        // Re-checked after the resume: a stop landing during it means the guest wants no
+        // audio at all, and adopting the replacement now would start some.
+        if (session.current !== active || active.consumers.get(slug) !== previous) {
+          consumer.close();
+          void api.closeConsumer(consumer.id).catch(() => {});
+          throw new Error(SUPERSEDED);
+        }
+
+        active.consumers.set(slug, consumer);
+        previous.close();
+        setState((prev) => consumerOpened(prev, slug, consumer.id));
+        setConsumedProducers((prev) => ({ ...prev, [slug]: params.producerId }));
+        // Fire and forget: the swap has already succeeded here, and reporting a failed
+        // release through this promise would name it a failed listen.
+        void api
+          .closeConsumer(outgoing)
+          .catch((cause) => console.error('media: could not release the replaced consumer', cause));
+        return consumer.track;
+      })();
+
+      const active = session.current;
+      if (active) {
+        active.pendingConsumers.set(slug, { generation, promise: swap });
+        void swap
+          .catch(() => {})
+          .finally(() => {
+            if (session.current === active && active.pendingConsumers.get(slug)?.promise === swap) {
+              active.pendingConsumers.delete(slug);
+            }
+          });
+      }
+      return swap;
+    },
+    [ensureTransport, socket],
   );
 
   /**
@@ -609,11 +719,13 @@ export function useMedia(socket: SocketClient | null) {
 
   return {
     state,
+    consumedProducers,
     health,
     restartRecommended,
     stats,
     startConsuming,
     stopConsuming,
+    swapConsumer,
     restartSession,
     release: releaseSession,
   };

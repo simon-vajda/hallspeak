@@ -84,6 +84,8 @@ export default function ChannelScreen() {
     slug,
     live: channelStatus?.online ?? false,
     muted: channelStatus?.muted ?? null,
+    producerId: channelStatus?.producerId ?? null,
+    incomingProducerId: channelStatus?.incomingProducerId ?? null,
     ...(channelStatus?.reason === undefined ? {} : { closeReason: channelStatus.reason }),
   });
 

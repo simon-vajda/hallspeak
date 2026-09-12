@@ -102,6 +102,7 @@ export function SpeakerStudio({
     goLivePressed,
     hasProducer,
     isMuted,
+    handingOver: false,
     displaced,
   });
 
@@ -247,7 +248,13 @@ export function SpeakerStudio({
     if (status !== 'connected' || hasProducer || !outputTrack) {
       return;
     }
-    const action = onReconnect({ goLivePressed, lastEnd, displaced });
+    const action = onReconnect({
+      goLivePressed,
+      lastEnd,
+      displaced,
+      handoverKnown: false,
+      handover: undefined,
+    });
     if (action.type !== 're-produce') {
       return;
     }

@@ -272,15 +272,15 @@ export function consumerPlan(input: {
    * whose producer this caller does not know, and no producer-identity decision is taken for
    * it: guessing would close audio that is playing.
    */
-  consumedProducers?: Record<string, string>;
+  consumedProducers: Record<string, string>;
   /** Channel being played or held for automatic recovery. */
   activeSlug: string | null;
   /** A producer exists on the active channel. */
   online: boolean;
   /** Producer the active channel says a listener should be hearing. */
-  producerId?: string | null;
+  producerId: string | null;
   /** Set only while a replacement interpreter is transmitting beside the current one. */
-  incomingProducerId?: string | null;
+  incomingProducerId: string | null;
 }): ConsumerPlan {
   const close = Object.keys(input.consumers).filter((slug) => slug !== input.activeSlug);
   if (input.activeSlug === null) {
@@ -300,9 +300,9 @@ export function consumerPlan(input: {
     return { close, consume: input.activeSlug, swap: null };
   }
 
-  const receiving = input.consumedProducers?.[input.activeSlug];
-  const current = input.producerId ?? null;
-  const incoming = input.incomingProducerId ?? null;
+  const receiving = input.consumedProducers[input.activeSlug];
+  const current = input.producerId;
+  const incoming = input.incomingProducerId;
   if (receiving === undefined || current === null) {
     return { close, consume: null, swap: null };
   }

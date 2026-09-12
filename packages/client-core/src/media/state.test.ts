@@ -231,11 +231,28 @@ describe('beginRebuild', () => {
   });
 });
 
+/**
+ * A channel whose producer identity the caller has not been told — the state every plan that
+ * predates producer identity is in. Each decision that turns on identity names its own ids.
+ */
+const unknownProducers = {
+  consumedProducers: {},
+  producerId: null,
+  incomingProducerId: null,
+};
+
 describe('consumerPlan', () => {
   const listening = { english: 'c1' };
 
   it('opens nothing while the guest has no active playback intent', () => {
-    expect(consumerPlan({ consumers: {}, activeSlug: null, online: true })).toEqual({
+    expect(
+      consumerPlan({
+        ...unknownProducers,
+        consumers: {},
+        activeSlug: null,
+        online: true,
+      }),
+    ).toEqual({
       close: [],
       consume: null,
       swap: null,
@@ -243,7 +260,14 @@ describe('consumerPlan', () => {
   });
 
   it('consumes when a producer appears on the active channel', () => {
-    expect(consumerPlan({ consumers: {}, activeSlug: 'english', online: true })).toEqual({
+    expect(
+      consumerPlan({
+        ...unknownProducers,
+        consumers: {},
+        activeSlug: 'english',
+        online: true,
+      }),
+    ).toEqual({
       close: [],
       consume: 'english',
       swap: null,
@@ -251,7 +275,14 @@ describe('consumerPlan', () => {
   });
 
   it('does not consume twice when one is already open', () => {
-    expect(consumerPlan({ consumers: listening, activeSlug: 'english', online: true })).toEqual({
+    expect(
+      consumerPlan({
+        ...unknownProducers,
+        consumers: listening,
+        activeSlug: 'english',
+        online: true,
+      }),
+    ).toEqual({
       close: [],
       consume: null,
       swap: null,
@@ -259,9 +290,24 @@ describe('consumerPlan', () => {
   });
 
   it('keeps the same consumer plan when an online producer mutes and resumes', () => {
-    const beforeMute = consumerPlan({ consumers: listening, activeSlug: 'english', online: true });
-    const whileMuted = consumerPlan({ consumers: listening, activeSlug: 'english', online: true });
-    const afterResume = consumerPlan({ consumers: listening, activeSlug: 'english', online: true });
+    const beforeMute = consumerPlan({
+      ...unknownProducers,
+      consumers: listening,
+      activeSlug: 'english',
+      online: true,
+    });
+    const whileMuted = consumerPlan({
+      ...unknownProducers,
+      consumers: listening,
+      activeSlug: 'english',
+      online: true,
+    });
+    const afterResume = consumerPlan({
+      ...unknownProducers,
+      consumers: listening,
+      activeSlug: 'english',
+      online: true,
+    });
 
     expect(whileMuted).toEqual(beforeMute);
     expect(afterResume).toEqual(beforeMute);
@@ -269,7 +315,14 @@ describe('consumerPlan', () => {
   });
 
   it('closes the consumer when the interpreter goes away, and asks for nothing', () => {
-    expect(consumerPlan({ consumers: listening, activeSlug: 'english', online: false })).toEqual({
+    expect(
+      consumerPlan({
+        ...unknownProducers,
+        consumers: listening,
+        activeSlug: 'english',
+        online: false,
+      }),
+    ).toEqual({
       close: ['english'],
       consume: null,
       swap: null,
@@ -277,7 +330,14 @@ describe('consumerPlan', () => {
   });
 
   it('does nothing when the interpreter goes away and nothing was open', () => {
-    expect(consumerPlan({ consumers: {}, activeSlug: 'english', online: false })).toEqual({
+    expect(
+      consumerPlan({
+        ...unknownProducers,
+        consumers: {},
+        activeSlug: 'english',
+        online: false,
+      }),
+    ).toEqual({
       close: [],
       consume: null,
       swap: null,
@@ -286,7 +346,14 @@ describe('consumerPlan', () => {
 
   /** Closing the old consumer prevents its audio continuing after the channel switch. */
   it('closes the previous channel and opens the new one on a switch', () => {
-    expect(consumerPlan({ consumers: listening, activeSlug: 'spanish', online: true })).toEqual({
+    expect(
+      consumerPlan({
+        ...unknownProducers,
+        consumers: listening,
+        activeSlug: 'spanish',
+        online: true,
+      }),
+    ).toEqual({
       close: ['english'],
       consume: 'spanish',
       swap: null,
@@ -294,13 +361,25 @@ describe('consumerPlan', () => {
   });
 
   it('never asks for a transport rebuild on a switch', () => {
-    const plan = consumerPlan({ consumers: listening, activeSlug: 'spanish', online: true });
+    const plan = consumerPlan({
+      ...unknownProducers,
+      consumers: listening,
+      activeSlug: 'spanish',
+      online: true,
+    });
 
     expect(JSON.stringify(plan)).not.toContain('transport');
   });
 
   it('closes a switched-away channel even when the new one is offline', () => {
-    expect(consumerPlan({ consumers: listening, activeSlug: 'spanish', online: false })).toEqual({
+    expect(
+      consumerPlan({
+        ...unknownProducers,
+        consumers: listening,
+        activeSlug: 'spanish',
+        online: false,
+      }),
+    ).toEqual({
       close: ['english'],
       consume: null,
       swap: null,
@@ -309,12 +388,22 @@ describe('consumerPlan', () => {
 
   it('closes everything left over when playback intent clears', () => {
     expect(
-      consumerPlan({ consumers: { english: 'c1', spanish: 'c2' }, activeSlug: null, online: true }),
+      consumerPlan({
+        ...unknownProducers,
+        consumers: { english: 'c1', spanish: 'c2' },
+        activeSlug: null,
+        online: true,
+      }),
     ).toEqual({ close: ['english', 'spanish'], consume: null, swap: null });
   });
 
   it('never lists the active channel twice when it is also the one to close', () => {
-    const plan = consumerPlan({ consumers: listening, activeSlug: 'english', online: false });
+    const plan = consumerPlan({
+      ...unknownProducers,
+      consumers: listening,
+      activeSlug: 'english',
+      online: false,
+    });
 
     expect(plan.close).toEqual(['english']);
   });
@@ -423,6 +512,7 @@ describe('consumerPlan across a producer change', () => {
   it('does not re-consume while the producer a consumer receives is unknown', () => {
     expect(
       consumerPlan({
+        consumedProducers: {},
         consumers: listening,
         activeSlug: 'english',
         online: true,
@@ -438,7 +528,12 @@ describe('mayAttachConsumerTrack', () => {
     const opened = consumerOpened(initialMediaState, 'english', 'c1');
 
     expect(
-      consumerPlan({ consumers: opened.consumers, activeSlug: 'english', online: true }).consume,
+      consumerPlan({
+        ...unknownProducers,
+        consumers: opened.consumers,
+        activeSlug: 'english',
+        online: true,
+      }).consume,
     ).toBeNull();
     expect(
       mayAttachConsumerTrack({

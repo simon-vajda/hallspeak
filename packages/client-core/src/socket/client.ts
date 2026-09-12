@@ -11,10 +11,17 @@ export type SocketClient = Socket<
   ClientToServerEvents<typeof clientToServer>
 >;
 
-/** What the server's handshake gate authorizes on. A listener sends only a pin. */
+/**
+ * What the server's handshake gate authorizes on. A listener sends only a pin.
+ *
+ * `studioSession` identifies one studio page, never a person, and travels only with a
+ * speaker code: the claim survives that page's reconnects and nothing else. Generating it
+ * belongs to the app, which has a platform's random source; this tier only carries it.
+ */
 export interface SocketAuth {
   pin: string;
   speakerCode?: string;
+  studioSession?: string;
 }
 
 /**

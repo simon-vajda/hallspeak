@@ -2,6 +2,14 @@
 export interface ChannelStatus {
   online: boolean;
   muted: boolean | null;
+  /**
+   * Producer a listener on this channel should be receiving. Null when nothing is
+   * broadcasting, and null until this connection has read an authoritative status: a
+   * producer nobody has named yet is unknown, which is not the same as absent.
+   */
+  producerId: string | null;
+  /** Set only while a replacement interpreter is transmitting beside the current one. */
+  incomingProducerId: string | null;
   reason?: 'ended' | 'dropped';
 }
 
@@ -36,19 +44,29 @@ export function projectOnlineStatuses(
   );
 }
 
-/** REST owns liveness only. An online response cannot say whether its producer is paused. */
+/**
+ * REST owns liveness only. An online response cannot say whether its producer is paused,
+ * and it names no producer at all.
+ */
 export function channelStatusFromHttp(online: boolean): ChannelStatus {
-  return { online, muted: online ? null : false };
+  return { online, muted: online ? null : false, producerId: null, incomingProducerId: null };
 }
 
-function normalizeStatus(status: {
+/** The broadcast snapshot as it arrives on the wire, minus the slug the caller already has. */
+export interface ChannelStatusSnapshot {
   online: boolean;
   muted: boolean;
+  producerId: string | null;
+  incomingProducerId: string | null;
   reason?: 'ended' | 'dropped';
-}): ChannelStatus {
+}
+
+function normalizeStatus(status: ChannelStatusSnapshot): ChannelStatus {
   return {
     online: status.online,
     muted: status.online ? status.muted : false,
+    producerId: status.producerId,
+    incomingProducerId: status.incomingProducerId,
     ...(status.reason === undefined ? {} : { reason: status.reason }),
   };
 }
@@ -100,7 +118,7 @@ export function beginChannelJoin(
 export function applyRealtimeStatus(
   state: ChannelStatusState,
   slug: string,
-  status: { online: boolean; muted: boolean; reason?: 'ended' | 'dropped' },
+  status: ChannelStatusSnapshot,
 ): ChannelStatusState {
   const current = state.channels[slug];
   return {
@@ -118,7 +136,7 @@ export function applyRealtimeStatus(
 export function applyJoinStatus(
   state: ChannelStatusState,
   ticket: ChannelJoinTicket,
-  status: { online: boolean; muted: boolean },
+  status: Omit<ChannelStatusSnapshot, 'reason'>,
 ): ChannelStatusState {
   const current = state.channels[ticket.slug];
   if (

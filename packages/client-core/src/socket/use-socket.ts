@@ -82,6 +82,7 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
   // Destructured so the effect depends on the values, not on a fresh object identity.
   const pin = auth?.pin ?? null;
   const speakerCode = auth?.speakerCode ?? null;
+  const studioSession = auth?.studioSession ?? null;
 
   useEffect(() => {
     if (pin === null) {
@@ -90,7 +91,11 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
 
     updateChannelStatuses(resetStatusesForAuth);
     dispatchConnection({ type: 'start' });
-    const s = connect(speakerCode === null ? { pin } : { pin, speakerCode });
+    const s = connect({
+      pin,
+      ...(speakerCode === null ? {} : { speakerCode }),
+      ...(studioSession === null ? {} : { studioSession }),
+    });
     setSocket(s);
 
     s.on('connect', () => {
@@ -125,15 +130,20 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
     });
     const onReconnectAttempt = () => dispatchConnection({ type: 'reconnect-attempt' });
     s.io.on('reconnect_attempt', onReconnectAttempt);
-    s.on('channel:status', ({ slug, online: isOnline, muted, reason }) => {
-      updateChannelStatuses((current) =>
-        applyRealtimeStatus(current, slug, {
-          online: isOnline,
-          muted,
-          ...(reason === undefined ? {} : { reason }),
-        }),
-      );
-    });
+    s.on(
+      'channel:status',
+      ({ slug, online: isOnline, muted, producerId, incomingProducerId, reason }) => {
+        updateChannelStatuses((current) =>
+          applyRealtimeStatus(current, slug, {
+            online: isOnline,
+            muted,
+            producerId,
+            incomingProducerId,
+            ...(reason === undefined ? {} : { reason }),
+          }),
+        );
+      },
+    );
     // Addressed to the speaker's socket alone, and sent once on connect, so a studio never
     // holds the `?? 0` fallback waiting for the first arrival or departure.
     s.on('channel:listeners', ({ slug, count }) => {
@@ -185,7 +195,7 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
       setSocket(null);
       dispatchConnection({ type: 'stop' });
     };
-  }, [pin, speakerCode, connect, updateChannelStatuses]);
+  }, [pin, speakerCode, studioSession, connect, updateChannelStatuses]);
 
   const joinChannel = useCallback(
     async (slug: string, httpOnline: boolean) => {
