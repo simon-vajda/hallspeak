@@ -230,7 +230,7 @@ describe('studio sessions', () => {
     });
 
     expect(speaker('colleague', 'studio-colleague').ok).toBe(true);
-    expect(presence.claimOf(english.id)).toEqual({
+    expect(presence.claimOf(english.id)).toMatchObject({
       sessionId: 'studio-incumbent',
       socketId: 'incumbent',
     });
@@ -246,7 +246,10 @@ describe('studio sessions', () => {
     presence.take({ eventId, channelId: english.id, sessionId: 'studio-a', socketId: 'first' });
 
     expect(speaker('second', 'studio-a').ok).toBe(true);
-    expect(presence.claimOf(english.id)).toEqual({ sessionId: 'studio-a', socketId: 'second' });
+    expect(presence.claimOf(english.id)).toMatchObject({
+      sessionId: 'studio-a',
+      socketId: 'second',
+    });
     expect(presence.release('first')).toBe(null);
     expect(presence.holder(english.id)).toBe('second');
   });

@@ -69,6 +69,7 @@ export function SpeakerOnAir({
   eventName: string;
   pin: string;
   mic: ReturnType<typeof useMicCapture>;
+  /** When the channel went on air, across every interpreter who has held it. */
   startedAt: number | null;
   listeners: number;
   reports: AnchoredRow[];

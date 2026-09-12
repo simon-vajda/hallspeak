@@ -145,6 +145,7 @@ const held = (over: Partial<AnchoredHandover> = {}): AnchoredHandover => ({
   pending: false,
   canTakeOver: false,
   expiresAt: null,
+  onAirStartedAt: null,
   ...over,
 });
 

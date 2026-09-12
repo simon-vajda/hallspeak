@@ -13,9 +13,9 @@ const studio = (sessionId: string, socketId: string, channelId = ENGLISH): Studi
   socketId,
 });
 
-const setup = () => {
+const setup = (now?: () => number) => {
   const published: Notification[] = [];
-  const presence = new PresenceRegistry({ publish: (n) => published.push(n) });
+  const presence = new PresenceRegistry({ publish: (n) => published.push(n), now });
   return { presence, published };
 };
 
@@ -39,7 +39,10 @@ describe('PresenceRegistry.registerStudio', () => {
 
     presence.registerStudio(studio('session-b', 'socket-b'));
 
-    expect(presence.claimOf(ENGLISH)).toEqual({ sessionId: 'session-a', socketId: 'socket-a' });
+    expect(presence.claimOf(ENGLISH)).toMatchObject({
+      sessionId: 'session-a',
+      socketId: 'socket-a',
+    });
     expect(claimChanges(published)).toEqual([]);
   });
 
@@ -50,7 +53,10 @@ describe('PresenceRegistry.registerStudio', () => {
 
     presence.registerStudio(studio('session-a', 'socket-b'));
 
-    expect(presence.claimOf(ENGLISH)).toEqual({ sessionId: 'session-a', socketId: 'socket-b' });
+    expect(presence.claimOf(ENGLISH)).toMatchObject({
+      sessionId: 'session-a',
+      socketId: 'socket-b',
+    });
     expect(claimChanges(published)).toEqual([
       {
         type: 'claim-changed',
@@ -120,7 +126,10 @@ describe('PresenceRegistry.take', () => {
     const { presence, published } = setup();
 
     expect(presence.take(studio('session-a', 'socket-a'))).toBe(true);
-    expect(presence.claimOf(ENGLISH)).toEqual({ sessionId: 'session-a', socketId: 'socket-a' });
+    expect(presence.claimOf(ENGLISH)).toMatchObject({
+      sessionId: 'session-a',
+      socketId: 'socket-a',
+    });
     expect(claimChanges(published)).toEqual([
       {
         type: 'claim-changed',
@@ -138,7 +147,10 @@ describe('PresenceRegistry.take', () => {
     published.length = 0;
 
     expect(presence.take(studio('session-b', 'socket-b'))).toBe(false);
-    expect(presence.claimOf(ENGLISH)).toEqual({ sessionId: 'session-a', socketId: 'socket-a' });
+    expect(presence.claimOf(ENGLISH)).toMatchObject({
+      sessionId: 'session-a',
+      socketId: 'socket-a',
+    });
     expect(claimChanges(published)).toEqual([]);
   });
 
@@ -156,7 +168,10 @@ describe('PresenceRegistry.take', () => {
     presence.take(studio('session-a', 'socket-a'));
 
     expect(presence.take(studio('session-a', 'socket-b'))).toBe(true);
-    expect(presence.claimOf(ENGLISH)).toEqual({ sessionId: 'session-a', socketId: 'socket-b' });
+    expect(presence.claimOf(ENGLISH)).toMatchObject({
+      sessionId: 'session-a',
+      socketId: 'socket-b',
+    });
   });
 
   it('tracks channels independently', () => {
@@ -183,7 +198,10 @@ describe('PresenceRegistry.move', () => {
     published.length = 0;
 
     expect(presence.move(studio('session-b', 'socket-b'))).toBe('socket-a');
-    expect(presence.claimOf(ENGLISH)).toEqual({ sessionId: 'session-b', socketId: 'socket-b' });
+    expect(presence.claimOf(ENGLISH)).toMatchObject({
+      sessionId: 'session-b',
+      socketId: 'socket-b',
+    });
     expect(claimChanges(published)).toEqual([
       {
         type: 'claim-changed',
@@ -249,7 +267,10 @@ describe('PresenceRegistry.release', () => {
     published.length = 0;
 
     expect(presence.release('socket-a')).toBe(null);
-    expect(presence.claimOf(ENGLISH)).toEqual({ sessionId: 'session-a', socketId: 'socket-b' });
+    expect(presence.claimOf(ENGLISH)).toMatchObject({
+      sessionId: 'session-a',
+      socketId: 'socket-b',
+    });
     expect(claimChanges(published)).toEqual([]);
   });
 
@@ -260,7 +281,10 @@ describe('PresenceRegistry.release', () => {
 
     expect(presence.release('socket-a')).toBe(ENGLISH);
     expect(presence.take(studio('session-a', 'socket-b'))).toBe(true);
-    expect(presence.claimOf(ENGLISH)).toEqual({ sessionId: 'session-a', socketId: 'socket-b' });
+    expect(presence.claimOf(ENGLISH)).toMatchObject({
+      sessionId: 'session-a',
+      socketId: 'socket-b',
+    });
   });
 
   it('does not let a socket that lost a grant evict the session that won it', () => {
@@ -317,5 +341,58 @@ describe('PresenceRegistry.releaseChannel', () => {
 
     expect(presence.releaseChannel(ENGLISH)).toBe(null);
     expect(claimChanges(published)).toEqual([]);
+  });
+});
+
+describe('PresenceRegistry broadcast start', () => {
+  const clock = () => {
+    let value = 1_000;
+    return { read: () => value, advance: (by: number) => (value += by) };
+  };
+
+  it('starts the clock when a free channel goes on air', () => {
+    const time = clock();
+    const { presence } = setup(time.read);
+
+    presence.take(studio('session-a', 'socket-a'));
+
+    expect(presence.claimOf(ENGLISH)?.startedAt).toBe(1_000);
+  });
+
+  it('keeps it across a handover, so the incoming studio continues the broadcast', () => {
+    const time = clock();
+    const { presence } = setup(time.read);
+    presence.take(studio('session-a', 'socket-a'));
+    time.advance(125_000);
+
+    presence.move(studio('session-b', 'socket-b'));
+
+    expect(presence.claimOf(ENGLISH)).toMatchObject({
+      sessionId: 'session-b',
+      startedAt: 1_000,
+    });
+  });
+
+  it('keeps it across the same studio reconnecting', () => {
+    const time = clock();
+    const { presence } = setup(time.read);
+    presence.take(studio('session-a', 'socket-a'));
+    time.advance(9_000);
+
+    presence.registerStudio(studio('session-a', 'socket-b'));
+
+    expect(presence.claimOf(ENGLISH)?.startedAt).toBe(1_000);
+  });
+
+  it('starts a fresh one for the next broadcast after the channel was released', () => {
+    const time = clock();
+    const { presence } = setup(time.read);
+    presence.take(studio('session-a', 'socket-a'));
+    time.advance(60_000);
+    presence.releaseChannel(ENGLISH);
+
+    presence.take(studio('session-b', 'socket-b'));
+
+    expect(presence.claimOf(ENGLISH)?.startedAt).toBe(61_000);
   });
 });

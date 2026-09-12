@@ -215,7 +215,7 @@ describe('HandoverRegistry', () => {
       registry.produced(waiter);
       registry.complete(CHANNEL_ID);
 
-      expect(presence.claimOf(CHANNEL_ID)).toEqual({
+      expect(presence.claimOf(CHANNEL_ID)).toMatchObject({
         sessionId: waiter.sessionId,
         socketId: waiter.socketId,
       });

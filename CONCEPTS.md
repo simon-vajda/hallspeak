@@ -45,6 +45,8 @@ The claim is held against the studio's own page rather than against the Speaker 
 
 A claim is not Live. It survives a reconnect that Live does not, and a Speaker who ends their broadcast gives it up while their studio stays open.
 
+The claim also carries when the Channel went on air, which is what the studio's elapsed timer reads. A Handover moves that moment with the claim, so an interpreter taking over continues the broadcast's clock rather than starting a second one; only ending the broadcast resets it.
+
 ### Handover
 Moving a Channel's Broadcast claim from one interpreter to another without the broadcast ending.
 

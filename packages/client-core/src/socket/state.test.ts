@@ -87,6 +87,7 @@ describe('anchorHandover', () => {
     pending: false,
     remainingMs: null,
     canTakeOver: false,
+    onAirMs: null,
   } as const;
 
   it('turns the remaining duration into a deadline on this client clock', () => {
@@ -113,6 +114,13 @@ describe('anchorHandover', () => {
     expect(anchorHandover({ ...waiting, canTakeOver: true }, 5_000).canTakeOver).toBe(true);
   });
 
+  it('anchors how long the channel has been on air, and carries none when nobody holds it', () => {
+    // The broadcast belongs to the channel, so a studio that takes it over reads back the
+    // same start and continues the clock rather than starting a second one.
+    expect(anchorHandover({ ...live, onAirMs: 125_000 }, 200_000).onAirStartedAt).toBe(75_000);
+    expect(anchorHandover({ ...live, holder: 'none' }, 200_000).onAirStartedAt).toBeNull();
+  });
+
   it('keeps the slug, holder, role and pending flag the server sent', () => {
     const anchored = anchorHandover(
       { ...live, holder: 'other', role: 'bystander', pending: true },
@@ -126,6 +134,7 @@ describe('anchorHandover', () => {
       pending: true,
       canTakeOver: false,
       expiresAt: null,
+      onAirStartedAt: null,
     });
   });
 });

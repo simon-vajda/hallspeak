@@ -417,7 +417,10 @@ export function SpeakerStudio({
         eventName={eventName}
         pin={pin}
         mic={mic}
-        startedAt={startedAt}
+        // The channel's own clock, not this studio's: an interpreter taking over continues
+        // the broadcast rather than starting a second one. The local press covers only the
+        // gap before the first snapshot.
+        startedAt={handover?.onAirStartedAt ?? startedAt}
         listeners={listeners}
         reports={reports}
         reportResolution={reportResolution}

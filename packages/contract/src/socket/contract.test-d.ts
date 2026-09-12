@@ -41,6 +41,7 @@ export const _handoverState: Parameters<S2C['handover:state']>[0] = {
   pending: true,
   remainingMs: 30_000,
   canTakeOver: false,
+  onAirMs: 125_000,
 };
 export const _closedStatus: Parameters<S2C['channel:status']>[0] = {
   slug: 'english',
