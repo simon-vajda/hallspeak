@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initialSocketConnectionState, socketConnectionState } from './state';
+import { anchorHandover, initialSocketConnectionState, socketConnectionState } from './state';
 
 describe('socketConnectionState', () => {
   it('orders a retryable drop before the reconnect attempt and successful recovery', () => {
@@ -76,5 +76,56 @@ describe('socketConnectionState', () => {
     const connected = socketConnectionState(initialSocketConnectionState, { type: 'connect' });
 
     expect(socketConnectionState(connected, { type: 'stop' })).toBe(initialSocketConnectionState);
+  });
+});
+
+describe('anchorHandover', () => {
+  const live = {
+    slug: 'english',
+    holder: 'self',
+    role: 'live',
+    pending: false,
+    remainingMs: null,
+    canTakeOver: false,
+  } as const;
+
+  it('turns the remaining duration into a deadline on this client clock', () => {
+    const anchored = anchorHandover({ ...live, pending: true, remainingMs: 30_000 }, 1_000);
+
+    expect(anchored.expiresAt).toBe(31_000);
+  });
+
+  it('carries no deadline when the server names no countdown', () => {
+    expect(anchorHandover(live, 1_000).expiresAt).toBeNull();
+  });
+
+  it('keeps the server as the authority on whether a takeover is available', () => {
+    const waiting = {
+      ...live,
+      holder: 'other',
+      role: 'waiting',
+      pending: true,
+      remainingMs: 0,
+      canTakeOver: false,
+    } as const;
+
+    expect(anchorHandover(waiting, 5_000).canTakeOver).toBe(false);
+    expect(anchorHandover({ ...waiting, canTakeOver: true }, 5_000).canTakeOver).toBe(true);
+  });
+
+  it('keeps the slug, holder, role and pending flag the server sent', () => {
+    const anchored = anchorHandover(
+      { ...live, holder: 'other', role: 'bystander', pending: true },
+      0,
+    );
+
+    expect(anchored).toEqual({
+      slug: 'english',
+      holder: 'other',
+      role: 'bystander',
+      pending: true,
+      canTakeOver: false,
+      expiresAt: null,
+    });
   });
 });
