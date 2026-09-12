@@ -33,7 +33,7 @@ beforeEach(() => {
   const a = createEvent(db, { name: 'A', enabled: true });
   englishId = createChannel(db, a.id, { slug: 'english', name: 'English', enabled: true }).id;
   createChannel(db, a.id, { slug: 'german', name: 'German' });
-  authA = { eventId: a.id, pin: a.pin, speakerChannelId: null };
+  authA = { eventId: a.id, pin: a.pin, speakerChannelId: null, studioSession: null };
 
   const b = createEvent(db, { name: 'B', enabled: true });
   foreignSlug = createChannel(db, b.id, { slug: 'klingon', name: 'Klingon', enabled: true }).slug;
@@ -58,7 +58,12 @@ describe('joinChannel', () => {
 
   // Liveness is producer existence, not the claim: an open studio is not audio.
   it('reports offline when a speaker only holds the claim', () => {
-    presence.claim(englishId, 'code-x', 'speaker-socket');
+    presence.take({
+      eventId: authA.eventId,
+      channelId: englishId,
+      sessionId: 'studio-x',
+      socketId: 'speaker-socket',
+    });
     const socket = fakeSocket();
 
     expect(joinChannel(db, socket, authA, 'english')).toEqual({

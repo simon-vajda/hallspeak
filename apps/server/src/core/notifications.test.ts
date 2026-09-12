@@ -44,11 +44,11 @@ describe('NotificationHub', () => {
     const seen: Notification[] = [];
     hub.subscribe((n) => seen.push(n));
 
-    hub.publish({ type: 'peer-evicted', socketId: 'socket-a', reason: 'claim_taken_over' });
+    hub.publish({ type: 'peer-evicted', socketId: 'socket-a', reason: 'access_revoked' });
     hub.publish({ type: 'room-evicted', eventId: 2, reason: 'access_revoked' });
 
     expect(seen).toEqual([
-      { type: 'peer-evicted', socketId: 'socket-a', reason: 'claim_taken_over' },
+      { type: 'peer-evicted', socketId: 'socket-a', reason: 'access_revoked' },
       { type: 'room-evicted', eventId: 2, reason: 'access_revoked' },
     ]);
   });

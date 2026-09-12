@@ -42,6 +42,7 @@ function subscribe(io: LifecycleServer) {
 }
 
 const SPEAKER = 'speaker-a';
+const STUDIO = 'studio-english';
 const LISTENER = 'guest-a';
 
 let db: Db;
@@ -62,8 +63,8 @@ beforeEach(async () => {
   const a = createEvent(db, { name: 'A', enabled: true });
   eventId = a.id;
   englishId = createChannel(db, a.id, { slug: 'english', name: 'English', enabled: true }).id;
-  listener = { eventId: a.id, pin: a.pin, speakerChannelId: null };
-  speaker = { eventId: a.id, pin: a.pin, speakerChannelId: englishId };
+  listener = { eventId: a.id, pin: a.pin, speakerChannelId: null, studioSession: null };
+  speaker = { eventId: a.id, pin: a.pin, speakerChannelId: englishId, studioSession: STUDIO };
 
   const b = createEvent(db, { name: 'B', enabled: true });
   foreignSlug = createChannel(db, b.id, { slug: 'klingon', name: 'Klingon', enabled: true }).slug;
@@ -83,7 +84,7 @@ describe('submitReport', () => {
   it('records a report and sends the tally to the claim holder alone', async () => {
     const { io, tallies } = fakeIo();
     const unsubscribe = subscribe(io);
-    presence.claim(englishId, 'code-english', SPEAKER);
+    presence.take({ eventId, channelId: englishId, sessionId: STUDIO, socketId: SPEAKER });
     await live();
 
     const result = submitReport(db, fakeSocket(LISTENER, [channelRoom(englishId)]), listener, {
@@ -107,7 +108,7 @@ describe('submitReport', () => {
   });
 
   it('refuses a socket that never joined the channel room, recording nothing', async () => {
-    presence.claim(englishId, 'code-english', SPEAKER);
+    presence.take({ eventId, channelId: englishId, sessionId: STUDIO, socketId: SPEAKER });
     await live();
 
     expect(() =>
@@ -139,7 +140,7 @@ describe('submitReport', () => {
   it('refuses a duplicate inside the cooldown and publishes no second tally', async () => {
     const { io, tallies } = fakeIo();
     const unsubscribe = subscribe(io);
-    presence.claim(englishId, 'code-english', SPEAKER);
+    presence.take({ eventId, channelId: englishId, sessionId: STUDIO, socketId: SPEAKER });
     await live();
     const socket = fakeSocket(LISTENER, [channelRoom(englishId)]);
     const payload = { slug: 'english', category: 'quiet' } as const;
@@ -174,7 +175,7 @@ describe('resolveReports', () => {
   it('clears this connection’s reports and sends a positive confirmation', async () => {
     const { io, tallies } = fakeIo();
     const unsubscribe = subscribe(io);
-    presence.claim(englishId, 'code-english', SPEAKER);
+    presence.take({ eventId, channelId: englishId, sessionId: STUDIO, socketId: SPEAKER });
     await live();
     const socket = fakeSocket(LISTENER, [channelRoom(englishId)]);
     submitReport(db, socket, listener, { slug: 'english', category: 'quiet' });
@@ -240,7 +241,7 @@ describe('reports-changed with no claim holder', () => {
 describe('sendInitialReports', () => {
   it('sends the current rows to a studio connecting to a channel with live reports', async () => {
     const emitted: unknown[] = [];
-    presence.claim(englishId, 'code-english', SPEAKER);
+    presence.take({ eventId, channelId: englishId, sessionId: STUDIO, socketId: SPEAKER });
     await live();
     submitReport(db, fakeSocket(LISTENER, [channelRoom(englishId)]), listener, {
       slug: 'english',
@@ -313,7 +314,7 @@ describe('teardown', () => {
   });
 
   it('drops the channel’s tally when the channel is revoked', async () => {
-    presence.claim(englishId, 'code-english', SPEAKER);
+    presence.take({ eventId, channelId: englishId, sessionId: STUDIO, socketId: SPEAKER });
     await live();
     submitReport(db, fakeSocket(LISTENER, [channelRoom(englishId)]), listener, {
       slug: 'english',

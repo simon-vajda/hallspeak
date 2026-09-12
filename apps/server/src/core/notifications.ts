@@ -5,7 +5,7 @@
 
 import type { ReportResolution, ReportRow } from '@linguacast/contract/socket';
 
-export type EvictionReason = 'worker_died' | 'access_revoked' | 'claim_taken_over';
+export type EvictionReason = 'worker_died' | 'access_revoked';
 
 /**
  * Two eviction variants because they answer different questions. `peer-evicted` names a
@@ -40,6 +40,14 @@ export type Notification =
       rows: ReportRow[];
       soundsGood: ReportResolution;
     }
+  | {
+      /** Who holds broadcast rights now; both fields null once nobody does. */
+      type: 'claim-changed';
+      eventId: number;
+      channelId: number;
+      sessionId: string | null;
+      socketId: string | null;
+    }
   | { type: 'peer-evicted'; socketId: string; reason: EvictionReason }
   | { type: 'room-evicted'; eventId: number; reason: EvictionReason };
 
@@ -47,9 +55,9 @@ export type NotificationListener = (notification: Notification) => void;
 
 /**
  * How a domain fact reaches the transport layer without `core/` knowing what a socket is.
- * Worker death, admin revocation and claim takeover all publish here rather than reaching
- * for a socket, and `socket/index.ts` is the only subscriber — so exactly one place in the
- * codebase turns an eviction into a disconnect.
+ * Worker death and admin revocation publish here rather than reaching for a socket, and
+ * `socket/index.ts` is the only subscriber — so exactly one place in the codebase turns an
+ * eviction into a disconnect.
  *
  * Facts, never commands: keeping it that way is what lets `core/` import nothing from
  * `socket/`.

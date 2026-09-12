@@ -51,10 +51,15 @@ beforeEach(async () => {
   const other = createEvent(db, { name: 'Conference', enabled: true });
   createChannel(db, other.id, { slug: 'french', name: 'French', enabled: true });
   foreignSlug = 'french';
-  foreignAuth = { eventId: other.id, pin: other.pin, speakerChannelId: null };
+  foreignAuth = { eventId: other.id, pin: other.pin, speakerChannelId: null, studioSession: null };
 
-  speaker = { eventId, pin: event.pin, speakerChannelId: englishId };
-  listener = { eventId, pin: event.pin, speakerChannelId: null };
+  speaker = {
+    eventId,
+    pin: event.pin,
+    speakerChannelId: englishId,
+    studioSession: 'studio-english',
+  };
+  listener = { eventId, pin: event.pin, speakerChannelId: null, studioSession: null };
 });
 
 afterEach(async () => {
@@ -372,7 +377,12 @@ describe('producer control is scoped to the claim', () => {
   });
 
   it('refuses a speaker acting on another channel’s producer', async () => {
-    const spanishSpeaker = { eventId, pin: speaker.pin, speakerChannelId: spanishId };
+    const spanishSpeaker = {
+      eventId,
+      pin: speaker.pin,
+      speakerChannelId: spanishId,
+      studioSession: 'studio-spanish',
+    };
     const { producerId } = await goLive();
     await openTransport(socket('speaker-b'), spanishSpeaker, { direction: 'send' });
 

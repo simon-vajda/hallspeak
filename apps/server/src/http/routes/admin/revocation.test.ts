@@ -62,8 +62,8 @@ const patch = (path: string, body: unknown) =>
     body: JSON.stringify(body),
   });
 
-async function broadcast(channelId: number, slug: string, socketId: string, code: string) {
-  presence.claim(channelId, code, socketId);
+async function broadcast(channelId: number, slug: string, socketId: string) {
+  presence.take({ eventId, channelId, sessionId: `${socketId}-studio`, socketId });
   await goLive({ eventId, socketId, channelId, slug });
 }
 
@@ -73,7 +73,7 @@ const roomEvictions = () => published.filter((n) => n.type === 'room-evicted');
 
 describe('regenerating a speaker code', () => {
   it('closes the producer, releases the claim and evicts that speaker', async () => {
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
+    await broadcast(english.id, 'english', 'speaker-a');
 
     const res = await request(`/admin/channels/${english.id}/regenerate-speaker-code`, {
       method: 'POST',
@@ -86,8 +86,8 @@ describe('regenerating a speaker code', () => {
   });
 
   it('leaves the other channels of the event broadcasting', async () => {
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
-    await broadcast(spanish.id, 'spanish', 'speaker-b', 'code-spanish');
+    await broadcast(english.id, 'english', 'speaker-a');
+    await broadcast(spanish.id, 'spanish', 'speaker-b');
 
     await request(`/admin/channels/${english.id}/regenerate-speaker-code`, { method: 'POST' });
 
@@ -96,7 +96,7 @@ describe('regenerating a speaker code', () => {
   });
 
   it('revokes after the write, so the new code is already in the response', async () => {
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
+    await broadcast(english.id, 'english', 'speaker-a');
 
     const res = await request(`/admin/channels/${english.id}/regenerate-speaker-code`, {
       method: 'POST',
@@ -110,8 +110,8 @@ describe('regenerating a speaker code', () => {
 
 describe('disabling and deleting a channel', () => {
   it('disabling closes that channel’s producer and leaves the others', async () => {
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
-    await broadcast(spanish.id, 'spanish', 'speaker-b', 'code-spanish');
+    await broadcast(english.id, 'english', 'speaker-a');
+    await broadcast(spanish.id, 'spanish', 'speaker-b');
 
     await patch(`/admin/channels/${english.id}`, { enabled: false });
 
@@ -120,7 +120,7 @@ describe('disabling and deleting a channel', () => {
   });
 
   it('enabling a channel revokes nothing', async () => {
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
+    await broadcast(english.id, 'english', 'speaker-a');
 
     await patch(`/admin/channels/${english.id}`, { enabled: true });
 
@@ -129,7 +129,7 @@ describe('disabling and deleting a channel', () => {
   });
 
   it('renaming a channel revokes nothing', async () => {
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
+    await broadcast(english.id, 'english', 'speaker-a');
 
     await patch(`/admin/channels/${english.id}`, { name: 'English (simultaneous)' });
 
@@ -138,7 +138,7 @@ describe('disabling and deleting a channel', () => {
   });
 
   it('deleting closes that channel’s producer and evicts its speaker', async () => {
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
+    await broadcast(english.id, 'english', 'speaker-a');
 
     const res = await request(`/admin/channels/${english.id}`, { method: 'DELETE' });
 
@@ -162,7 +162,7 @@ describe('regenerating a PIN', () => {
    * meant to lock out.
    */
   it('publishes one room eviction rather than one per known peer', async () => {
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
+    await broadcast(english.id, 'english', 'speaker-a');
 
     const res = await request(`/admin/events/${eventId}/regenerate-pin`, { method: 'POST' });
 
@@ -172,8 +172,8 @@ describe('regenerating a PIN', () => {
   });
 
   it('closes every producer on the event and releases every claim', async () => {
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
-    await broadcast(spanish.id, 'spanish', 'speaker-b', 'code-spanish');
+    await broadcast(english.id, 'english', 'speaker-a');
+    await broadcast(spanish.id, 'spanish', 'speaker-b');
 
     await request(`/admin/events/${eventId}/regenerate-pin`, { method: 'POST' });
 
@@ -192,8 +192,8 @@ describe('regenerating a PIN', () => {
 
 describe('disabling and deleting an event', () => {
   it('disabling closes every producer on it', async () => {
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
-    await broadcast(spanish.id, 'spanish', 'speaker-b', 'code-spanish');
+    await broadcast(english.id, 'english', 'speaker-a');
+    await broadcast(spanish.id, 'spanish', 'speaker-b');
 
     await patch(`/admin/events/${eventId}`, { enabled: false });
 
@@ -203,7 +203,7 @@ describe('disabling and deleting an event', () => {
   });
 
   it('enabling an event revokes nothing', async () => {
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
+    await broadcast(english.id, 'english', 'speaker-a');
 
     await patch(`/admin/events/${eventId}`, { enabled: true });
 
@@ -213,7 +213,7 @@ describe('disabling and deleting an event', () => {
   });
 
   it('deleting closes the room and evicts everyone on it', async () => {
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
+    await broadcast(english.id, 'english', 'speaker-a');
 
     const res = await request(`/admin/events/${eventId}`, { method: 'DELETE' });
 
@@ -232,7 +232,7 @@ describe('disabling and deleting an event', () => {
       channelId: french.id,
       slug: 'french',
     });
-    await broadcast(english.id, 'english', 'speaker-a', english.speakerCode);
+    await broadcast(english.id, 'english', 'speaker-a');
 
     await patch(`/admin/events/${eventId}`, { enabled: false });
 

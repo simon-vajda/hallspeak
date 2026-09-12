@@ -60,7 +60,12 @@ describe('GET /events/{pin}', () => {
   // Liveness is producer existence, not the claim: an interpreter with the studio open
   // and nothing produced must not read as live to a guest.
   it('reports a channel offline while a speaker only holds the claim', async () => {
-    presence.claim(live.channelId, 'code-x', 'socket-x');
+    presence.take({
+      eventId: live.eventId,
+      channelId: live.channelId,
+      sessionId: 'studio-x',
+      socketId: 'socket-x',
+    });
     try {
       const res = await api.request(`/events/${live.pin}`);
       const body = (await res.json()) as { channels: { slug: string; online: boolean }[] };

@@ -11,6 +11,11 @@ export interface SocketAuth {
   pin: string;
   /** The channel this socket may broadcast on, or null for a listener. */
   speakerChannelId: number | null;
+  /**
+   * The studio page behind this connection, or null for a listener. It identifies a page,
+   * never a person: a reload or a duplicated tab is a different studio.
+   */
+  studioSession: string | null;
 }
 
 export type HandshakeError =
@@ -21,22 +26,16 @@ export type HandshakeError =
   | 'web_version_mismatch'
   | 'mobile_version_too_old'
   | 'not_found'
-  | 'invalid_speaker_code'
-  | 'channel_busy';
+  | 'invalid_speaker_code';
 
-/**
- * `displacedSocketId` is a one-shot fact about this connection, not standing state, which
- * is why it sits beside `data` rather than inside it: it never belongs in `socket.data`.
- */
-export type AuthorizeResult =
-  | { ok: true; data: SocketAuth; displacedSocketId: string | null }
-  | { ok: false; error: HandshakeError };
+export type AuthorizeResult = { ok: true; data: SocketAuth } | { ok: false; error: HandshakeError };
 
 /**
  * The entire connection-time decision, in one synchronous pass. Synchronous is
- * load-bearing: better-sqlite3 is, so the busy check and the claim that follows cannot
- * interleave with another socket's. On success it claims the channel; `presence.release`
- * on disconnect is the matching half.
+ * load-bearing: better-sqlite3 is, so the code lookup and the rebind that follows cannot
+ * interleave with another socket's. It takes no claim — opening a studio is not a request
+ * to broadcast — but it registers the studio, and a session that already holds the channel
+ * gets it rebound to this connection. `presence.release` on disconnect is the matching half.
  */
 export function authorizeHandshake(
   db: Db,
@@ -70,12 +69,11 @@ export function authorizeHandshake(
     return { ok: false, error: 'not_found' };
   }
 
-  const { speakerCode } = parsed.data;
-  if (speakerCode === undefined) {
+  const { speakerCode, studioSession } = parsed.data;
+  if (speakerCode === undefined || studioSession === undefined) {
     return {
       ok: true,
-      data: { eventId: event.id, pin: event.pin, speakerChannelId: null },
-      displacedSocketId: null,
+      data: { eventId: event.id, pin: event.pin, speakerChannelId: null, studioSession: null },
     };
   }
 
@@ -86,16 +84,20 @@ export function authorizeHandshake(
     return { ok: false, error: 'invalid_speaker_code' };
   }
 
-  // Another code holds it: busy. The same code takes it over, and the loser is named so
-  // the caller can close its media and its socket.
-  const claim = presence.claim(channel.id, speakerCode, socketId);
-  if (!claim.ok) {
-    return { ok: false, error: 'channel_busy' };
-  }
+  presence.registerStudio({
+    eventId: event.id,
+    channelId: channel.id,
+    sessionId: studioSession,
+    socketId,
+  });
 
   return {
     ok: true,
-    data: { eventId: event.id, pin: event.pin, speakerChannelId: channel.id },
-    displacedSocketId: claim.displaced,
+    data: {
+      eventId: event.id,
+      pin: event.pin,
+      speakerChannelId: channel.id,
+      studioSession,
+    },
   };
 }
