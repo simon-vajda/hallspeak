@@ -764,9 +764,10 @@ export async function closeConsumer(ctx: MediaContext, consumerId: string): Prom
 // --- revocation ---------------------------------------------------------------
 
 /**
- * Channel-scoped: disabling or deleting a channel, or regenerating its speaker code. Only
- * the claim holder loses access, so only they are evicted — a listener's PIN is untouched
- * and their consumer dies with the producer anyway.
+ * Channel-scoped: disabling or deleting a channel, or regenerating its speaker code. Every
+ * studio on the channel is evicted and not only the one that was live — they all hold the
+ * code that was just revoked, and one left sitting in pre-flight could otherwise still go
+ * live on it. A listener's PIN is untouched and their consumer dies with the producer.
  */
 export function revokeChannel(eventId: number, channelId: number, reason: EvictionReason): void {
   const room = state?.registry.get(eventId);
@@ -774,11 +775,13 @@ export function revokeChannel(eventId: number, channelId: number, reason: Evicti
   room?.closeProducer(channelId);
 
   reports.forgetChannel(eventId, channelId);
+  // Nothing can be waiting for a channel nobody may broadcast on any more.
+  handover.forgetChannel(channelId);
 
-  const holder = presence.releaseChannel(channelId);
-  if (holder) {
-    room?.closePeer(holder);
-    notifications.publish({ type: 'peer-evicted', socketId: holder, reason });
+  presence.releaseChannel(channelId);
+  for (const studio of presence.studios(channelId)) {
+    room?.closePeer(studio.socketId);
+    notifications.publish({ type: 'peer-evicted', socketId: studio.socketId, reason });
   }
   state?.registry.releaseIfIdle(eventId);
 }

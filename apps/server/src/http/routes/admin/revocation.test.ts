@@ -85,6 +85,25 @@ describe('regenerating a speaker code', () => {
     expect(evictedSockets()).toEqual(['speaker-a']);
   });
 
+  /**
+   * Every studio on the channel holds the code that was just regenerated, not only the one
+   * that was live: a colleague left sitting in pre-flight could otherwise still go live.
+   */
+  it('evicts a studio in pre-flight as well as the one on air', async () => {
+    await broadcast(english.id, 'english', 'speaker-a');
+    presence.registerStudio({
+      eventId,
+      channelId: english.id,
+      sessionId: 'studio-b',
+      socketId: 'speaker-b',
+    });
+
+    await request(`/admin/channels/${english.id}/regenerate-speaker-code`, { method: 'POST' });
+
+    expect(evictedSockets().sort()).toEqual(['speaker-a', 'speaker-b']);
+    presence.release('speaker-b');
+  });
+
   it('leaves the other channels of the event broadcasting', async () => {
     await broadcast(english.id, 'english', 'speaker-a');
     await broadcast(spanish.id, 'spanish', 'speaker-b');

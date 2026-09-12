@@ -21,6 +21,7 @@ import {
   applyNotification,
   type LifecycleServer,
   releaseSocket,
+  seedClaimAudience,
   sendInitialListenerCount,
 } from './lifecycle.handlers';
 
@@ -60,15 +61,19 @@ function fakeIo() {
 }
 
 let stopMedia: () => Promise<void>;
+let db: Db;
+let closeDb: () => void;
 
 beforeEach(async () => {
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
   stopMedia = await startFakeMedia();
+  ({ db, cleanup: closeDb } = createTestDb());
 });
 
 afterEach(async () => {
   await stopMedia();
+  closeDb();
   presence.releaseChannel(ENGLISH);
   vi.restoreAllMocks();
 });
@@ -130,7 +135,7 @@ describe('applyNotification producer lifecycle', () => {
     const { io, emitted } = fakeIo();
     await goLive({ eventId: EVENT, socketId: 'speaker-a', channelId: ENGLISH, slug: 'english' });
 
-    applyNotification(io, {
+    applyNotification(io, db, {
       type: 'producer-opened',
       eventId: EVENT,
       channelId: ENGLISH,
@@ -159,7 +164,7 @@ describe('applyNotification producer lifecycle', () => {
       },
     );
 
-    applyNotification(io, {
+    applyNotification(io, db, {
       type: 'producer-opened',
       eventId: EVENT,
       channelId: ENGLISH,
@@ -180,14 +185,14 @@ describe('applyNotification producer lifecycle', () => {
     });
     const ctx = { eventId: EVENT, socketId: 'speaker-a' };
     await pauseProducer(ctx, ENGLISH, producerId);
-    applyNotification(io, {
+    applyNotification(io, db, {
       type: 'producer-paused',
       eventId: EVENT,
       channelId: ENGLISH,
       slug: 'english',
     });
     await resumeProducer(ctx, ENGLISH, producerId);
-    applyNotification(io, {
+    applyNotification(io, db, {
       type: 'producer-resumed',
       eventId: EVENT,
       channelId: ENGLISH,
@@ -215,7 +220,7 @@ describe('applyNotification producer lifecycle', () => {
     await pauseProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
     await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
 
-    applyNotification(io, {
+    applyNotification(io, db, {
       type: 'producer-closed',
       eventId: EVENT,
       channelId: ENGLISH,
@@ -244,7 +249,7 @@ describe('applyNotification producer lifecycle', () => {
     });
     await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
 
-    applyNotification(io, {
+    applyNotification(io, db, {
       type: 'producer-paused',
       eventId: EVENT,
       channelId: ENGLISH,
@@ -269,7 +274,7 @@ describe('applyNotification producer lifecycle', () => {
     // still replaces another now that a colleague's arrival negotiates instead.
     await goLive({ ...reconnecting, socketId: 'speaker-a-again' });
 
-    applyNotification(io, {
+    applyNotification(io, db, {
       type: 'producer-paused',
       eventId: EVENT,
       channelId: ENGLISH,
@@ -287,7 +292,7 @@ describe('applyNotification peer eviction', () => {
     addSocket('speaker-a');
     addSocket('speaker-b');
 
-    applyNotification(io, {
+    applyNotification(io, db, {
       type: 'peer-evicted',
       socketId: 'speaker-a',
       reason: 'access_revoked',
@@ -300,7 +305,7 @@ describe('applyNotification peer eviction', () => {
     const { io, disconnectedSockets } = fakeIo();
 
     expect(() =>
-      applyNotification(io, {
+      applyNotification(io, db, {
         type: 'peer-evicted',
         socketId: 'long-gone',
         reason: 'access_revoked',
@@ -314,7 +319,7 @@ describe('applyNotification room eviction', () => {
   it('disconnects the whole event room when access is revoked', () => {
     const { io, disconnectedRooms, emitted } = fakeIo();
 
-    applyNotification(io, { type: 'room-evicted', eventId: EVENT, reason: 'access_revoked' });
+    applyNotification(io, db, { type: 'room-evicted', eventId: EVENT, reason: 'access_revoked' });
 
     expect(disconnectedRooms).toEqual([eventRoom(EVENT)]);
     expect(emitted).toEqual([]);
@@ -323,7 +328,7 @@ describe('applyNotification room eviction', () => {
   it('touches only that event’s room', () => {
     const { io, disconnectedRooms } = fakeIo();
 
-    applyNotification(io, { type: 'room-evicted', eventId: 7, reason: 'access_revoked' });
+    applyNotification(io, db, { type: 'room-evicted', eventId: 7, reason: 'access_revoked' });
 
     expect(disconnectedRooms).toEqual([eventRoom(7)]);
     expect(disconnectedRooms).not.toContain(eventRoom(EVENT));
@@ -336,7 +341,7 @@ describe('applyNotification room eviction', () => {
   it('resets rather than disconnects when a worker died', () => {
     const { io, disconnectedRooms, emitted } = fakeIo();
 
-    applyNotification(io, { type: 'room-evicted', eventId: EVENT, reason: 'worker_died' });
+    applyNotification(io, db, { type: 'room-evicted', eventId: EVENT, reason: 'worker_died' });
 
     expect(disconnectedRooms).toEqual([]);
     expect(emitted).toEqual([
@@ -354,7 +359,7 @@ describe('applyNotification listener counts', () => {
     const { io, emitted } = fakeIo();
     presence.take({ eventId: EVENT, channelId: ENGLISH, sessionId: STUDIO, socketId: 'speaker-a' });
 
-    applyNotification(io, {
+    applyNotification(io, db, {
       type: 'listeners-changed',
       eventId: EVENT,
       channelId: ENGLISH,
@@ -373,7 +378,7 @@ describe('applyNotification listener counts', () => {
     const { io, emitted } = fakeIo();
     presence.take({ eventId: EVENT, channelId: ENGLISH, sessionId: STUDIO, socketId: 'speaker-a' });
 
-    applyNotification(io, {
+    applyNotification(io, db, {
       type: 'listeners-changed',
       eventId: EVENT,
       channelId: ENGLISH,
@@ -388,7 +393,7 @@ describe('applyNotification listener counts', () => {
     const { io, emitted } = fakeIo();
 
     expect(() =>
-      applyNotification(io, {
+      applyNotification(io, db, {
         type: 'listeners-changed',
         eventId: EVENT,
         channelId: ENGLISH,
@@ -410,7 +415,7 @@ describe('applyNotification listener counts', () => {
       sessionId: STUDIO,
     });
 
-    applyNotification(io, {
+    applyNotification(io, db, {
       type: 'producer-opened',
       eventId: EVENT,
       channelId: ENGLISH,
@@ -427,14 +432,11 @@ describe('applyNotification listener counts', () => {
   });
 });
 
-describe('sendInitialListenerCount', () => {
-  let db: Db;
-  let cleanup: () => void;
+describe('applyNotification claim changes', () => {
   let eventId: number;
   let channelId: number;
 
   beforeEach(() => {
-    ({ db, cleanup } = createTestDb());
     const event = createEvent(db, { name: 'A', enabled: true });
     eventId = event.id;
     channelId = createChannel(db, eventId, {
@@ -445,7 +447,84 @@ describe('sendInitialListenerCount', () => {
   });
 
   afterEach(() => {
-    cleanup();
+    presence.release('speaker-a');
+    presence.release('speaker-b');
+  });
+
+  /** A studio's audience is its claim's, so both seeds ride the claim rather than connect. */
+  it('seeds the count and the tally to the socket that took the claim', () => {
+    const { io, emitted } = fakeIo();
+    presence.registerStudio({ eventId, channelId, sessionId: STUDIO, socketId: 'speaker-a' });
+
+    applyNotification(io, db, {
+      type: 'claim-changed',
+      eventId,
+      channelId,
+      sessionId: STUDIO,
+      socketId: 'speaker-a',
+    });
+
+    expect(emitted.filter((entry) => entry.event === 'channel:listeners')).toEqual([
+      { room: 'speaker-a', event: 'channel:listeners', payload: { slug: 'english', count: 0 } },
+    ]);
+    expect(emitted.filter((entry) => entry.event === 'channel:reports')).toMatchObject([
+      { room: 'speaker-a', payload: { slug: 'english', rows: [], soundsGood: null } },
+    ]);
+  });
+
+  /**
+   * The rebind a reconnecting holder triggers is published from inside the handshake,
+   * before Socket.IO can address the socket, so the connect path seeds it directly.
+   */
+  it('seeds a studio that already holds the claim at connection time', () => {
+    const { io, emitted } = fakeIo();
+
+    seedClaimAudience(db, io, eventId, channelId, 'speaker-a');
+
+    expect(emitted.map((entry) => entry.event)).toEqual(['channel:listeners', 'channel:reports']);
+    expect(emitted.every((entry) => entry.room === 'speaker-a')).toBe(true);
+  });
+
+  it('seeds nobody when the claim was dropped, and still tells every studio', () => {
+    const { io, emitted } = fakeIo();
+    presence.registerStudio({ eventId, channelId, sessionId: STUDIO, socketId: 'speaker-a' });
+
+    applyNotification(io, db, {
+      type: 'claim-changed',
+      eventId,
+      channelId,
+      sessionId: null,
+      socketId: null,
+    });
+
+    expect(emitted.map((entry) => entry.event)).toEqual(['handover:state']);
+    expect(emitted[0]?.room).toBe('speaker-a');
+  });
+
+  it('tells every studio on the channel about a handover change', () => {
+    const { io, emitted } = fakeIo();
+    presence.registerStudio({ eventId, channelId, sessionId: STUDIO, socketId: 'speaker-a' });
+    presence.registerStudio({ eventId, channelId, sessionId: 'studio-b', socketId: 'speaker-b' });
+
+    applyNotification(io, db, { type: 'handover-changed', eventId, channelId });
+
+    expect(emitted.map((entry) => entry.room)).toEqual(['speaker-a', 'speaker-b']);
+    expect(emitted.every((entry) => entry.event === 'handover:state')).toBe(true);
+  });
+});
+
+describe('sendInitialListenerCount', () => {
+  let eventId: number;
+  let channelId: number;
+
+  beforeEach(() => {
+    const event = createEvent(db, { name: 'A', enabled: true });
+    eventId = event.id;
+    channelId = createChannel(db, eventId, {
+      slug: 'english',
+      name: 'English',
+      enabled: true,
+    }).id;
   });
 
   function fakeSpeakerSocket() {
@@ -472,12 +551,7 @@ describe('sendInitialListenerCount', () => {
     await resumeConsumer(ctx, consumerId);
 
     const { socket, emitted } = fakeSpeakerSocket();
-    sendInitialListenerCount(db, socket, {
-      eventId,
-      pin: '111111',
-      speakerChannelId: channelId,
-      studioSession: STUDIO,
-    });
+    sendInitialListenerCount(db, socket, eventId, channelId);
 
     expect(emitted).toEqual([
       { event: 'channel:listeners', payload: { slug: 'english', count: 1 } },
@@ -488,12 +562,7 @@ describe('sendInitialListenerCount', () => {
   it('sends zero rather than nothing when nobody is listening', () => {
     const { socket, emitted } = fakeSpeakerSocket();
 
-    sendInitialListenerCount(db, socket, {
-      eventId,
-      pin: '111111',
-      speakerChannelId: channelId,
-      studioSession: STUDIO,
-    });
+    sendInitialListenerCount(db, socket, eventId, channelId);
 
     expect(emitted).toEqual([
       { event: 'channel:listeners', payload: { slug: 'english', count: 0 } },

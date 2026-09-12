@@ -2,13 +2,17 @@ import type { ServerType } from '@hono/node-server';
 import { clientToServer } from '@linguacast/contract/socket';
 import { Server } from 'socket.io';
 import { notifications } from '../core/notifications';
+import { presence } from '../core/presence';
 import { db } from '../db';
 import { joinChannel, leaveChannel } from './handlers/channels.handlers';
 import {
-  applyNotification,
-  releaseSocket,
-  sendInitialListenerCount,
-} from './handlers/lifecycle.handlers';
+  cancelHandover,
+  confirmHandover,
+  requestHandover,
+  sendHandoverState,
+  takeOverHandover,
+} from './handlers/handover.handlers';
+import { applyNotification, releaseSocket, seedClaimAudience } from './handlers/lifecycle.handlers';
 import {
   connectTransport,
   getCapabilities,
@@ -23,7 +27,7 @@ import {
   stopConsuming,
   stopProducing,
 } from './handlers/media.handlers';
-import { resolveReports, sendInitialReports, submitReport } from './handlers/reports.handlers';
+import { resolveReports, submitReport } from './handlers/reports.handlers';
 import { handshakeGate } from './handshake';
 import { on } from './lib/on';
 import { channelRoom, eventRoom } from './lib/rooms';
@@ -51,7 +55,7 @@ export function attachSocket(httpServer: ServerType): SocketServer {
 
   // The only subscriber: every eviction and liveness change reaches a client through
   // this transport boundary and nowhere else.
-  notifications.subscribe((notification) => applyNotification(io, notification));
+  notifications.subscribe((notification) => applyNotification(io, db, notification));
 
   io.on('connection', (socket) => {
     // Before any handler, so it also sees packets no handler is registered for.
@@ -75,6 +79,11 @@ export function attachSocket(httpServer: ServerType): SocketServer {
       // A fire-and-forget Handler returns `undefined`, not `void`.
       return undefined;
     });
+
+    on(socket, 'handover:request', () => requestHandover(socket, socket.data));
+    on(socket, 'handover:cancel', () => cancelHandover(socket, socket.data));
+    on(socket, 'handover:confirm', () => confirmHandover(socket, socket.data));
+    on(socket, 'handover:take-over', () => takeOverHandover(socket, socket.data));
 
     on(socket, 'channel:report', (payload) => submitReport(db, socket, socket.data, payload));
     on(socket, 'channel:resolve-reports', (payload) =>
@@ -103,23 +112,27 @@ export function attachSocket(httpServer: ServerType): SocketServer {
     // Last, and guarded. It reads the database synchronously, and this runs in the raw
     // connection listener rather than behind `handle`'s try/catch — so a throw here would
     // escape an EventEmitter and take the whole single-process server down with it. Failing
-    // it costs one studio a number until the next change; failing loudly costs every event.
-    if (speakerChannelId !== null) {
-      // One try each: sharing a block would let a failed count suppress the tally, and a
-      // studio that never hears one withholds its panel for the life of the connection.
+    // it costs one studio a reading until the next change; failing loudly costs every event.
+    const studioSession = socket.data.studioSession;
+    if (speakerChannelId !== null && studioSession !== null) {
       try {
-        // Addressed to this socket alone, so a studio joining a channel already being
-        // listened to shows a number rather than a blank.
-        sendInitialListenerCount(db, socket, socket.data);
+        // Unconditional: a studio that has heard nothing cannot tell an idle channel from
+        // one it has no reading of, and only this message's arrival separates them. The
+        // listener count and the report tally instead follow the claim, which a studio in
+        // pre-flight does not hold.
+        sendHandoverState(db, socket, {
+          eventId: socket.data.eventId,
+          channelId: speakerChannelId,
+          sessionId: studioSession,
+          socketId: socket.id,
+        });
       } catch (cause) {
-        console.error(`socket: could not send the initial listener count to ${socket.id}`, cause);
+        console.error(`socket: could not send the handover snapshot to ${socket.id}`, cause);
       }
-      try {
-        // Unconditional, empty rows included: an empty window and one the studio has not
-        // heard are different states, and only this message's arrival separates them.
-        sendInitialReports(db, socket, socket.data);
-      } catch (cause) {
-        console.error(`socket: could not send the initial report tally to ${socket.id}`, cause);
+      // A studio reconnecting onto a claim it still holds had that rebind published from
+      // inside the handshake, before this socket could be addressed at all.
+      if (presence.claimOf(speakerChannelId)?.socketId === socket.id) {
+        seedClaimAudience(db, io, socket.data.eventId, speakerChannelId, socket.id);
       }
     }
   });

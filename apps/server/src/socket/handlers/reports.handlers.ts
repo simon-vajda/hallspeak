@@ -80,17 +80,17 @@ export function resolveReports(
 }
 
 /**
- * A studio that reconnects or reloads while reports are live must not read an empty panel,
- * so it is told the current tally on connect. It is sent whether or not there are rows:
- * an empty window and one the studio has never heard are different states, and only the
- * arrival of this message separates them.
+ * A studio taking the channel while reports are live must not read an empty panel, so it
+ * is told the current tally the moment the claim becomes its own. It is sent whether or
+ * not there are rows: an empty window and one the studio has never heard are different
+ * states, and only the arrival of this message separates them.
  */
-export function sendInitialReports(db: Db, socket: ReportsSocket, auth: SocketAuth): void {
-  const channelId = auth.speakerChannelId;
-  if (channelId === null) {
-    return;
-  }
-
+export function sendInitialReports(
+  db: Db,
+  socket: ReportsSocket,
+  eventId: number,
+  channelId: number,
+): void {
   // `socket.data` carries no slug, so the wire's identifier is read back off the row.
   const channel = getChannelById(db, channelId);
   if (!channel) {
@@ -99,6 +99,6 @@ export function sendInitialReports(db: Db, socket: ReportsSocket, auth: SocketAu
 
   socket.emit('channel:reports', {
     slug: channel.slug,
-    ...reports.snapshot(auth.eventId, channelId),
+    ...reports.snapshot(eventId, channelId),
   });
 }
