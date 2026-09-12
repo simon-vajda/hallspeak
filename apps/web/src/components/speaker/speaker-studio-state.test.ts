@@ -5,6 +5,7 @@ import {
   type BroadcastEnd,
   type BroadcastInput,
   broadcastState,
+  hasLostClaim,
   isBroadcasting,
   isClaimMoved,
   isHandingOver,
@@ -338,5 +339,39 @@ describe('isClaimMoved', () => {
   it('is not any other socket failure', () => {
     expect(isClaimMoved(new SocketError('not_found', 'No such channel.'))).toBe(false);
     expect(isClaimMoved(new Error('channel_taken'))).toBe(false);
+  });
+});
+
+describe('hasLostClaim', () => {
+  const live = { goLivePressed: true, displaced: false, handoverKnown: true };
+
+  it("keeps a granted studio on air while the claim is still the outgoing one's", () => {
+    // The regression: the claim moves at promotion, so the studio the server just handed
+    // the channel to reads `holder: 'other'` for the whole swap window. Returning to
+    // pre-flight here drops the producer in the same tick it went live, and the server
+    // promotes what nobody is feeding over the colleague it replaced.
+    expect(hasLostClaim({ ...live, handover: held({ role: 'granted' }) })).toBe(false);
+  });
+
+  it('returns the previous holder to pre-flight once the claim has moved', () => {
+    expect(hasLostClaim({ ...live, handover: held({ role: 'bystander' }) })).toBe(true);
+  });
+
+  it('keeps a studio that still holds the claim', () => {
+    expect(hasLostClaim({ ...live, handover: held({ holder: 'self', role: 'live' }) })).toBe(false);
+    expect(
+      hasLostClaim({ ...live, handover: held({ holder: 'self', role: 'handing-over' }) }),
+    ).toBe(false);
+    expect(hasLostClaim({ ...live, handover: held({ holder: 'none' }) })).toBe(false);
+  });
+
+  it('withholds on an unknown snapshot rather than dropping the broadcast', () => {
+    expect(hasLostClaim({ ...live, handoverKnown: false, handover: held() })).toBe(false);
+    expect(hasLostClaim({ ...live, handover: undefined })).toBe(false);
+  });
+
+  it('does not apply to a studio that never went live, or to a displaced one', () => {
+    expect(hasLostClaim({ ...live, goLivePressed: false, handover: held() })).toBe(false);
+    expect(hasLostClaim({ ...live, displaced: true, handover: held() })).toBe(false);
   });
 });
