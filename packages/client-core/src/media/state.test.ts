@@ -238,6 +238,7 @@ describe('consumerPlan', () => {
     expect(consumerPlan({ consumers: {}, activeSlug: null, online: true })).toEqual({
       close: [],
       consume: null,
+      swap: null,
     });
   });
 
@@ -245,6 +246,7 @@ describe('consumerPlan', () => {
     expect(consumerPlan({ consumers: {}, activeSlug: 'english', online: true })).toEqual({
       close: [],
       consume: 'english',
+      swap: null,
     });
   });
 
@@ -252,6 +254,7 @@ describe('consumerPlan', () => {
     expect(consumerPlan({ consumers: listening, activeSlug: 'english', online: true })).toEqual({
       close: [],
       consume: null,
+      swap: null,
     });
   });
 
@@ -262,13 +265,14 @@ describe('consumerPlan', () => {
 
     expect(whileMuted).toEqual(beforeMute);
     expect(afterResume).toEqual(beforeMute);
-    expect(whileMuted).toEqual({ close: [], consume: null });
+    expect(whileMuted).toEqual({ close: [], consume: null, swap: null });
   });
 
   it('closes the consumer when the interpreter goes away, and asks for nothing', () => {
     expect(consumerPlan({ consumers: listening, activeSlug: 'english', online: false })).toEqual({
       close: ['english'],
       consume: null,
+      swap: null,
     });
   });
 
@@ -276,6 +280,7 @@ describe('consumerPlan', () => {
     expect(consumerPlan({ consumers: {}, activeSlug: 'english', online: false })).toEqual({
       close: [],
       consume: null,
+      swap: null,
     });
   });
 
@@ -284,6 +289,7 @@ describe('consumerPlan', () => {
     expect(consumerPlan({ consumers: listening, activeSlug: 'spanish', online: true })).toEqual({
       close: ['english'],
       consume: 'spanish',
+      swap: null,
     });
   });
 
@@ -297,19 +303,133 @@ describe('consumerPlan', () => {
     expect(consumerPlan({ consumers: listening, activeSlug: 'spanish', online: false })).toEqual({
       close: ['english'],
       consume: null,
+      swap: null,
     });
   });
 
   it('closes everything left over when playback intent clears', () => {
     expect(
       consumerPlan({ consumers: { english: 'c1', spanish: 'c2' }, activeSlug: null, online: true }),
-    ).toEqual({ close: ['english', 'spanish'], consume: null });
+    ).toEqual({ close: ['english', 'spanish'], consume: null, swap: null });
   });
 
   it('never lists the active channel twice when it is also the one to close', () => {
     const plan = consumerPlan({ consumers: listening, activeSlug: 'english', online: false });
 
     expect(plan.close).toEqual(['english']);
+  });
+});
+
+describe('consumerPlan across a producer change', () => {
+  const listening = { english: 'c1' };
+  const onP1 = { english: 'p1' };
+
+  it('re-consumes when the channel is live under a producer this consumer is not receiving', () => {
+    expect(
+      consumerPlan({
+        consumers: listening,
+        consumedProducers: onP1,
+        activeSlug: 'english',
+        online: true,
+        producerId: 'p2',
+        incomingProducerId: null,
+      }),
+    ).toEqual({ close: ['english'], consume: 'english', swap: null });
+  });
+
+  it('leaves a consumer alone while it receives the producer the channel names', () => {
+    expect(
+      consumerPlan({
+        consumers: listening,
+        consumedProducers: onP1,
+        activeSlug: 'english',
+        online: true,
+        producerId: 'p1',
+        incomingProducerId: null,
+      }),
+    ).toEqual({ close: [], consume: null, swap: null });
+  });
+
+  /** Both producers transmit through the window, so nothing is closed before the new one plays. */
+  it('swaps to the incoming producer without closing the one still playing', () => {
+    expect(
+      consumerPlan({
+        consumers: listening,
+        consumedProducers: onP1,
+        activeSlug: 'english',
+        online: true,
+        producerId: 'p1',
+        incomingProducerId: 'p2',
+      }),
+    ).toEqual({
+      close: [],
+      consume: null,
+      swap: { slug: 'english', outgoing: 'c1', producerId: 'p2' },
+    });
+  });
+
+  it('asks for nothing more once the swap window closes over the producer still playing', () => {
+    expect(
+      consumerPlan({
+        consumers: listening,
+        consumedProducers: onP1,
+        activeSlug: 'english',
+        online: true,
+        producerId: 'p1',
+        incomingProducerId: null,
+      }),
+    ).toEqual({ close: [], consume: null, swap: null });
+  });
+
+  it('asks for nothing while already receiving the incoming producer', () => {
+    expect(
+      consumerPlan({
+        consumers: listening,
+        consumedProducers: { english: 'p2' },
+        activeSlug: 'english',
+        online: true,
+        producerId: 'p1',
+        incomingProducerId: 'p2',
+      }),
+    ).toEqual({ close: [], consume: null, swap: null });
+  });
+
+  it('keeps the hold behaviour when the channel goes offline mid-swap', () => {
+    expect(
+      consumerPlan({
+        consumers: listening,
+        consumedProducers: onP1,
+        activeSlug: 'english',
+        online: false,
+        producerId: null,
+        incomingProducerId: null,
+      }),
+    ).toEqual({ close: ['english'], consume: null, swap: null });
+  });
+
+  it('does not re-consume against a status that names no producer', () => {
+    expect(
+      consumerPlan({
+        consumers: listening,
+        consumedProducers: onP1,
+        activeSlug: 'english',
+        online: true,
+        producerId: null,
+        incomingProducerId: null,
+      }),
+    ).toEqual({ close: [], consume: null, swap: null });
+  });
+
+  it('does not re-consume while the producer a consumer receives is unknown', () => {
+    expect(
+      consumerPlan({
+        consumers: listening,
+        activeSlug: 'english',
+        online: true,
+        producerId: 'p2',
+        incomingProducerId: null,
+      }),
+    ).toEqual({ close: [], consume: null, swap: null });
   });
 });
 

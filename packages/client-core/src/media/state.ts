@@ -238,6 +238,21 @@ export function consumerClosed(state: MediaState, slug: string): MediaState {
 export interface ConsumerPlan {
   close: string[];
   consume: string | null;
+  swap: ConsumerSwap | null;
+}
+
+/**
+ * The one case where a consumer is replaced rather than closed and reopened. Both producers
+ * transmit through the window, so the replacement is opened paused beside the consumer that
+ * is still playing, and only once it is resumed does the outgoing one close — the guest is
+ * never subscribed to two voices and never hears a gap between them.
+ */
+export interface ConsumerSwap {
+  slug: string;
+  /** Consumer still playing; closed in the same step that resumes the replacement. */
+  outgoing: string;
+  /** Producer the replacement must receive. */
+  producerId: string;
 }
 
 /** Opening a consumer completes its plan but does not cancel its pending playback handoff. */
@@ -252,20 +267,58 @@ export function mayAttachConsumerTrack(input: {
 
 export function consumerPlan(input: {
   consumers: Record<string, string>;
+  /**
+   * Producer each open consumer is receiving, by slug. A slug missing from it is a consumer
+   * whose producer this caller does not know, and no producer-identity decision is taken for
+   * it: guessing would close audio that is playing.
+   */
+  consumedProducers?: Record<string, string>;
   /** Channel being played or held for automatic recovery. */
   activeSlug: string | null;
   /** A producer exists on the active channel. */
   online: boolean;
+  /** Producer the active channel says a listener should be hearing. */
+  producerId?: string | null;
+  /** Set only while a replacement interpreter is transmitting beside the current one. */
+  incomingProducerId?: string | null;
 }): ConsumerPlan {
   const close = Object.keys(input.consumers).filter((slug) => slug !== input.activeSlug);
   if (input.activeSlug === null) {
-    return { close, consume: null };
+    return { close, consume: null, swap: null };
   }
 
-  const open = input.consumers[input.activeSlug] !== undefined;
+  const open = input.consumers[input.activeSlug];
   if (!input.online) {
     // A hold keeps intent, not a dead consumer. A returned producer gets a fresh one.
-    return { close: open ? [...close, input.activeSlug] : close, consume: null };
+    return {
+      close: open === undefined ? close : [...close, input.activeSlug],
+      consume: null,
+      swap: null,
+    };
   }
-  return { close, consume: open ? null : input.activeSlug };
+  if (open === undefined) {
+    return { close, consume: input.activeSlug, swap: null };
+  }
+
+  const receiving = input.consumedProducers?.[input.activeSlug];
+  const current = input.producerId ?? null;
+  const incoming = input.incomingProducerId ?? null;
+  if (receiving === undefined || current === null) {
+    return { close, consume: null, swap: null };
+  }
+  if (receiving === current) {
+    return incoming === null
+      ? { close, consume: null, swap: null }
+      : {
+          close,
+          consume: null,
+          swap: { slug: input.activeSlug, outgoing: open, producerId: incoming },
+        };
+  }
+  if (receiving === incoming) {
+    return { close, consume: null, swap: null };
+  }
+  // On neither producer the channel names: a replacement arrived as one status rather than
+  // as a close, so there is nothing left to keep and a fresh consumer is the whole recovery.
+  return { close: [...close, input.activeSlug], consume: input.activeSlug, swap: null };
 }

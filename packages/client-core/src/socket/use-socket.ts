@@ -17,9 +17,21 @@ import {
   resetStatusOrdering,
 } from '../channel/status';
 import type { SocketAuth, SocketClient } from './client';
-import { initialSocketConnectionState, socketConnectionState } from './state';
+import {
+  type AnchoredHandover,
+  anchorHandover,
+  initialSocketConnectionState,
+  socketConnectionState,
+} from './state';
 
-export type { SocketStatus } from './state';
+export type { AnchoredHandover, SocketStatus } from './state';
+
+/** The four verbs a studio presses. None carries a payload; the server reads the caller. */
+export type HandoverAction =
+  | 'handover:request'
+  | 'handover:cancel'
+  | 'handover:confirm'
+  | 'handover:take-over';
 
 /** Opens a connected socket for `auth`. Each app binds its own client version and url. */
 export type SocketFactory = (auth: SocketAuth) => SocketClient;
@@ -45,6 +57,11 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
   // False until the connect-time tally lands. An empty window and one this socket has not
   // heard are different states, and only `No reports` may be printed for the first.
   const [reportsKnown, setReportsKnown] = useState(false);
+  const [handover, setHandover] = useState<Record<string, AnchoredHandover>>({});
+  // False until the connect-time snapshot lands, on the same terms as `reportsKnown`: a
+  // channel nobody is waiting on and one this socket has not heard about are different
+  // states, and only the first may be presented as nothing pending.
+  const [handoverKnown, setHandoverKnown] = useState(false);
   const [socket, setSocket] = useState<SocketClient | null>(null);
   const channelStatusRef = useRef(channelStatusState);
   channelStatusRef.current = channelStatusState;
@@ -90,6 +107,8 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
       setReports({});
       setReportResolutions({});
       setReportsKnown(false);
+      setHandover({});
+      setHandoverKnown(false);
       // The server ends a session by disconnecting it and Socket.IO does not retry that,
       // so it is terminal, not a blip. Reported as such or the screen promises a recovery
       // that will never come.
@@ -132,6 +151,32 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
       }));
       setReportsKnown(true);
     });
+    // Sent unconditionally on connect and again on every claim or handover change.
+    s.on('handover:state', (state) => {
+      // Anchored here rather than at render: `remainingMs` is only true at receipt.
+      setHandover((prev) => ({ ...prev, [state.slug]: anchorHandover(state, Date.now()) }));
+      setHandoverKnown(true);
+      if (state.holder === 'self') {
+        return;
+      }
+      // The audience and the tally belong to whoever holds the claim. A studio that does not
+      // hold it receives neither, so holding the last values would state an audience for a
+      // broadcast that is no longer this studio's, and clearing them alone would present an
+      // empty window this socket is not being told about.
+      setListeners((prev) => {
+        const { [state.slug]: _gone, ...rest } = prev;
+        return rest;
+      });
+      setReports((prev) => {
+        const { [state.slug]: _gone, ...rest } = prev;
+        return rest;
+      });
+      setReportResolutions((prev) => {
+        const { [state.slug]: _gone, ...rest } = prev;
+        return rest;
+      });
+      setReportsKnown(false);
+    });
 
     return () => {
       s.io.off('reconnect_attempt', onReconnectAttempt);
@@ -158,6 +203,21 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
     [socket, updateChannelStatuses],
   );
 
+  const emitHandover = useCallback(
+    async (action: HandoverAction) => {
+      if (!socket) {
+        throw new Error('No socket.');
+      }
+      unwrap(await socket.emitWithAck(action, {}));
+    },
+    [socket],
+  );
+
+  const requestHandover = useCallback(() => emitHandover('handover:request'), [emitHandover]);
+  const cancelHandover = useCallback(() => emitHandover('handover:cancel'), [emitHandover]);
+  const confirmHandover = useCallback(() => emitHandover('handover:confirm'), [emitHandover]);
+  const takeOver = useCallback(() => emitHandover('handover:take-over'), [emitHandover]);
+
   const leaveChannel = useCallback(
     (slug: string) => {
       socket?.emit('channel:leave', { slug });
@@ -175,8 +235,14 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
     reports,
     reportResolutions,
     reportsKnown,
+    handover,
+    handoverKnown,
     socket,
     joinChannel,
     leaveChannel,
+    requestHandover,
+    cancelHandover,
+    confirmHandover,
+    takeOver,
   };
 }
