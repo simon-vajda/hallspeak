@@ -308,15 +308,21 @@ export function useMedia(socket: SocketClient | null) {
           setRestartRecommended(true);
         }
       },
-    }).finally(() => {
-      delete active.pendingTransports[direction];
     });
-    active.pendingTransports[direction] = opening;
+    // Cleared where the transport is adopted, never on settle: between `openTransport`
+    // resolving and `transports[direction]` being written, a concurrent caller would
+    // otherwise find neither the pending promise nor the transport and ask the server for a
+    // second one, which its one-per-direction cap refuses as `transport_exists`.
+    active.pendingTransports[direction] = opening.catch((cause) => {
+      delete active.pendingTransports[direction];
+      throw cause;
+    });
     const transport = await opening;
 
     // A connect that landed while this was in flight already voided it. Adopting the
     // answer now would hand back a transport the server no longer knows about.
     if (!isCurrent(stateRef.current, generation) || session.current !== active) {
+      delete active.pendingTransports[direction];
       transport.close();
       throw new Error(SUPERSEDED);
     }
@@ -501,6 +507,7 @@ export function useMedia(socket: SocketClient | null) {
     transport.on('connectionstatechange', armIceRecovery);
 
     active.transports[direction] = transport;
+    delete active.pendingTransports[direction];
     setState((prev) => transportOpened(prev, direction, transport.id));
     armIceRecovery(transport.connectionState as TransportConnectionState);
     return transport;

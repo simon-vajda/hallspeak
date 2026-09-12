@@ -66,7 +66,6 @@ interface Session {
    */
   iceConnectedOnce: Partial<Record<TransportDirection, boolean>>;
   pendingConsumers: Map<string, Promise<MediaStreamTrack>>;
-  pendingProducer?: Promise<types.Producer>;
 }
 
 /**
@@ -93,6 +92,7 @@ export function useMedia(socket: SocketClient | null) {
   const previousSample = useRef<StatsSample | null>(null);
   const session = useRef<Session | null>(null);
   const pendingSession = useRef<Promise<Session> | null>(null);
+  const pendingProducer = useRef<Promise<types.Producer> | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -100,6 +100,7 @@ export function useMedia(socket: SocketClient | null) {
     const current = session.current;
     session.current = null;
     pendingSession.current = null;
+    pendingProducer.current = null;
     if (!current) {
       return;
     }
@@ -265,15 +266,21 @@ export function useMedia(socket: SocketClient | null) {
                 }
               }
             : undefined,
-      }).finally(() => {
-        delete active.pendingTransports[direction];
       });
-      active.pendingTransports[direction] = opening;
+      // Cleared where the transport is adopted, never on settle: between `openTransport`
+      // resolving and `transports[direction]` being written, a concurrent caller would
+      // otherwise find neither the pending promise nor the transport and ask the server
+      // for a second one, which its one-per-direction cap refuses as `transport_exists`.
+      active.pendingTransports[direction] = opening.catch((cause) => {
+        delete active.pendingTransports[direction];
+        throw cause;
+      });
       const transport = await opening;
 
       // A connect that landed while this was in flight already voided it. Adopting the
       // answer now would hand back a transport the server no longer knows about.
       if (!isCurrent(stateRef.current, generation) || session.current !== active) {
+        delete active.pendingTransports[direction];
         transport.close();
         throw new Error(SUPERSEDED);
       }
@@ -424,6 +431,7 @@ export function useMedia(socket: SocketClient | null) {
       transport.on('connectionstatechange', armIceRecovery);
 
       active.transports[direction] = transport;
+      delete active.pendingTransports[direction];
       setState((prev) => transportOpened(prev, direction, transport.id));
       armIceRecovery(transport.connectionState as TransportConnectionState);
       return transport;
@@ -433,7 +441,10 @@ export function useMedia(socket: SocketClient | null) {
 
   const startProducing = useCallback(
     async (slug: string, track: MediaStreamTrack, paused: boolean) => {
-      const started = session.current?.pendingProducer;
+      // Held on the hook rather than on the session: the first produce of a page runs before
+      // any session exists, so a guard reading one would let a second caller through in
+      // exactly the window where it opens the send transport.
+      const started = pendingProducer.current;
       // Re-entering while the first produce is still in flight would close it and start
       // another, which the server broadcasts as the channel going offline and back on.
       if (started) {
@@ -465,17 +476,14 @@ export function useMedia(socket: SocketClient | null) {
         return producer;
       })();
 
-      const active = session.current;
-      if (active) {
-        active.pendingProducer = produce;
-        void produce
-          .catch(() => {})
-          .finally(() => {
-            if (session.current === active) {
-              active.pendingProducer = undefined;
-            }
-          });
-      }
+      pendingProducer.current = produce;
+      void produce
+        .catch(() => {})
+        .finally(() => {
+          if (pendingProducer.current === produce) {
+            pendingProducer.current = null;
+          }
+        });
       return produce;
     },
     [ensureTransport],
