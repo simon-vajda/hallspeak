@@ -48,6 +48,25 @@ export type Notification =
       sessionId: string | null;
       socketId: string | null;
     }
+  | {
+      /**
+       * Something moved in the channel's handover: a request, a withdrawal, a grant, a
+       * cancellation, a promotion, or the moment a take-over became available. The
+       * subscriber rebuilds each studio's own snapshot rather than being handed one,
+       * because the view differs per studio.
+       */
+      type: 'handover-changed';
+      eventId: number;
+      channelId: number;
+    }
+  | {
+      /** Permission to produce passed between studios; `from` is null on a free channel. */
+      type: 'handover-granted';
+      eventId: number;
+      channelId: number;
+      fromSessionId: string | null;
+      toSessionId: string;
+    }
   | { type: 'peer-evicted'; socketId: string; reason: EvictionReason }
   | { type: 'room-evicted'; eventId: number; reason: EvictionReason };
 
