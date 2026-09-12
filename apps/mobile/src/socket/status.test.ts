@@ -15,19 +15,30 @@ describe('currentChannelStatus', () => {
   });
 
   it('lets the socket turn a channel the fetch read as offline on air', () => {
-    const status = currentChannelStatus({ online: true, muted: false }, false);
+    const status = currentChannelStatus(
+      { online: true, muted: false, producerId: 'p1', incomingProducerId: null },
+      false,
+    );
 
     expect(status?.online).toBe(true);
   });
 
   it('never lets the fetch regress a socket-authoritative reading', () => {
-    const status = currentChannelStatus({ online: true, muted: false }, false);
+    const status = currentChannelStatus(
+      { online: true, muted: false, producerId: 'p1', incomingProducerId: null },
+      false,
+    );
 
-    expect(status).toEqual({ online: true, muted: false });
+    expect(status).toEqual({
+      online: true,
+      muted: false,
+      producerId: 'p1',
+      incomingProducerId: null,
+    });
   });
 
   it('keeps the last socket reading rather than falling back, so a drop is not offline', () => {
-    const held = { online: true, muted: false };
+    const held = { online: true, muted: false, producerId: 'p1', incomingProducerId: null };
 
     expect(currentChannelStatus(held, false)).toBe(held);
   });

@@ -1,5 +1,6 @@
 import { useSocket } from '@linguacast/client-core/socket';
 import type { components } from '@linguacast/contract/openapi';
+import { useState } from 'react';
 import { SpeakerStudio } from '@/components/speaker/speaker-studio';
 import { connectSocket } from '@/lib/socket';
 
@@ -12,6 +13,10 @@ export function SpeakerChannel({
   view: PublicChannelView;
   speakerCode: string;
 }) {
+  // Generated once per mounted studio and held in memory only, so it identifies this page
+  // rather than a person and survives every Socket.IO reconnect, which replays the auth
+  // payload verbatim. A reload or a second tab is deliberately a different studio.
+  const [studioSession] = useState(() => crypto.randomUUID());
   const {
     status,
     hasConnected,
@@ -25,6 +30,7 @@ export function SpeakerChannel({
     {
       pin: view.event.pin,
       speakerCode,
+      studioSession,
     },
     connectSocket,
   );

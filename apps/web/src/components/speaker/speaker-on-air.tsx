@@ -29,6 +29,7 @@ const BADGE_LABEL: Record<BroadcastState, string> = {
   connecting: 'Going live…',
   live: 'On air',
   muted: 'On air · muted',
+  'handing-over': 'On air',
   displaced: 'Off air',
 };
 
@@ -37,6 +38,7 @@ const TARGET_LABEL: Record<BroadcastState, string> = {
   connecting: 'Connecting',
   live: 'Mute',
   muted: 'Muted',
+  'handing-over': 'Mute',
   displaced: 'Mute',
 };
 
@@ -78,7 +80,7 @@ export function SpeakerOnAir({
   const isMuted = state === 'muted';
   // A producer this screen still holds locally is not reaching anyone while signalling is
   // down, so the badge falls back to the pre-producer wording rather than claiming the air.
-  const hasProducer = state === 'live' || state === 'muted';
+  const hasProducer = state === 'live' || state === 'muted' || state === 'handing-over';
   const onAir = hasProducer && isLinkUp(link);
   const badgeLabel = hasProducer && !onAir ? BADGE_LABEL.connecting : BADGE_LABEL[state];
 

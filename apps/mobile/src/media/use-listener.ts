@@ -61,6 +61,10 @@ export function useListener(input: {
   slug: string;
   live: boolean;
   muted: boolean | null;
+  /** Producer this listener should be receiving; null until a status names one. */
+  producerId: string | null;
+  /** Set only while a replacement interpreter is transmitting beside the current one. */
+  incomingProducerId: string | null;
   closeReason?: 'ended' | 'dropped';
 }): ListenerView {
   const { status, hasConnected, media } = useEventSocket();
@@ -146,8 +150,9 @@ export function useListener(input: {
    * channel switch, an interpreter dropping and a hold overlap, and deciding them
    * separately here is how the previous channel's consumer gets left open.
    */
-  const { startConsuming, stopConsuming } = media;
+  const { startConsuming, stopConsuming, swapConsumer, consumedProducers } = media;
   const consumers = media.state.consumers;
+  const { producerId, incomingProducerId } = input;
   const activeSlug =
     resolved.intent === 'playing' || resolved.intent === 'holding' ? input.slug : null;
   const online = live && linkConnected;
@@ -157,19 +162,22 @@ export function useListener(input: {
   }, [activeSlug, online]);
 
   useEffect(() => {
-    const plan = consumerPlan({ consumers, activeSlug, online });
+    const plan = consumerPlan({
+      consumers,
+      consumedProducers,
+      activeSlug,
+      online,
+      producerId,
+      incomingProducerId,
+    });
     for (const slug of plan.close) {
       // The local consumer is closed synchronously; only telling the server can fail, and a
       // socket that is already gone is the usual reason. Caught rather than left floating:
       // an unhandled rejection is a red box over a screen that recovered by itself.
       void stopConsuming(slug).catch(() => {});
     }
-    if (!plan.consume) {
-      return;
-    }
 
-    const requestedSlug = plan.consume;
-    void startConsuming(requestedSlug).catch((cause) => {
+    const report = (requestedSlug: string, cause: unknown) => {
       // Swallowed silently, a failed consume left the screen claiming it was waiting.
       if (
         intentRef.current.activeSlug === requestedSlug &&
@@ -178,8 +186,31 @@ export function useListener(input: {
       ) {
         console.error('media: could not listen', cause);
       }
-    });
-  }, [consumers, activeSlug, online, startConsuming, stopConsuming]);
+    };
+
+    const swap = plan.swap;
+    if (swap) {
+      void swapConsumer(swap.slug, swap.outgoing).catch((cause) => report(swap.slug, cause));
+      return;
+    }
+
+    if (!plan.consume) {
+      return;
+    }
+
+    const requestedSlug = plan.consume;
+    void startConsuming(requestedSlug).catch((cause) => report(requestedSlug, cause));
+  }, [
+    consumers,
+    consumedProducers,
+    activeSlug,
+    online,
+    producerId,
+    incomingProducerId,
+    startConsuming,
+    stopConsuming,
+    swapConsumer,
+  ]);
 
   // Leaving the channel room does not close media, so without this the consumer and its
   // remote track outlive the screen that opened them. Held in a ref so a new socket
