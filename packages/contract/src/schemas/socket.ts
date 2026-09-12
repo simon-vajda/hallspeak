@@ -40,36 +40,35 @@ const MediaId = z.string().min(1).max(200);
 export const ChannelJoinPayload = z.object({ slug: SocketSlug });
 
 /**
- * The same broadcast snapshot `ChannelStatus` carries, minus the slug the caller already
- * named: a guest joining inside a handover's swap window learns about both producers from
- * its ack rather than waiting for the next status and paying a gap at promotion.
+ * What is being broadcast on one channel, read as a whole so its parts cannot disagree.
+ *
+ * `producerId` is what lets a listener follow a replacement as one message rather than as a
+ * close followed by an open — two messages a single render batch can collapse into silence.
+ * `incomingProducerId` is set only inside a handover's swap window, while both interpreters
+ * are transmitting: a listener consuming `producerId` opens this one paused, then resumes it
+ * and closes the old one together, so it is never subscribed to two voices and hears no gap.
+ * Both are null while offline.
  */
-export const ChannelJoinResponse = z.object({
+const BroadcastSnapshot = z.object({
   online: z.boolean(),
   muted: z.boolean(),
   producerId: MediaId.nullable(),
   incomingProducerId: MediaId.nullable(),
 });
 
+/**
+ * The join ack is the same snapshot minus the slug the caller already named, so a guest
+ * joining inside a swap window learns about both producers from its ack rather than waiting
+ * for the next status and paying a gap at promotion.
+ */
+export const ChannelJoinResponse = BroadcastSnapshot;
+
 export const ChannelLeavePayload = z.object({ slug: SocketSlug });
 
-export const ChannelStatus = z.object({
+/** The broadcast snapshot addressed to a channel, with why it last went offline. */
+export const ChannelStatus = BroadcastSnapshot.extend({
   slug: SocketSlug,
-  online: z.boolean(),
-  muted: z.boolean(),
   reason: z.enum(['ended', 'dropped']).optional(),
-  /**
-   * Which producer a listener should be hearing, so a replacement reaches them as one
-   * status naming the new producer rather than as a close followed by an open — two
-   * messages a single render batch can collapse into silence. Null while offline.
-   */
-  producerId: MediaId.nullable(),
-  /**
-   * Set only inside a handover's swap window, while both interpreters are transmitting.
-   * A listener consuming `producerId` opens this one paused, then resumes it and closes
-   * the old one together, so it is never subscribed to two voices and hears no gap.
-   */
-  incomingProducerId: MediaId.nullable(),
 });
 
 /**

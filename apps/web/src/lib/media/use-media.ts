@@ -570,46 +570,23 @@ export function useMedia(socket: SocketClient | null) {
     [],
   );
 
-  const startConsuming = useCallback(
-    async (slug: string): Promise<MediaStreamTrack> => {
+  /**
+   * One in-flight consume per channel. Both callers re-enter while the first is still
+   * awaiting: their driving effect depends on the consumers map, which a close mutates
+   * synchronously.
+   */
+  const trackPending = useCallback(
+    (slug: string, start: () => Promise<MediaStreamTrack>): Promise<MediaStreamTrack> => {
       const started = session.current?.pendingConsumers.get(slug);
-      // The effect that drives this depends on the consumers map, which a close mutates
-      // synchronously — so it re-enters while the first consume is still awaiting.
       if (started) {
         return started;
       }
 
-      const consume = (async () => {
-        const transport = await ensureTransport('recv');
-        const active = session.current;
-        if (!socket || !active) {
-          throw new Error(SUPERSEDED);
-        }
-
-        const api = signalling(socket);
-        const params = await api.consume(slug, active.device.rtpCapabilities);
-        const consumer = await transport.consume({
-          id: params.consumerId,
-          producerId: params.producerId,
-          kind: params.kind,
-          rtpParameters: params.rtpParameters,
-        });
-        active.consumers.set(slug, consumer);
-        setState((prev) => consumerOpened(prev, slug, consumer.id));
-        setConsumedProducers((prev) => ({ ...prev, [slug]: params.producerId }));
-
-        watchConsumerTrack(consumer.track, slug);
-
-        // Resumed only once the track is in hand, per the server creating it paused: RTP
-        // arriving before the decoder is ready is the usual cause of artefacts at join.
-        await api.resumeConsumer(consumer.id);
-        return consumer.track;
-      })();
-
+      const pending = start();
       const active = session.current;
       if (active) {
-        active.pendingConsumers.set(slug, consume);
-        void consume
+        active.pendingConsumers.set(slug, pending);
+        void pending
           .catch(() => {})
           .finally(() => {
             if (session.current === active) {
@@ -617,9 +594,54 @@ export function useMedia(socket: SocketClient | null) {
             }
           });
       }
-      return consume;
+      return pending;
     },
-    [ensureTransport, socket],
+    [],
+  );
+
+  /** The negotiation both a first consume and a swap share; the consumer arrives paused. */
+  const negotiateConsumer = useCallback(
+    async (
+      slug: string,
+      active: Session,
+      transport: types.Transport,
+      api: ReturnType<typeof signalling>,
+    ): Promise<{ consumer: types.Consumer; producerId: string }> => {
+      const params = await api.consume(slug, active.device.rtpCapabilities);
+      const consumer = await transport.consume({
+        id: params.consumerId,
+        producerId: params.producerId,
+        kind: params.kind,
+        rtpParameters: params.rtpParameters,
+      });
+      return { consumer, producerId: params.producerId };
+    },
+    [],
+  );
+
+  const startConsuming = useCallback(
+    (slug: string): Promise<MediaStreamTrack> =>
+      trackPending(slug, async () => {
+        const transport = await ensureTransport('recv');
+        const active = session.current;
+        if (!socket || !active) {
+          throw new Error(SUPERSEDED);
+        }
+
+        const api = signalling(socket);
+        const { consumer, producerId } = await negotiateConsumer(slug, active, transport, api);
+        active.consumers.set(slug, consumer);
+        setState((prev) => consumerOpened(prev, slug, consumer.id));
+        setConsumedProducers((prev) => ({ ...prev, [slug]: producerId }));
+
+        watchConsumerTrack(consumer.track, slug);
+
+        // Resumed only once the track is in hand, per the server creating it paused: RTP
+        // arriving before the decoder is ready is the usual cause of artefacts at join.
+        await api.resumeConsumer(consumer.id);
+        return consumer.track;
+      }),
+    [ensureTransport, negotiateConsumer, socket, trackPending],
   );
 
   const stopConsuming = useCallback(
@@ -648,15 +670,8 @@ export function useMedia(socket: SocketClient | null) {
    * guest is never subscribed to two voices and never hears silence between them.
    */
   const swapConsumer = useCallback(
-    async (slug: string, outgoing: string): Promise<MediaStreamTrack> => {
-      const started = session.current?.pendingConsumers.get(slug);
-      // The same re-entry the effect driving a first consume has: its dependencies move
-      // while this is still awaiting.
-      if (started) {
-        return started;
-      }
-
-      const swap = (async () => {
+    (slug: string, outgoing: string): Promise<MediaStreamTrack> =>
+      trackPending(slug, async () => {
         const transport = await ensureTransport('recv');
         const active = session.current;
         if (!socket || !active) {
@@ -666,16 +681,12 @@ export function useMedia(socket: SocketClient | null) {
         if (!previous || previous.id !== outgoing) {
           throw new Error(SUPERSEDED);
         }
+        const stillSwapping = () =>
+          session.current === active && active.consumers.get(slug) === previous;
 
         const api = signalling(socket);
-        const params = await api.consume(slug, active.device.rtpCapabilities);
-        const consumer = await transport.consume({
-          id: params.consumerId,
-          producerId: params.producerId,
-          kind: params.kind,
-          rtpParameters: params.rtpParameters,
-        });
-        if (session.current !== active || active.consumers.get(slug) !== previous) {
+        const { consumer, producerId } = await negotiateConsumer(slug, active, transport, api);
+        if (!stillSwapping()) {
           consumer.close();
           throw new Error(SUPERSEDED);
         }
@@ -684,7 +695,7 @@ export function useMedia(socket: SocketClient | null) {
         await api.resumeConsumer(consumer.id);
         // Re-checked after the resume: a stop landing during it means the guest wants no
         // audio at all, and adopting the replacement now would start some.
-        if (session.current !== active || active.consumers.get(slug) !== previous) {
+        if (!stillSwapping()) {
           consumer.close();
           void api.closeConsumer(consumer.id).catch(() => {});
           throw new Error(SUPERSEDED);
@@ -693,29 +704,15 @@ export function useMedia(socket: SocketClient | null) {
         active.consumers.set(slug, consumer);
         previous.close();
         setState((prev) => consumerOpened(prev, slug, consumer.id));
-        setConsumedProducers((prev) => ({ ...prev, [slug]: params.producerId }));
+        setConsumedProducers((prev) => ({ ...prev, [slug]: producerId }));
         // Fire and forget: the swap has already succeeded here, and reporting a failed
         // release through this promise would name it a failed listen.
         void api
           .closeConsumer(outgoing)
           .catch((cause) => console.error('media: could not release the replaced consumer', cause));
         return consumer.track;
-      })();
-
-      const active = session.current;
-      if (active) {
-        active.pendingConsumers.set(slug, swap);
-        void swap
-          .catch(() => {})
-          .finally(() => {
-            if (session.current === active) {
-              active.pendingConsumers.delete(slug);
-            }
-          });
-      }
-      return swap;
-    },
-    [ensureTransport, socket],
+      }),
+    [ensureTransport, negotiateConsumer, socket, trackPending],
   );
 
   return {
