@@ -262,7 +262,7 @@ default, and the last four rows are ones you should not normally need to touch.
 | `MEDIA_TURN_URL` | unset | A TURN relay that carries audio for guests whose network blocks the RTC ports. Needs the secret below to apply. |
 | `MEDIA_TURN_SECRET` | unset | The relay's shared secret. Per-session credentials are minted from it; it never reaches a client. |
 | `PUID` / `PGID` | `1000` | The uid/gid the server runs as, and the owner the container gives the data directory. |
-| `MEDIA_ROOM_IDLE_GRACE_MS` | `60000` | How long an event's router survives with nobody on it. Shorter renegotiates every guest during a handover between interpreters. |
+| `MEDIA_ROOM_IDLE_GRACE_MS` | `60000` | How long an event's router survives with nobody on it. Shorter renegotiates every guest across a gap between broadcasts. |
 | `DATA_DIR` | `/data` | Where `linguacast.db` and `admin.json` live. Change the mount, not this. |
 | `PORT` | `3000` | The HTTP port inside the container. Publish a different one instead of changing this. |
 | `MEDIA_LISTEN_IP` | `0.0.0.0` | What the RTC ports bind to inside the container. |

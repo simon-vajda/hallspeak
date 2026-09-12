@@ -34,11 +34,12 @@ collapsed into one status:
 - **Enabled** is an administrator's access decision. An Event and its Channel must both be
   enabled before a guest can reach the Channel; it says nothing about whether audio exists
   (`CONCEPTS.md:7`, `CONCEPTS.md:19-22`).
-- A **broadcast claim** is the exclusive right to produce on a Channel. It is taken during
-  the Speaker's Socket.IO handshake, before media exists, and is held in the in-memory
-  presence registry (`apps/server/src/core/access.ts:31-35`,
-  `apps/server/src/core/access.ts:61-76`, `apps/server/src/core/presence.ts:9-16`). A
-  connected studio can therefore hold the claim without being Live.
+- A **broadcast claim** is the exclusive right to produce on a Channel. It is taken by going
+  live, keyed on the studio page rather than on the Speaker code or the socket, and held in
+  the in-memory presence registry (`apps/server/src/core/presence.ts`). It survives a
+  reconnect that Live does not: the claim rebinds to the studio's new socket while no
+  Producer exists, so a connected studio can hold the claim without being Live. It is moved
+  between studios only by a negotiated handover (`apps/server/src/core/handover.ts`).
 - **Live**, exposed in code as `online`, means that the media Room has an unclosed Producer
   for the Channel. It is derived from the producer map, not from enablement, a socket
   connection, or a presence claim (`CONCEPTS.md:24-27`,
@@ -165,10 +166,10 @@ Room layer (`apps/server/src/core/media/room.test.ts:100-137`) and through the s
 handlers (`apps/server/src/socket/handlers/media.handlers.test.ts:244-255`). Public and admin
 lists continue to show the Channel on air; joined Listeners receive the mute change.
 
-**Claimed but not Live.** A Speaker completes the handshake and takes the presence claim but
-has not pressed Go live. The claim exists while no Producer exists, so `online` is false. The
-join-handler test guards this distinction
-(`apps/server/src/socket/handlers/channels.handlers.test.ts:47-60`).
+**Claimed but not Live.** A Speaker who went live loses their connection and reconnects: the
+claim rebinds to the new socket before the Producer is rebuilt, so it exists while no Producer
+does and `online` is false. The join-handler test guards this distinction. Opening the studio
+takes no claim at all, so a Speaker sitting in pre-flight is neither claimed nor Live.
 
 **Producer before Listen.** The guest's target is disabled while `online` is false. A Producer
 appears independently of the guest's gesture, so gating the target on it cannot deadlock media
