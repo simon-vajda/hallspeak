@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SocketAuth } from '../../core/access';
 import { createChannel } from '../../core/channels.service';
 import { createEvent } from '../../core/events.service';
+import { handover } from '../../core/handover';
 import {
   closeProducer,
   consume,
@@ -100,6 +101,28 @@ describe('releaseSocket', () => {
 
     expect(isOnline(EVENT, ENGLISH)).toBe(false);
     expect(presence.holder(ENGLISH)).toBeUndefined();
+  });
+
+  it('keeps the on-air start for the colleague a dropped holder hands over to', () => {
+    presence.take({ eventId: EVENT, channelId: ENGLISH, sessionId: STUDIO, socketId: 'speaker-a' });
+    const startedAt = presence.claimOf(ENGLISH)?.startedAt;
+    const colleague = {
+      eventId: EVENT,
+      channelId: ENGLISH,
+      sessionId: 'studio-b',
+      socketId: 'speaker-b',
+    };
+    presence.registerStudio(colleague);
+    expect(handover.request(colleague)).toBe('accepted');
+
+    vi.spyOn(Date, 'now').mockReturnValue((startedAt ?? 0) + 120_000);
+    releaseSocket({ id: 'speaker-a' }, speaker);
+    handover.produced(colleague);
+    handover.complete(ENGLISH);
+
+    expect(presence.claimOf(ENGLISH)).toMatchObject({ sessionId: 'studio-b', startedAt });
+    handover.forgetChannel(ENGLISH);
+    presence.release('speaker-b');
   });
 
   it('releases the claim and does nothing else for a session holding no media', () => {

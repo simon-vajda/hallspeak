@@ -829,6 +829,31 @@ describe('the handover swap window', () => {
     expect(activeRooms()[0]?.producer(ENGLISH)?.id).toBe(outgoing);
     expect(handover.view(ENGLISH)?.grant?.sessionId).toBe('speaker-b-studio');
   });
+
+  it('ends the broadcast when the holder ended it during a grant that never produces', async () => {
+    const outgoing = await grantTo('speaker-b');
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, outgoing);
+    published.length = 0;
+
+    handover.releaseSocket('speaker-b');
+
+    expect(published.filter((n) => n.type === 'producer-opened')).toEqual([]);
+    expect(published.filter((n) => n.type === 'producer-closed')).toMatchObject([
+      { reason: 'ended' },
+    ]);
+    expect(isOnline(EVENT, ENGLISH)).toBe(false);
+    expect(presence.claimOf(ENGLISH)).toBeUndefined();
+  });
+
+  it('keeps the holder live when another socket closes the standing producer during a grant', async () => {
+    const outgoing = await grantTo('speaker-b');
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-b' }, ENGLISH, outgoing);
+
+    handover.releaseSocket('speaker-b');
+
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({ online: true, producerId: outgoing });
+    expect(presence.claimOf(ENGLISH)?.sessionId).toBe('speaker-a-studio');
+  });
 });
 
 describe('ending a broadcast', () => {
@@ -865,7 +890,7 @@ describe('ending a broadcast', () => {
     handover.releaseSocket('speaker-b');
 
     expect(published.filter((n) => n.type === 'producer-closed')).toMatchObject([
-      { reason: 'dropped' },
+      { reason: 'ended' },
     ]);
     expect(isOnline(EVENT, ENGLISH)).toBe(false);
     expect(presence.claimOf(ENGLISH)).toBeUndefined();

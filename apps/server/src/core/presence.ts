@@ -109,11 +109,11 @@ export class PresenceRegistry {
    * Hands the channel to another session regardless of who holds it — a granted handover,
    * never a race. Names the socket that held it, which has not been disconnected.
    */
-  move(studio: StudioSocket): string | null {
+  move(studio: StudioSocket, onAirSince?: number): string | null {
     this.registerStudio(studio);
 
     const previous = this.claimByChannel.get(studio.channelId)?.socketId ?? null;
-    this.setClaim(studio);
+    this.setClaim(studio, onAirSince);
     return previous === studio.socketId ? null : previous;
   }
 
@@ -155,12 +155,13 @@ export class PresenceRegistry {
     return held.socketId;
   }
 
-  private setClaim(studio: StudioSocket): void {
+  private setClaim(studio: StudioSocket, onAirSince?: number): void {
     const { eventId, channelId, sessionId, socketId } = studio;
     // Inherited from whatever the claim already was: a rebind is the same broadcast on a
     // new socket, and a move is the same broadcast under a new interpreter. Only a channel
-    // that nobody held starts the clock.
-    const startedAt = this.claimByChannel.get(channelId)?.startedAt ?? this.now();
+    // that nobody held starts the clock — unless the move names when it went on air, which
+    // a handover does when its outgoing holder's socket dropped the claim a moment earlier.
+    const startedAt = this.claimByChannel.get(channelId)?.startedAt ?? onAirSince ?? this.now();
     this.claimByChannel.set(channelId, { eventId, sessionId, socketId, startedAt });
     this.publisher({ type: 'claim-changed', eventId, channelId, sessionId, socketId });
   }

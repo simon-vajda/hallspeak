@@ -588,6 +588,9 @@ function cancelSwap(cancellation: GrantCancellation): void {
   }
   // What stands was kept alive only for a handover that is not going to happen, and the
   // interpreter behind it stopped speaking when they asked to leave.
+  if (standing) {
+    markClosing(standing, 'ended');
+  }
   room?.closeProducer(channelId);
   presence.releaseChannel(channelId);
   state?.registry.releaseIfIdle(eventId);
@@ -650,6 +653,11 @@ export async function closeProducer(
   }
   // A granted handover owns the standing producer until the swap completes, whoever asks.
   if (handover.view(channelId)?.grant) {
+    if (presence.claimOf(channelId)?.socketId === ctx.socketId) {
+      // The holder has stopped speaking into it, so a grant that never produces must end
+      // the broadcast rather than put this silent producer back on air.
+      markAbandoned(producer);
+    }
     return;
   }
   if (handover.departed({ eventId: ctx.eventId, channelId }, producer.id)) {

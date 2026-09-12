@@ -56,12 +56,16 @@ export function releaseSocket(socket: { id: string }, auth: SocketAuth): void {
   media.releasePeer(auth.eventId, socket.id);
   // Whatever this socket was doing in a handover, it can no longer do it.
   handover.releaseSocket(socket.id);
+  const onAirSince =
+    auth.speakerChannelId === null
+      ? null
+      : (presence.claimOf(auth.speakerChannelId)?.startedAt ?? null);
   const freed = presence.release(socket.id);
   if (freed !== null) {
     // Only a release that actually freed the claim is a departure. A socket the same
     // studio has already replaced frees nothing, so a reconnect and the drop it replaces
     // are safe to arrive in either order and neither hands the channel to a colleague.
-    handover.departed({ eventId: auth.eventId, channelId: freed }, null);
+    handover.departed({ eventId: auth.eventId, channelId: freed }, null, onAirSince);
   }
   // Reports stay in the window; cooldown and the right to resolve them go with the socket.
   reports.releaseSocket(socket.id);

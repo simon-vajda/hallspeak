@@ -373,6 +373,18 @@ describe('PresenceRegistry broadcast start', () => {
     });
   });
 
+  it('takes the start a move names when nobody holds the channel any more', () => {
+    const time = clock();
+    const { presence } = setup(time.read);
+    presence.take(studio('session-a', 'socket-a'));
+    presence.release('socket-a');
+    time.advance(30_000);
+
+    presence.move(studio('session-b', 'socket-b'), 1_000);
+
+    expect(presence.claimOf(ENGLISH)?.startedAt).toBe(1_000);
+  });
+
   it('keeps it across the same studio reconnecting', () => {
     const time = clock();
     const { presence } = setup(time.read);

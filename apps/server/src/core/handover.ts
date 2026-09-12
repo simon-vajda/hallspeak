@@ -33,6 +33,8 @@ export interface Grant {
   fromSocketId: string | null;
   /** The producer standing at grant time, which keeps the claim if the grant is cancelled. */
   producerId: string | null;
+  /** When the channel went on air, carried to the incoming session when the claim moves. */
+  onAirSince: number | null;
   grantedAt: number;
   /** Null once the granted studio has produced: the swap window has its own deadline. */
   deadlineAt: number | null;
@@ -60,7 +62,7 @@ export type GrantCancelListener = (cancellation: GrantCancellation) => void;
 /** The half of `PresenceRegistry` this registry uses, so a test can hand it a plain double. */
 export interface ClaimRegistry {
   claimOf(channelId: number): ClaimHolder | undefined;
-  move(studio: StudioSocket): string | null;
+  move(studio: StudioSocket, onAirSince?: number): string | null;
 }
 
 export interface HandoverRegistryOptions {
@@ -215,12 +217,30 @@ export class HandoverRegistry {
    * closed page, a dropped network. All of them hand the channel over rather than ending
    * the broadcast, which is why this is one hook and not three.
    */
-  departed(channel: ChannelRef, standingProducerId: string | null): Grant | null {
+  departed(
+    channel: ChannelRef,
+    standingProducerId: string | null,
+    onAirSince: number | null = null,
+  ): Grant | null {
     const state = this.channels.get(channel.channelId);
     if (!state?.request || state.grant) {
       return null;
     }
-    return this.grant(channel.channelId, state, standingProducerId);
+    return this.grant(channel.channelId, state, standingProducerId, onAirSince);
+  }
+
+  /**
+   * The same studio arriving on a fresh connection. What it is waiting for or was granted
+   * follows it, exactly as its claim does, so the dying socket's disconnect cancels nothing.
+   */
+  rebind(studio: StudioSocket): void {
+    const state = this.channels.get(studio.channelId);
+    if (state?.request?.sessionId === studio.sessionId) {
+      state.request.socketId = studio.socketId;
+    }
+    if (state?.grant?.sessionId === studio.sessionId) {
+      state.grant.socketId = studio.socketId;
+    }
   }
 
   /** The granted studio's produce landed, so the grant deadline no longer binds. */
@@ -246,10 +266,13 @@ export class HandoverRegistry {
     if (!state?.grant) {
       return false;
     }
-    const { sessionId, socketId } = state.grant;
+    const { sessionId, socketId, onAirSince } = state.grant;
     state.grant = null;
     this.disarm(state);
-    this.claims.move({ eventId: state.eventId, channelId, sessionId, socketId });
+    this.claims.move(
+      { eventId: state.eventId, channelId, sessionId, socketId },
+      onAirSince ?? undefined,
+    );
     this.publishChanged(channelId, state.eventId);
     return true;
   }
@@ -309,6 +332,7 @@ export class HandoverRegistry {
     channelId: number,
     state: ChannelState,
     standingProducerId: string | null,
+    onAirSince: number | null = null,
   ): Grant | null {
     const request = state.request;
     if (!request) {
@@ -323,6 +347,7 @@ export class HandoverRegistry {
       fromSessionId: claim?.sessionId ?? null,
       fromSocketId: claim?.socketId ?? null,
       producerId: standingProducerId,
+      onAirSince: claim?.startedAt ?? onAirSince,
       grantedAt,
       deadlineAt,
     };

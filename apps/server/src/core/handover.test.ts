@@ -250,6 +250,75 @@ describe('HandoverRegistry', () => {
       expect(registry.departed({ eventId: EVENT_ID, channelId: CHANNEL_ID }, null)).toBeNull();
       expect(published).toEqual([]);
     });
+
+    it('keeps the on-air start when the holder dropped the claim before departing', () => {
+      const { registry, presence } = live();
+      const onAirSince = presence.claimOf(CHANNEL_ID)?.startedAt ?? null;
+      registry.request(waiter);
+      presence.release(holder.socketId);
+      vi.advanceTimersByTime(60_000);
+
+      registry.departed({ eventId: EVENT_ID, channelId: CHANNEL_ID }, null, onAirSince);
+      registry.produced(waiter);
+      registry.complete(CHANNEL_ID);
+
+      expect(presence.claimOf(CHANNEL_ID)).toMatchObject({
+        sessionId: waiter.sessionId,
+        startedAt: onAirSince,
+      });
+    });
+  });
+
+  describe('rebind', () => {
+    const rebound = studio(waiter.sessionId, 'socket-waiter-2');
+
+    it("follows a waiting studio's reconnect, so the old socket's disconnect cancels nothing", () => {
+      const { registry } = live();
+      registry.request(waiter);
+
+      registry.rebind(rebound);
+      registry.releaseSocket(waiter.socketId);
+
+      expect(registry.view(CHANNEL_ID)?.request).toMatchObject({ socketId: rebound.socketId });
+    });
+
+    it("follows a granted studio's reconnect and moves the claim to the live socket", () => {
+      const { registry, presence, cancellations } = live();
+      registry.request(waiter);
+      registry.confirm(holder, 'producer-out');
+
+      registry.rebind(rebound);
+      registry.releaseSocket(waiter.socketId);
+
+      expect(cancellations).toEqual([]);
+      registry.produced(rebound);
+      registry.complete(CHANNEL_ID);
+      expect(presence.claimOf(CHANNEL_ID)).toMatchObject({
+        sessionId: waiter.sessionId,
+        socketId: rebound.socketId,
+      });
+      expect(presence.release(waiter.socketId)).toBeNull();
+    });
+
+    it('cancels the grant once the rebound socket itself disconnects', () => {
+      const { registry, cancellations } = live();
+      registry.request(waiter);
+      registry.confirm(holder, 'producer-out');
+      registry.rebind(rebound);
+
+      registry.releaseSocket(rebound.socketId);
+
+      expect(cancellations).toHaveLength(1);
+    });
+
+    it("leaves another session's request alone", () => {
+      const { registry } = live();
+      registry.request(waiter);
+
+      registry.rebind(studio(third.sessionId, 'socket-third-2'));
+
+      expect(registry.view(CHANNEL_ID)?.request?.socketId).toBe(waiter.socketId);
+    });
   });
 
   describe('a grant that is not completed', () => {
