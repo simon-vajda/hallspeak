@@ -83,7 +83,13 @@ describe('releaseSocket', () => {
 
   it('closes a live producer and takes the channel offline', async () => {
     presence.take({ eventId: EVENT, channelId: ENGLISH, sessionId: STUDIO, socketId: 'speaker-a' });
-    await goLive({ eventId: EVENT, socketId: 'speaker-a', channelId: ENGLISH, slug: 'english' });
+    await goLive({
+      eventId: EVENT,
+      socketId: 'speaker-a',
+      channelId: ENGLISH,
+      slug: 'english',
+      sessionId: STUDIO,
+    });
 
     releaseSocket({ id: 'speaker-a' }, speaker);
 
@@ -144,7 +150,7 @@ describe('applyNotification producer lifecycle', () => {
     const { io, emitted } = fakeIo();
     await createTransport({ eventId: EVENT, socketId: 'speaker-a' }, 'send', { create: true });
     await produce(
-      { eventId: EVENT, socketId: 'speaker-a' },
+      { eventId: EVENT, socketId: 'speaker-a', sessionId: STUDIO },
       {
         channelId: ENGLISH,
         slug: 'english',
@@ -257,8 +263,11 @@ describe('applyNotification producer lifecycle', () => {
 
   it('uses the current replacement snapshot for a stale pause invalidation', async () => {
     const { io, emitted } = fakeIo();
-    await goLive({ eventId: EVENT, socketId: 'speaker-a', channelId: ENGLISH, slug: 'english' });
-    await goLive({ eventId: EVENT, socketId: 'speaker-b', channelId: ENGLISH, slug: 'english' });
+    const reconnecting = { eventId: EVENT, channelId: ENGLISH, slug: 'english', sessionId: STUDIO };
+    await goLive({ ...reconnecting, socketId: 'speaker-a' });
+    // The same studio on a fresh socket: a reconnect, which is the only way one producer
+    // still replaces another now that a colleague's arrival negotiates instead.
+    await goLive({ ...reconnecting, socketId: 'speaker-a-again' });
 
     applyNotification(io, {
       type: 'producer-paused',
@@ -393,7 +402,13 @@ describe('applyNotification listener counts', () => {
   it('leaves the producer lifecycle emit untouched', async () => {
     const { io, emitted } = fakeIo();
     presence.take({ eventId: EVENT, channelId: ENGLISH, sessionId: STUDIO, socketId: 'speaker-a' });
-    await goLive({ eventId: EVENT, socketId: 'speaker-a', channelId: ENGLISH, slug: 'english' });
+    await goLive({
+      eventId: EVENT,
+      socketId: 'speaker-a',
+      channelId: ENGLISH,
+      slug: 'english',
+      sessionId: STUDIO,
+    });
 
     applyNotification(io, {
       type: 'producer-opened',

@@ -385,7 +385,14 @@ describe('producer control is scoped to the claim', () => {
     };
     const { producerId } = await goLive();
     await openTransport(socket('speaker-b'), spanishSpeaker, { direction: 'send' });
+    await startProducing(db, socket('speaker-b'), spanishSpeaker, {
+      slug: 'spanish',
+      rtpParameters: { codecs: [] },
+      paused: false,
+    });
 
+    // Holding a claim of their own, so the refusal is about the producer they named rather
+    // than about their right to broadcast at all.
     await expect(
       pauseProducing(socket('speaker-b'), spanishSpeaker, { producerId }),
     ).rejects.toMatchObject({ code: 'no_producer' });
@@ -501,5 +508,35 @@ describe('cross-event isolation', () => {
         rtpCapabilities: { codecs: [] },
       }),
     ).rejects.toMatchObject({ code: 'not_found' });
+  });
+});
+
+describe('a second studio on the same speaker code', () => {
+  const colleague = (): SocketAuth => ({
+    eventId,
+    pin: speaker.pin,
+    speakerChannelId: englishId,
+    studioSession: 'studio-english-second',
+  });
+
+  it('does not disturb the live broadcast by connecting and is refused if it produces', async () => {
+    const { producerId } = await goLive();
+
+    await expect(goLive('speaker-b', colleague())).rejects.toMatchObject({
+      code: 'channel_taken',
+    });
+    expect(channelStatus(eventId, englishId)).toMatchObject({ online: true, producerId });
+  });
+
+  it('cannot mute or end the interpreter who holds the channel', async () => {
+    const { producerId } = await goLive();
+    const second = colleague();
+
+    await expect(pauseProducing(socket('speaker-b'), second, { producerId })).rejects.toMatchObject(
+      { code: 'channel_taken' },
+    );
+    // Ending is a no-op rather than a refusal: there is nothing left for this studio to end.
+    await expect(stopProducing(socket('speaker-b'), second, { producerId })).resolves.toEqual({});
+    expect(isOnline(eventId, englishId)).toBe(true);
   });
 });

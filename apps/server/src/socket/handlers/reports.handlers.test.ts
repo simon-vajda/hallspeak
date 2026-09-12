@@ -78,7 +78,14 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-const live = () => goLive({ eventId, socketId: SPEAKER, channelId: englishId, slug: 'english' });
+const live = () =>
+  goLive({
+    eventId,
+    socketId: SPEAKER,
+    channelId: englishId,
+    slug: 'english',
+    sessionId: STUDIO,
+  });
 
 describe('submitReport', () => {
   it('records a report and sends the tally to the claim holder alone', async () => {
@@ -222,15 +229,23 @@ describe('resolveReports', () => {
 });
 
 describe('reports-changed with no claim holder', () => {
-  it('emits to nobody and does not throw', async () => {
+  /**
+   * Going live is what takes the claim, so a tally can only outrun a holder — a window
+   * still open after the interpreter ended or dropped. It is addressed to nobody rather
+   * than fanned out to the channel room, where every listening guest would read it.
+   */
+  it('emits to nobody and does not throw', () => {
     const { io, tallies } = fakeIo();
     const unsubscribe = subscribe(io);
-    await live();
 
     expect(() =>
-      submitReport(db, fakeSocket(LISTENER, [channelRoom(englishId)]), listener, {
+      notifications.publish({
+        type: 'reports-changed',
+        eventId,
+        channelId: englishId,
         slug: 'english',
-        category: 'quiet',
+        rows: [{ category: 'quiet', count: 1, ageMs: 0 }],
+        soundsGood: null,
       }),
     ).not.toThrow();
     expect(tallies()).toEqual([]);

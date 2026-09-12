@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { handover } from '../handover';
 import type { Notification } from '../notifications';
 import { notifications } from '../notifications';
-import { presence } from '../presence';
+import { presence, type StudioSocket } from '../presence';
 import { reports } from '../reports';
 import {
   activeRooms,
@@ -48,9 +49,15 @@ beforeEach(async () => {
 afterEach(async () => {
   await stopMedia();
   unsubscribe();
-  // The claim registry is a process singleton; leaving a claim behind leaks into the next test.
-  presence.releaseChannel(ENGLISH);
-  presence.releaseChannel(SPANISH);
+  // Claims and handovers are process singletons; leaving either behind leaks into the next test.
+  for (const channelId of [ENGLISH, SPANISH]) {
+    handover.forgetChannel(channelId);
+    presence.releaseChannel(channelId);
+  }
+  for (const socketId of ['speaker-a', 'speaker-b', 'speaker-c', 'guest-a', 'guest-b']) {
+    presence.release(socketId);
+  }
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -59,6 +66,20 @@ const takeClaim = (channelId: number, socketId: string) =>
 
 const goLive = (socketId: string, channelId = ENGLISH, slug = 'english') =>
   goLiveOn({ eventId: EVENT, socketId, channelId, slug });
+
+/** One studio page per socket, which is what `goLive` assumes too. */
+const studio = (socketId: string, channelId = ENGLISH): StudioSocket => ({
+  eventId: EVENT,
+  channelId,
+  sessionId: `${socketId}-studio`,
+  socketId,
+});
+
+const speakerCtx = (socketId: string) => ({
+  eventId: EVENT,
+  socketId,
+  sessionId: `${socketId}-studio`,
+});
 
 const peerConsumer = (socketId: string, consumerId: string) =>
   activeRooms()[0]?.peer(socketId)?.consumerById(consumerId);
@@ -205,15 +226,12 @@ describe('produce', () => {
     });
     await createTransport({ eventId: EVENT, socketId: 'speaker-a' }, 'send', { create: true });
     try {
-      await produce(
-        { eventId: EVENT, socketId: 'speaker-a' },
-        {
-          channelId: ENGLISH,
-          slug: 'english',
-          rtpParameters: { codecs: [] },
-          paused: true,
-        },
-      );
+      await produce(speakerCtx('speaker-a'), {
+        channelId: ENGLISH,
+        slug: 'english',
+        rtpParameters: { codecs: [] },
+        paused: true,
+      });
     } finally {
       unsubscribeStatus();
     }
@@ -266,7 +284,7 @@ describe('produce', () => {
   it('refuses to produce without a send transport', async () => {
     await expect(
       produce(
-        { eventId: EVENT, socketId: 'nobody' },
+        { eventId: EVENT, socketId: 'nobody', sessionId: 'nobody-studio' },
         {
           channelId: ENGLISH,
           slug: 'english',
@@ -509,15 +527,12 @@ describe('a listener whose speaker stops', () => {
     await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
 
     // The speaker keeps their send transport across this and only produces again.
-    await produce(
-      { eventId: EVENT, socketId: 'speaker-a' },
-      {
-        channelId: ENGLISH,
-        slug: 'english',
-        rtpParameters: { codecs: [] },
-        paused: false,
-      },
-    );
+    await produce(speakerCtx('speaker-a'), {
+      channelId: ENGLISH,
+      slug: 'english',
+      rtpParameters: { codecs: [] },
+      paused: false,
+    });
     const again = await consume(
       { eventId: EVENT, socketId: 'guest-a' },
       { channelId: ENGLISH, rtpCapabilities: { codecs: [] } },
@@ -637,5 +652,222 @@ describe('releasePeer', () => {
     releasePeer(EVENT, 'speaker-a');
 
     expect(isOnline(EVENT, SPANISH)).toBe(true);
+  });
+});
+
+describe('claim-authorised produce', () => {
+  it('takes a free channel for the session that goes live', async () => {
+    await goLive('speaker-a');
+
+    expect(presence.claimOf(ENGLISH)?.sessionId).toBe('speaker-a-studio');
+  });
+
+  it('refuses a session whose claim moved away and leaves the standing producer alone', async () => {
+    const { producerId } = await goLive('speaker-a');
+
+    await expect(goLive('speaker-b')).rejects.toMatchObject({ code: 'channel_taken' });
+    expect(activeRooms()[0]?.producer(ENGLISH)?.id).toBe(producerId);
+    expect(presence.claimOf(ENGLISH)?.sessionId).toBe('speaker-a-studio');
+  });
+
+  it('lets exactly one of two sessions racing for a free channel take it', async () => {
+    const [first, second] = await Promise.allSettled([goLive('speaker-a'), goLive('speaker-b')]);
+
+    const outcomes = [first, second].map((result) => result.status);
+    expect(outcomes.filter((status) => status === 'fulfilled')).toHaveLength(1);
+    const refused = [first, second].find((result) => result.status === 'rejected');
+    expect(refused && (refused as PromiseRejectedResult).reason).toMatchObject({
+      code: 'channel_taken',
+    });
+    expect(activeRooms()[0]?.producer(ENGLISH)).toBeDefined();
+  });
+
+  it('gives a free channel back when the produce it took it for fails', async () => {
+    const ctx = { eventId: EVENT, socketId: 'speaker-a', sessionId: 'speaker-a-studio' };
+
+    await expect(
+      produce(ctx, {
+        channelId: ENGLISH,
+        slug: 'english',
+        rtpParameters: { codecs: [] },
+        paused: false,
+      }),
+    ).rejects.toMatchObject({ code: 'no_transport' });
+
+    expect(presence.claimOf(ENGLISH)).toBeUndefined();
+    await expect(goLive('speaker-b')).resolves.toBeDefined();
+  });
+
+  it('refuses a pause from a session that no longer holds the claim', async () => {
+    const { producerId } = await goLive('speaker-a');
+    presence.move(studio('speaker-b'));
+
+    await expect(
+      pauseProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, `${producerId}-other`),
+    ).rejects.toMatchObject({ code: 'no_producer' });
+  });
+});
+
+describe('the handover swap window', () => {
+  /** Live on `speaker-a`, requested and confirmed by `speaker-b`: a grant, no producer yet. */
+  const grantTo = async (socketId: string) => {
+    const { producerId } = await goLive('speaker-a');
+    expect(handover.request(studio(socketId))).toBe('accepted');
+    expect(handover.confirm(studio('speaker-a'), producerId)).toBe('accepted');
+    return producerId;
+  };
+
+  const consumeOn = async (socketId: string) => {
+    const { consumerId, producerId } = await consume(
+      { eventId: EVENT, socketId },
+      { channelId: ENGLISH, rtpCapabilities: { codecs: [] } },
+    );
+    await resumeConsumer({ eventId: EVENT, socketId }, consumerId);
+    return { consumerId, producerId };
+  };
+
+  const listenTo = async (socketId: string) => {
+    await createTransport({ eventId: EVENT, socketId }, 'recv', { create: true });
+    return consumeOn(socketId);
+  };
+
+  it('holds both producers and names them both, closing neither', async () => {
+    const outgoing = await grantTo('speaker-b');
+    await listenTo('guest-a');
+    published.length = 0;
+
+    const { producerId: incoming } = await goLive('speaker-b');
+
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({
+      online: true,
+      producerId: outgoing,
+      incomingProducerId: incoming,
+    });
+    expect(activeRooms()[0]?.producer(ENGLISH)?.closed).toBe(false);
+    expect(published.filter((n) => n.type === 'producer-closed')).toEqual([]);
+  });
+
+  it('promotes once the last listener has left the outgoing producer', async () => {
+    const outgoing = await grantTo('speaker-b');
+    const listener = await listenTo('guest-a');
+    const { producerId: incoming } = await goLive('speaker-b');
+    published.length = 0;
+
+    // The swap itself: a second consumer on the incoming producer, then the outgoing one
+    // closes in the same step, so the guest is never subscribed to two voices.
+    await consumeOn('guest-a');
+    await closeConsumer({ eventId: EVENT, socketId: 'guest-a' }, listener.consumerId);
+
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({
+      online: true,
+      producerId: incoming,
+      incomingProducerId: null,
+    });
+    expect(activeRooms()[0]?.producerById(ENGLISH, outgoing)).toBeUndefined();
+    expect(published.filter((n) => n.type === 'producer-closed')).toEqual([]);
+    expect(presence.claimOf(ENGLISH)?.sessionId).toBe('speaker-b-studio');
+  });
+
+  it('promotes at the deadline when a listener never swaps', async () => {
+    await stopMedia();
+    await startFakeMedia({ swapDeadlineMs: 20 });
+    const outgoing = await grantTo('speaker-b');
+    await listenTo('guest-a');
+
+    const { producerId: incoming } = await goLive('speaker-b');
+    expect(channelStatus(EVENT, ENGLISH).incomingProducerId).toBe(incoming);
+
+    await vi.waitFor(() => {
+      expect(channelStatus(EVENT, ENGLISH)).toMatchObject({
+        producerId: incoming,
+        incomingProducerId: null,
+      });
+    });
+    expect(activeRooms()[0]?.producerById(ENGLISH, outgoing)).toBeUndefined();
+    expect(presence.claimOf(ENGLISH)?.sessionId).toBe('speaker-b-studio');
+  });
+
+  it('leaves the outgoing interpreter live when the granted studio drops mid-window', async () => {
+    const outgoing = await grantTo('speaker-b');
+    await listenTo('guest-a');
+    await goLive('speaker-b');
+    published.length = 0;
+
+    handover.releaseSocket('speaker-b');
+
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({
+      online: true,
+      producerId: outgoing,
+      incomingProducerId: null,
+    });
+    expect(presence.claimOf(ENGLISH)?.sessionId).toBe('speaker-a-studio');
+    expect(published.filter((n) => n.type === 'producer-closed')).toEqual([]);
+  });
+
+  it('starts the incoming producer unmuted even when the outgoing one was muted', async () => {
+    const outgoing = await goLive('speaker-a');
+    await pauseProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, outgoing.producerId);
+    expect(handover.request(studio('speaker-b'))).toBe('accepted');
+    expect(handover.confirm(studio('speaker-a'), outgoing.producerId)).toBe('accepted');
+
+    await goLive('speaker-b');
+
+    // Nobody is consuming, so the window settles at once and the channel is already the
+    // incoming interpreter's: unmuted, because a handover carries no mute state across.
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({
+      online: true,
+      muted: false,
+      incomingProducerId: null,
+    });
+  });
+
+  it('ignores a close from the previous holder while the grant stands', async () => {
+    const outgoing = await grantTo('speaker-b');
+
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, outgoing);
+
+    expect(activeRooms()[0]?.producer(ENGLISH)?.id).toBe(outgoing);
+    expect(handover.view(ENGLISH)?.grant?.sessionId).toBe('speaker-b-studio');
+  });
+});
+
+describe('ending a broadcast', () => {
+  it('hands the channel over rather than ending it while somebody is waiting', async () => {
+    const { producerId } = await goLive('speaker-a');
+    expect(handover.request(studio('speaker-b'))).toBe('accepted');
+    published.length = 0;
+
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+
+    expect(channelStatus(EVENT, ENGLISH)).toMatchObject({ online: true, producerId });
+    expect(handover.view(ENGLISH)?.grant?.sessionId).toBe('speaker-b-studio');
+    expect(published.filter((n) => n.type === 'producer-closed')).toEqual([]);
+  });
+
+  it('frees the claim with nobody waiting, so another studio can go live', async () => {
+    const { producerId } = await goLive('speaker-a');
+
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+
+    expect(published.filter((n) => n.type === 'producer-closed')).toMatchObject([
+      { reason: 'ended' },
+    ]);
+    expect(presence.claimOf(ENGLISH)).toBeUndefined();
+    await expect(goLive('speaker-b')).resolves.toBeDefined();
+  });
+
+  it('drops the abandoned producer and frees the claim when the grant expires', async () => {
+    const { producerId } = await goLive('speaker-a');
+    expect(handover.request(studio('speaker-b'))).toBe('accepted');
+    await closeProducer({ eventId: EVENT, socketId: 'speaker-a' }, ENGLISH, producerId);
+    published.length = 0;
+
+    handover.releaseSocket('speaker-b');
+
+    expect(published.filter((n) => n.type === 'producer-closed')).toMatchObject([
+      { reason: 'dropped' },
+    ]);
+    expect(isOnline(EVENT, ENGLISH)).toBe(false);
+    expect(presence.claimOf(ENGLISH)).toBeUndefined();
   });
 });
