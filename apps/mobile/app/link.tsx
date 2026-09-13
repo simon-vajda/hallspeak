@@ -6,7 +6,7 @@ import { LinkField } from '@/components/link-field';
 import { RefusalBanner } from '@/components/refusal-banner';
 import { SheetChrome } from '@/components/sheet-chrome';
 import { parseListenerLink } from '@/links/parse';
-import { channelHref, eventHref } from '@/links/route';
+import { destinationHref } from '@/links/route';
 import { refusalMessage } from '@/screens/scanner-state';
 import { useColors } from '@/theme/provider';
 import { type } from '@/theme/typography';
@@ -25,9 +25,7 @@ export default function LinkEntrySheet() {
       return;
     }
 
-    const { host, pin, slug } = parsed.destination;
-
-    router.replace(slug ? channelHref(host, pin, slug) : eventHref(host, pin));
+    router.replace(destinationHref(parsed.destination, parsed.speakerCode));
   };
 
   return (

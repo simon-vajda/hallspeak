@@ -8,7 +8,7 @@ import { GlassSurface } from '@/components/glass-surface';
 import { Icon } from '@/components/icon';
 import { RefusalBanner } from '@/components/refusal-banner';
 import { ScanReticle } from '@/components/scan-reticle';
-import { channelHref, eventHref } from '@/links/route';
+import { destinationHref } from '@/links/route';
 import {
   cameraPermission,
   INITIAL_SCAN_STATE,
@@ -62,14 +62,8 @@ export default function ScannerScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
 
-      const destination = outcome.destination;
-
-      if (destination) {
-        router.replace(
-          destination.slug
-            ? channelHref(destination.host, destination.pin, destination.slug)
-            : eventHref(destination.host, destination.pin),
-        );
+      if (outcome.destination) {
+        router.replace(destinationHref(outcome.destination, outcome.speakerCode));
       }
     },
     [router, state],

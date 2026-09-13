@@ -34,6 +34,15 @@ describe('the scan latch', () => {
     });
   });
 
+  it('reports a speaker code with the channel destination, and still buzzes', () => {
+    const outcome = scan(INITIAL_SCAN_STATE, `${CHANNEL_URL}?speaker_code=abc123`);
+
+    expect(outcome.speakerCode).toBe('abc123');
+    expect(outcome.destination?.slug).toBe('magyar');
+    expect(outcome.haptic).toBe(true);
+    expect(scan(INITIAL_SCAN_STATE, CHANNEL_URL).speakerCode).toBe(null);
+  });
+
   it('refuses an unrelated URL inline and can be re-armed', () => {
     const refused = scan(INITIAL_SCAN_STATE, 'https://example.com/some/page');
 

@@ -7,10 +7,31 @@ describe('redirectSystemPath', () => {
   it.each([true, false])('opens the channel on initial=%s', (initial) => {
     expect(
       redirectSystemPath({
-        path: wrapped('https://church.example:8443/events/481209/espanol?speaker_code=secret'),
+        path: wrapped('https://church.example:8443/events/481209/espanol'),
         initial,
       }),
     ).toBe('/events/church.example:8443/481209/espanol');
+  });
+
+  it.each([true, false])(
+    'opens the speaker-link sheet, not the channel, on initial=%s',
+    (initial) => {
+      expect(
+        redirectSystemPath({
+          path: wrapped('https://church.example/events/481209/espanol?speaker_code=secret'),
+          initial,
+        }),
+      ).toBe('/speaker-link?host=church.example&pin=481209&slug=espanol&code=secret');
+    },
+  );
+
+  it('opens an event when a speaker code arrives without a channel', () => {
+    expect(
+      redirectSystemPath({
+        path: wrapped('https://church.example/events/481209?speaker_code=secret'),
+        initial: true,
+      }),
+    ).toBe('/events/church.example/481209');
   });
 
   it('handles a relative wrapper path', () => {

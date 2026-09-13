@@ -1,5 +1,5 @@
 import { parseListenerLink } from '@/links/parse';
-import { channelHref, eventHref } from '@/links/route';
+import { destinationHref } from '@/links/route';
 
 /** The shared app-link host wraps a self-hosted event or channel URL. */
 export function redirectSystemPath({ path }: { path: string; initial: boolean }): string {
@@ -21,8 +21,7 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
       return '/';
     }
 
-    const { host, pin, slug } = parsed.destination;
-    return String(slug === null ? eventHref(host, pin) : channelHref(host, pin, slug));
+    return String(destinationHref(parsed.destination, parsed.speakerCode));
   } catch {
     // External input must never crash routing, on a cold launch or while already running.
     return '/';

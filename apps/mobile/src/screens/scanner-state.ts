@@ -16,6 +16,7 @@ export const INITIAL_SCAN_STATE: ScanState = { armed: true, refusal: null };
 export type ScanOutcome = {
   state: ScanState;
   destination: ListenerDestination | null;
+  speakerCode: string | null;
   /** A QR code is read at arm's length with the screen pointed away, so the buzz is often
    * the first confirmation the guest gets. It fires on an accepted code and on no other. */
   haptic: boolean;
@@ -23,7 +24,7 @@ export type ScanOutcome = {
 
 export function scan(state: ScanState, raw: string): ScanOutcome {
   if (!state.armed) {
-    return { state, destination: null, haptic: false };
+    return { state, destination: null, speakerCode: null, haptic: false };
   }
 
   const parsed = parseListenerLink(raw);
@@ -32,6 +33,7 @@ export function scan(state: ScanState, raw: string): ScanOutcome {
     return {
       state: { armed: false, refusal: parsed.reason },
       destination: null,
+      speakerCode: null,
       haptic: false,
     };
   }
@@ -39,6 +41,7 @@ export function scan(state: ScanState, raw: string): ScanOutcome {
   return {
     state: { armed: false, refusal: null },
     destination: parsed.destination,
+    speakerCode: parsed.speakerCode,
     haptic: true,
   };
 }
