@@ -85,7 +85,7 @@ export function SpeakerOnAir({
   const handingOver = state === 'handing-over';
   const badge = studioBadge(state, isLinkUp(link));
 
-  const exit = (className: string, buttonClassName: string) => (
+  const exit = ({ className, buttonClassName }: { className: string; buttonClassName: string }) => (
     <div className={cn('w-full flex-col items-center', className)}>
       <Button
         variant="destructive"
@@ -143,7 +143,7 @@ export function SpeakerOnAir({
             <ConnectionLine link={link} className="mt-2.5 w-full lg:mt-4" />
             {/* Rendered once per breakpoint rather than reordered: `display: none` takes the
                 unused copy out of the tab order, so focus follows what is on screen. */}
-            {exit('mt-6 hidden lg:flex', 'max-w-60')}
+            {exit({ className: 'mt-6 hidden lg:flex', buttonClassName: 'max-w-60' })}
           </div>
 
           <div className="mt-4.5 flex flex-col gap-2.5 lg:mt-0 lg:gap-4">
@@ -159,7 +159,7 @@ export function SpeakerOnAir({
           </div>
         </div>
 
-        {exit('mt-auto flex pt-8 lg:hidden', 'sm:max-w-100')}
+        {exit({ className: 'mt-auto flex pt-8 lg:hidden', buttonClassName: 'sm:max-w-100' })}
       </main>
 
       <VersionFooter />
