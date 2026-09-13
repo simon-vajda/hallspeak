@@ -407,7 +407,7 @@ export function SpeakerStudio({
   };
 
   if (state === 'displaced') {
-    return <SpeakerDisplaced channelName={channel.name} eventName={eventName} />;
+    return <SpeakerDisplaced channelName={channel.name} />;
   }
 
   if (goLivePressed) {

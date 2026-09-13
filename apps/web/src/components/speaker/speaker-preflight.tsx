@@ -1,13 +1,13 @@
 import type { LinkState } from '@linguacast/client-core/media';
 import type { components } from '@linguacast/contract/openapi';
 import { Mic } from 'lucide-react';
+import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { HandoverAlert } from '@/components/speaker/handover-alert';
 import { HandoverCountdown, useHandoverRemaining } from '@/components/speaker/handover-countdown';
 import { InputLevelPanel } from '@/components/speaker/input-level-panel';
 import { ListenerPageLink } from '@/components/speaker/listener-page-link';
 import { MicPanel } from '@/components/speaker/mic-panel';
-import { StudioChrome } from '@/components/speaker/studio-chrome';
 import { StudioTitle } from '@/components/speaker/studio-title';
 import { Button } from '@/components/ui/button';
 import { VersionFooter } from '@/components/version-footer';
@@ -67,7 +67,7 @@ export function SpeakerPreflight({
   const gated = !canGoLive;
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <StudioChrome />
+      <AppHeader />
 
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-4 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         {/* One region for every holder state, mounted throughout: the alert and the note each

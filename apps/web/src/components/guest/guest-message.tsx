@@ -1,20 +1,15 @@
 import type { ReactElement, ReactNode } from 'react';
 import { AppHeader } from '@/components/app-header';
-import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import { VersionFooter } from '@/components/version-footer';
 
 /**
  * The frame both guest routes put their non-screen states in. The listener room does not use
- * it: its own frame carries a back link, the channel strip and a centred main.
+ * it: its header carries a back link and its main is centred.
  */
 export function GuestShell({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <div className="absolute top-3.5 right-gutter z-10 lg:top-4 lg:right-10">
-        <TempThemeToggle />
-      </div>
-
       <AppHeader />
 
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-7 pb-gutter lg:px-10 lg:pt-15 lg:pb-16.5">

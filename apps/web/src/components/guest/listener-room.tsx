@@ -29,12 +29,10 @@ import { AppNotice } from '@/components/guest/app-notice';
 import { ReportSheet } from '@/components/guest/report-sheet';
 import { LiveBadge } from '@/components/live-badge';
 import { PlayTarget } from '@/components/play-target';
-import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { Button } from '@/components/ui/button';
 import { VersionFooter } from '@/components/version-footer';
 import { useListenerMediaSession } from '@/lib/audio/use-listener-media-session';
 import { useMediaSessionCarrier } from '@/lib/audio/use-media-session-carrier';
-import { formatPin } from '@/lib/format';
 import { isSuperseded, useMedia } from '@/lib/media/use-media';
 import { cn } from '@/lib/utils';
 
@@ -359,7 +357,6 @@ export function ListenerRoom({
     return { ok: true as const };
   }, [socket, channel.slug]);
 
-  const meta = `${eventName} · PIN ${formatPin(pin)}`;
   const note =
     socketError ??
     statusNote({
@@ -371,27 +368,18 @@ export function ListenerRoom({
   return (
     <div className="relative flex min-h-dvh flex-col">
       <AppHeader
-        right={
-          <>
-            <span className="text-meta text-muted-foreground">{meta}</span>
-            <TempThemeToggle />
-          </>
+        left={
+          <Link
+            to="/events/$pin"
+            params={{ pin }}
+            aria-label={`Back to ${eventName}`}
+            className="group -ml-1.5 flex h-9.5 min-w-0 max-w-57.5 items-center gap-1 rounded-sm pr-1 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 lg:max-w-80"
+          >
+            <ChevronLeft aria-hidden className="size-5 shrink-0 stroke-[2.25]" />
+            <span className="truncate underline-offset-4 group-hover:underline">{eventName}</span>
+          </Link>
         }
       />
-      <div className="mx-auto flex w-full max-w-shell items-center gap-3 px-gutter pt-4.5 lg:px-10">
-        <Link
-          to="/events/$pin"
-          params={{ pin }}
-          aria-label={`Back to ${eventName}`}
-          className="hover:overlay flex h-9.5 min-w-0 max-w-57.5 items-center gap-2 rounded-full bg-secondary pr-action-x pl-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 lg:max-w-80"
-        >
-          <ChevronLeft aria-hidden className="size-4.5 shrink-0 stroke-[2.25]" />
-          <span className="truncate">{eventName}</span>
-        </Link>
-        <div className="ml-auto lg:hidden">
-          <TempThemeToggle />
-        </div>
-      </div>
       <AppNotice />
 
       <main className="mx-auto flex w-full max-w-shell grow shrink-0 flex-col items-center justify-center gap-y-6 px-8 pt-6 pb-3.5 text-center lg:gap-y-8 lg:px-10 lg:pt-10">

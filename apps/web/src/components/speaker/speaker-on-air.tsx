@@ -3,6 +3,7 @@ import { isLinkUp, type LinkState } from '@linguacast/client-core/media';
 import type { components } from '@linguacast/contract/openapi';
 import { Mic, MicOff } from 'lucide-react';
 import { useState } from 'react';
+import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { PlayTarget } from '@/components/play-target';
 import { AudioSettings } from '@/components/speaker/audio-settings';
@@ -13,7 +14,6 @@ import { ListenerPageLink } from '@/components/speaker/listener-page-link';
 import { ListenerReports } from '@/components/speaker/listener-reports';
 import { OnAirStats } from '@/components/speaker/on-air-stats';
 import { ScreenAwakeNotice } from '@/components/speaker/screen-awake-notice';
-import { StudioChrome } from '@/components/speaker/studio-chrome';
 import { StudioTitle } from '@/components/speaker/studio-title';
 import { Button } from '@/components/ui/button';
 import { VersionFooter } from '@/components/version-footer';
@@ -103,7 +103,7 @@ export function SpeakerOnAir({
 
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <StudioChrome />
+      <AppHeader />
 
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-4 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
         {handoverPending || handingOver ? (
@@ -121,7 +121,7 @@ export function SpeakerOnAir({
           {/* Sticky so the mute target stays in reach however far the panels beside it grow, but
               only where the whole stage fits: a stuck stage taller than the window hides End
               broadcast until the panels have scrolled to their end. */}
-          <div className="flex flex-col items-center lg:top-11 lg:[@media(min-height:45rem)]:sticky">
+          <div className="flex flex-col items-center lg:top-[calc(var(--spacing-header)+--spacing(11))] lg:[@media(min-height:45rem)]:sticky">
             <StudioTitle eventName={eventName} name={channel.name} badge={badge} />
             <div className="mt-4.5 flex justify-center py-10 lg:mt-7">
               <PlayTarget

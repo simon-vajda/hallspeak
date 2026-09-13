@@ -1,6 +1,5 @@
 import { AppHeader } from '@/components/app-header';
 import { LiveBadge } from '@/components/live-badge';
-import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { VersionFooter } from '@/components/version-footer';
 
 /**
@@ -8,27 +7,10 @@ import { VersionFooter } from '@/components/version-footer';
  * channel, and neither is something this session can undo by reconnecting. A handover is
  * not displacement — it returns the studio to pre-flight, free to ask for the channel back.
  */
-export function SpeakerDisplaced({
-  channelName,
-  eventName,
-}: {
-  channelName: string;
-  eventName: string;
-}) {
+export function SpeakerDisplaced({ channelName }: { channelName: string }) {
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <div className="absolute top-3.5 right-gutter z-10 lg:hidden">
-        <TempThemeToggle />
-      </div>
-
-      <AppHeader
-        right={
-          <>
-            <span className="text-meta text-muted-foreground">{eventName}</span>
-            <TempThemeToggle />
-          </>
-        }
-      />
+      <AppHeader />
 
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col items-center justify-center px-gutter pb-16 text-center lg:px-10">
         <LiveBadge live={false} showDot={false} label="Interpreter · off air" />
