@@ -55,6 +55,36 @@ export function isBroadcasting(state: BroadcastState): boolean {
   return state === 'live';
 }
 
+export interface StudioBadge {
+  label: string;
+  live: boolean;
+  showDot: boolean;
+}
+
+const BADGE_LABEL: Record<BroadcastState, string> = {
+  'pre-flight': 'Off air',
+  connecting: 'Going live…',
+  live: 'On air',
+  muted: 'On air · muted',
+  'handing-over': 'On air',
+  displaced: 'Off air',
+};
+
+/**
+ * This studio's state and nothing else: a colleague on the channel is an alert above the title,
+ * never a badge that reads as this studio being live. A producer held locally while signalling
+ * is down is not reaching anyone, so it falls back to the pre-producer wording.
+ */
+export function studioBadge(state: BroadcastState, linkUp: boolean): StudioBadge {
+  const hasProducer = state === 'live' || state === 'muted' || state === 'handing-over';
+  const live = hasProducer && linkUp;
+  return {
+    label: hasProducer && !live ? BADGE_LABEL.connecting : BADGE_LABEL[state],
+    live,
+    showDot: state !== 'pre-flight' && state !== 'displaced',
+  };
+}
+
 /**
  * How long a broadcast survives a link the client cannot re-establish. Socket.IO retries
  * forever, so without a deadline the studio sits on `Reconnecting…` with nothing behind it;

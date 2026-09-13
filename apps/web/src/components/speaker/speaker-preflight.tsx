@@ -1,28 +1,26 @@
 import type { LinkState } from '@linguacast/client-core/media';
 import type { components } from '@linguacast/contract/openapi';
 import { Mic } from 'lucide-react';
-import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
-import { LiveBadge } from '@/components/live-badge';
+import { HandoverAlert } from '@/components/speaker/handover-alert';
 import { HandoverCountdown, useHandoverRemaining } from '@/components/speaker/handover-countdown';
 import { InputLevelPanel } from '@/components/speaker/input-level-panel';
 import { ListenerPageLink } from '@/components/speaker/listener-page-link';
 import { MicPanel } from '@/components/speaker/mic-panel';
-import { TempThemeToggle } from '@/components/temp-theme-toggle';
+import { StudioChrome } from '@/components/speaker/studio-chrome';
+import { StudioTitle } from '@/components/speaker/studio-title';
 import { Button } from '@/components/ui/button';
 import { VersionFooter } from '@/components/version-footer';
 import type { AudioPreferences } from '@/lib/audio/preferences';
 import type { useMicCapture } from '@/lib/audio/use-mic-capture';
-import { formatPin } from '@/lib/format';
 import {
   CANCEL_REQUEST,
   HANDOVER_FAILED,
-  otherInterpreterLive,
+  PREFLIGHT_CHECKING_NOTE,
   preflightActionLabel,
-  preflightBadgeLabel,
-  preflightNote,
+  preflightAlert,
 } from '@/lib/handover-copy';
-import type { PreflightAction } from './speaker-studio-state';
+import { type PreflightAction, studioBadge } from './speaker-studio-state';
 
 type PublicChannel = components['schemas']['PublicChannel'];
 
@@ -63,40 +61,21 @@ export function SpeakerPreflight({
   onTakeOver: () => void;
 }) {
   const remaining = useHandoverRemaining(action.type === 'waiting' ? action.expiresAt : null);
-  const note = preflightNote(action.type);
+  const alert = preflightAlert(action.type);
   // Every variant that puts this studio on air keeps the microphone gate: a handover is
   // still a Go live, and going live with nothing captured hands over silence.
   const gated = !canGoLive;
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <AppHeader
-        right={
-          <>
-            <span className="text-meta text-muted-foreground">
-              {eventName} · PIN {formatPin(pin)}
-            </span>
-            <TempThemeToggle />
-          </>
-        }
-      />
+      <StudioChrome eventName={eventName} pin={pin} />
 
-      <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-6.5 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
-        <header>
-          <div className="flex items-center justify-between gap-3">
-            <LiveBadge
-              live={otherInterpreterLive(action.type)}
-              showDot={otherInterpreterLive(action.type)}
-              label={preflightBadgeLabel(action.type)}
-            />
-            <div className="-my-1 lg:hidden">
-              <TempThemeToggle />
-            </div>
-          </div>
-          <h1 className="mt-4 mb-1 text-screen lg:text-hero-lg">{channel.name}</h1>
-          <p className="text-sm text-muted-foreground lg:mb-8">{eventName}</p>
-        </header>
+      <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-4 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
+        {alert ? (
+          <HandoverAlert tone="warn" title={alert.title} note={alert.note} className="mb-6" />
+        ) : null}
+        <StudioTitle name={channel.name} badge={studioBadge('pre-flight', true)} />
 
-        <div className="mt-6 flex flex-1 flex-col gap-4 lg:mt-0 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5.5">
+        <div className="mt-6 flex flex-1 flex-col gap-4 lg:mt-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5.5">
           <MicPanel
             status={mic.status}
             error={mic.error}
@@ -120,12 +99,12 @@ export function SpeakerPreflight({
                 <ConnectionLine link={link} className="mb-3.5 text-center" />
               )}
 
-              {note ? (
+              {action.type === 'unknown' ? (
                 <p
                   aria-live="polite"
-                  className="mb-4 rounded-lg bg-secondary px-4 py-3 text-note text-muted-foreground"
+                  className="mb-3.5 text-center text-note text-muted-foreground"
                 >
-                  {note}
+                  {PREFLIGHT_CHECKING_NOTE}
                 </p>
               ) : null}
 
