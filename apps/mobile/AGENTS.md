@@ -30,7 +30,7 @@ Rules local to the Expo listener. Repo-wide rules, the socket protocol, media re
 - `expo-router`: a file under `app/` is a route. Event and Channel are addressed by host and PIN (`app/events/[host]/[pin]/[slug].tsx`), not a stored record id, so a scanned code opens Event before anything is remembered. `src/links/route.ts` encodes nothing (a dot in a segment was verified to round-trip); it is the one place to change if a router version reserves the character.
 - `app/+native-intent.tsx` unwraps `open.linguacast.app`'s `url` parameter through `parseListenerLink`; malformed links go Home. Associated domains and verified intent filters need the external host's association files, which are separate work.
 - Back controls follow fixed hierarchy: Channel dismisses to its Event URL, Event to Home, via `router.dismissTo`.
-- Home's title is **Join**, not Listen: the same screen will open speaker links.
+- Home's title is **Join**, not Listen: it opens speaker links too. A channel link carrying a non-empty `speaker_code` — entered, scanned or arriving through `+native-intent` — opens the `speaker-link` sheet via `destinationHref` in `src/links/route.ts`, which offers the system browser (`Linking.openURL`, never an in-app browser or WebView) or the listener channel. The app never sends, stores or logs the code. The sheet is addressed by validated host, PIN, slug and code and rebuilds the studio URL itself; it must never accept a URL param (`docs/solutions/conventions/a-registered-url-scheme-makes-every-route-param-untrusted.md`).
 
 ## Event connection
 
@@ -94,7 +94,7 @@ The app states the platform's audio settings and offers no control that would du
 
 ## Sheets and storage
 
-- Sheets (`link`, `appearance`, `[slug]/report`) are `expo-router` routes with `presentation: 'formSheet'`, not a sheet library. Each owns its title and dismiss control as content (Android caps detents at three and renders no header inside a form sheet). `SheetChrome` puts header and body in **one** scroll container.
+- Sheets (`link`, `appearance`, `speaker-link`, `[slug]/report`) are `expo-router` routes with `presentation: 'formSheet'`, not a sheet library. Each owns its title and dismiss control as content (Android caps detents at three and renders no header inside a form sheet). `SheetChrome` puts header and body in **one** scroll container.
 - Appearance opens from the Home header, uses `SheetChoice` rows (iOS checkmark, Android radio), defaults to System, and stores `system`/`light`/`dark` under `linguacast-appearance` in `expo-sqlite/kv-store`. The theme provider restores it synchronously at boot and syncs React Native's native appearance override (`unspecified` for System). A failed write keeps the session's choice and shows an inline message.
 - History lives in `expo-sqlite/kv-store`, not `expo-secure-store` (Keychain API, truncates past ~2 KB); synchronous reads paint pinned rows on the first frame. A row records **no channel**. Availability is checked only when tapped — never a launch sweep, which would be slow and disclose to servers where a person worships. Only the guest removes a row; an unreachable event is marked and kept. Home re-reads on focus and on pull.
 - Pinning is a visible star button; Remove is also an accessibility action (gestures aren't reachable under VoiceOver/TalkBack). Removal is not confirmed; a snackbar offers Undo.
