@@ -36,6 +36,7 @@ export function SheetChrome({
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={styles.sheet}
       contentInsetAdjustmentBehavior="never"
+      keyboardShouldPersistTaps="handled"
     >
       {Platform.OS === 'android' ? (
         <View style={[styles.handle, { backgroundColor: colors.border }]} />
