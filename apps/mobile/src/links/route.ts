@@ -1,5 +1,6 @@
 import { PIN_PATTERN, SLUG_PATTERN } from '@linguacast/contract/patterns';
 import type { Href } from 'expo-router';
+import { apiOrigin } from '@/api/client';
 import { isListenerHost } from './host';
 import type { ListenerDestination } from './parse';
 
@@ -121,7 +122,7 @@ export function readSpeakerLinkParams(
 }
 
 export function speakerStudioUrl({ host, pin, slug, code }: SpeakerLinkParams): string {
-  return `https://${host}/events/${pin}/${slug}?speaker_code=${encodeURIComponent(code)}`;
+  return `${apiOrigin(host)}/events/${pin}/${slug}?speaker_code=${encodeURIComponent(code)}`;
 }
 
 export function destinationHref(
