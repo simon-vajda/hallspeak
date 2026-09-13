@@ -8,6 +8,7 @@ export function HandoverAlert({
   note,
   children,
   trailing,
+  live = true,
   className,
 }: {
   tone: 'warn' | 'neutral';
@@ -16,11 +17,13 @@ export function HandoverAlert({
   /** Under the note, inside the text column. */
   children?: ReactNode;
   trailing?: ReactNode;
+  /** Off where the caller announces the same text through a region that stays mounted. */
+  live?: boolean;
   className?: string;
 }) {
   return (
     <section
-      aria-live="polite"
+      aria-live={live ? 'polite' : undefined}
       className={cn(
         'flex gap-3.5 rounded-lg border p-4 sm:items-center sm:gap-4 sm:pr-4.5 sm:pl-5',
         tone === 'neutral'

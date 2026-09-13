@@ -118,8 +118,10 @@ export function SpeakerOnAir({
         ) : null}
 
         <div className="flex flex-col lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-x-8.5">
-          {/* Sticky so the mute target stays in reach however far the panels beside it grow. */}
-          <div className="flex flex-col items-center lg:sticky lg:top-11">
+          {/* Sticky so the mute target stays in reach however far the panels beside it grow, but
+              only where the whole stage fits: a stuck stage taller than the window hides End
+              broadcast until the panels have scrolled to their end. */}
+          <div className="flex flex-col items-center lg:top-11 lg:[@media(min-height:45rem)]:sticky">
             <StudioTitle name={channel.name} badge={badge} />
             <div className="mt-4.5 flex justify-center py-10 lg:mt-7">
               <PlayTarget

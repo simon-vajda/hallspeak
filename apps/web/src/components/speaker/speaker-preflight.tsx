@@ -70,8 +70,23 @@ export function SpeakerPreflight({
       <StudioChrome eventName={eventName} pin={pin} />
 
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-4 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
+        {/* One region for every holder state, mounted throughout: the alert and the note each
+            mount already holding their text, which screen readers do not announce. */}
+        <p aria-live="polite" className="sr-only">
+          {alert
+            ? `${alert.title}. ${alert.note}`
+            : action.type === 'unknown'
+              ? PREFLIGHT_CHECKING_NOTE
+              : ''}
+        </p>
         {alert ? (
-          <HandoverAlert tone="warn" title={alert.title} note={alert.note} className="mb-6" />
+          <HandoverAlert
+            tone="warn"
+            title={alert.title}
+            note={alert.note}
+            live={false}
+            className="mb-6"
+          />
         ) : null}
         <StudioTitle name={channel.name} badge={studioBadge('pre-flight', true)} />
 
@@ -100,10 +115,7 @@ export function SpeakerPreflight({
               )}
 
               {action.type === 'unknown' ? (
-                <p
-                  aria-live="polite"
-                  className="mb-3.5 text-center text-note text-muted-foreground"
-                >
+                <p aria-hidden className="mb-3.5 text-center text-note text-muted-foreground">
                   {PREFLIGHT_CHECKING_NOTE}
                 </p>
               ) : null}

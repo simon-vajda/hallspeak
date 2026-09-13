@@ -12,9 +12,9 @@ export function StudioTitle({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-col items-center text-center', className)}>
+    <div className={cn('flex w-full min-w-0 flex-col items-center text-center', className)}>
       <LiveBadge live={badge.live} showDot={badge.showDot} label={badge.label} />
-      <h1 className="mt-4 max-w-full break-words text-screen lg:mt-3.5 lg:text-hero">{name}</h1>
+      <h1 className="mt-4 max-w-full wrap-break-word text-screen lg:mt-3.5 lg:text-hero">{name}</h1>
     </div>
   );
 }
