@@ -103,7 +103,7 @@ export function SpeakerOnAir({
 
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <StudioChrome eventName={eventName} pin={pin} />
+      <StudioChrome />
 
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-4 pb-7.5 lg:px-10 lg:pt-11 lg:pb-12">
         {handoverPending || handingOver ? (
@@ -122,7 +122,7 @@ export function SpeakerOnAir({
               only where the whole stage fits: a stuck stage taller than the window hides End
               broadcast until the panels have scrolled to their end. */}
           <div className="flex flex-col items-center lg:top-11 lg:[@media(min-height:45rem)]:sticky">
-            <StudioTitle name={channel.name} badge={badge} />
+            <StudioTitle eventName={eventName} name={channel.name} badge={badge} />
             <div className="mt-4.5 flex justify-center py-10 lg:mt-7">
               <PlayTarget
                 icon={isMuted ? <MicOff /> : <Mic />}

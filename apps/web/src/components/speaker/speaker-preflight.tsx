@@ -67,7 +67,7 @@ export function SpeakerPreflight({
   const gated = !canGoLive;
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <StudioChrome eventName={eventName} pin={pin} />
+      <StudioChrome />
 
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-4 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         {/* One region for every holder state, mounted throughout: the alert and the note each
@@ -88,7 +88,11 @@ export function SpeakerPreflight({
             className="mb-6"
           />
         ) : null}
-        <StudioTitle name={channel.name} badge={studioBadge('pre-flight', true)} />
+        <StudioTitle
+          eventName={eventName}
+          name={channel.name}
+          badge={studioBadge('pre-flight', true)}
+        />
 
         <div className="mt-6 flex flex-1 flex-col gap-4 lg:mt-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5.5">
           <MicPanel
