@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PreflightAction } from '@/components/speaker/speaker-studio-state';
 import {
-  ANOTHER_INTERPRETER,
   CANCEL_REQUEST,
   END_WITH_HANDOVER,
   formatCountdown,
@@ -11,10 +10,9 @@ import {
   HANDOVER_FAILED,
   HANDOVER_REQUEST_TITLE,
   handoverRequestNote,
-  otherInterpreterLive,
+  PREFLIGHT_CHECKING_NOTE,
   preflightActionLabel,
-  preflightBadgeLabel,
-  preflightNote,
+  preflightAlert,
 } from './handover-copy';
 
 const ACTIONS: PreflightAction['type'][] = [
@@ -27,9 +25,12 @@ const ACTIONS: PreflightAction['type'][] = [
 ];
 
 const EVERY_STRING = [
-  ...ACTIONS.map(preflightBadgeLabel),
   ...ACTIONS.map(preflightActionLabel),
-  ...ACTIONS.map(preflightNote).filter((note) => note !== null),
+  ...ACTIONS.flatMap((action) => {
+    const alert = preflightAlert(action);
+    return alert ? [alert.title, alert.note] : [];
+  }),
+  PREFLIGHT_CHECKING_NOTE,
   CANCEL_REQUEST,
   HANDOVER_REQUEST_TITLE,
   handoverRequestNote(false),
@@ -48,8 +49,7 @@ describe('handover copy', () => {
   });
 
   it('reads an unknown channel as unknown rather than as off air', () => {
-    expect(preflightBadgeLabel('unknown')).toBe('Channel status unknown');
-    expect(preflightNote('unknown')).not.toMatch(/off air|nobody|no one/i);
+    expect(PREFLIGHT_CHECKING_NOTE).not.toMatch(/off air|nobody|no one/i);
     expect(preflightActionLabel('unknown')).not.toBe(preflightActionLabel('go-live'));
   });
 
@@ -60,11 +60,15 @@ describe('handover copy', () => {
     }
   });
 
-  it('says another interpreter is on air for every action but Go live and unknown', () => {
+  it('alerts about a colleague for every action but Go live and unknown', () => {
     for (const action of ACTIONS) {
-      const other = otherInterpreterLive(action);
-      expect(other).toBe(action !== 'go-live' && action !== 'unknown');
-      expect(preflightBadgeLabel(action) === ANOTHER_INTERPRETER).toBe(other);
+      const alert = preflightAlert(action);
+      if (action === 'go-live' || action === 'unknown') {
+        expect(alert).toBeNull();
+      } else {
+        expect(alert?.title).toBeTruthy();
+        expect(alert?.note).toBeTruthy();
+      }
     }
   });
 

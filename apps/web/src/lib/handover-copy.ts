@@ -6,32 +6,6 @@ import type { PreflightAction } from '@/components/speaker/speaker-studio-state'
  */
 
 /**
- * Short enough to sit beside the header's other controls at 320px: the badge's live dot and
- * tint already carry the state, and the note under the action says the sentence in full.
- */
-export const ANOTHER_INTERPRETER = 'Another interpreter';
-
-/**
- * `unknown` is the screen withholding, so its label states that rather than reporting an
- * idle channel: an interpreter told the channel is off air would go live over a colleague.
- */
-export function preflightBadgeLabel(action: PreflightAction['type']): string {
-  switch (action) {
-    case 'go-live':
-      return 'Off air';
-    case 'unknown':
-      return 'Channel status unknown';
-    default:
-      return ANOTHER_INTERPRETER;
-  }
-}
-
-/** Whether the badge is reporting a colleague's live channel rather than this studio's. */
-export function otherInterpreterLive(action: PreflightAction['type']): boolean {
-  return action !== 'go-live' && action !== 'unknown';
-}
-
-/**
  * Short: every one of these sits inside the same full-width pill, which does not wrap, and
  * the note above the pill is where the sentence goes.
  */
@@ -52,22 +26,44 @@ export function preflightActionLabel(action: PreflightAction['type']): string {
   }
 }
 
-export function preflightNote(action: PreflightAction['type']): string | null {
+export interface PreflightAlert {
+  title: string;
+  note: string;
+}
+
+/** A colleague holding or receiving the channel, stated above the title rather than in the badge. */
+export function preflightAlert(action: PreflightAction['type']): PreflightAlert | null {
   switch (action) {
     case 'ready':
-      return 'Another interpreter has this channel. Ask them to hand it over — they can do that straight away, and if they do not answer you can take it over after 30 seconds.';
+      return {
+        title: 'Another interpreter has this channel',
+        note: 'Ask them to hand it over — they can do that straight away, and if they do not answer you can take it over after 30 seconds.',
+      };
     case 'waiting':
-      return 'The other interpreter has been asked to hand over. You can take the channel yourself once the countdown ends.';
+      return {
+        title: 'Waiting for the other interpreter',
+        note: 'They have been asked to hand over. You can take the channel yourself once the countdown ends.',
+      };
     case 'take-over':
-      return 'No answer from the other interpreter. Taking over puts you on air in their place.';
+      return {
+        title: 'No answer from the other interpreter',
+        note: 'Taking over puts you on air in their place.',
+      };
     case 'pending-elsewhere':
-      return 'This channel is already being handed to another interpreter. Wait for that to finish, then ask again.';
-    case 'unknown':
-      return 'Checking who holds this channel.';
+      return {
+        title: 'This channel is being handed over',
+        note: 'It is already going to another interpreter. Wait for that to finish, then ask again.',
+      };
     default:
       return null;
   }
 }
+
+/**
+ * Beside the disabled action rather than in an alert: the holder is unknown on every page load
+ * until the first snapshot lands, and a box that flashes each time would read as a warning.
+ */
+export const PREFLIGHT_CHECKING_NOTE = 'Checking who holds this channel.';
 
 export const CANCEL_REQUEST = 'Cancel the request';
 

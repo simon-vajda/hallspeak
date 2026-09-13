@@ -26,6 +26,13 @@ const TRANSITION_MS = 260;
 /** Matches report-row-in and report-row-out in index.css. */
 const ROW_TRANSITION_MS = 200;
 
+/**
+ * How long an unknown tally is withheld silently before the panel says so. The tally is
+ * seeded moments after a go-live or reconnect, and a panel that mounts and leaves again in
+ * that window moves every panel below it twice.
+ */
+const WITHHOLD_GRACE_MS = 2_000;
+
 const TONE = {
   warn: 'border-warn-border bg-warn-muted text-warn-on-muted',
   severe: 'border-destructive-border bg-destructive-muted text-destructive',
@@ -41,7 +48,6 @@ export function ListenerReports({
   resolution,
   known,
   className,
-  variant = 'panel',
 }: {
   rows: AnchoredRow[];
   resolution: AnchoredResolution | null;
@@ -49,8 +55,6 @@ export function ListenerReports({
    * cannot support, so the panel withholds instead. */
   known: boolean;
   className?: string;
-  /** `phone` hides the panel while it has nothing to say, so it costs no fold height. */
-  variant?: 'panel' | 'phone';
 }) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -71,116 +75,118 @@ export function ListenerReports({
     resolution !== null && now - resolution.receivedAt < RESOLUTION_WINDOW_MS ? resolution : null;
   const issueTotal = sorted.length === 0 ? 0 : live.reduce((sum, r) => sum + r.count, 0);
   const flash = useFlashParity(issueTotal, liveResolution?.receivedAt ?? null);
-  const phoneVisible =
-    variant !== 'phone' || !known || sorted.length > 0 || liveResolution !== null;
-  const presence = usePanelPresence(phoneVisible);
+  const withholding = useSettledFlag(!known, WITHHOLD_GRACE_MS);
+  const visible = withholding || sorted.length > 0 || liveResolution !== null;
+  const presence = usePanelPresence(visible);
   const presentRows = useReportRowPresence(sorted);
 
-  // The phone panel is absent while empty — but never while withholding, which would make a
-  // dropped socket look like an empty window.
-  if (variant === 'phone' && presence === 'hidden') {
-    return null;
-  }
+  const announcement = [
+    ...(liveResolution ? [`Audio sounds good now, ${liveResolution.count}`] : []),
+    ...sorted.map((row) => `${reportLabel(row.category)}, ${row.count}`),
+  ].join('. ');
 
-  const panel = (
-    <section
-      className={cn(
-        'rounded-lg bg-secondary p-5',
-        // Flash stays on the panel while the phone entrance lives on its wrapper. Keeping
-        // them on separate elements prevents the first flash from cancelling the entrance.
-        flash === 1 && 'animate-report-flash-a',
-        flash === 2 && 'animate-report-flash-b',
-        variant === 'panel' && className,
-      )}
-    >
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className={MICRO_LABEL}>Listener reports</h2>
-        <span className="text-meta font-medium text-muted-foreground">Recent feedback</span>
-      </div>
-      <div className="mt-3.5 flex flex-col gap-1.5" aria-live="polite">
-        {liveResolution ? (
-          <div className="grid animate-report-row-in">
-            <div className="min-h-0 overflow-hidden">
-              <div className="flex items-center justify-between gap-3 rounded-md border border-live/35 bg-live-muted py-2.75 pr-3 pl-3.5 text-live-on-muted">
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <Check className="size-4.5 shrink-0 stroke-[2.5]" />
-                  <span>
-                    <span className="block font-semibold text-sm">Audio sounds good now</span>
-                    <span className="mt-0.5 block text-meta font-medium text-muted-foreground">
-                      {reportAgeLabel(now - liveResolution.receivedAt)}
-                    </span>
-                  </span>
-                </span>
-                <span className="flex h-6.5 min-w-6.5 items-center justify-center rounded-full bg-live/20 px-2 text-note font-semibold">
-                  {liveResolution.count}
-                </span>
-              </div>
-            </div>
-          </div>
-        ) : null}
-        {presentRows.map(({ row, phase }) => {
-          const tone = reportTone(row.category);
-          return (
-            <div
-              key={row.category}
-              aria-hidden={phase === 'leaving'}
+  return (
+    <>
+      {/* Mounted for the component's whole life, unlike the panel: a live region that mounts
+          already holding its first report is not announced by most screen readers. Ages are
+          left out so the tick does not re-announce every second. */}
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
+      {/* Absent while empty — but not once an unknown tally outlasts its grace period, which
+          would make a dropped socket look like an empty window. */}
+      {presence === 'hidden' ? null : (
+        <div
+          className={cn('grid', visible ? 'animate-report-in' : 'animate-report-out', className)}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <section
               className={cn(
-                'grid',
-                phase === 'leaving' ? 'animate-report-row-out' : 'animate-report-row-in',
+                'rounded-lg bg-secondary p-5',
+                // Flash stays on the panel while the entrance lives on its wrapper. Keeping them on
+                // separate elements prevents the first flash from cancelling the entrance.
+                flash === 1 && 'animate-report-flash-a',
+                flash === 2 && 'animate-report-flash-b',
               )}
             >
-              <div className="min-h-0 overflow-hidden">
-                <div
-                  className={cn(
-                    'flex items-center justify-between gap-3 rounded-md border py-2.75 pr-3 pl-3.5',
-                    TONE[tone],
-                  )}
-                >
-                  <span>
-                    <span className="block font-semibold text-sm">{reportLabel(row.category)}</span>
-                    <span className="mt-0.5 block text-meta font-medium text-muted-foreground">
-                      {reportAgeLabel(row.ageMs)}
-                    </span>
-                  </span>
-                  <span
-                    className={cn(
-                      'flex h-6.5 min-w-6.5 items-center justify-center rounded-full px-2 text-note font-semibold',
-                      CHIP[tone],
-                    )}
-                  >
-                    {row.count}
-                  </span>
-                </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className={MICRO_LABEL}>Listener reports</h2>
+                <span className="text-meta font-medium text-muted-foreground">Recent feedback</span>
               </div>
-            </div>
-          );
-        })}
-        {presentRows.length === 0 &&
-        liveResolution === null &&
-        (variant === 'panel' || phoneVisible) ? (
-          <p className="rounded-md border border-border border-dashed px-3.5 py-4 text-note text-muted-foreground">
-            {known ? (
-              'No reports. Listeners can flag an audio problem from their page, and it appears here for five minutes.'
-            ) : (
-              <>
-                <span aria-hidden>—</span>
-                <span className="sr-only">Status unknown</span>
-              </>
-            )}
-          </p>
-        ) : null}
-      </div>
-    </section>
-  );
-
-  return variant === 'phone' ? (
-    <div
-      className={cn('grid', phoneVisible ? 'animate-report-in' : 'animate-report-out', className)}
-    >
-      <div className="min-h-0 overflow-hidden">{panel}</div>
-    </div>
-  ) : (
-    panel
+              <div className="mt-3.5 flex flex-col gap-1.5">
+                {liveResolution ? (
+                  <div className="grid animate-report-row-in">
+                    <div className="min-h-0 overflow-hidden">
+                      <div className="flex items-center justify-between gap-3 rounded-md border border-live/35 bg-live-muted py-2.75 pr-3 pl-3.5 text-live-on-muted">
+                        <span className="flex min-w-0 items-center gap-2.5">
+                          <Check className="size-4.5 shrink-0 stroke-[2.5]" />
+                          <span>
+                            <span className="block font-semibold text-sm">
+                              Audio sounds good now
+                            </span>
+                            <span className="mt-0.5 block text-meta font-medium text-muted-foreground">
+                              {reportAgeLabel(now - liveResolution.receivedAt)}
+                            </span>
+                          </span>
+                        </span>
+                        <span className="flex h-6.5 min-w-6.5 items-center justify-center rounded-full bg-live/20 px-2 text-note font-semibold">
+                          {liveResolution.count}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+                {presentRows.map(({ row, phase }) => {
+                  const tone = reportTone(row.category);
+                  return (
+                    <div
+                      key={row.category}
+                      aria-hidden={phase === 'leaving'}
+                      className={cn(
+                        'grid',
+                        phase === 'leaving' ? 'animate-report-row-out' : 'animate-report-row-in',
+                      )}
+                    >
+                      <div className="min-h-0 overflow-hidden">
+                        <div
+                          className={cn(
+                            'flex items-center justify-between gap-3 rounded-md border py-2.75 pr-3 pl-3.5',
+                            TONE[tone],
+                          )}
+                        >
+                          <span>
+                            <span className="block font-semibold text-sm">
+                              {reportLabel(row.category)}
+                            </span>
+                            <span className="mt-0.5 block text-meta font-medium text-muted-foreground">
+                              {reportAgeLabel(row.ageMs)}
+                            </span>
+                          </span>
+                          <span
+                            className={cn(
+                              'flex h-6.5 min-w-6.5 items-center justify-center rounded-full px-2 text-note font-semibold',
+                              CHIP[tone],
+                            )}
+                          >
+                            {row.count}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {presentRows.length === 0 && liveResolution === null && withholding ? (
+                  <p className="rounded-md border border-border border-dashed px-3.5 py-4 text-note text-muted-foreground">
+                    <span aria-hidden>—</span>
+                    <span className="sr-only">Status unknown</span>
+                  </p>
+                ) : null}
+              </div>
+            </section>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -211,7 +217,23 @@ function useReportRowPresence(rows: ReturnType<typeof sortReportRows>) {
   return presentRows;
 }
 
-/** Keeps the phone panel mounted long enough for its exit animation to finish. */
+/** `value` turning true takes effect after `delayMs`; turning false takes effect at once. */
+function useSettledFlag(value: boolean, delayMs: number): boolean {
+  const [settled, setSettled] = useState(false);
+
+  useEffect(() => {
+    if (!value) {
+      setSettled(false);
+      return;
+    }
+    const timer = setTimeout(() => setSettled(true), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+
+  return settled;
+}
+
+/** Keeps the panel mounted long enough for its exit animation to finish. */
 function usePanelPresence(visible: boolean): 'hidden' | 'visible' | 'leaving' {
   const [presence, setPresence] = useState<'hidden' | 'visible' | 'leaving'>(() =>
     visible ? 'visible' : 'hidden',

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type BroadcastEnd,
   type BroadcastInput,
+  type BroadcastState,
   broadcastState,
   hasLostClaim,
   isBroadcasting,
@@ -11,6 +12,7 @@ import {
   isHandingOver,
   onReconnect,
   preflightAction,
+  studioBadge,
 } from './speaker-studio-state';
 
 const base: BroadcastInput = {
@@ -374,5 +376,55 @@ describe('hasLostClaim', () => {
   it('does not apply to a studio that never went live, or to a displaced one', () => {
     expect(hasLostClaim({ ...live, goLivePressed: false, handover: held() })).toBe(false);
     expect(hasLostClaim({ ...live, displaced: true, handover: held() })).toBe(false);
+  });
+});
+
+describe('studioBadge', () => {
+  const STATES: BroadcastState[] = [
+    'pre-flight',
+    'connecting',
+    'live',
+    'muted',
+    'handing-over',
+    'displaced',
+  ];
+
+  it('reads pre-flight as off air with no dot', () => {
+    expect(studioBadge('pre-flight', true)).toEqual({
+      label: 'Off air',
+      live: false,
+      showDot: false,
+    });
+  });
+
+  it('reports a producer on a working link as on air', () => {
+    expect(studioBadge('live', true)).toEqual({ label: 'On air', live: true, showDot: true });
+    expect(studioBadge('muted', true)).toEqual({
+      label: 'On air · muted',
+      live: true,
+      showDot: true,
+    });
+    expect(studioBadge('handing-over', true)).toMatchObject({ label: 'On air', live: true });
+  });
+
+  it('withholds on air while the link is down', () => {
+    for (const state of ['live', 'muted', 'handing-over'] as const) {
+      expect(studioBadge(state, false)).toMatchObject({ label: 'Going live…', live: false });
+    }
+  });
+
+  it('reads connecting as going live', () => {
+    expect(studioBadge('connecting', true)).toMatchObject({ label: 'Going live…', live: false });
+  });
+
+  it('never names or reflects another interpreter', () => {
+    for (const state of STATES) {
+      for (const linkUp of [true, false]) {
+        const badge = studioBadge(state, linkUp);
+        expect(badge.label).not.toMatch(/interpreter/i);
+        const hasProducer = state === 'live' || state === 'muted' || state === 'handing-over';
+        expect(badge.live).toBe(hasProducer && linkUp);
+      }
+    }
   });
 });
