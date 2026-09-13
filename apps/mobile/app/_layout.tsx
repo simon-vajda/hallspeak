@@ -42,6 +42,7 @@ function Navigator() {
       >
         <Stack.Screen name="link" options={SHEET_OPTIONS} />
         <Stack.Screen name="appearance" options={SHEET_OPTIONS} />
+        <Stack.Screen name="speaker-link" options={SHEET_OPTIONS} />
       </Stack>
     </>
   );

@@ -13,6 +13,7 @@ const EXPECTED = [
   'badLink',
   'close',
   'confirm',
+  'external',
   'forward',
   'headphones',
   'link',

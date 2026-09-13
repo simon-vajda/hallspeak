@@ -4,6 +4,7 @@ import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import Check from 'lucide-react-native/icons/check';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import ExternalLink from 'lucide-react-native/icons/external-link';
 import Flashlight from 'lucide-react-native/icons/flashlight';
 import FlashlightOff from 'lucide-react-native/icons/flashlight-off';
 import Headphones from 'lucide-react-native/icons/headphones';
@@ -38,6 +39,7 @@ export const icons = {
   appearance: SunMoon,
   scan: QrCode,
   link: Link,
+  external: ExternalLink,
   badLink: Link2Off,
   pin: Star,
   remove: Trash,
