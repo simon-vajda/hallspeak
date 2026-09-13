@@ -1,6 +1,7 @@
 import type { LinkState } from '@linguacast/client-core/media';
 import type { components } from '@linguacast/contract/openapi';
 import { Mic } from 'lucide-react';
+import { useLayoutEffect } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { HandoverAlert } from '@/components/speaker/handover-alert';
@@ -60,6 +61,9 @@ export function SpeakerPreflight({
   onCancelHandover: () => void;
   onTakeOver: () => void;
 }) {
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const remaining = useHandoverRemaining(action.type === 'waiting' ? action.expiresAt : null);
   const alert = preflightAlert(action.type);
   // Every variant that puts this studio on air keeps the microphone gate: a handover is
