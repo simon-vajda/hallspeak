@@ -2,7 +2,7 @@ import type { AnchoredResolution, AnchoredRow } from '@linguacast/client-core/ch
 import { isLinkUp, type LinkState } from '@linguacast/client-core/media';
 import type { components } from '@linguacast/contract/openapi';
 import { Mic, MicOff } from 'lucide-react';
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { AppHeader } from '@/components/app-header';
 import { ConnectionLine } from '@/components/connection-line';
 import { PlayTarget } from '@/components/play-target';
@@ -79,6 +79,9 @@ export function SpeakerOnAir({
   preferences: AudioPreferences;
   onPreferencesChange: (patch: Partial<AudioPreferences>) => void;
 }) {
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const wakeLock = useScreenWakeLock();
   const [confirming, setConfirming] = useState(false);
   const isMuted = state === 'muted';
