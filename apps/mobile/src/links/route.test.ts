@@ -1,5 +1,14 @@
 import { describe, expect, it } from '@jest/globals';
-import { buildChannelPath, buildEventPath, readChannelParams, readEventParams } from './route';
+import {
+  buildChannelPath,
+  buildEventPath,
+  destinationHref,
+  readChannelParams,
+  readEventParams,
+  readSpeakerLinkParams,
+  speakerLinkHref,
+  speakerStudioUrl,
+} from './route';
 
 describe('route builders', () => {
   it('builds an event path for a plain host', () => {
@@ -76,5 +85,55 @@ describe('readChannelParams', () => {
     expect(readChannelParams('a.example', '834912', 'Magyar Jelnyelv')).toBeNull();
     expect(readChannelParams('a.example', '834912', undefined)).toBeNull();
     expect(readChannelParams('evil.example/path', '834912', 'magyar')).toBeNull();
+  });
+});
+
+describe('speaker links', () => {
+  const PARAMS = { host: 'church.example:8443', pin: '481209', slug: 'espanol', code: 'a+b' };
+
+  it('carries every part through the sheet href and back', () => {
+    const href = String(speakerLinkHref(PARAMS));
+    const query = new URLSearchParams(href.split('?')[1]);
+
+    expect(href.startsWith('/speaker-link?')).toBe(true);
+    expect(
+      readSpeakerLinkParams(
+        query.get('host') ?? undefined,
+        query.get('pin') ?? undefined,
+        query.get('slug') ?? undefined,
+        query.get('code') ?? undefined,
+      ),
+    ).toEqual(PARAMS);
+  });
+
+  it('rebuilds the studio URL with the code encoded', () => {
+    expect(speakerStudioUrl(PARAMS)).toBe(
+      'https://church.example:8443/events/481209/espanol?speaker_code=a%2Bb',
+    );
+  });
+
+  it('refuses a missing or empty code, and inherits the channel refusals', () => {
+    expect(readSpeakerLinkParams('a.example', '481209', 'espanol', undefined)).toBeNull();
+    expect(readSpeakerLinkParams('a.example', '481209', 'espanol', '')).toBeNull();
+    expect(readSpeakerLinkParams('a.example', '48120', 'espanol', 'code')).toBeNull();
+    expect(readSpeakerLinkParams('a.example', '481209', 'Bad Slug', 'code')).toBeNull();
+    expect(readSpeakerLinkParams('user@a.example', '481209', 'espanol', 'code')).toBeNull();
+  });
+});
+
+describe('destinationHref', () => {
+  it('opens the speaker-link sheet for a channel link carrying a code', () => {
+    expect(
+      String(destinationHref({ host: 'a.example', pin: '481209', slug: 'espanol' }, 'secret')),
+    ).toBe('/speaker-link?host=a.example&pin=481209&slug=espanol&code=secret');
+  });
+
+  it('opens the channel without a code, and the event without a slug', () => {
+    expect(
+      String(destinationHref({ host: 'a.example', pin: '481209', slug: 'espanol' }, null)),
+    ).toBe('/events/a.example/481209/espanol');
+    expect(String(destinationHref({ host: 'a.example', pin: '481209', slug: null }, null))).toBe(
+      '/events/a.example/481209',
+    );
   });
 });

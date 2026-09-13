@@ -1,6 +1,7 @@
 import { PIN_PATTERN, SLUG_PATTERN } from '@linguacast/contract/patterns';
 import type { Href } from 'expo-router';
 import { isListenerHost } from './host';
+import type { ListenerDestination } from './parse';
 
 /**
  * Routes are addressed by host and PIN rather than by a stored history id: a scanned code
@@ -86,4 +87,51 @@ export function readChannelParams(
   }
 
   return { ...event, slug: readSlug };
+}
+
+export type SpeakerLinkParams = ChannelParams & { code: string };
+
+/**
+ * The sheet is addressed by the link's validated parts, never by a URL: the registered scheme
+ * lets any page open this route, and a URL parameter would let it choose what the browser opens.
+ */
+export function speakerLinkHref({ host, pin, slug, code }: SpeakerLinkParams): Href {
+  const query = new URLSearchParams({ host, pin, slug, code });
+
+  return `/speaker-link?${query.toString()}` as Href;
+}
+
+export function readSpeakerLinkParams(
+  host: RouteSegment,
+  pin: RouteSegment,
+  slug: RouteSegment,
+  code: RouteSegment,
+): SpeakerLinkParams | null {
+  const channel = readChannelParams(host, pin, slug);
+  const readCode = firstSegment(code);
+
+  if (channel === null || readCode === '') {
+    return null;
+  }
+
+  return { ...channel, code: readCode };
+}
+
+export function speakerStudioUrl({ host, pin, slug, code }: SpeakerLinkParams): string {
+  return `https://${host}/events/${pin}/${slug}?speaker_code=${encodeURIComponent(code)}`;
+}
+
+export function destinationHref(
+  destination: ListenerDestination,
+  speakerCode: string | null,
+): Href {
+  const { host, pin, slug } = destination;
+
+  if (slug === null) {
+    return eventHref(host, pin);
+  }
+
+  return speakerCode === null
+    ? channelHref(host, pin, slug)
+    : speakerLinkHref({ host, pin, slug, code: speakerCode });
 }

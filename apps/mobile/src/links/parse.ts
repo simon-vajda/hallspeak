@@ -17,7 +17,12 @@ export type LinkRefusalReason =
   | 'bad-slug';
 
 export type ParsedListenerLink =
-  | { ok: true; destination: ListenerDestination }
+  | {
+      ok: true;
+      destination: ListenerDestination;
+      /** Null unless the link names a channel and carries a non-empty `speaker_code`. */
+      speakerCode: string | null;
+    }
   | { ok: false; reason: LinkRefusalReason };
 
 const refuse = (reason: LinkRefusalReason): ParsedListenerLink => ({ ok: false, reason });
@@ -28,8 +33,9 @@ const refuse = (reason: LinkRefusalReason): ParsedListenerLink => ({ ok: false, 
  * rather than watching a request fail, and the server's public lookups are metered per
  * address — a room of guests shares one NAT, so a malformed link must not spend a token.
  *
- * A `speaker_code` query parameter is read and discarded. This is a listener client, and
- * honouring it would make possession of a scanned code a broadcasting capability.
+ * A `speaker_code` is reported so the link can be handed to the browser, which hosts the
+ * speaker studio. The app never sends it anywhere: this is a listener client, and honouring the
+ * code here would make possession of a scanned link a broadcasting capability inside the app.
  */
 export function parseListenerLink(input: string): ParsedListenerLink {
   const trimmed = input.trim();
@@ -56,7 +62,9 @@ export function parseListenerLink(input: string): ParsedListenerLink {
     return refuse('unknown-host');
   }
 
-  const path = rest.slice(authority.length).split(/[?#]/, 1)[0] ?? '';
+  const afterAuthority = rest.slice(authority.length).split('#', 1)[0] ?? '';
+  const queryStart = afterAuthority.indexOf('?');
+  const path = queryStart === -1 ? afterAuthority : afterAuthority.slice(0, queryStart);
   const segments = path.split('/').filter((segment) => segment !== '');
 
   if (segments[0] !== 'events' || segments.length < 2 || segments.length > 3) {
@@ -72,12 +80,15 @@ export function parseListenerLink(input: string): ParsedListenerLink {
   const slug = segments[2];
 
   if (slug === undefined) {
-    return { ok: true, destination: { host, pin, slug: null } };
+    return { ok: true, destination: { host, pin, slug: null }, speakerCode: null };
   }
 
   if (!SLUG_PATTERN.test(slug)) {
     return refuse('bad-slug');
   }
 
-  return { ok: true, destination: { host, pin, slug } };
+  const query = queryStart === -1 ? '' : afterAuthority.slice(queryStart + 1);
+  const speakerCode = new URLSearchParams(query).get('speaker_code') || null;
+
+  return { ok: true, destination: { host, pin, slug }, speakerCode };
 }
