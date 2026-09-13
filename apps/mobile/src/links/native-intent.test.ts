@@ -25,6 +25,17 @@ describe('redirectSystemPath', () => {
     },
   );
 
+  it('keeps a port through the speaker-link sheet path', () => {
+    expect(
+      redirectSystemPath({
+        path: wrapped('https://church.example:8443/events/481209/espanol?speaker_code=secret'),
+        initial: false,
+      }),
+    ).toBe(
+      '/speaker-link?server=church.example%3A8443&eventPin=481209&channel=espanol&code=secret',
+    );
+  });
+
   it('opens an event when a speaker code arrives without a channel', () => {
     expect(
       redirectSystemPath({

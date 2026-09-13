@@ -120,6 +120,12 @@ describe('speaker links', () => {
     );
   });
 
+  it('lower-cases the host and takes the first of repeated values', () => {
+    expect(
+      readSpeakerLinkParams(['A.Example', 'b.example'], '481209', 'espanol', ['secret', 'other']),
+    ).toEqual({ host: 'a.example', pin: '481209', slug: 'espanol', code: 'secret' });
+  });
+
   it('refuses a missing or empty code, and inherits the channel refusals', () => {
     expect(readSpeakerLinkParams('a.example', '481209', 'espanol', undefined)).toBeNull();
     expect(readSpeakerLinkParams('a.example', '481209', 'espanol', '')).toBeNull();
