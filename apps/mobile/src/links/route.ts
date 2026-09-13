@@ -94,9 +94,12 @@ export type SpeakerLinkParams = ChannelParams & { code: string };
 /**
  * The sheet is addressed by the link's validated parts, never by a URL: the registered scheme
  * lets any page open this route, and a URL parameter would let it choose what the browser opens.
+ *
+ * The names must differ from the event route's `host`, `pin` and `slug` segments. When they
+ * matched, replacing the sheet with the channel landed on a parameterless Event screen.
  */
 export function speakerLinkHref({ host, pin, slug, code }: SpeakerLinkParams): Href {
-  const query = new URLSearchParams({ host, pin, slug, code });
+  const query = new URLSearchParams({ server: host, eventPin: pin, channel: slug, code });
 
   return `/speaker-link?${query.toString()}` as Href;
 }

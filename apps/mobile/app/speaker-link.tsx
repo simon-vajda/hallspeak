@@ -12,8 +12,13 @@ import { type } from '@/theme/typography';
 export default function SpeakerLinkSheet() {
   const colors = useColors();
   const router = useRouter();
-  const params = useLocalSearchParams<{ host: string; pin: string; slug: string; code: string }>();
-  const link = readSpeakerLinkParams(params.host, params.pin, params.slug, params.code);
+  const params = useLocalSearchParams<{
+    server: string;
+    eventPin: string;
+    channel: string;
+    code: string;
+  }>();
+  const link = readSpeakerLinkParams(params.server, params.eventPin, params.channel, params.code);
   const copy = speakerLinkCopy(link?.host ?? '');
   const [openFailed, setOpenFailed] = useState(false);
 

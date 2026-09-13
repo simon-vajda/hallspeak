@@ -91,6 +91,14 @@ describe('readChannelParams', () => {
 describe('speaker links', () => {
   const PARAMS = { host: 'church.example:8443', pin: '481209', slug: 'espanol', code: 'a+b' };
 
+  it('names no parameter after an event route segment', () => {
+    const query = new URLSearchParams(String(speakerLinkHref(PARAMS)).split('?')[1]);
+
+    for (const segment of ['host', 'pin', 'slug']) {
+      expect(query.has(segment)).toBe(false);
+    }
+  });
+
   it('carries every part through the sheet href and back', () => {
     const href = String(speakerLinkHref(PARAMS));
     const query = new URLSearchParams(href.split('?')[1]);
@@ -98,9 +106,9 @@ describe('speaker links', () => {
     expect(href.startsWith('/speaker-link?')).toBe(true);
     expect(
       readSpeakerLinkParams(
-        query.get('host') ?? undefined,
-        query.get('pin') ?? undefined,
-        query.get('slug') ?? undefined,
+        query.get('server') ?? undefined,
+        query.get('eventPin') ?? undefined,
+        query.get('channel') ?? undefined,
         query.get('code') ?? undefined,
       ),
     ).toEqual(PARAMS);
@@ -125,7 +133,7 @@ describe('destinationHref', () => {
   it('opens the speaker-link sheet for a channel link carrying a code', () => {
     expect(
       String(destinationHref({ host: 'a.example', pin: '481209', slug: 'espanol' }, 'secret')),
-    ).toBe('/speaker-link?host=a.example&pin=481209&slug=espanol&code=secret');
+    ).toBe('/speaker-link?server=a.example&eventPin=481209&channel=espanol&code=secret');
   });
 
   it('opens the channel without a code, and the event without a slug', () => {

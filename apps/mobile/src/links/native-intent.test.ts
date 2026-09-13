@@ -21,7 +21,7 @@ describe('redirectSystemPath', () => {
           path: wrapped('https://church.example/events/481209/espanol?speaker_code=secret'),
           initial,
         }),
-      ).toBe('/speaker-link?host=church.example&pin=481209&slug=espanol&code=secret');
+      ).toBe('/speaker-link?server=church.example&eventPin=481209&channel=espanol&code=secret');
     },
   );
 
