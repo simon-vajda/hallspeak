@@ -1,11 +1,12 @@
 name: Server release
 
-# The only triggers that publish an image. A pull request runs nothing here, so a
-# change to the Dockerfile is reviewed before it can reach the registry.
+# The only trigger that builds an image. A pull request runs nothing here, so a change
+# to the Dockerfile is reviewed before it can reach the registry. A release never builds:
+# release-draft.yml drafts from a successful run of this workflow, and release-publish.yml
+# retags the image this run pushed for that commit.
 on:
   push:
     branches: [main]
-    tags: ["server-v*"]
 
 concurrency:
   group: release-${{ github.ref }}
@@ -27,8 +28,6 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - if: startsWith(github.ref, 'refs/tags/server-v')
-        run: node scripts/versioning.mjs release-tag server "$GITHUB_REF_NAME"
       - run: pnpm check
       - run: pnpm typecheck
       # typecheck runs `pnpm gen` first, so a dirty tree here is generated-file drift:
@@ -40,22 +39,11 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       packages: write
 
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - id: version
-        if: startsWith(github.ref, 'refs/tags/server-v')
-        run: |
-          version="$(node scripts/versioning.mjs release-tag server "$GITHUB_REF_NAME")"
-          {
-            echo "version=$version"
-            echo "minor=${version%.*}"
-          } >> "$GITHUB_OUTPUT"
 
       # QEMU is what lets one runner emit both architectures. It is only the small
       # native-dependency stage that runs emulated: the application build is pinned to
@@ -73,17 +61,12 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE }}
-          # A server-v* tag cuts the stable channel; main cuts the edge channel. The two
-          # stable tags are raw rather than semver-patterned: the tag name carries a
-          # `server-v` prefix no semver parser accepts, and the version step has already
-          # proved it against the manifest. `latest` is enabled explicitly rather than by
-          # default branch, or every push to main would move the tag operators pin against.
+          # The short-SHA tag is what a published release promotes to `X.Y.Z`, `X.Y` and
+          # `latest`, so every commit needs one. `latest` is never set here, or every push
+          # to main would move the tag operators pin against.
           tags: |
-            type=raw,value=${{ steps.version.outputs.version }},enable=${{ startsWith(github.ref, 'refs/tags/server-v') }}
-            type=raw,value=${{ steps.version.outputs.minor }},enable=${{ startsWith(github.ref, 'refs/tags/server-v') }}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/server-v') }}
             type=edge,branch=main
-            type=sha,format=short,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,format=short
 
       - uses: docker/build-push-action@v6
         with:
@@ -103,16 +86,3 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Create GitHub release
-        if: startsWith(github.ref, 'refs/tags/server-v')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Not the second row of the sorted list: the tag being released is not always the
-          # highest one, and notes would then start from the wrong release.
-          previous="$(git tag --list 'server-v*' --sort=-v:refname | grep -vx "$GITHUB_REF_NAME" | head -n1)"
-          if [ -n "$previous" ]; then
-            gh release create "$GITHUB_REF_NAME" --verify-tag --latest --generate-notes --notes-start-tag "$previous" --title "Server v${{ steps.version.outputs.version }}"
-          else
-            gh release create "$GITHUB_REF_NAME" --verify-tag --latest --generate-notes --title "Server v${{ steps.version.outputs.version }}"
-          fi
