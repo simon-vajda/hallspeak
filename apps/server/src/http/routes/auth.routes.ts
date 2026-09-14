@@ -4,6 +4,7 @@ import type { Context } from 'hono';
 import {
   createAccount,
   createSession,
+  currentUsername,
   deleteAllSessions,
   deleteSession,
   isConfigured,
@@ -43,7 +44,12 @@ function authenticated(c: Context): boolean {
 
 export const authRoutes = app
   .openapi(routes.getSessionState, (c) =>
-    c.json({ configured: isConfigured(), authenticated: authenticated(c) }, 200),
+    c.json(
+      authenticated(c)
+        ? { configured: true, authenticated: true, username: currentUsername() }
+        : { configured: isConfigured(), authenticated: false },
+      200,
+    ),
   )
   .openapi(routes.setupAdmin, async (c) => {
     const { username, password } = c.req.valid('json');
@@ -67,7 +73,7 @@ export const authRoutes = app
     // after it.
     deleteAllSessions(db);
     setSessionCookie(c, createSession(db));
-    return c.json({ configured: true, authenticated: true }, 201);
+    return c.json({ configured: true, authenticated: true, username }, 201);
   })
   .openapi(routes.login, async (c) => {
     const { username, password } = c.req.valid('json');
@@ -77,7 +83,7 @@ export const authRoutes = app
     }
 
     setSessionCookie(c, createSession(db));
-    return c.json({ configured: true, authenticated: true }, 200);
+    return c.json({ configured: true, authenticated: true, username }, 200);
   })
   .openapi(routes.logout, (c) => {
     const token = readSessionCookie(c);

@@ -126,9 +126,24 @@ export const publicRateLimit = createPublicRateLimit();
  * Setup shares the bucket and charges on its own refusal: it takes credentials and pays
  * for a hash, so repeating it must cost something too.
  */
+const signInPerIp = new TokenBucketLimiter({ capacity: 10, refillPerSecond: 1 / 60 });
+
 export const signInRateLimit = createRateLimit({
-  perIp: new TokenBucketLimiter({ capacity: 10, refillPerSecond: 1 / 60 }),
+  perIp: signInPerIp,
   chargeStatuses: [401, 409],
   reserve: true,
   message: 'Too many sign-in attempts.',
+});
+
+/**
+ * The same bucket as sign-in: a wrong current password is a password guess too, and a
+ * bucket of its own would double how fast one address can make them. Only 403 is charged;
+ * 401 (no session) is answered by requireAdmin before this runs, and 409 (a change already
+ * in flight) guesses nothing.
+ */
+export const passwordChangeRateLimit = createRateLimit({
+  perIp: signInPerIp,
+  chargeStatuses: [403],
+  reserve: true,
+  message: 'Too many password attempts.',
 });

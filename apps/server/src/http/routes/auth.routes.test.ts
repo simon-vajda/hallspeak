@@ -64,7 +64,7 @@ describe('GET /auth/session', () => {
 
     const res = await api.request('/auth/session', { headers: jarOf(created) }, from('10.0.0.1'));
 
-    expect(await res.json()).toEqual({ configured: true, authenticated: true });
+    expect(await res.json()).toEqual({ configured: true, authenticated: true, username: 'admin' });
   });
 
   it('is never throttled, however hard it is called', async () => {
@@ -80,7 +80,7 @@ describe('POST /auth/setup', () => {
     const res = await setup();
 
     expect(res.status).toBe(201);
-    expect(await res.json()).toEqual({ configured: true, authenticated: true });
+    expect(await res.json()).toEqual({ configured: true, authenticated: true, username: 'admin' });
     expect(cookieOf(res)).toContain('__Host-linguacast_session=');
   });
 
@@ -134,6 +134,7 @@ describe('POST /auth/login', () => {
     const res = await post('/auth/login', { username: 'admin', password: 'hunter2!' });
 
     expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ configured: true, authenticated: true, username: 'admin' });
     expect(cookieOf(res)).toContain('__Host-linguacast_session=');
   });
 

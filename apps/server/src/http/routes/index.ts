@@ -1,6 +1,8 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { defaultHook } from '../default-hook';
+import { passwordChangeRateLimit } from '../middleware/rate-limit.middleware';
 import { requireAdmin } from '../middleware/require-admin.middleware';
+import { adminAccountRoutes } from './admin/account.routes';
 import { adminChannelRoutes } from './admin/channels.routes';
 import { adminEventRoutes } from './admin/events.routes';
 import { adminLiveRoutes } from './admin/live.routes';
@@ -14,6 +16,7 @@ const app = new OpenAPIHono({ defaultHook });
 // statement rather than a link in the chain below, because `.use()` returns a plain Hono
 // with no `.openapi()`, and before it because registration order is composition order.
 app.use('/admin/*', requireAdmin);
+app.use('/admin/password', passwordChangeRateLimit);
 
 /** Every route in this app is mounted here, without the /api prefix. */
 export const apiRoutes = app
@@ -22,4 +25,5 @@ export const apiRoutes = app
   .route('/', publicEventRoutes)
   .route('/', adminEventRoutes)
   .route('/', adminChannelRoutes)
-  .route('/', adminLiveRoutes);
+  .route('/', adminLiveRoutes)
+  .route('/', adminAccountRoutes);
