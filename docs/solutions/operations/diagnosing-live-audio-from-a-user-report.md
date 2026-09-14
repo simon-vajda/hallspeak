@@ -90,5 +90,5 @@ above rather than failing outright.
 ## A venue that blocks UDP
 
 Every worker listens on TCP at the same port as its UDP one, so an institutional network
-that blocks UDP still connects directly. TURN over TCP is the remaining fallback beyond
-that, and it costs the latency target — a client on it will be noticeably behind.
+that blocks UDP still connects directly. A network that also blocks TCP to the RTC port
+is not served.
