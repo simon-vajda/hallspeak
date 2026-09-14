@@ -1,23 +1,12 @@
 import { randomBytes, type ScryptOptions, scrypt, timingSafeEqual } from 'node:crypto';
+import { PASSWORD_COST, type ScryptCost } from './password-cost';
 
-export interface ScryptCost {
-  n: number;
-  r: number;
-  p: number;
-}
-
-/**
- * OWASP's N=2^15/r=8/p=3 pairing, equivalent to the headline N=2^17/r=8/p=1 at a quarter
- * of the memory. Each verification allocates 128*N*r, and on a 2 GB NAS that allocation is
- * the lever worth pulling, not the iteration count.
- */
-const COST: ScryptCost = { n: 32_768, r: 8, p: 3 };
 const SALT_BYTES = 16;
 const KEY_BYTES = 32;
 
 /**
  * scrypt throws rather than allocating past maxmem, whose default is 32 MB — exactly what
- * the parameters above need. Derived from the stored cost, so raising N cannot silently
+ * PASSWORD_COST needs. Derived from the stored cost, so raising N cannot silently
  * break verification of hashes written under the old one.
  */
 function maxmem(cost: ScryptCost): number {
@@ -75,10 +64,13 @@ function derive(password: string, salt: Buffer, cost: ScryptCost): Promise<Buffe
 }
 
 /**
- * Self-describing: verification reads its parameters from the string, never from COST, so
+ * Self-describing: verification reads its parameters from the string, never from PASSWORD_COST, so
  * raising the cost later leaves every stored hash valid.
  */
-export async function hashPassword(password: string, cost: ScryptCost = COST): Promise<string> {
+export async function hashPassword(
+  password: string,
+  cost: ScryptCost = PASSWORD_COST,
+): Promise<string> {
   const salt = randomBytes(SALT_BYTES);
   const key = await derive(password, salt, cost);
   return [
@@ -127,9 +119,9 @@ export async function verifyPassword(password: string, encoded: string): Promise
  */
 export const DUMMY_PASSWORD_HASH = [
   'scrypt',
-  COST.n,
-  COST.r,
-  COST.p,
+  PASSWORD_COST.n,
+  PASSWORD_COST.r,
+  PASSWORD_COST.p,
   randomBytes(SALT_BYTES).toString('base64url'),
   randomBytes(KEY_BYTES).toString('base64url'),
 ].join('$');

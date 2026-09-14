@@ -227,7 +227,8 @@ describe('sign-in throttling', () => {
   it('does not charge a successful sign-in', async () => {
     await setup();
 
-    for (let i = 0; i < 15; i++) {
+    // One past the sign-in bucket's capacity of 10, so any charge would surface as a 429.
+    for (let i = 0; i < 11; i++) {
       const res = await post(
         '/auth/login',
         { username: 'admin', password: 'hunter2!' },
