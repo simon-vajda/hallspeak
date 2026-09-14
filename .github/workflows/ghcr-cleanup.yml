@@ -46,7 +46,7 @@ jobs:
       # Deleting a multi-arch image means deleting its per-platform children too, which a
       # plain package-version cleanup gets wrong: it removes children a tagged image still
       # references and breaks `docker pull`. This action walks the manifest list first.
-      # Scheduled runs stay dry until a dispatched dry-run log has been reviewed.
+      # A scheduled run deletes; a dispatched run deletes only when dry-run is unticked.
       - uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
         with:
           use-regex: true
@@ -54,4 +54,4 @@ jobs:
           exclude-tags: ${{ steps.releases.outputs.pattern }}
           keep-n-tagged: 20
           delete-untagged: true
-          dry-run: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run == false) }}
+          dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
