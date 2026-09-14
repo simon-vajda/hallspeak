@@ -1,0 +1,119 @@
+name: Release publish
+
+# Publishing a draft creates its tag. A server release ships the image main already built
+# and verified for that commit, retagged rather than rebuilt, so the published version is
+# the exact digest its tests ran against.
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: release-publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+  TAG: ${{ github.event.release.tag_name }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - id: track
+        run: |
+          case "$TAG" in
+            server-v*) echo "track=server" >> "$GITHUB_OUTPUT" ;;
+            mobile-v*) echo "track=mobile" >> "$GITHUB_OUTPUT" ;;
+            *) echo "$TAG belongs to no release track; nothing to do" ;;
+          esac
+
+      - if: steps.track.outputs.track != ''
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - id: version
+        if: steps.track.outputs.track != ''
+        env:
+          TRACK: ${{ steps.track.outputs.track }}
+        # Assigned first: inside `echo "$(…)"` the step's exit status is echo's, so a tag
+        # the manifest refuses would pass this step and promote an empty version.
+        run: |
+          version="$(node scripts/versioning.mjs release-tag "$TRACK" "$TAG")"
+          {
+            echo "version=$version"
+            echo "minor=${version%.*}"
+            echo "sha=$(git rev-parse HEAD)"
+          } >> "$GITHUB_OUTPUT"
+
+      # Waits rather than fails when the build is still running, so publishing right after
+      # a merge is safe. A draft only appears after a successful build, so a missing or
+      # failed run means the release was drafted by hand on a commit main never built.
+      - name: Wait for the commit's image build
+        if: steps.track.outputs.track == 'server'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.version.outputs.sha }}
+        run: |
+          set -euo pipefail
+          run="$(gh run list --workflow server-release.yml --branch main --event push --commit "$SHA" \
+            --limit 1 --json databaseId,url --jq '.[] | [.databaseId, .url] | @tsv')"
+          if [ -z "$run" ]; then
+            echo "::error::No Server release build on main for $SHA; nothing to promote."
+            exit 1
+          fi
+          IFS=$'\t' read -r id url <<<"$run"
+          if ! gh run watch "$id" --exit-status --interval 30 >/dev/null; then
+            echo "::error::The Server release build for $SHA did not succeed: $url"
+            exit 1
+          fi
+
+      - if: steps.track.outputs.track == 'server'
+        uses: docker/setup-buildx-action@v3
+
+      - if: steps.track.outputs.track == 'server'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The multi-arch manifest list is copied, not rebuilt, so all three tags resolve to
+      # the short-SHA image's digest.
+      - name: Promote the image
+        if: steps.track.outputs.track == 'server'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          MINOR: ${{ steps.version.outputs.minor }}
+          SHA: ${{ steps.version.outputs.sha }}
+        run: |
+          docker buildx imagetools create \
+            --tag "$IMAGE:$VERSION" --tag "$IMAGE:$MINOR" --tag "$IMAGE:latest" \
+            "$IMAGE:sha-${SHA::7}"
+          docker buildx imagetools inspect "$IMAGE:$VERSION"
+
+      # A mobile draft is created without Latest, but the publish form can still tick it.
+      # Operators follow Latest to the server release they deploy, so hand it back.
+      - name: Keep Latest on the server track
+        if: steps.track.outputs.track == 'mobile'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
+          if [ "$latest" != "$TAG" ]; then
+            exit 0
+          fi
+          server="$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+            --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name | select(startswith("server-v"))' \
+            | sort -V | tail -n 1)"
+          if [ -n "$server" ]; then
+            gh release edit "$server" --latest
+            echo "Restored Latest to $server"
+          fi
