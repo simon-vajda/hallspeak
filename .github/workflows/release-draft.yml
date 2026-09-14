@@ -36,6 +36,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          # A rerun of an older build must not replace a newer bump's draft with its own; the
+          # build of main's tip drafts whatever is still unreleased.
+          tip="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          if [ "$tip" != "$HEAD_SHA" ]; then
+            echo "$HEAD_SHA is no longer main's tip ($tip); leaving drafts to that build"
+            exit 0
+          fi
+
           # The REST list, not `gh release list`: it carries release ids, and a draft has no
           # tag to address it by.
           releases="$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
@@ -77,10 +85,19 @@ jobs:
             if [ "$track" = server ]; then
               # GitHub rewrites an asset name that starts with a period, so the file goes up
               # as env.example and the hosting guide says to save it as .env.
-              gh release create "$tag" "${args[@]}" --latest --title "Server v$version" \
-                compose.yaml "$RUNNER_TEMP/env.example"
+              args+=(--title "Server v$version" compose.yaml "$RUNNER_TEMP/env.example")
             else
-              gh release create "$tag" "${args[@]}" --latest=false --title "Mobile v$version"
+              args+=(--latest=false --title "Mobile v$version")
+            fi
+            # gh leaves a draft behind when an asset upload fails, and the next run would keep
+            # it as it is. Remove it so the next build drafts the release whole.
+            if ! gh release create "$tag" "${args[@]}"; then
+              for id in $(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+                --jq ".[] | select(.draft and .tag_name == \"$tag\") | .id"); do
+                gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$id" >/dev/null
+              done
+              echo "::error::Could not create the $tag draft; removed any partial draft"
+              exit 1
             fi
             echo "$track: created the $tag draft at $HEAD_SHA${previous:+, notes since $previous}"
           done
