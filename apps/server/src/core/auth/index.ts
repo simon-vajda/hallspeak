@@ -1,4 +1,13 @@
-export { createAccount, isConfigured, resetAuth, startAuth, verifyCredentials } from './account';
+export {
+  type ChangePasswordOutcome,
+  changePassword,
+  createAccount,
+  currentUsername,
+  isConfigured,
+  resetAuth,
+  startAuth,
+  verifyCredentials,
+} from './account';
 export { credentialsPath } from './credentials';
 export {
   createSession,

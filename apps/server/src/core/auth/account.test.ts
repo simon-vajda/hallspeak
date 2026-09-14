@@ -1,10 +1,24 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createAccount, isConfigured, resetAuth, startAuth, verifyCredentials } from './account';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  changePassword,
+  createAccount,
+  currentUsername,
+  isConfigured,
+  resetAuth,
+  startAuth,
+  verifyCredentials,
+} from './account';
 import { readCredentials, writeCredentials } from './credentials';
-import { hashPassword } from './password';
+import { hashPassword, verifyPassword } from './password';
+
+// Passes through to the real derivation; a test that needs to hold one open overrides a call.
+vi.mock('./password', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./password')>();
+  return { ...actual, verifyPassword: vi.fn(actual.verifyPassword) };
+});
 
 let dir: string;
 let file: string;
@@ -15,6 +29,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  chmodSync(dir, 0o700);
   resetAuth();
   rmSync(dir, { recursive: true, force: true });
 });
@@ -106,6 +121,108 @@ describe('verifyCredentials', () => {
     startAuth(file);
 
     await expect(verifyCredentials('admin', 'hunter2!')).resolves.toBe(false);
+  });
+});
+
+describe('changePassword', () => {
+  it('replaces the password, and the old one stops verifying', async () => {
+    startAuth(file);
+    await createAccount('admin', 'hunter2!');
+
+    await expect(changePassword('hunter2!', 'correct1!')).resolves.toBe('changed');
+
+    await expect(verifyCredentials('admin', 'correct1!')).resolves.toBe(true);
+    await expect(verifyCredentials('admin', 'hunter2!')).resolves.toBe(false);
+  });
+
+  it('survives a restart', async () => {
+    startAuth(file);
+    await createAccount('admin', 'hunter2!');
+    await changePassword('hunter2!', 'correct1!');
+
+    startAuth(file);
+
+    await expect(verifyCredentials('admin', 'correct1!')).resolves.toBe(true);
+    expect(currentUsername()).toBe('admin');
+  });
+
+  it('refuses a wrong current password and leaves the file byte-identical', async () => {
+    startAuth(file);
+    await createAccount('admin', 'hunter2!');
+    const before = readFileSync(file, 'utf8');
+
+    await expect(changePassword('hunter3!', 'correct1!')).resolves.toBe('refused');
+
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    await expect(verifyCredentials('admin', 'hunter2!')).resolves.toBe(true);
+  });
+
+  it('accepts the current password as the new one', async () => {
+    startAuth(file);
+    await createAccount('admin', 'hunter2!');
+
+    await expect(changePassword('hunter2!', 'hunter2!')).resolves.toBe('changed');
+
+    await expect(verifyCredentials('admin', 'hunter2!')).resolves.toBe(true);
+  });
+
+  it('refuses a second change while the first is still hashing, then admits the next', async () => {
+    startAuth(file);
+    await createAccount('admin', 'hunter2!');
+
+    const first = changePassword('hunter2!', 'correct1!');
+    await expect(changePassword('hunter2!', 'other1!x')).resolves.toBe('in_progress');
+    await expect(first).resolves.toBe('changed');
+
+    await expect(changePassword('correct1!', 'other1!x')).resolves.toBe('changed');
+  });
+
+  it('keeps the old password when the file cannot be written, and releases the claim', async () => {
+    startAuth(file);
+    await createAccount('admin', 'hunter2!');
+    chmodSync(dir, 0o500);
+
+    await expect(changePassword('hunter2!', 'correct1!')).rejects.toThrow();
+
+    chmodSync(dir, 0o700);
+    await expect(verifyCredentials('admin', 'hunter2!')).resolves.toBe(true);
+    await expect(changePassword('hunter2!', 'correct1!')).resolves.toBe('changed');
+  });
+
+  it('refuses on an unconfigured server', async () => {
+    startAuth(file);
+
+    await expect(changePassword('hunter2!', 'correct1!')).resolves.toBe('refused');
+  });
+
+  it('refuses a sign-in whose derivation was still running when the password changed', async () => {
+    startAuth(file);
+    await createAccount('admin', 'hunter2!');
+    const real = vi.mocked(verifyPassword).getMockImplementation();
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.mocked(verifyPassword).mockImplementationOnce(async (password, encoded) => {
+      await held;
+      return real ? real(password, encoded) : false;
+    });
+
+    const signIn = verifyCredentials('admin', 'hunter2!');
+    await changePassword('hunter2!', 'correct1!');
+    release();
+
+    await expect(signIn).resolves.toBe(false);
+  });
+});
+
+describe('currentUsername', () => {
+  it('is undefined until an account exists', async () => {
+    startAuth(file);
+    expect(currentUsername()).toBeUndefined();
+
+    await createAccount('admin', 'hunter2!');
+    expect(currentUsername()).toBe('admin');
   });
 });
 

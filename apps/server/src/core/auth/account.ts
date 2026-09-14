@@ -12,6 +12,7 @@ import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from './password';
 let file: string | null = null;
 let account: StoredAccount | null = null;
 let claiming = false;
+let changing = false;
 
 /**
  * Read once, at boot. A running server never re-reads the file, so recovery requires a
@@ -22,6 +23,7 @@ export function startAuth(path: string = credentialsPath()): void {
   file = path;
   account = readCredentials(path);
   claiming = false;
+  changing = false;
 }
 
 /**
@@ -35,10 +37,15 @@ export function resetAuth(): void {
   }
   account = null;
   claiming = false;
+  changing = false;
 }
 
 export function isConfigured(): boolean {
   return account !== null;
+}
+
+export function currentUsername(): string | undefined {
+  return account?.username;
 }
 
 /**
@@ -73,5 +80,41 @@ export async function verifyCredentials(username: string, password: string): Pro
     await verifyPassword(password, DUMMY_PASSWORD_HASH);
     return false;
   }
-  return verifyPassword(password, current.passwordHash);
+  const matched = await verifyPassword(password, current.passwordHash);
+  // A derivation queued behind the hash semaphore can outlast a password change; succeeding
+  // against the replaced hash would mint a session after every other one was revoked.
+  return matched && account === current;
+}
+
+export type ChangePasswordOutcome = 'changed' | 'refused' | 'in_progress';
+
+/**
+ * The file is written before memory is swapped, so a failed write leaves the old password
+ * in force everywhere. The claim is taken before the first await for the same reason as
+ * createAccount's: two changes interleaving would each verify the old password.
+ */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<ChangePasswordOutcome> {
+  const current = account;
+  if (!file || !current) {
+    return 'refused';
+  }
+  if (changing) {
+    return 'in_progress';
+  }
+
+  changing = true;
+  try {
+    if (!(await verifyPassword(currentPassword, current.passwordHash))) {
+      return 'refused';
+    }
+    const changed = { username: current.username, passwordHash: await hashPassword(newPassword) };
+    writeCredentials(file, changed);
+    account = changed;
+    return 'changed';
+  } finally {
+    changing = false;
+  }
 }
