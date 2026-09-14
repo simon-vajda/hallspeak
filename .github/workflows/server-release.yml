@@ -29,7 +29,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - if: startsWith(github.ref, 'refs/tags/server-v')
         run: node scripts/versioning.mjs release-tag server "$GITHUB_REF_NAME"
-      - run: pnpm version:check
+      - run: pnpm check
       - run: pnpm typecheck
       # typecheck runs `pnpm gen` first, so a dirty tree here is generated-file drift:
       # openapi.json or api.d.ts committed out of step with the schemas.
