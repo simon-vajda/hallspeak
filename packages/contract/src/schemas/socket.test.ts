@@ -172,7 +172,7 @@ describe('media payload schemas', () => {
     );
   });
 
-  it('accepts capabilities with no ICE servers, which is a deployment without coturn', () => {
+  it('accepts capabilities with no ICE servers, which is a deployment without STUN', () => {
     const parsed = MediaCapabilitiesResponse.parse({
       routerRtpCapabilities: opaque,
       iceServers: [],
@@ -180,12 +180,12 @@ describe('media payload schemas', () => {
     expect(parsed.iceServers).toEqual([]);
   });
 
-  it('accepts an ICE server with credentials and rejects one with no urls', () => {
+  it('accepts a STUN server, carries no credentials, and rejects an entry with no urls', () => {
     const parsed = MediaCapabilitiesResponse.parse({
       routerRtpCapabilities: opaque,
-      iceServers: [{ urls: ['turn:example.org:3478'], username: 'u', credential: 'c' }],
+      iceServers: [{ urls: ['stun:example.org:3478'], username: 'u', credential: 'c' }],
     });
-    expect(parsed.iceServers[0]?.username).toBe('u');
+    expect(parsed.iceServers).toEqual([{ urls: ['stun:example.org:3478'] }]);
     expect(
       MediaCapabilitiesResponse.safeParse({ routerRtpCapabilities: opaque, iceServers: [{}] })
         .success,
