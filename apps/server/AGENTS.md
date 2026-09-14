@@ -41,7 +41,7 @@ Rules local to the server. Repo-wide rules, the socket protocol and versioning l
 - Endpoints are `/auth/*`, outside `/admin`. `http/middleware/require-admin.middleware.ts` checks an account exists **before** checking the session. Refusals are a 401 `Problem`, never a redirect.
 - Sign-in is throttled per address and never locked out: `createRateLimit` charges 401 and 409, with **no** shared global budget (against one account that is a lockout of the correct password). The semaphore bounds scrypt load instead.
 - `clientIp` believes the rightmost `X-Forwarded-For` entry only from an address in `TRUSTED_PROXY_IPS`; unset means never.
-- No password-change or reset surface exists, by design.
+- A signed-in admin changes the password at `POST /admin/password`, behind `requireAdmin`. A wrong current password is 403 `invalid_credentials`, never 401 (under `/admin` that signs the client out). It spends the sign-in per-address bucket (`passwordChangeRateLimit` charges 403). Success rotates sessions: delete all, issue the caller a fresh one. `verifyCredentials` refuses when the account was replaced during its derivation, so an in-flight sign-in cannot outlive the rotation. There is no reset surface: a forgotten password is still recovery by deleting `admin.json`.
 
 ## Presence, handover, reports, notifications
 

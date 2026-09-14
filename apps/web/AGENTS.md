@@ -25,6 +25,7 @@ Rules local to the web app. Repo-wide rules, the socket protocol, media recovery
   - `badge.tsx`: `size` variant holding the chip geometry.
   - `select.tsx` trigger and `slider.tsx` thumb: `cursor-pointer`.
   - `sonner.tsx`: `useTheme` from `@/components/theme-provider`, not `next-themes`.
+  - `dropdown-menu.tsx`: imports `cn` from `@/lib/utils`; the CLI generated `from "cn"` and added an unrelated `cn` npm package — revert that dependency if it reappears.
   - `card.tsx` and `label.tsx` were deleted (no importers).
   - The `rounded-[min(var(--radius-md),Npx)]` clamps on button `xs`/`sm` and the small select trigger are shadcn's own; leave them.
 - Prefer call-site classes for one-off styling.
@@ -90,7 +91,7 @@ Web-only; not a `packages/client-core` candidate.
 
 ## Auth screens
 
-- Setup wizard (`routes/setup.tsx`, two steps) and sign-in (`routes/login.tsx`) share `components/auth/auth-card.tsx`, `password-field.tsx`, `password-checklist.tsx`; `lib/password-rules.ts` is the pure half. Sign-out lives in the admin header; no account settings screen.
+- Setup wizard (`routes/setup.tsx`, two steps) and sign-in (`routes/login.tsx`) share `components/auth/auth-card.tsx`, `password-field.tsx`, `password-checklist.tsx`; `lib/password-rules.ts` is the pure half. The admin header's account menu (`components/admin/account-menu.tsx`, labelled with the username from the session entry) holds `Change password` (a dialog), the light/dark switch and sign-out; no account settings screen. Sign-in and setup responses carry `username` because they seed the session entry.
 - State comes from `GET /auth/session` (`lib/auth-queries.ts`), read by `beforeLoad` on `/`, `/admin`, `/setup`, `/login`. A 401 from any admin call invalidates that entry and then the router; `/auth/*` is excluded.
 - After setup and sign-in, **seed** the entry from the response rather than invalidating: `ensureQueryData` returns the stale signed-out value during a refetch.
 - `?redirect=` is accepted back only as an internal router path.
