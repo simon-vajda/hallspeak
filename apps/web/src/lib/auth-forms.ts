@@ -31,6 +31,20 @@ export const setupFormSchema = z
 
 export type SetupFormValues = z.infer<typeof setupFormSchema>;
 
+// The current password is not held to the rules, for the same reason sign-in is not.
+export const changePasswordFormSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Enter your current password.').max(PASSWORD_MAX_LENGTH),
+    newPassword,
+    confirmation: z.string().max(PASSWORD_MAX_LENGTH),
+  })
+  .refine(({ newPassword, confirmation }) => newPassword === confirmation, {
+    path: ['confirmation'],
+    message: 'Passwords do not match.',
+  });
+
+export type ChangePasswordFormValues = z.infer<typeof changePasswordFormSchema>;
+
 // Sign-in must accept passwords created before password rules are tightened.
 export const loginFormSchema = z.object({
   username: z.string().min(1),

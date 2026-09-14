@@ -3,19 +3,19 @@
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/components/theme-provider';
 import { Button } from '@/components/ui/button';
+import { themeFlip } from '@/lib/theme-flip';
 
 export function TempThemeToggle() {
   const { theme, setTheme } = useTheme();
-
-  const isDark =
-    theme === 'system'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      : theme === 'dark';
+  const { next, label } = themeFlip(
+    theme,
+    window.matchMedia('(prefers-color-scheme: dark)').matches,
+  );
 
   return (
-    <Button variant="ghost" size="icon" onClick={() => setTheme(isDark ? 'light' : 'dark')}>
-      {isDark ? <Sun /> : <Moon />}
-      <span className="sr-only">Switch to {isDark ? 'light' : 'dark'} theme</span>
+    <Button variant="ghost" size="icon" onClick={() => setTheme(next)}>
+      {next === 'light' ? <Sun /> : <Moon />}
+      <span className="sr-only">{label}</span>
     </Button>
   );
 }

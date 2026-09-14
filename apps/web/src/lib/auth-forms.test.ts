@@ -1,6 +1,6 @@
 import { PASSWORD_MAX_LENGTH } from '@linguacast/contract/patterns';
 import { describe, expect, it } from 'vitest';
-import { loginFormSchema, setupFormSchema } from './auth-forms';
+import { changePasswordFormSchema, loginFormSchema, setupFormSchema } from './auth-forms';
 
 describe('setupFormSchema', () => {
   const valid = { username: 'admin', password: 'hunter2!', confirmation: 'hunter2!' };
@@ -44,5 +44,49 @@ describe('loginFormSchema', () => {
         password: 'x'.repeat(PASSWORD_MAX_LENGTH + 1),
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('changePasswordFormSchema', () => {
+  const valid = {
+    currentPassword: 'hunter2!',
+    newPassword: 'correct1!',
+    confirmation: 'correct1!',
+  };
+
+  it('accepts a matching new password that meets every rule', () => {
+    expect(changePasswordFormSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('accepts a current password created before the rules were tightened', () => {
+    expect(changePasswordFormSchema.safeParse({ ...valid, currentPassword: 'short' }).success).toBe(
+      true,
+    );
+  });
+
+  it('accepts the current password as the new one', () => {
+    expect(
+      changePasswordFormSchema.safeParse({
+        currentPassword: 'hunter2!',
+        newPassword: 'hunter2!',
+        confirmation: 'hunter2!',
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ['required current password', { ...valid, currentPassword: '' }],
+    ['number', { ...valid, newPassword: 'correctxx!', confirmation: 'correctxx!' }],
+    ['special', { ...valid, newPassword: 'correct11', confirmation: 'correct11' }],
+    ['length', { ...valid, newPassword: 'short1!', confirmation: 'short1!' }],
+  ])('rejects invalid %s', (_case, values) => {
+    expect(changePasswordFormSchema.safeParse(values).success).toBe(false);
+  });
+
+  it('reports a mismatched confirmation on the confirmation field', () => {
+    const result = changePasswordFormSchema.safeParse({ ...valid, confirmation: 'different1!' });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['confirmation']);
   });
 });

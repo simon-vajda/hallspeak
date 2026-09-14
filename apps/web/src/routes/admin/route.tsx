@@ -1,7 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router';
-import { SignOutButton } from '@/components/admin/sign-out-button';
+import { AccountMenu } from '@/components/admin/account-menu';
 import { LogoLockup } from '@/components/logo-lockup';
-import { TempThemeToggle } from '@/components/temp-theme-toggle';
 import { VersionFooter } from '@/components/version-footer';
 import { sessionQueryOptions } from '@/lib/auth-queries';
 
@@ -26,7 +25,7 @@ function AdminLayout() {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="border-b border-border">
-        <div className="mx-auto flex max-w-shell items-center justify-between px-gutter py-4 lg:px-10">
+        <div className="mx-auto flex max-w-shell items-center justify-between gap-4 px-gutter py-4 lg:px-10">
           <Link to="/admin/events">
             <LogoLockup />
           </Link>
@@ -37,8 +36,7 @@ function AdminLayout() {
             >
               Events
             </Link>
-            <SignOutButton />
-            <TempThemeToggle />
+            <AccountMenu />
           </nav>
         </div>
       </header>

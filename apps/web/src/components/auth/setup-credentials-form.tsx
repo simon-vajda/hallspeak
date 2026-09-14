@@ -107,7 +107,8 @@ export function SetupCredentialsForm() {
         Finish setup
       </Button>
       <p className="mt-4 text-note text-muted-foreground">
-        Keep this somewhere safe. Changing it later needs access to the machine LinguaCast runs on.
+        Keep this somewhere safe. You can change it after signing in; a forgotten password needs
+        access to the machine LinguaCast runs on.
       </p>
     </form>
   );
