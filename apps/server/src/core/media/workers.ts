@@ -15,7 +15,6 @@ export type WorkerFactory = typeof createWorker;
 
 export interface WorkerPoolOptions {
   net: MediaNetworkConfig;
-  turnConfigured: boolean;
   createWorker?: WorkerFactory;
   hostCpuCount?: number;
   now?: () => number;
@@ -53,14 +52,12 @@ export class WorkerPool {
   private closing = false;
 
   private readonly net: MediaNetworkConfig;
-  private readonly turnConfigured: boolean;
   private readonly spawnWorker: WorkerFactory;
   private readonly hostCpuCount: number;
   private readonly now: () => number;
 
   constructor(options: WorkerPoolOptions) {
     this.net = options.net;
-    this.turnConfigured = options.turnConfigured;
     this.spawnWorker = options.createWorker ?? createWorker;
     this.hostCpuCount = options.hostCpuCount ?? os.cpus().length;
     this.now = options.now ?? Date.now;
@@ -99,7 +96,6 @@ export class WorkerPool {
       resolvedAddress && resolvedAddress !== this.net.announcedIp
         ? `guests connect to ${this.net.announcedIp} (${resolvedAddress})`
         : `guests connect to ${this.net.announcedIp}`,
-      `TURN ${this.turnConfigured ? 'configured' : 'not configured'}`,
     ].join(' · ');
   }
 

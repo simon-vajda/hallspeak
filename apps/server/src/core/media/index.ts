@@ -11,8 +11,6 @@ import {
   iceServersFor,
   isUnroutableAnnouncedAddress,
   type MediaNetworkConfig,
-  mintTurnCredential,
-  type TurnConfig,
 } from './config';
 import { watchConsumer, watchProducer } from './diagnostics';
 import { ListenerCountPublisher } from './listeners';
@@ -24,9 +22,6 @@ export type { ChannelBroadcastStatus } from './room';
 
 import { type ChannelBroadcastStatus, markClosing, type Room } from './room';
 import { type WorkerFactory, WorkerPool } from './workers';
-
-/** Short enough that a leaked credential is worthless before anyone could use it. */
-const TURN_CREDENTIAL_TTL_SECONDS = 3600;
 
 /**
  * How long both interpreters may transmit at once when every listener has not yet swapped.
@@ -45,7 +40,7 @@ export interface MediaContext {
 
 export interface StartMediaOptions {
   net: MediaNetworkConfig;
-  turn: TurnConfig;
+  stunUrl?: string;
   graceMs?: number;
   swapDeadlineMs?: number;
   hostCpuCount?: number;
@@ -59,7 +54,7 @@ export interface StartMediaOptions {
 interface MediaState {
   pool: WorkerPool;
   registry: RoomRegistry;
-  turn: TurnConfig;
+  stunUrl?: string;
   listeners: ListenerCountPublisher;
   announced: AnnouncedAddress;
   swapDeadlineMs: number;
@@ -103,13 +98,11 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
     console.log(`mediasoup: ${options.net.announcedIp} resolved to ${announcedIp}`);
   }
 
-  const turnConfigured = Boolean(options.turn.turnUrl && options.turn.turnSecret);
   // The configured value is what the workers announce, hostname and all: `createTransport`
   // adds the resolved literal to every candidate list, so both forms reach the client and
   // the announced value never moves.
   const pool = new WorkerPool({
     net: options.net,
-    turnConfigured,
     hostCpuCount: options.hostCpuCount,
     createWorker: options.createWorker,
   });
@@ -139,7 +132,7 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
   state = {
     pool,
     registry,
-    turn: options.turn,
+    stunUrl: options.stunUrl,
     listeners,
     announced,
     swapDeadlineMs: options.swapDeadlineMs ?? SWAP_DEADLINE_MS,
@@ -159,7 +152,7 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
   // Never awaited: the answer is a log line and nothing reads it, so a STUN server that is
   // slow or gone must not hold up the listener. Only worth asking when the address looks
   // usable — the warning above already covers the case where it does not.
-  const stunUrl = options.turn.stunUrl;
+  const stunUrl = options.stunUrl;
   if (!options.probeReflexiveAddress || !stunUrl) {
     return;
   }
@@ -288,14 +281,8 @@ export async function capabilities(
   const room = await roomFor(ctx.eventId, options.create);
   return {
     routerRtpCapabilities: room.router.rtpCapabilities,
-    iceServers: iceServers(),
+    iceServers: iceServersFor(require_().stunUrl),
   };
-}
-
-/** Minted per session with a short life: a standing credential given to every guest is a relay. */
-function iceServers(): IceServer[] {
-  const { turn } = require_();
-  return iceServersFor(turn, (secret) => mintTurnCredential(secret, TURN_CREDENTIAL_TTL_SECONDS));
 }
 
 export interface TransportDescription {

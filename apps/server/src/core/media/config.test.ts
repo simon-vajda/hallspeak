@@ -6,7 +6,6 @@ import {
   iceServersFor,
   isUnroutableAnnouncedAddress,
   listenInfosFor,
-  mintTurnCredential,
   ROOM_IDLE_GRACE_MS,
   workerCountFor,
 } from './config';
@@ -169,69 +168,14 @@ describe('AUDIO_CODECS', () => {
 });
 
 describe('iceServersFor', () => {
-  it('is empty when nothing is configured, which is a deployment without coturn', () => {
-    expect(iceServersFor({}, () => ({ username: 'u', credential: 'c' }))).toEqual([]);
+  it('is empty when no STUN server is configured', () => {
+    expect(iceServersFor(undefined)).toEqual([]);
   });
 
   it('carries a STUN url with no credentials', () => {
-    const servers = iceServersFor({ stunUrl: 'stun:stun.example.org:3478' }, () => ({
-      username: 'u',
-      credential: 'c',
-    }));
-    expect(servers).toEqual([{ urls: ['stun:stun.example.org:3478'] }]);
-  });
-
-  it('mints per-session credentials for a TURN url rather than echoing the shared secret', () => {
-    const servers = iceServersFor(
-      { turnUrl: 'turn:turn.example.org:3478', turnSecret: 'shared-secret' },
-      () => ({ username: '1700000000:abc', credential: 'minted' }),
-    );
-    expect(servers).toEqual([
-      { urls: ['turn:turn.example.org:3478'], username: '1700000000:abc', credential: 'minted' },
+    expect(iceServersFor('stun:stun.example.org:3478')).toEqual([
+      { urls: ['stun:stun.example.org:3478'] },
     ]);
-    expect(JSON.stringify(servers)).not.toContain('shared-secret');
-  });
-
-  it('omits TURN when the url is set without a secret, rather than handing out an open relay', () => {
-    expect(
-      iceServersFor({ turnUrl: 'turn:turn.example.org:3478' }, () => ({
-        username: 'u',
-        credential: 'c',
-      })),
-    ).toEqual([]);
-  });
-
-  it('returns both entries when STUN and TURN are configured together', () => {
-    const servers = iceServersFor(
-      {
-        stunUrl: 'stun:stun.example.org:3478',
-        turnUrl: 'turn:turn.example.org:3478',
-        turnSecret: 's',
-      },
-      () => ({ username: 'u', credential: 'c' }),
-    );
-    expect(servers).toHaveLength(2);
-  });
-});
-
-describe('mintTurnCredential', () => {
-  it('carries an expiry the given number of seconds out', () => {
-    const now = 1_700_000_000_000;
-    const { username } = mintTurnCredential('secret', 3600, now);
-    expect(Number(username)).toBe(1_700_000_000 + 3600);
-  });
-
-  it('never returns the shared secret itself', () => {
-    const minted = mintTurnCredential('shared-secret', 3600, 1_700_000_000_000);
-    expect(minted.credential).not.toContain('shared-secret');
-    expect(minted.credential.length).toBeGreaterThan(0);
-  });
-
-  it('gives two sessions different credentials as the expiry moves', () => {
-    const a = mintTurnCredential('secret', 3600, 1_700_000_000_000);
-    const b = mintTurnCredential('secret', 3600, 1_700_000_060_000);
-    expect(a.username).not.toBe(b.username);
-    expect(a.credential).not.toBe(b.credential);
   });
 });
 

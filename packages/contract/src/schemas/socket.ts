@@ -183,15 +183,13 @@ const MediaParams = z.looseObject({});
 /** The shape `RTCPeerConnection` takes, so the client hands it straight to mediasoup-client. */
 export const IceServer = z.object({
   urls: z.array(z.string().min(1)).min(1),
-  username: z.string().optional(),
-  credential: z.string().optional(),
 });
 
 export const MediaCapabilitiesPayload = z.object({});
 
 export const MediaCapabilitiesResponse = z.object({
   routerRtpCapabilities: MediaParams,
-  /** Empty is valid and is what a deployment without coturn returns. */
+  /** Empty is valid and is what a deployment without a STUN server returns. */
   iceServers: z.array(IceServer),
 });
 

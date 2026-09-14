@@ -51,10 +51,6 @@ const BaseEnvSchema = z.object({
     .string()
     .default('stun:stun.l.google.com:19302')
     .transform((value) => value.trim() || undefined),
-  MEDIA_TURN_URL: z.string().min(1).optional(),
-  // coturn's shared secret, used to mint short-lived per-session credentials. It is
-  // never handed to a client; a standing credential given to every guest is a relay.
-  MEDIA_TURN_SECRET: z.string().min(1).optional(),
 });
 
 export const EnvSchema = BaseEnvSchema.refine(

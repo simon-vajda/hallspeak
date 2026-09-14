@@ -68,13 +68,12 @@ Rules local to the server. Repo-wide rules, the socket protocol and versioning l
 - Media state is never persisted; client recovery is described under "Media recovery" in the root `AGENTS.md`.
 - `PUBLIC_ADDRESS` is announced verbatim and resolved to IPv4 at boot — fatally if unresolvable or answering only private/loopback — and re-resolved every minute. `augmentCandidates` offers a literal-addressed twin of every candidate with priority lifted clear of every hostname candidate. A polled change rebuilds nothing and evicts nobody; the next transport carries the new literal. `media:reset` has no `address_changed` reason. See `docs/solutions/integration-issues/announce-a-resolved-address-because-firefox-drops-hostname-ice-candidates.md` and `docs/solutions/integration-issues/derive-appended-ice-candidate-priorities-from-the-whole-list.md`.
 - `reflexive-address.ts` is a boot-time STUN cross-check, never a source for the announced address. Fire-and-forget, skipped when the address is known unroutable, off unless `probeReflexiveAddress` is passed (only `index.ts` does; tests must never send a datagram). It re-probes on `AnnouncedAddress.onChange` and binds an ephemeral port, so only the address is compared.
-- A TURN relay stays optional; it may not become a requirement.
 
 ## Environment
 
 - `DATA_DIR` holds both user-data files, `linguacast.db` and `admin.json`; each filename lives with its owner.
 - `TRUSTED_PROXY_IPS` — optional, comma-separated, unset by default.
-- Media: `PUBLIC_ADDRESS` (required in production, no safe default), `MEDIA_LISTEN_IP`, `MEDIA_RTC_PORT_BASE` (worker *i* binds base + *i* on UDP and TCP), `MEDIA_MAX_WORKERS`, `MEDIA_ROOM_IDLE_GRACE_MS`, `MEDIA_STUN_URL` (public default; empty means off, parsed as a defaulted string trimmed to `undefined`), `MEDIA_TURN_URL`, `MEDIA_TURN_SECRET` (credentials minted per session; never a standing credential).
+- Media: `PUBLIC_ADDRESS` (required in production, no safe default), `MEDIA_LISTEN_IP`, `MEDIA_RTC_PORT_BASE` (worker *i* binds base + *i* on UDP and TCP), `MEDIA_MAX_WORKERS`, `MEDIA_ROOM_IDLE_GRACE_MS`, `MEDIA_STUN_URL` (public default; empty means off, parsed as a defaulted string trimmed to `undefined`). A network blocking both UDP and TCP to the RTC ports is not served.
 - Operator-facing text (`.env.example`, `docs/hosting.md`, boot logs, errors) says "public address", never "announced address" or "ICE candidate". Internally it stays `announcedIp`. The startup summary names both the configured and resolved address.
 
 ## Tests

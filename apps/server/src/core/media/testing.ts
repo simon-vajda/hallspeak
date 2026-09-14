@@ -1,7 +1,6 @@
 import { EventEmitter } from 'node:events';
 import type { types } from 'mediasoup';
 import type { AddressResolver } from './announced-address';
-import type { TurnConfig } from './config';
 import { createTransport, produce, startMedia, stopMedia } from './index';
 import type { WorkerFactory } from './workers';
 
@@ -249,7 +248,7 @@ export const fakeWorkerFactory = (async () => {
 export interface FakeMediaOptions {
   graceMs?: number;
   swapDeadlineMs?: number;
-  turn?: TurnConfig;
+  stunUrl?: string;
   announcedIp?: string;
   resolveAddress?: AddressResolver;
   addressPollMs?: number;
@@ -274,7 +273,7 @@ export async function startFakeMedia(options: FakeMediaOptions = {}): Promise<()
       rtcPortBase: 44400,
       maxWorkers: 1,
     },
-    turn: options.turn ?? {},
+    stunUrl: options.stunUrl,
     hostCpuCount: 1,
     graceMs: options.graceMs,
     swapDeadlineMs: options.swapDeadlineMs,

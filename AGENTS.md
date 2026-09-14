@@ -20,7 +20,7 @@ Implemented: workspace, contract, API, SQLite persistence, validated Socket.IO t
 
 Not built: the **mobile speaker studio** — the next mobile work. Deferred with reasons: moving `apps/mobile/src/media/{transport,device,diagnostics}.ts` into `packages/client-core` (wait for a second mediasoup shell to shape the seam); an app-drawn output device list (neither platform offers one); replacing the web silent-WAV carrier; app icon, splash, store metadata, EAS config and store automation.
 
-Non-blocking follow-ups: a coturn/TURN relay deployment, automated `/data` backup, and a pre-flight "someone is waiting" signal. That signal needs channel-room membership and a new concept — do not relax the meaning of `Listening`, because a guest waiting on an offline Channel allocates nothing server-side.
+Non-blocking follow-ups: automated `/data` backup and a pre-flight "someone is waiting" signal. That signal needs channel-room membership and a new concept — do not relax the meaning of `Listening`, because a guest waiting on an offline Channel allocates nothing server-side.
 
 Settings storage: mobile appearance is device-local (see mobile file); storage for other settings is undecided. Record further decisions here.
 

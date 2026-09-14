@@ -80,7 +80,6 @@ function harness(overrides: Partial<MediaNetworkConfig> = {}, hostCpuCount = 8) 
   const pool = new WorkerPool({
     net: { ...net, ...overrides },
     hostCpuCount,
-    turnConfigured: false,
     createWorker: (async () => {
       const worker = new FakeWorker();
       spawned.push(worker);
@@ -160,7 +159,7 @@ describe('WorkerPool.start', () => {
     await pool.close();
   });
 
-  it('summarises both counts, the ports, the address and TURN', async () => {
+  it('summarises both counts, the ports and the address', async () => {
     const { pool } = harness({ maxWorkers: 2 }, 8);
     await pool.start();
     const summary = pool.startupSummary();
@@ -169,7 +168,7 @@ describe('WorkerPool.start', () => {
     expect(summary).toContain('44400');
     expect(summary).toContain('44401');
     expect(summary).toContain('203.0.113.10');
-    expect(summary.toLowerCase()).toContain('turn');
+    expect(summary.toLowerCase()).not.toContain('turn');
     await pool.close();
   });
 
@@ -177,7 +176,9 @@ describe('WorkerPool.start', () => {
     const { pool } = harness({ maxWorkers: 1 }, 1);
     await pool.start();
     expect(pool.startupSummary('198.51.100.4')).toContain('203.0.113.10 (198.51.100.4)');
-    expect(pool.startupSummary('203.0.113.10')).toContain('connect to 203.0.113.10 ·');
+    expect(pool.startupSummary('203.0.113.10').endsWith('guests connect to 203.0.113.10')).toBe(
+      true,
+    );
     await pool.close();
   });
 });
@@ -318,7 +319,6 @@ describe('WorkerPool against real mediasoup workers', () => {
     const rtcPortBase = 49_500 + Math.floor(Math.random() * 500) * 4;
     const pool = new WorkerPool({
       net: { listenIp: '127.0.0.1', announcedIp: '127.0.0.1', rtcPortBase, maxWorkers: 1 },
-      turnConfigured: false,
       hostCpuCount: 1,
     });
 

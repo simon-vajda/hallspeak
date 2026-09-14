@@ -46,11 +46,7 @@ await startMedia({
     rtcPortBase: env.MEDIA_RTC_PORT_BASE,
     maxWorkers: env.MEDIA_MAX_WORKERS,
   },
-  turn: {
-    stunUrl: env.MEDIA_STUN_URL,
-    turnUrl: env.MEDIA_TURN_URL,
-    turnSecret: env.MEDIA_TURN_SECRET,
-  },
+  stunUrl: env.MEDIA_STUN_URL,
   graceMs: env.MEDIA_ROOM_IDLE_GRACE_MS,
   probeReflexiveAddress: true,
 });

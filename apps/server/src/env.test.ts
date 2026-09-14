@@ -33,10 +33,13 @@ describe('EnvSchema media configuration', () => {
     expect(EnvSchema.safeParse({ MEDIA_RTC_PORT_BASE: '70000' }).success).toBe(false);
   });
 
-  it('leaves TURN unset, which is a deployment without coturn', () => {
-    const result = EnvSchema.parse({});
-    expect(result.MEDIA_TURN_URL).toBeUndefined();
-    expect(result.MEDIA_TURN_SECRET).toBeUndefined();
+  it('ignores leftover TURN settings rather than refusing to start', () => {
+    const result = EnvSchema.parse({
+      MEDIA_TURN_URL: 'turn:turn.example.org:3478',
+      MEDIA_TURN_SECRET: 'shared-secret',
+    });
+    expect(result).not.toHaveProperty('MEDIA_TURN_URL');
+    expect(result).not.toHaveProperty('MEDIA_TURN_SECRET');
   });
 
   it('defaults STUN to a public server, since most deployments want one', () => {
