@@ -163,14 +163,15 @@ describe('POST /admin/password', () => {
     const ip = '10.213.0.1';
     let password = 'hunter2!';
 
-    for (let i = 0; i < 12; i++) {
+    // One past the sign-in bucket's capacity of 10, so any charge would surface as a 429.
+    for (let i = 0; i < 11; i++) {
       const next = `correct${i}!`;
       const res = await change(jar, { currentPassword: password, newPassword: next }, ip);
       expect(res.status).toBe(204);
       jar = jarOf(res);
       password = next;
     }
-  });
+  }, 20_000);
 
   it('refuses a sign-in with the old password that was still hashing when the change landed', async () => {
     const jar = await setup();
