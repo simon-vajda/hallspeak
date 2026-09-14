@@ -29,3 +29,14 @@ minimumReleaseAgeExclude:
   - '@tanstack/router-generator@1.167.27'
   - '@tanstack/router-plugin@1.168.29'
   - babel-preset-expo@57.0.11
+  - esbuild@0.24.3
+  - uuid@11.1.1
+  - js-yaml@4.3.1
+  - decode-uri-component@0.4.3
+  - qs@6.15.4
+  - qs@6.16.0
+  - fast-uri@3.1.6
+  - vitest@4.1.11
+  - '@vitest/mocker@4.1.11'
+  - js-yaml@4.3.2
+  - hono@4.13.5
