@@ -25,7 +25,7 @@ Rules local to the web app. Repo-wide rules, the socket protocol, media recovery
   - `badge.tsx`: `size` variant holding the chip geometry.
   - `select.tsx` trigger and `slider.tsx` thumb: `cursor-pointer`.
   - `sonner.tsx`: `useTheme` from `@/components/theme-provider`, not `next-themes`.
-  - `dropdown-menu.tsx`: imports `cn` from `@/lib/utils`; the CLI generated `from "cn"` and added an unrelated `cn` npm package — revert that dependency if it reappears.
+  - `dropdown-menu.tsx`: panel `p-2` around `rounded-sm` rows (12px + 8px padding nests inside the 20px `rounded-lg` panel), rows `min-h-touch lg:min-h-action px-3 gap-2.5`, separator `-mx-2 my-2`; imports `cn` from `@/lib/utils`; the CLI generated `from "cn"` and added an unrelated `cn` npm package — revert that dependency if it reappears.
   - `card.tsx` and `label.tsx` were deleted (no importers).
   - The `rounded-[min(var(--radius-md),Npx)]` clamps on button `xs`/`sm` and the small select trigger are shadcn's own; leave them.
 - Prefer call-site classes for one-off styling.
