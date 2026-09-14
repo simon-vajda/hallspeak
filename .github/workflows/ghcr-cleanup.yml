@@ -1,0 +1,55 @@
+name: GHCR cleanup
+
+# Every push to main leaves a short-SHA image behind. This keeps the newest ones, every
+# released version, `latest`, `edge`, and the image behind every server release.
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Log what would be deleted without deleting it
+        type: boolean
+        default: true
+
+concurrency:
+  group: ghcr-cleanup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      # A release's image may be older than the newest builds kept below. Publishing retags
+      # it rather than building one, so a draft, or a published release whose promotion has
+      # not succeeded yet, would otherwise lose the only image it can ship. Only the newest
+      # page of releases counts: the action refuses an exclude pattern over 1000 characters,
+      # and an older release is either promoted, and kept by its version tag, or abandoned.
+      - id: releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          shas="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=30" \
+            --jq '.[] | select(.tag_name | startswith("server-v")) | .target_commitish | select(test("^[0-9a-f]{40}$")) | "sha-" + .[0:7]' \
+            | sort -u | paste -sd '|' -)"
+          echo "Release images kept: ${shas:-none}"
+          echo "pattern=^([0-9]+\.[0-9]+(\.[0-9]+)?|latest|edge${shas:+|$shas})\$" >> "$GITHUB_OUTPUT"
+
+      # Deleting a multi-arch image means deleting its per-platform children too, which a
+      # plain package-version cleanup gets wrong: it removes children a tagged image still
+      # references and breaks `docker pull`. This action walks the manifest list first.
+      # Scheduled runs stay dry until a dispatched dry-run log has been reviewed.
+      - uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
+        with:
+          use-regex: true
+          delete-tags: ^sha-[0-9a-f]{7}$
+          exclude-tags: ${{ steps.releases.outputs.pattern }}
+          keep-n-tagged: 20
+          delete-untagged: true
+          dry-run: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run == false) }}

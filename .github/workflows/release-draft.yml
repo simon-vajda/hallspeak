@@ -1,0 +1,103 @@
+name: Release draft
+
+# Drafts a release once the commit it targets has a pushed image. Publishing a draft
+# creates a tag the ruleset makes immutable, so a draft on a commit whose build failed or
+# was dropped would pin that version to an image that does not exist. A failed build
+# drafts nothing; the next successful build on main drafts the still-unreleased version.
+on:
+  workflow_run:
+    workflows: [Server release]
+    types: [completed]
+    branches: [main]
+
+# One queue for both tracks, so two builds finishing close together cannot both see no
+# draft and create two.
+concurrency:
+  group: release-draft
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  draft:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Create or supersede drafts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          # A rerun of an older build must not replace a newer bump's draft with its own; the
+          # build of main's tip drafts whatever is still unreleased.
+          tip="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          if [ "$tip" != "$HEAD_SHA" ]; then
+            echo "$HEAD_SHA is no longer main's tip ($tip); leaving drafts to that build"
+            exit 0
+          fi
+
+          # The REST list, not `gh release list`: it carries release ids, and a draft has no
+          # tag to address it by.
+          releases="$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+            --jq '.[] | [.id, .tag_name, (if .draft then "draft" else "released" end), (.prerelease | tostring)] | @tsv')"
+
+          cp .env.example "$RUNNER_TEMP/env.example"
+
+          for track in server mobile; do
+            prefix="$track-v"
+            version="$(node -p "require('./apps/$track/package.json').version")"
+            tag="$prefix$version"
+
+            if awk -F '\t' -v tag="$tag" '$2 == tag && $3 == "released" { found = 1 } END { exit !found }' <<<"$releases"; then
+              echo "$track: $tag is already released; nothing to draft"
+              continue
+            fi
+            if awk -F '\t' -v tag="$tag" '$2 == tag && $3 == "draft" { found = 1 } END { exit !found }' <<<"$releases"; then
+              echo "$track: kept the existing $tag draft"
+              continue
+            fi
+
+            # A bump replaces any older unpublished draft of the same track, so notes are
+            # generated once, from the last published release, rather than stacked.
+            while IFS=$'\t' read -r id stale; do
+              [ -n "$id" ] || continue
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$id" >/dev/null
+              echo "$track: superseded the $stale draft"
+            done < <(awk -F '\t' -v prefix="$prefix" '$3 == "draft" && index($2, prefix) == 1 { print $1 "\t" $2 }' <<<"$releases")
+
+            # From the Releases list, not git tags: a draft creates no tag, and the newest
+            # published version is not always the highest tag.
+            previous="$(awk -F '\t' -v prefix="$prefix" '$3 == "released" && $4 == "false" && index($2, prefix) == 1 { print $2 }' <<<"$releases" | sort -V | tail -n 1)"
+
+            args=(--draft --target "$HEAD_SHA" --generate-notes)
+            if [ -n "$previous" ]; then
+              args+=(--notes-start-tag "$previous")
+            fi
+
+            if [ "$track" = server ]; then
+              # GitHub rewrites an asset name that starts with a period, so the file goes up
+              # as env.example and the hosting guide says to save it as .env.
+              args+=(--title "Server v$version" compose.yaml "$RUNNER_TEMP/env.example")
+            else
+              args+=(--latest=false --title "Mobile v$version")
+            fi
+            # gh leaves a draft behind when an asset upload fails, and the next run would keep
+            # it as it is. Remove it so the next build drafts the release whole.
+            if ! gh release create "$tag" "${args[@]}"; then
+              for id in $(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+                --jq ".[] | select(.draft and .tag_name == \"$tag\") | .id"); do
+                gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$id" >/dev/null
+              done
+              echo "::error::Could not create the $tag draft; removed any partial draft"
+              exit 1
+            fi
+            echo "$track: created the $tag draft at $HEAD_SHA${previous:+, notes since $previous}"
+          done

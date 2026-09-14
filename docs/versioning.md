@@ -33,7 +33,8 @@ Coordinate dates and commits when it helps. Never require matching version numbe
 - A shared-package change bumps each deployable whose shipped behaviour changes. Both tags
   may land on the same commit.
 - Documentation-only commits bump nothing.
-- Moving a canonical version in a manifest is not itself a release. The tag is.
+- Moving a canonical version in a manifest is not itself a release. Publishing its draft
+  is.
 
 ## Compatibility
 
@@ -100,14 +101,28 @@ emergency.
 
 ## Tags, images and releases
 
-- Stable tags are `server-vX.Y.Z` and `mobile-vX.Y.Z`, strict `X.Y.Z`, no prerelease.
-- `server-v*` publishes GHCR tags `X.Y.Z`, `X.Y` and `latest`, then creates the GitHub Release
-  `LinguaCast Server X.Y.Z`.
-- `mobile-v*` type-checks and tests the app, then creates `LinguaCast Mobile X.Y.Z` with the
-  repository-wide Latest designation left on the server track. It publishes no binary; EAS and
-  store credentials are separate work.
-- Every push to `main` publishes `edge` and short-SHA images and creates no release.
-- Both workflows validate the tag suffix against the manifest before doing anything else.
+- Stable tags are `server-vX.Y.Z` and `mobile-vX.Y.Z`, strict `X.Y.Z`, no prerelease. Nobody
+  pushes one: publishing a release creates it, and the ruleset forbids moving or deleting it.
+- A version reaches `main` only through a bump pull request. Every push to `main` builds and
+  verifies the server image once and publishes it as `edge` and `sha-<7 chars>`.
+- When that build succeeds, each track whose manifest version has no release yet gets a draft
+  release targeting the built commit, titled `Server vX.Y.Z` or `Mobile vX.Y.Z`, with notes
+  generated since the track's newest published release. A newer bump deletes an older
+  unpublished draft of the same track; a push that leaves the version alone leaves the draft,
+  and any edits to it, untouched. Server drafts carry that commit's `compose.yaml` and
+  `.env.example`, the latter as `env.example` because GitHub renames assets starting with a
+  period.
+- Publishing a server draft waits for its commit's build, checks the tag against the manifest,
+  and retags that commit's `sha-*` image as `X.Y.Z`, `X.Y` and `latest`. Nothing is rebuilt or
+  retested, so the release is the digest `main` verified. A failed or missing build refuses the
+  promotion, and rerunning the job retries it.
+- Publishing a mobile draft produces the release only. It never takes the repository-wide Latest
+  designation from the server track, and publishes no binary; EAS and store credentials are
+  separate work.
+- A weekly cleanup of `sha-*` images keeps the newest 20, every released version, `latest`,
+  `edge`, and the image behind each of the newest server releases, draft or published. Scheduled
+  runs stay dry runs until a dispatched dry run's log has been reviewed and the workflow is
+  switched over.
 
 ## Known limits
 
@@ -117,8 +132,9 @@ emergency.
   who chose it, and the alternative — prerelease identifiers — would put a `-dev` suffix
   through gates that are numeric by design. Do not point a store build at an `edge` server.
 - **`.env.example` runs ahead of the registry.** The pin moves when the version does, so
-  between the bump commit and the pushed tag it names an image that does not exist yet. Cut the
-  tag promptly after the bump commit.
+  on `main`, between the bump merging and its draft being published, it names an image tag that
+  does not exist yet. Operators take `.env.example` from a published release, never from
+  `main`. Publish the draft promptly after the bump merges.
 - **The mobile floor is one number, not a range.** A mobile release cannot refuse a specific
   broken server patch, only everything below a version. If that is ever needed, it is a
   capability, not a floor.

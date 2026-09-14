@@ -1,7 +1,9 @@
 # Hosting LinguaCast
 
-One container, behind a reverse proxy you supply. Files you need:
-[`compose.yaml`](../compose.yaml) and [`.env.example`](../.env.example).
+One container, behind a reverse proxy you supply. Files you need: `compose.yaml` and
+`env.example`, both attached to the
+[latest release](https://github.com/simon-vajda/linguacast/releases/latest). Take them from
+the release, not from `main`: `main` can already name a version that has not been published.
 
 ## How it fits together
 
@@ -40,8 +42,9 @@ flowchart LR
 
 ## Deploy
 
-Take [`compose.yaml`](../compose.yaml) and [`.env.example`](../.env.example) into
-wherever you keep your Compose stacks, rename the second one to `.env`, and set:
+Download `compose.yaml` and `env.example` from the
+[latest release](https://github.com/simon-vajda/linguacast/releases/latest) into wherever you
+keep your Compose stacks, save the second one as `.env`, and set:
 
 - **`PUBLIC_ADDRESS`** — where guests reach this server: your public hostname, usually
   the same one your reverse proxy serves, `linguacast.example.com`. A public IP address
@@ -169,7 +172,9 @@ LAN can succeed or fail for reasons no real guest will ever hit.
 
 ## Upgrading and backups
 
-Upgrade by editing `LINGUACAST_VERSION` in `.env`, then:
+Upgrade by editing `LINGUACAST_VERSION` in `.env` to the version of the release you are
+moving to. If that release's `compose.yaml` or `env.example` differs from the one you deployed,
+carry its changes over first. Then:
 
 ```sh
 docker compose pull && docker compose up -d

@@ -108,6 +108,7 @@ Applies to the server and both clients.
 
 - Two release tracks: `apps/server/package.json` owns server + bundled web; `apps/mobile/package.json` owns mobile (and Expo's version via `app.config.ts`; `app.json` must not mirror it). Every other manifest stays private at `0.0.0`.
 - `pnpm version:server [X.Y.Z]` / `pnpm version:mobile [X.Y.Z]` bump without committing, tagging or publishing. Tags are `server-vX.Y.Z` / `mobile-vX.Y.Z`.
+- A release is a bump PR; the successful `main` build drafts it and publishing the draft on GitHub creates the tag and promotes the image. Never push a tag or push to `main`.
 - Web handshake must equal the server version exactly. Mobile must meet `MIN_MOBILE_VERSION` (`apps/server/src/version.ts`); raise it whenever an older client would be left broken rather than merely behind.
 - `MIN_SERVER_VERSION` (policy) and `SERVER_CAPABILITIES` (feature selection) in `packages/client-core/src/server/compatibility.ts` stay separate constants even while equal.
 - A handshake with no `clientType` gets the legacy `client_too_old`; remove that and the default once no bundle predating server 0.4.0 can be open.
