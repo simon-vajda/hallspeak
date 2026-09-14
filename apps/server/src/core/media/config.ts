@@ -1,4 +1,3 @@
-import { createHmac } from 'node:crypto';
 import type { types } from 'mediasoup';
 
 /**
@@ -37,16 +36,8 @@ export interface MediaNetworkConfig {
   maxWorkers: number;
 }
 
-export interface TurnConfig {
-  stunUrl?: string;
-  turnUrl?: string;
-  turnSecret?: string;
-}
-
 export interface IceServer {
   urls: string[];
-  username?: string;
-  credential?: string;
 }
 
 /**
@@ -115,44 +106,12 @@ export function workerCountFor(hostCpuCount: number, maxWorkers: number): number
   return Math.max(1, Math.min(hostCpuCount, maxWorkers));
 }
 
-export interface SessionCredential {
-  username: string;
-  credential: string;
-}
-
-/**
- * coturn's standard time-limited scheme: the username is an expiry timestamp and the
- * credential is its HMAC under the shared secret. Every guest is unauthenticated by
- * design, so a standing credential handed to all of them is a durable open relay.
- */
-export function mintTurnCredential(secret: string, ttlSeconds: number, now = Date.now()) {
-  const expiry = Math.floor(now / 1000) + ttlSeconds;
-  const username = String(expiry);
-  return {
-    username,
-    credential: createHmac('sha1', secret).update(username).digest('base64'),
-  };
-}
-
 /**
  * The ICE configuration the server hands a client during signalling; the client never
- * carries any of it. Empty is valid and is exactly what a deployment without coturn
- * returns — ordinary networks connect on the direct path alone.
+ * carries any of it. Empty is valid: ordinary networks connect on the direct path alone.
  */
-export function iceServersFor(
-  turn: TurnConfig,
-  mint: (secret: string) => SessionCredential,
-): IceServer[] {
-  const servers: IceServer[] = [];
-  if (turn.stunUrl) {
-    servers.push({ urls: [turn.stunUrl] });
-  }
-  // A TURN url without a secret would have to be offered uncredentialed, which is an
-  // open relay rather than a degraded one. Dropping it is the safe reading.
-  if (turn.turnUrl && turn.turnSecret) {
-    servers.push({ urls: [turn.turnUrl], ...mint(turn.turnSecret) });
-  }
-  return servers;
+export function iceServersFor(stunUrl: string | undefined): IceServer[] {
+  return stunUrl ? [{ urls: [stunUrl] }] : [];
 }
 
 const PRIVATE_V4 = [

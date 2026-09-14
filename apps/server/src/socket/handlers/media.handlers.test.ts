@@ -89,27 +89,19 @@ describe('getCapabilities', () => {
     expect(result.routerRtpCapabilities.codecs?.[0]?.mimeType).toBe('audio/opus');
   });
 
-  it('returns the configured ICE servers, which are empty without coturn', async () => {
+  it('returns no ICE servers when no STUN server is configured', async () => {
     const result = await getCapabilities(socket('speaker-a'), speaker);
 
     expect(result.iceServers).toEqual([]);
   });
 
-  it('mints a fresh TURN credential per call rather than echoing the shared secret', async () => {
+  it('returns the configured STUN server as the only ICE server', async () => {
     await stopMedia();
-    stopMedia = await startFakeMedia({
-      turn: { turnUrl: 'turn:turn.example.org:3478', turnSecret: 'shared-secret' },
-    });
+    stopMedia = await startFakeMedia({ stunUrl: 'stun:stun.example.org:3478' });
 
-    const first = await getCapabilities(socket('speaker-a'), speaker);
-    const second = await getCapabilities(socket('speaker-b'), speaker);
+    const result = await getCapabilities(socket('speaker-a'), speaker);
 
-    const [turn] = first.iceServers;
-    expect(turn?.urls).toEqual(['turn:turn.example.org:3478']);
-    // The username is the credential's expiry, so it is proof of a time limit.
-    expect(Number(turn?.username)).toBeGreaterThan(Date.now() / 1000);
-    expect(JSON.stringify(first.iceServers)).not.toContain('shared-secret');
-    expect(second.iceServers[0]?.credential).toBeDefined();
+    expect(result.iceServers).toEqual([{ urls: ['stun:stun.example.org:3478'] }]);
   });
 
   it('refuses a listener before anyone is live, rather than creating a room', async () => {
