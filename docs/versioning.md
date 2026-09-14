@@ -120,9 +120,8 @@ emergency.
   designation from the server track, and publishes no binary; EAS and store credentials are
   separate work.
 - A weekly cleanup of `sha-*` images keeps the newest 20, every released version, `latest`,
-  `edge`, and the image behind each of the newest server releases, draft or published. Scheduled
-  runs stay dry runs until a dispatched dry run's log has been reviewed and the workflow is
-  switched over.
+  `edge`, and the image behind each of the newest server releases, draft or published. A manual
+  run is a dry run unless told otherwise.
 
 ## Known limits
 
