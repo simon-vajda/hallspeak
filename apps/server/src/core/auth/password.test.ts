@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   DUMMY_PASSWORD_HASH,
   hashesInFlight,
@@ -29,8 +29,14 @@ describe('hashPassword', () => {
     expect(a).not.toBe(b);
   });
 
-  it('completes at the configured parameters without a maxmem error', async () => {
-    await expect(hashPassword('parameters fit in maxmem')).resolves.toMatch(/^scrypt\$/);
+  it('completes at the production cost without a maxmem error', async () => {
+    const { PASSWORD_COST } =
+      await vi.importActual<typeof import('./password-cost')>('./password-cost');
+
+    const encoded = await hashPassword('parameters fit in maxmem', PASSWORD_COST);
+
+    expect(encoded).toContain(`$${PASSWORD_COST.n}$${PASSWORD_COST.r}$${PASSWORD_COST.p}$`);
+    await expect(verifyPassword('parameters fit in maxmem', encoded)).resolves.toBe(true);
   });
 });
 

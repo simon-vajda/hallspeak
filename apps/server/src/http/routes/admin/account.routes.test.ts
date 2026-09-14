@@ -171,7 +171,7 @@ describe('POST /admin/password', () => {
       jar = jarOf(res);
       password = next;
     }
-  }, 20_000);
+  });
 
   it('refuses a sign-in with the old password that was still hashing when the change landed', async () => {
     const jar = await setup();

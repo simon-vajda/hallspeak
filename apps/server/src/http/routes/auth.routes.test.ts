@@ -204,7 +204,7 @@ describe('sign-in throttling', () => {
     expect(last.status).toBe(429);
     expect(last.headers.get('Retry-After')).toBeTruthy();
     expect((await post('/auth/login', wrong, '10.1.1.2')).status).toBe(401);
-  }, 20_000);
+  });
 
   it('still admits the correct password from an address that has not been throttled', async () => {
     await setup();
@@ -222,7 +222,7 @@ describe('sign-in throttling', () => {
     );
 
     expect(elsewhere.status).toBe(200);
-  }, 20_000);
+  });
 
   it('does not charge a successful sign-in', async () => {
     await setup();
@@ -236,7 +236,7 @@ describe('sign-in throttling', () => {
       );
       expect(res.status).toBe(200);
     }
-  }, 20_000);
+  });
 
   it('charges a refused setup, so repeating it costs the same budget', async () => {
     await setup('admin', 'hunter2!', '10.4.4.1');
