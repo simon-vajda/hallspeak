@@ -39,7 +39,9 @@ jobs:
             --jq '.[] | select(.tag_name | startswith("server-v")) | .target_commitish | select(test("^[0-9a-f]{40}$")) | "sha-" + .[0:7]' \
             | sort -u | paste -sd '|' -)"
           echo "Release images kept: ${shas:-none}"
-          echo "pattern=^([0-9]+\.[0-9]+(\.[0-9]+)?|latest|edge${shas:+|$shas})\$" >> "$GITHUB_OUTPUT"
+          # X.Y and X.Y.Z are spelled out as separate alternatives: the action rejects a
+          # quantified group holding its own quantifier as ReDoS-prone.
+          echo "pattern=^([0-9]+\.[0-9]+|[0-9]+\.[0-9]+\.[0-9]+|latest|edge${shas:+|$shas})\$" >> "$GITHUB_OUTPUT"
 
       # Deleting a multi-arch image means deleting its per-platform children too, which a
       # plain package-version cleanup gets wrong: it removes children a tagged image still
