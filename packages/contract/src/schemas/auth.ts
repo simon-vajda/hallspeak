@@ -32,6 +32,19 @@ export const LoginBody = z
   .object({ username: z.string().min(1), password: z.string().min(1).max(PASSWORD_MAX_LENGTH) })
   .openapi('LoginBody');
 
+// Deliberately not NewPassword for the current password, for the reason given on LoginBody.
+export const ChangePasswordBody = z
+  .object({
+    currentPassword: z.string().min(1).max(PASSWORD_MAX_LENGTH),
+    newPassword: NewPassword,
+  })
+  .openapi('ChangePasswordBody');
+
+/** `username` only ever accompanies `authenticated: true`. */
 export const SessionState = z
-  .object({ configured: z.boolean(), authenticated: z.boolean() })
+  .object({
+    configured: z.boolean(),
+    authenticated: z.boolean(),
+    username: AdminUsername.optional(),
+  })
   .openapi('SessionState');

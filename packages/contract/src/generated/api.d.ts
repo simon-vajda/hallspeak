@@ -4,6 +4,91 @@
  */
 
 export interface paths {
+    "/admin/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change the administrator password and end every other session */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ChangePasswordBody"];
+                };
+            };
+            responses: {
+                /** @description Changed; this caller holds a fresh session */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description The new password does not meet the rules */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
+                /** @description Sign in first */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
+                /** @description The current password does not match */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
+                /** @description Another password change is still in progress */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
+                /** @description Too many attempts */
+                429: {
+                    headers: {
+                        /** @description Whole seconds until another attempt may be made */
+                        "Retry-After": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Problem"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/events/{id}/channels": {
         parameters: {
             query?: never;
@@ -952,6 +1037,14 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        Problem: {
+            code: string;
+            message: string;
+        };
+        ChangePasswordBody: {
+            currentPassword: string;
+            newPassword: string;
+        };
         AdminChannel: {
             id: number;
             eventId: number;
@@ -962,10 +1055,6 @@ export interface components {
             enabled: boolean;
             createdAt: number;
             updatedAt: number;
-        };
-        Problem: {
-            code: string;
-            message: string;
         };
         CreateChannelBody: {
             /** @example english */
@@ -1037,6 +1126,8 @@ export interface components {
         SessionState: {
             configured: boolean;
             authenticated: boolean;
+            /** @example admin */
+            username?: string;
         };
         VersionResponse: {
             serverVersion: string;

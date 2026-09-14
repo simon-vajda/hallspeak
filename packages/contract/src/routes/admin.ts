@@ -1,4 +1,5 @@
 import { createRoute, z } from '@hono/zod-openapi';
+import { ChangePasswordBody } from '../schemas/auth';
 import {
   AdminChannel,
   AdminEvent,
@@ -141,4 +142,29 @@ export const adminRegenerateSpeakerCode = createRoute({
   summary: 'Replace the speaker code — the sole mitigation for a leaked one',
   request: { params: IdParam },
   responses: guarded({ 200: json(AdminChannel, 'OK'), 404: problem('No such channel') }),
+});
+
+export const adminChangePassword = createRoute({
+  method: 'post',
+  path: '/admin/password',
+  tags: TAGS,
+  summary: 'Change the administrator password and end every other session',
+  request: { body: body(ChangePasswordBody) },
+  responses: guarded({
+    204: { description: 'Changed; this caller holds a fresh session' },
+    400: problem('The new password does not meet the rules'),
+    // Not 401: under /admin that means the session is gone, and a mistyped current password
+    // must not sign the administrator out.
+    403: problem('The current password does not match'),
+    409: problem('Another password change is still in progress'),
+    429: {
+      ...problem('Too many attempts'),
+      headers: z.object({
+        'Retry-After': z.string().openapi({
+          description: 'Whole seconds until another attempt may be made',
+          example: '60',
+        }),
+      }),
+    },
+  }),
 });
