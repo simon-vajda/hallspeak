@@ -132,7 +132,7 @@ async function bump() {
   }
 
   console.log(`Updated ${track} ${current} to ${next}.`);
-  console.log(`Review changes, commit, then tag ${config.tagPrefix}${next}.`);
+  console.log('Review changes, commit on a release branch and open a PR.');
 }
 
 async function releaseTag() {
