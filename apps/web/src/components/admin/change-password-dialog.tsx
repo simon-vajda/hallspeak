@@ -152,7 +152,13 @@ function ChangePasswordForm({ username, onChanged }: { username: string; onChang
 
       <DialogActions>
         <DialogClose render={<Button variant="outline" size="action" />}>Cancel</DialogClose>
-        <Button type="submit" size="action" disabled={!isValid || isSubmitting}>
+        {/* setError forces isValid false, and the fields already passed validation when the
+            server refused, so a server error alone must not lock the retry. */}
+        <Button
+          type="submit"
+          size="action"
+          disabled={isSubmitting || (!isValid && !errors.root?.server)}
+        >
           Change password
         </Button>
       </DialogActions>
