@@ -3,6 +3,7 @@ import type { SocketAuth } from '../../core/access';
 import { createChannel } from '../../core/channels.service';
 import { createEvent } from '../../core/events.service';
 import { handover } from '../../core/handover';
+import { listenerHistory } from '../../core/listener-history';
 import {
   closeProducer,
   consume,
@@ -24,7 +25,12 @@ import {
   releaseSocket,
   seedClaimAudience,
   sendInitialListenerCount,
+  sendInitialListenerHistory,
 } from './lifecycle.handlers';
+
+/** The shape of a listener-history payload, reduced to what these tests assert on. */
+const historyCounts = (payload: unknown) =>
+  (payload as { points: { count: number }[] } | undefined)?.points.map((point) => point.count);
 
 const EVENT = 1;
 const ENGLISH = 10;
@@ -76,6 +82,7 @@ afterEach(async () => {
   await stopMedia();
   closeDb();
   presence.releaseChannel(ENGLISH);
+  listenerHistory.close();
   vi.restoreAllMocks();
 });
 
@@ -471,6 +478,7 @@ describe('applyNotification claim changes', () => {
 
   afterEach(() => {
     presence.release('speaker-a');
+    presence.release('speaker-a2');
     presence.release('speaker-b');
   });
 
@@ -508,6 +516,87 @@ describe('applyNotification claim changes', () => {
     expect(emitted.every((entry) => entry.room === 'speaker-a')).toBe(true);
   });
 
+  /** R6/R7: the history rides the claim exactly as the count and the tally do. */
+  it('seeds the listener history to the socket that took the claim, and to no room', () => {
+    const { io, emitted } = fakeIo();
+    presence.take({ eventId, channelId, sessionId: STUDIO, socketId: 'speaker-a' });
+    listenerHistory.record(eventId, channelId, 2);
+
+    applyNotification(io, db, {
+      type: 'claim-changed',
+      eventId,
+      channelId,
+      sessionId: STUDIO,
+      socketId: 'speaker-a',
+    });
+
+    const history = emitted.filter((entry) => entry.event === 'channel:listener-history');
+    expect(history).toHaveLength(1);
+    expect(history[0]?.room).toBe('speaker-a');
+    expect(history[0]?.payload).toMatchObject({ slug: 'english' });
+    expect(historyCounts(history[0]?.payload)).toEqual([0, 2, 0]);
+    expect(emitted.map((entry) => entry.room)).not.toContain(channelRoom(channelId));
+  });
+
+  /** A colleague taking over inherits the audience the channel has had all along. */
+  it('seeds the incoming studio with the points recorded before the swap', () => {
+    const { io, emitted } = fakeIo();
+    presence.take({ eventId, channelId, sessionId: STUDIO, socketId: 'speaker-a' });
+    listenerHistory.record(eventId, channelId, 4);
+    const colleague = { eventId, channelId, sessionId: 'studio-b', socketId: 'speaker-b' };
+    presence.registerStudio(colleague);
+    expect(handover.request(colleague)).toBe('accepted');
+    handover.confirm({ eventId, channelId, sessionId: STUDIO, socketId: 'speaker-a' }, null);
+    handover.produced(colleague);
+    handover.complete(channelId);
+    expect(presence.holder(channelId)).toBe('speaker-b');
+
+    applyNotification(io, db, {
+      type: 'claim-changed',
+      eventId,
+      channelId,
+      sessionId: 'studio-b',
+      socketId: 'speaker-b',
+    });
+
+    const history = emitted.find((entry) => entry.event === 'channel:listener-history');
+    expect(history?.room).toBe('speaker-b');
+    expect(historyCounts(history?.payload)).toEqual([0, 4, 0]);
+    handover.forgetChannel(channelId);
+  });
+
+  /**
+   * A reconnect is the same broadcast on a new socket, and the dying socket's disconnect
+   * lands after the new handshake. Neither may cost the studio its chart.
+   */
+  it('keeps the history across a reconnect whose stale disconnect arrives late', () => {
+    const { io, emitted } = fakeIo();
+    presence.take({ eventId, channelId, sessionId: STUDIO, socketId: 'speaker-a' });
+    listenerHistory.record(eventId, channelId, 3);
+
+    presence.registerStudio({ eventId, channelId, sessionId: STUDIO, socketId: 'speaker-a2' });
+    presence.release('speaker-a');
+
+    seedClaimAudience(db, io, eventId, channelId, 'speaker-a2');
+
+    const history = emitted.find((entry) => entry.event === 'channel:listener-history');
+    expect(historyCounts(history?.payload)).toEqual([0, 3, 0]);
+  });
+
+  /** One try each: a history that cannot be built must not cost the studio its numbers. */
+  it('still seeds the count and the tally when the history throws', () => {
+    const { io, emitted } = fakeIo();
+    presence.take({ eventId, channelId, sessionId: STUDIO, socketId: 'speaker-a' });
+    vi.spyOn(listenerHistory, 'snapshot').mockImplementation(() => {
+      throw new Error('nope');
+    });
+
+    seedClaimAudience(db, io, eventId, channelId, 'speaker-a');
+
+    expect(emitted.map((entry) => entry.event)).toEqual(['channel:listeners', 'channel:reports']);
+    expect(console.error).toHaveBeenCalled();
+  });
+
   it('seeds nobody when the claim was dropped, and still tells every studio', () => {
     const { io, emitted } = fakeIo();
     presence.registerStudio({ eventId, channelId, sessionId: STUDIO, socketId: 'speaker-a' });
@@ -539,6 +628,11 @@ describe('applyNotification claim changes', () => {
 describe('sendInitialListenerCount', () => {
   let eventId: number;
   let channelId: number;
+
+  afterEach(() => {
+    presence.releaseChannel(channelId);
+    presence.release('speaker-a');
+  });
 
   beforeEach(() => {
     const event = createEvent(db, { name: 'A', enabled: true });
@@ -590,5 +684,72 @@ describe('sendInitialListenerCount', () => {
     expect(emitted).toEqual([
       { event: 'channel:listeners', payload: { slug: 'english', count: 0 } },
     ]);
+  });
+});
+
+describe('sendInitialListenerHistory', () => {
+  let eventId: number;
+  let channelId: number;
+
+  beforeEach(() => {
+    const event = createEvent(db, { name: 'A', enabled: true });
+    eventId = event.id;
+    channelId = createChannel(db, eventId, {
+      slug: 'english',
+      name: 'English',
+      enabled: true,
+    }).id;
+  });
+
+  afterEach(() => {
+    presence.releaseChannel(channelId);
+    presence.release('speaker-a');
+  });
+
+  function fakeSpeakerSocket() {
+    const emitted: Array<{ event: string; payload: unknown }> = [];
+    return {
+      emitted,
+      socket: {
+        emit: (event: string, payload: unknown) => {
+          emitted.push({ event, payload });
+        },
+      },
+    };
+  }
+
+  it('ends the series at the live count, so a studio seeded between recounts is not behind', async () => {
+    await goLive({
+      eventId,
+      socketId: 'speaker-a',
+      channelId,
+      slug: 'english',
+      sessionId: STUDIO,
+    });
+    const ctx = { eventId, socketId: 'guest-a' };
+    await createTransport(ctx, 'recv', { create: false });
+    const { consumerId } = await consume(ctx, {
+      channelId,
+      // biome-ignore lint/suspicious/noExplicitAny: the fakes stand in for mediasoup's types.
+      rtpCapabilities: {} as any,
+    });
+    await resumeConsumer(ctx, consumerId);
+
+    const { socket, emitted } = fakeSpeakerSocket();
+    sendInitialListenerHistory(db, socket, eventId, channelId);
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]?.event).toBe('channel:listener-history');
+    expect(emitted[0]?.payload).toMatchObject({ slug: 'english' });
+    expect(historyCounts(emitted[0]?.payload)).toEqual([0, 1]);
+  });
+
+  // An empty chart would claim an hour of silence the channel never had.
+  it('sends nothing at all for a channel with no broadcast to describe', () => {
+    const { socket, emitted } = fakeSpeakerSocket();
+
+    sendInitialListenerHistory(db, socket, eventId, channelId);
+
+    expect(emitted).toEqual([]);
   });
 });

@@ -1,7 +1,12 @@
-import type { HandoverState, ReportCategory } from '@linguacast/contract/socket';
+import type {
+  HandoverState,
+  ListenerHistoryPoint,
+  ReportCategory,
+} from '@linguacast/contract/socket';
 import type { SocketAuth } from '../../core/access';
 import { getChannelById } from '../../core/channels.service';
 import { handover } from '../../core/handover';
+import { listenerHistory } from '../../core/listener-history';
 import * as media from '../../core/media';
 import type { Notification } from '../../core/notifications';
 import { presence } from '../../core/presence';
@@ -36,6 +41,10 @@ export interface LifecycleServer {
         soundsGood: { count: number; ageMs: number } | null;
       },
     ): unknown;
+    emit(
+      event: 'channel:listener-history',
+      payload: { slug: string; points: ListenerHistoryPoint[] },
+    ): unknown;
   };
   in(room: string): { disconnectSockets(close: boolean): unknown };
   sockets: { sockets: Map<string, { disconnect(close: boolean): unknown }> };
@@ -44,6 +53,18 @@ export interface LifecycleServer {
 /** The subset of Socket the connect-time count needs; a real Socket satisfies it. */
 export interface LifecycleSocket {
   emit(event: 'channel:listeners', payload: { slug: string; count: number }): unknown;
+}
+
+/**
+ * The subset of Socket the seeded history needs. Its own interface rather than a second
+ * signature on `LifecycleSocket`: one emitter satisfying both would have to be written as
+ * an overload, and nothing here gains from the two events travelling together.
+ */
+export interface ListenerHistorySocket {
+  emit(
+    event: 'channel:listener-history',
+    payload: { slug: string; points: ListenerHistoryPoint[] },
+  ): unknown;
 }
 
 /**
@@ -208,6 +229,38 @@ export function sendInitialListenerCount(
 }
 
 /**
+ * The hour behind the number, sent once. A studio taking the channel mid-service inherits
+ * the audience its colleague built, and extends the line from `channel:listeners` after
+ * this; there is never a second snapshot.
+ *
+ * Nothing is sent for a channel with no broadcast to describe: an empty chart would claim
+ * an hour of silence the channel never had.
+ */
+export function sendInitialListenerHistory(
+  db: Db,
+  socket: ListenerHistorySocket,
+  eventId: number,
+  channelId: number,
+): void {
+  // `socket.data` carries no slug, so the wire's identifier is read back off the row.
+  const channel = getChannelById(db, channelId);
+  if (!channel) {
+    return;
+  }
+
+  const points = listenerHistory.snapshot(
+    eventId,
+    channelId,
+    media.listenerCount(eventId, channelId),
+  );
+  if (!points) {
+    return;
+  }
+
+  socket.emit('channel:listener-history', { slug: channel.slug, points });
+}
+
+/**
  * What a studio is owed the moment the channel's claim becomes its own. Also called at
  * connection time for a studio that already holds the claim: the rebind is published from
  * inside the handshake, before Socket.IO has put the socket in a room of its own name, so
@@ -229,8 +282,16 @@ export function seedClaimAudience(
   const tallies: ReportsSocket = {
     emit: (event, payload) => io.to(socketId).emit(event, payload),
   };
+  const history: ListenerHistorySocket = {
+    emit: (event, payload) => io.to(socketId).emit(event, payload),
+  };
   seed(() => sendInitialListenerCount(db, counts, eventId, channelId), socketId, 'listener count');
   seed(() => sendInitialReports(db, tallies, eventId, channelId), socketId, 'report tally');
+  seed(
+    () => sendInitialListenerHistory(db, history, eventId, channelId),
+    socketId,
+    'listener history',
+  );
 }
 
 function seed(send: () => void, socketId: string, what: string): void {

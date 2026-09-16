@@ -1,18 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { listenerHistory } from '../listener-history';
 import type { Notification } from '../notifications';
 import { notifications } from '../notifications';
+import { presence } from '../presence';
 import {
   closeConsumer,
+  closeProducer,
   consume,
   createTransport,
   listenerCount,
   listenerCounts,
   releasePeer,
   resumeConsumer,
+  revokeChannel,
   stopMedia,
 } from './index';
 import { ListenerCountPublisher } from './listeners';
-import { goLive as goLiveOn, startFakeMedia } from './testing';
+import { failWorker, goLive as goLiveOn, startFakeMedia } from './testing';
 
 const WINDOW_MS = 300;
 
@@ -303,5 +307,121 @@ describe('listener counts through the media facade', () => {
     await stopMedia();
 
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+// --- the listener history it feeds ----------------------------------------------
+
+describe('listener history through the media facade', () => {
+  beforeEach(async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await startFakeMedia();
+  });
+
+  afterEach(async () => {
+    await stopMedia();
+    presence.releaseChannel(ENGLISH);
+    listenerHistory.close();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  const listen = async (socketId: string) => {
+    const ctx = { eventId: EVENT, socketId };
+    await createTransport(ctx, 'recv', { create: false });
+    const { consumerId } = await consume(ctx, {
+      channelId: ENGLISH,
+      // biome-ignore lint/suspicious/noExplicitAny: the fakes stand in for mediasoup's types.
+      rtpCapabilities: {} as any,
+    });
+    await resumeConsumer(ctx, consumerId);
+    return consumerId;
+  };
+
+  const counts = () =>
+    listenerHistory
+      .snapshot(EVENT, ENGLISH, listenerCount(EVENT, ENGLISH))
+      ?.map((point) => point.count);
+
+  it('records a point per coalesced change, in the order they happened', async () => {
+    await goLiveOn({ eventId: EVENT, socketId: 'speaker', channelId: ENGLISH, slug: 'english' });
+    vi.useFakeTimers();
+
+    const leaving = await listen('guest-a');
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+    await listen('guest-b');
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+    await closeConsumer({ eventId: EVENT, socketId: 'guest-a' }, leaving);
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+
+    expect(counts()).toEqual([0, 1, 2, 1]);
+  });
+
+  it('forgets on a deliberate end, so the next broadcast starts from nothing', async () => {
+    const { producerId } = await goLiveOn({
+      eventId: EVENT,
+      socketId: 'speaker',
+      channelId: ENGLISH,
+      slug: 'english',
+    });
+    vi.useFakeTimers();
+    await listen('guest-a');
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+    expect(counts()).toEqual([0, 1]);
+
+    await closeProducer({ eventId: EVENT, socketId: 'speaker' }, ENGLISH, producerId);
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+    expect(counts()).toBeUndefined();
+
+    vi.useRealTimers();
+    await goLiveOn({ eventId: EVENT, socketId: 'speaker-2', channelId: ENGLISH, slug: 'english' });
+
+    expect(counts()).toEqual([0]);
+  });
+
+  it('forgets when the channel is revoked, and a trailing zero recount does not revive it', async () => {
+    await goLiveOn({ eventId: EVENT, socketId: 'speaker', channelId: ENGLISH, slug: 'english' });
+    vi.useFakeTimers();
+    await listen('guest-a');
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+    expect(counts()).toEqual([0, 1]);
+
+    revokeChannel(EVENT, ENGLISH, 'access_revoked');
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+
+    expect(counts()).toBeUndefined();
+  });
+
+  /**
+   * A dead worker keeps the claim and its start while clients renegotiate, so the hour
+   * before it must survive — forgetting there would draw a flat zero over a live audience.
+   */
+  it('keeps the history a worker death interrupts', async () => {
+    await goLiveOn({ eventId: EVENT, socketId: 'speaker', channelId: ENGLISH, slug: 'english' });
+    vi.useFakeTimers();
+    await listen('guest-a');
+    await listen('guest-b');
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+    expect(counts()).toEqual([0, 2]);
+
+    failWorker();
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+
+    expect(presence.claimOf(ENGLISH)).toBeDefined();
+    expect(counts()).toEqual([0, 2, 0]);
+  });
+
+  it('keeps the history when a producer drops rather than ends', async () => {
+    await goLiveOn({ eventId: EVENT, socketId: 'speaker', channelId: ENGLISH, slug: 'english' });
+    vi.useFakeTimers();
+    await listen('guest-a');
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+
+    // The speaker's connection goes; the claim stays with the session that may come back.
+    releasePeer(EVENT, 'speaker');
+    await vi.advanceTimersByTimeAsync(WINDOW_MS + 1);
+
+    expect(presence.claimOf(ENGLISH)).toBeDefined();
+    expect(counts()).toEqual([0, 1, 0]);
   });
 });

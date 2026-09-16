@@ -1,6 +1,7 @@
 import type { types } from 'mediasoup';
 import { AppError } from '../../lib/problem';
 import { type GrantCancellation, handover } from '../handover';
+import { listenerHistory } from '../listener-history';
 import { type EvictionReason, notifications } from '../notifications';
 import { presence, type StudioSocket } from '../presence';
 import { reports } from '../reports';
@@ -113,6 +114,15 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
     // A recount rather than a delta, and a room that has gone answers zero: the window is
     // trailing, so it routinely fires after the room it names was torn down.
     count: (eventId, channelId) => listenerCount(eventId, channelId),
+    // Recorded at the publisher's output rather than at every poke: what comes out here is
+    // already coalesced and already known to differ from the last number, so every point
+    // the history keeps is a change somebody could see.
+    publish: (notification) => {
+      if (notification.type === 'listeners-changed') {
+        listenerHistory.record(notification.eventId, notification.channelId, notification.count);
+      }
+      notifications.publish(notification);
+    },
   });
 
   const registry = new RoomRegistry(pool, {
@@ -122,6 +132,11 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
       // first real count of the next broadcast on the same channel.
       listeners.forgetEvent(room.eventId);
       reports.forgetEvent(room.eventId);
+      // The history deliberately does not forget here. A dead worker keeps every claim and
+      // its on-air start while the clients renegotiate, so the broadcast carries on and
+      // dropping the series would redraw the hour behind it as a flat zero. The final zero
+      // `listeners.forgetEvent` publishes is recorded like any other change, and the dip
+      // recovers as the listeners come back.
       // Idle and shutdown take nobody's access away, so nothing is evicted for them.
       if (reason === 'worker_died') {
         notifications.publish({ type: 'room-evicted', eventId: room.eventId, reason });
@@ -188,6 +203,7 @@ export async function stopMedia(): Promise<void> {
   await registry.closeAll();
   listeners.close();
   reports.close();
+  listenerHistory.close();
   await pool.close();
 }
 
@@ -489,6 +505,8 @@ function publishProducerClosed(
   if (closeReason === 'ended') {
     // A deliberate end closes every listener feedback episode for this broadcast.
     reports.forgetChannel(eventId, channelId);
+    // And the audience it had: the next broadcast on this channel describes its own hour.
+    listenerHistory.forgetChannel(eventId, channelId);
   }
   notifications.publish({
     type: 'producer-closed',
@@ -770,6 +788,7 @@ export function revokeChannel(eventId: number, channelId: number, reason: Evicti
   room?.closeProducer(channelId);
 
   reports.forgetChannel(eventId, channelId);
+  listenerHistory.forgetChannel(eventId, channelId);
   // Nothing can be waiting for a channel nobody may broadcast on any more.
   handover.forgetChannel(channelId);
 
@@ -793,6 +812,7 @@ export function revokeEvent(eventId: number, channelIds: number[], reason: Evict
     presence.releaseChannel(channelId);
     reports.forgetChannel(eventId, channelId);
   }
+  listenerHistory.forgetEvent(eventId);
   state?.registry.closeEvent(eventId, 'revoked');
   notifications.publish({ type: 'room-evicted', eventId, reason });
 }
