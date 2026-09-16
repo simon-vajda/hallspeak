@@ -67,7 +67,7 @@ export default function ListenerHistoryFigure({
               hideLabel
               hideIndicator
               formatter={(value, _name, item) =>
-                listenerPointLabel(Number(value), Number(item?.payload?.at ?? now), now)
+                listenerPointLabel(Number(value), Number(item?.payload?.at ?? now))
               }
             />
           }

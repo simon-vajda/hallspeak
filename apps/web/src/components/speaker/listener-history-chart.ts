@@ -23,9 +23,18 @@ export function listenerChartTicks(now: number): number[] {
   return [start, start + LISTENER_HISTORY_WINDOW_MS / 2, now];
 }
 
+/** Axis copy: the age of a tick, which is what the fixed window's three labels describe. */
 export function listenerTickLabel(at: number, now: number): string {
   const minutes = Math.round((now - at) / MINUTE_MS);
   return minutes <= 0 ? 'now' : `${minutes}m ago`;
+}
+
+/**
+ * Wall-clock time in the viewer's own locale, so a US studio reads `2:05 PM` and a Hungarian
+ * one `14:05` without the panel choosing a clock for either.
+ */
+export function listenerPointTime(at: number, locales?: Intl.LocalesArgument): string {
+  return new Date(at).toLocaleTimeString(locales, { hour: 'numeric', minute: '2-digit' });
 }
 
 /** Zero for an empty series: there is no peak to state, and the caller withholds the chart. */
@@ -42,7 +51,11 @@ export function listenerChartSummary(rows: readonly ListenerChartRow[]): string 
   return `${plural(latest.count, 'listener')}, peak ${listenerPeak(rows)} in the last hour.`;
 }
 
-/** Tooltip copy: the recorded count and when it was recorded, and nothing beyond that. */
-export function listenerPointLabel(count: number, at: number, now: number): string {
-  return `${plural(count, 'listener')} · ${listenerTickLabel(at, now)}`;
+/** Tooltip copy: the recorded count and the clock time it was recorded at, and nothing else. */
+export function listenerPointLabel(
+  count: number,
+  at: number,
+  locales?: Intl.LocalesArgument,
+): string {
+  return `${plural(count, 'listener')} · ${listenerPointTime(at, locales)}`;
 }
