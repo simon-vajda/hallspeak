@@ -1,6 +1,7 @@
 import { type AnchoredListenerPoint, listenerChartRows } from '@linguacast/client-core/channel';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { MICRO_LABEL } from '@/components/micro-label';
+import { useSettledFlag, WITHHOLD_GRACE_MS } from '@/lib/use-settled-flag';
 import { cn } from '@/lib/utils';
 import {
   LISTENER_HISTORY_HEADING,
@@ -13,10 +14,6 @@ import {
  * holds to the right edge gains nothing from a faster clock.
  */
 const TICK_MS = 10_000;
-
-/** The same grace `ListenerReports` gives its tally: a snapshot lands moments after the claim
- * does, and a dash that appears and leaves again inside that window only flickers. */
-const WITHHOLD_GRACE_MS = 2_000;
 
 const ListenerHistoryFigure = lazy(() => import('./listener-history-figure'));
 
@@ -76,20 +73,4 @@ function WithheldSlot({ settled }: { settled: boolean }) {
       <span aria-hidden>{settled ? '—' : null}</span>
     </div>
   );
-}
-
-/** `value` turning true takes effect after `delayMs`; turning false takes effect at once. */
-function useSettledFlag(value: boolean, delayMs: number): boolean {
-  const [settled, setSettled] = useState(false);
-
-  useEffect(() => {
-    if (!value) {
-      setSettled(false);
-      return;
-    }
-    const timer = setTimeout(() => setSettled(true), delayMs);
-    return () => clearTimeout(timer);
-  }, [value, delayMs]);
-
-  return settled;
 }

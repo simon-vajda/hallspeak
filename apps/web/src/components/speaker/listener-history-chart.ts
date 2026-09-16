@@ -1,5 +1,6 @@
 import type { ListenerChartRow } from '@linguacast/client-core/channel';
 import { LISTENER_HISTORY_WINDOW_MS } from '@linguacast/contract/socket';
+import { plural } from '@/lib/format';
 
 const MINUTE_MS = 60_000;
 
@@ -32,20 +33,16 @@ export function listenerPeak(rows: readonly ListenerChartRow[]): number {
   return rows.reduce((peak, row) => Math.max(peak, row.count), 0);
 }
 
-function countPhrase(count: number): string {
-  return `${count} ${count === 1 ? 'listener' : 'listeners'}`;
-}
-
 /** The chart is decorative to a screen reader; this sentence carries it instead. */
 export function listenerChartSummary(rows: readonly ListenerChartRow[]): string {
   const latest = rows.at(-1);
   if (latest === undefined) {
     return LISTENER_HISTORY_WITHHELD;
   }
-  return `${countPhrase(latest.count)}, peak ${listenerPeak(rows)} in the last hour.`;
+  return `${plural(latest.count, 'listener')}, peak ${listenerPeak(rows)} in the last hour.`;
 }
 
 /** Tooltip copy: the recorded count and when it was recorded, and nothing beyond that. */
 export function listenerPointLabel(count: number, at: number, now: number): string {
-  return `${countPhrase(count)} · ${listenerTickLabel(at, now)}`;
+  return `${plural(count, 'listener')} · ${listenerTickLabel(at, now)}`;
 }

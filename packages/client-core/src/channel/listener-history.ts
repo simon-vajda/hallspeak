@@ -45,9 +45,11 @@ export function pruneListenerHistory(
   let firstKept = 0;
   for (let index = 0; index < history.length; index += 1) {
     const point = history[index];
-    if (point !== undefined && point.at < windowStart) {
-      firstKept = index;
+    // Ordered oldest first, so the first point inside the window settles the answer.
+    if (point === undefined || point.at >= windowStart) {
+      break;
     }
+    firstKept = index;
   }
   return firstKept === 0 ? (history as AnchoredListenerPoint[]) : history.slice(firstKept);
 }
