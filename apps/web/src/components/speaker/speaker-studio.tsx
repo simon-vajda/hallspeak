@@ -1,4 +1,8 @@
-import type { AnchoredResolution, AnchoredRow } from '@linguacast/client-core/channel';
+import type {
+  AnchoredListenerPoint,
+  AnchoredResolution,
+  AnchoredRow,
+} from '@linguacast/client-core/channel';
 import {
   type ChannelStatusEntry,
   rollbackMutedAfterFailure,
@@ -40,6 +44,7 @@ export function SpeakerStudio({
   channel,
   speakerCode,
   listeners,
+  listenerHistory,
   reports,
   reportResolution,
   reportsKnown,
@@ -60,6 +65,8 @@ export function SpeakerStudio({
   speakerCode: string;
   /** Guests currently receiving this channel's audio. */
   listeners: number;
+  /** This channel's recent counts, or undefined while none has been sent to this studio. */
+  listenerHistory: AnchoredListenerPoint[] | undefined;
   reports: AnchoredRow[];
   reportResolution: AnchoredResolution | null;
   /** False until the connect-time tally lands; the panel withholds rather than claiming. */
@@ -422,6 +429,7 @@ export function SpeakerStudio({
         // gap before the first snapshot.
         startedAt={handover?.onAirStartedAt ?? startedAt}
         listeners={listeners}
+        listenerHistory={listenerHistory}
         reports={reports}
         reportResolution={reportResolution}
         reportsKnown={reportsKnown}
