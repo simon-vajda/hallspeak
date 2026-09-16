@@ -79,6 +79,31 @@ export const ChannelStatus = BroadcastSnapshot.extend({
 export const ChannelListeners = z.object({ slug: SocketSlug, count: z.int().nonnegative() });
 
 /**
+ * One value both sides must agree on: the server prunes its stored history to this span and
+ * the client prunes to it again and draws its chart over exactly it.
+ */
+export const LISTENER_HISTORY_WINDOW_MS = 60 * 60 * 1000;
+
+/**
+ * A snapshot of the channel's listener history, to the claim holder alone like
+ * `channel:listeners`. Per-change updates ride `channel:listeners`; this event is never a
+ * delta. Points are ordered oldest first and carry `ageMs` rather than absolute times, for
+ * the reason `ChannelReports` does: the studio anchors each point to its own clock at
+ * receipt, so a client clock off the server's does not shift the whole series.
+ */
+export const ChannelListenerHistory = z.object({
+  slug: SocketSlug,
+  points: z.array(
+    z.object({
+      count: z.int().nonnegative(),
+      ageMs: z.int().nonnegative(),
+    }),
+  ),
+});
+
+export type ListenerHistoryPoint = z.infer<typeof ChannelListenerHistory>['points'][number];
+
+/**
  * Five fixed categories and nothing else: a report carries no text, no listener identifier
  * and no history, so the enum is the whole vocabulary and an unknown one is rejected by the
  * validation middleware before any handler runs.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ChannelJoinResponse,
+  ChannelListenerHistory,
   ChannelStatus,
   HandoverActionPayload,
   HandoverState,
@@ -288,5 +289,30 @@ describe('handover schemas', () => {
     expect(HandoverState.safeParse({ ...base, holder: 'someone' }).success).toBe(false);
     expect(HandoverState.safeParse({ ...base, role: 'declining' }).success).toBe(false);
     expect(HandoverState.safeParse({ ...base, remainingMs: -1 }).success).toBe(false);
+  });
+});
+
+describe('listener history schema', () => {
+  it('accepts ordered points and an empty series', () => {
+    const parsed = ChannelListenerHistory.parse({
+      slug: 'english',
+      points: [
+        { count: 0, ageMs: 600_000 },
+        { count: 3, ageMs: 0 },
+      ],
+    });
+    expect(parsed.points.map((point) => point.count)).toEqual([0, 3]);
+    expect(ChannelListenerHistory.parse({ slug: 'english', points: [] }).points).toEqual([]);
+  });
+
+  it('rejects a negative count or age', () => {
+    expect(
+      ChannelListenerHistory.safeParse({ slug: 'english', points: [{ count: -1, ageMs: 0 }] })
+        .success,
+    ).toBe(false);
+    expect(
+      ChannelListenerHistory.safeParse({ slug: 'english', points: [{ count: 1, ageMs: -1 }] })
+        .success,
+    ).toBe(false);
   });
 });
