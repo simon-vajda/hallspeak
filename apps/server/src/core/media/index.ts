@@ -118,10 +118,10 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
     // already coalesced and already known to differ from the last number, so every point
     // the history keeps is a change somebody could see.
     publish: (notification) => {
+      notifications.publish(notification);
       if (notification.type === 'listeners-changed') {
         listenerHistory.record(notification.eventId, notification.channelId, notification.count);
       }
-      notifications.publish(notification);
     },
   });
 
