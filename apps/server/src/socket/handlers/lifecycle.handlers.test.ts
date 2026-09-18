@@ -516,7 +516,7 @@ describe('applyNotification claim changes', () => {
     expect(emitted.every((entry) => entry.room === 'speaker-a')).toBe(true);
   });
 
-  /** R6/R7: the history rides the claim exactly as the count and the tally do. */
+  /** The history rides the claim exactly as the count and the tally do. */
   it('seeds the listener history to the socket that took the claim, and to no room', () => {
     const { io, emitted } = fakeIo();
     presence.take({ eventId, channelId, sessionId: STUDIO, socketId: 'speaker-a' });
