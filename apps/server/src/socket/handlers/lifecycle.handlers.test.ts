@@ -566,6 +566,54 @@ describe('applyNotification claim changes', () => {
   });
 
   /**
+   * The case the claim's span exists for: the live interpreter's socket drops while a
+   * colleague waits, so the claim is gone for the moment between the drop and the completed
+   * handover. The restored claim carries the same start, so the incoming studio inherits the
+   * series instead of a chart that opens flat at zero.
+   */
+  it('keeps the history when the holder drops and a waiting colleague completes the handover', () => {
+    const { io, emitted } = fakeIo();
+    const speaker: SocketAuth = {
+      eventId,
+      pin: '111111',
+      speakerChannelId: channelId,
+      studioSession: STUDIO,
+    };
+    // A moving clock, or a claim restored a millisecond later would look unchanged and the
+    // series would ride a reseed nobody would notice.
+    const clock = { now: Date.now() };
+    vi.spyOn(Date, 'now').mockImplementation(() => clock.now);
+    presence.take({ eventId, channelId, sessionId: STUDIO, socketId: 'speaker-a' });
+    clock.now += 60_000;
+    listenerHistory.record(eventId, channelId, 6);
+    const colleague = { eventId, channelId, sessionId: 'studio-b', socketId: 'speaker-b' };
+    presence.registerStudio(colleague);
+    expect(handover.request(colleague)).toBe('accepted');
+
+    clock.now += 60_000;
+    releaseSocket({ id: 'speaker-a' }, speaker);
+    expect(presence.holder(channelId)).toBeUndefined();
+    // Recorded while nobody holds the claim: the audience is still there, so the series is.
+    listenerHistory.record(eventId, channelId, 5);
+    clock.now += 60_000;
+    handover.produced(colleague);
+    expect(handover.complete(channelId)).toBe(true);
+
+    applyNotification(io, db, {
+      type: 'claim-changed',
+      eventId,
+      channelId,
+      sessionId: 'studio-b',
+      socketId: 'speaker-b',
+    });
+
+    const history = emitted.find((entry) => entry.event === 'channel:listener-history');
+    expect(history?.room).toBe('speaker-b');
+    expect(historyCounts(history?.payload)).toEqual([0, 6, 5, 0]);
+    handover.forgetChannel(channelId);
+  });
+
+  /**
    * A reconnect is the same broadcast on a new socket, and the dying socket's disconnect
    * lands after the new handshake. Neither may cost the studio its chart.
    */
