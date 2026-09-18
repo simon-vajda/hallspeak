@@ -1,9 +1,10 @@
 import { unwrap } from '@linguacast/contract/socket';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
-  type AnchoredListenerPoint,
-  anchorListenerHistory,
-  appendListenerCount,
+  extendListenerHistory,
+  forgetListenerHistory,
+  type ListenerHistoryState,
+  seedListenerHistory,
 } from '../channel/listener-history';
 import {
   type AnchoredResolution,
@@ -58,9 +59,7 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
   // A slug's absence means withheld: the snapshot arrives once when this studio gains the
   // claim, and until it does an empty series and a series nobody has sent are different
   // states. Only the first may be drawn; the second holds the panel back.
-  const [listenerHistory, setListenerHistory] = useState<Record<string, AnchoredListenerPoint[]>>(
-    {},
-  );
+  const [listenerHistory, setListenerHistory] = useState<ListenerHistoryState>({});
   const [reports, setReports] = useState<Record<string, AnchoredRow[]>>({});
   const [reportResolutions, setReportResolutions] = useState<
     Record<string, AnchoredResolution | null>
@@ -163,26 +162,12 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
     s.on('channel:listeners', ({ slug, count }) => {
       const now = Date.now();
       setListeners((prev) => ({ ...prev, [slug]: count }));
-      // Extends a series this studio already holds and never starts one: a count arriving
-      // before the snapshot would otherwise open a chart at that value, claiming the channel
-      // had no earlier audience.
-      setListenerHistory((prev) => {
-        const current = prev[slug];
-        if (current === undefined) {
-          return prev;
-        }
-        const next = appendListenerCount(current, count, now);
-        return next === current ? prev : { ...prev, [slug]: next };
-      });
+      setListenerHistory((prev) => extendListenerHistory(prev, slug, count, now));
     });
     // Sent once to the studio that gains the claim; the series is extended from
     // `channel:listeners` afterwards, never from a second snapshot.
     s.on('channel:listener-history', ({ slug, points }) => {
-      // Anchored here rather than at render: each point's `ageMs` is only true at receipt.
-      setListenerHistory((prev) => ({
-        ...prev,
-        [slug]: anchorListenerHistory(points, Date.now()),
-      }));
+      setListenerHistory((prev) => seedListenerHistory(prev, slug, points, Date.now()));
     });
     // Sent once on connect whether or not there are rows, then on every change.
     s.on('channel:reports', ({ slug, rows, soundsGood }) => {
@@ -212,10 +197,7 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
         const { [state.slug]: _gone, ...rest } = prev;
         return rest;
       });
-      setListenerHistory((prev) => {
-        const { [state.slug]: _gone, ...rest } = prev;
-        return rest;
-      });
+      setListenerHistory((prev) => forgetListenerHistory(prev, state.slug));
       setReports((prev) => {
         const { [state.slug]: _gone, ...rest } = prev;
         return rest;

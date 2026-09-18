@@ -111,3 +111,53 @@ export function listenerChartRows(
   }
   return rows;
 }
+
+/** Every channel's series this socket has been sent, keyed by slug. */
+export type ListenerHistoryState = Record<string, AnchoredListenerPoint[]>;
+
+/**
+ * Replaces a channel's series with the snapshot the server sends to the claim holder,
+ * anchoring it at receipt because each point's `ageMs` is only true then.
+ */
+export function seedListenerHistory(
+  state: ListenerHistoryState,
+  slug: string,
+  points: readonly ListenerHistoryPoint[],
+  now: number,
+): ListenerHistoryState {
+  return { ...state, [slug]: anchorListenerHistory(points, now) };
+}
+
+/**
+ * Extends a series this socket already holds and never starts one: a count arriving before
+ * the snapshot would otherwise open a chart at that value, claiming the channel had no
+ * earlier audience.
+ */
+export function extendListenerHistory(
+  state: ListenerHistoryState,
+  slug: string,
+  count: number,
+  now: number,
+): ListenerHistoryState {
+  const current = state[slug];
+  if (current === undefined) {
+    return state;
+  }
+  const next = appendListenerCount(current, count, now);
+  return next === current ? state : { ...state, [slug]: next };
+}
+
+/**
+ * Drops a channel's series. The audience belongs to whoever holds the claim, so a socket that
+ * loses it withholds the chart rather than holding a line nobody is extending.
+ */
+export function forgetListenerHistory(
+  state: ListenerHistoryState,
+  slug: string,
+): ListenerHistoryState {
+  if (state[slug] === undefined) {
+    return state;
+  }
+  const { [slug]: _gone, ...rest } = state;
+  return rest;
+}
