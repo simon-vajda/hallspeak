@@ -1,4 +1,8 @@
-import type { AnchoredResolution, AnchoredRow } from '@linguacast/client-core/channel';
+import type {
+  AnchoredListenerPoint,
+  AnchoredResolution,
+  AnchoredRow,
+} from '@linguacast/client-core/channel';
 import { isLinkUp, type LinkState } from '@linguacast/client-core/media';
 import type { components } from '@linguacast/contract/openapi';
 import { Mic, MicOff } from 'lucide-react';
@@ -10,6 +14,7 @@ import { AudioSettings } from '@/components/speaker/audio-settings';
 import { EndBroadcastDialog } from '@/components/speaker/end-broadcast-dialog';
 import { HandoverPrompt } from '@/components/speaker/handover-prompt';
 import { InputLevelPanel } from '@/components/speaker/input-level-panel';
+import { ListenerHistoryPanel } from '@/components/speaker/listener-history-panel';
 import { ListenerPageLink } from '@/components/speaker/listener-page-link';
 import { ListenerReports } from '@/components/speaker/listener-reports';
 import { OnAirStats } from '@/components/speaker/on-air-stats';
@@ -41,6 +46,7 @@ export function SpeakerOnAir({
   mic,
   startedAt,
   listeners,
+  listenerHistory,
   reports,
   reportResolution,
   reportsKnown,
@@ -63,6 +69,8 @@ export function SpeakerOnAir({
   /** When the channel went on air, across every interpreter who has held it. */
   startedAt: number | null;
   listeners: number;
+  /** This channel's recent counts, or undefined while none has been sent to this studio. */
+  listenerHistory: AnchoredListenerPoint[] | undefined;
   reports: AnchoredRow[];
   reportResolution: AnchoredResolution | null;
   reportsKnown: boolean;
@@ -161,6 +169,7 @@ export function SpeakerOnAir({
               preferences={preferences}
               onPreferencesChange={onPreferencesChange}
             />
+            <ListenerHistoryPanel history={listenerHistory} />
           </div>
         </div>
 

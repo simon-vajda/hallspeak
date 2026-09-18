@@ -2,6 +2,7 @@ import {
   ChannelJoinPayload,
   ChannelJoinResponse,
   ChannelLeavePayload,
+  ChannelListenerHistory,
   ChannelListeners,
   ChannelReportPayload,
   ChannelReportResponse,
@@ -150,6 +151,13 @@ export const serverToClient = {
    * number and a listener churning does not concern the event room.
    */
   'channel:listeners': event({ payload: ChannelListeners }),
+
+  /**
+   * To the socket holding the channel's speaker claim, like `channel:listeners`: the same
+   * audience, and the same reason. A snapshot sent when a studio gains the claim; the series
+   * is extended afterwards from `channel:listeners`, never from a second snapshot.
+   */
+  'channel:listener-history': event({ payload: ChannelListenerHistory }),
 
   /**
    * To the socket holding the channel's speaker claim, like `channel:listeners` and for the

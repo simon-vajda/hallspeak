@@ -9,6 +9,7 @@ import {
 import { Check } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { MICRO_LABEL } from '@/components/micro-label';
+import { useSettledFlag, WITHHOLD_GRACE_MS } from '@/lib/use-settled-flag';
 import { cn } from '@/lib/utils';
 import { reconcileReportRows, removeLeavingReportRows } from './report-row-presence';
 
@@ -25,13 +26,6 @@ const TRANSITION_MS = 260;
 
 /** Matches report-row-in and report-row-out in index.css. */
 const ROW_TRANSITION_MS = 200;
-
-/**
- * How long an unknown tally is withheld silently before the panel says so. The tally is
- * seeded moments after a go-live or reconnect, and a panel that mounts and leaves again in
- * that window moves every panel below it twice.
- */
-const WITHHOLD_GRACE_MS = 2_000;
 
 const TONE = {
   warn: 'border-warn-border bg-warn-muted text-warn-on-muted',
@@ -215,22 +209,6 @@ function useReportRowPresence(rows: ReturnType<typeof sortReportRows>) {
   }, [leavingKey]);
 
   return presentRows;
-}
-
-/** `value` turning true takes effect after `delayMs`; turning false takes effect at once. */
-function useSettledFlag(value: boolean, delayMs: number): boolean {
-  const [settled, setSettled] = useState(false);
-
-  useEffect(() => {
-    if (!value) {
-      setSettled(false);
-      return;
-    }
-    const timer = setTimeout(() => setSettled(true), delayMs);
-    return () => clearTimeout(timer);
-  }, [value, delayMs]);
-
-  return settled;
 }
 
 /** Keeps the panel mounted long enough for its exit animation to finish. */

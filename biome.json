@@ -41,6 +41,9 @@
             "useFocusableInteractive": "off",
             "useSemanticElements": "off"
           },
+          "security": {
+            "noDangerouslySetInnerHtml": "off"
+          },
           "suspicious": {
             "noArrayIndexKey": "off",
             "noDoubleEquals": "off"

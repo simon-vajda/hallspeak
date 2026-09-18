@@ -81,6 +81,7 @@ Applies to the server and both clients.
 - Handover: four acked client verbs (`handover:request`, `handover:cancel`, `handover:confirm`, `handover:take-over`) with a **strictly empty** payload, and one server `handover:state` snapshot built per studio socket (`holder`, `role`, `pending`, `remainingMs`, `canTakeOver`). `canTakeOver` is the server's answer; never re-derive it from a client clock. See `docs/solutions/conventions/an-identifier-returned-to-a-client-is-not-a-capability.md`.
 - `ChannelStatus` and the `channel:join` ack carry `producerId` and, during a swap, `incomingProducerId`, so a listener follows a replacement as one status rather than a close then an open.
 - Reports: `channel:report` (client, acked) and `channel:reports` (server). The tally is addressed to the claim holder only, like `channel:listeners`.
+- Listener history: `channel:listener-history` (server) carries `{ slug, points: [{ count, ageMs }] }`, oldest first, to the claim holder only. It is a snapshot, never a delta — sent once when a studio gains or rebinds the claim, and extended from `channel:listeners` after that. `LISTENER_HISTORY_WINDOW_MS` in `packages/contract` is the one window both sides prune to.
 - Durations on the wire (`remainingMs`, `ageMs`, `onAirMs`) are anchored at receipt.
 
 ## Media recovery

@@ -22,6 +22,7 @@ export function SpeakerChannel({
     hasConnected,
     channelStatuses,
     listeners,
+    listenerHistory,
     reports,
     reportResolutions,
     reportsKnown,
@@ -47,6 +48,7 @@ export function SpeakerChannel({
       channel={view.channel}
       speakerCode={speakerCode}
       listeners={listeners[view.channel.slug] ?? 0}
+      listenerHistory={listenerHistory[view.channel.slug]}
       reports={reports[view.channel.slug] ?? []}
       reportResolution={reportResolutions[view.channel.slug] ?? null}
       reportsKnown={reportsKnown}

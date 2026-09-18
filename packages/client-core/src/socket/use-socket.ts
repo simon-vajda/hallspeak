@@ -1,6 +1,12 @@
 import { unwrap } from '@linguacast/contract/socket';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
+  extendListenerHistory,
+  forgetListenerHistory,
+  type ListenerHistoryState,
+  seedListenerHistory,
+} from '../channel/listener-history';
+import {
   type AnchoredResolution,
   type AnchoredRow,
   anchorResolution,
@@ -50,6 +56,10 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
   const [channelStatusState, setChannelStatusState] =
     useState<ChannelStatusState>(initialChannelStatuses);
   const [listeners, setListeners] = useState<Record<string, number>>({});
+  // A slug's absence means withheld: the snapshot arrives once when this studio gains the
+  // claim, and until it does an empty series and a series nobody has sent are different
+  // states. Only the first may be drawn; the second holds the panel back.
+  const [listenerHistory, setListenerHistory] = useState<ListenerHistoryState>({});
   const [reports, setReports] = useState<Record<string, AnchoredRow[]>>({});
   const [reportResolutions, setReportResolutions] = useState<
     Record<string, AnchoredResolution | null>
@@ -107,6 +117,9 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
       // outage, the studio's tile would state an audience for a broadcast the server has
       // already reaped. `sendInitialListenerCount` re-seeds the real number on reconnect.
       setListeners({});
+      // The series goes with the counts that extend it: a chart held through the outage would
+      // keep drawing an audience nobody is reporting, and the snapshot re-seeds it on reconnect.
+      setListenerHistory({});
       // A tally from a dropped socket describes a channel nobody is updating, for the same
       // reason the counts go: the studio withholds rather than claiming an empty window.
       setReports({});
@@ -147,7 +160,14 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
     // Addressed to the speaker's socket alone, and sent once on connect, so a studio never
     // holds the `?? 0` fallback waiting for the first arrival or departure.
     s.on('channel:listeners', ({ slug, count }) => {
+      const now = Date.now();
       setListeners((prev) => ({ ...prev, [slug]: count }));
+      setListenerHistory((prev) => extendListenerHistory(prev, slug, count, now));
+    });
+    // Sent once to the studio that gains the claim; the series is extended from
+    // `channel:listeners` afterwards, never from a second snapshot.
+    s.on('channel:listener-history', ({ slug, points }) => {
+      setListenerHistory((prev) => seedListenerHistory(prev, slug, points, Date.now()));
     });
     // Sent once on connect whether or not there are rows, then on every change.
     s.on('channel:reports', ({ slug, rows, soundsGood }) => {
@@ -177,6 +197,7 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
         const { [state.slug]: _gone, ...rest } = prev;
         return rest;
       });
+      setListenerHistory((prev) => forgetListenerHistory(prev, state.slug));
       setReports((prev) => {
         const { [state.slug]: _gone, ...rest } = prev;
         return rest;
@@ -242,6 +263,7 @@ export function useSocket(auth: SocketAuth | null, connect: SocketFactory) {
     online,
     channelStatuses: channelStatusState.channels,
     listeners,
+    listenerHistory,
     reports,
     reportResolutions,
     reportsKnown,
