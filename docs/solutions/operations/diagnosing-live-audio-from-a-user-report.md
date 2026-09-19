@@ -53,11 +53,19 @@ expected failure sequence rather than a set of unrelated faults.
 
 Logging has two tiers. The **always-on** tier is sized so that a log pasted straight out of
 `docker compose logs` answers the checks below on its own: it carries the server version,
-the media configuration, both trusted-proxy misconfigurations, the silent-failure
-warnings, every failure signal, and a per-channel timeline of going on air and off air
-with the listener count at each boundary and the peak between them. Its cost is flat per
-event — there is no always-on line per listener — so a hundred-listener event and a
-five-listener one produce comparable volume. Every line carries a timestamp the server
+the media configuration, both trusted-proxy misconfigurations, the three silent-failure
+warnings (a transport that never connected, a producer receiving no RTP, a consumer
+sending none), worker death and replacement, room-creation failure, socket handler
+timeouts, unhandled errors, and a per-channel timeline of going on air and off air with
+the listener count at each boundary and the peak between them. The timeline's cost is
+flat per event — there is no always-on line per listener — so a healthy hundred-listener
+event and a healthy five-listener one produce comparable volume. The silent-failure
+warnings are per connection, so a deployment carrying no audio at all is loud in
+proportion to its audience; that is the signal, not noise.
+
+What is **not** always-on: a transport that connected and later dropped, and a DTLS
+failure after a successful handshake. Both are per-connection narration and live in the
+verbose tier. Every line carries a timestamp the server
 emits itself and a subsystem prefix.
 
 The **verbose** tier is off unless the operator sets `LOG_VERBOSE`. It adds the

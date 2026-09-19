@@ -53,6 +53,14 @@ export function createChannelTimeline(slugOf: SlugResolver): (n: Notification) =
     switch (notification.type) {
       case 'producer-opened': {
         const state = stateOf(notification.channelId);
+        // A handover publishes this again on a channel that never went off air — once for
+        // the incoming producer, once when it is promoted — because the swap reaches
+        // listeners as one continuous broadcast. Treating each as a boundary would restart
+        // the peak mid-broadcast and claim the channel went on air three times. The claim
+        // moving is already on the timeline as its own line.
+        if (state.onAir) {
+          return;
+        }
         state.onAir = true;
         // Reset here rather than at close, so a second broadcast on the same channel does
         // not inherit the first one's peak.

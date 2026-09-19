@@ -247,8 +247,10 @@ skipped when `MEDIA_STUN_URL` is empty.
 `docker compose logs linguacast` is the whole of your monitoring. It is written to be
 pasted into a bug report as-is: the first line names the version, every line after it
 carries the time the server stamped on it, and what you get by default is sized to answer
-a support question without anybody asking you to turn anything on. It stays that size at
-any audience — a hundred-listener event costs no more lines than a five-listener one.
+a support question without anybody asking you to turn anything on. A healthy event costs
+the same handful of lines whether five people listened or five hundred. A broken one is
+louder on purpose: the warning that a connection carried no audio is written per
+connection, so a deployment whose audio reaches nobody will say so once per listener.
 
 If someone asks you for more, set `LOG_VERBOSE=true`, recreate the container, reproduce
 the problem, then set it back and recreate again. Verbose output includes **the network

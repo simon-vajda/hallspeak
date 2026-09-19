@@ -40,13 +40,31 @@ export interface Logger extends TierWriters {
 }
 
 /**
- * Bounded because one of the keys carries an address the caller chose: a client appending
- * a forwarded header from a fresh address each time would otherwise mint keys for the life
- * of the process. Past the cap the condition stays true and stays unsaid — by then the
- * operator has more examples than they need.
+ * Bounded because a key may carry a value the caller chose: a client appending a forwarded
+ * header from a fresh address each time would otherwise mint keys for the life of the
+ * process. Past the cap that condition stays true and stays unsaid — by then the operator
+ * has more examples than they need.
+ *
+ * The cap is per family — the key up to its last colon — rather than global, so filling
+ * one condition's key space cannot silence a different condition that has not warned yet.
  */
-const MAX_ONCE_KEYS = 50;
+const MAX_ONCE_KEYS_PER_FAMILY = 50;
 const seenKeys = new Set<string>();
+const familySizes = new Map<string, number>();
+
+function admitOnce(key: string): boolean {
+  if (seenKeys.has(key)) {
+    return false;
+  }
+  const family = key.slice(0, key.lastIndexOf(':') + 1) || key;
+  const size = familySizes.get(family) ?? 0;
+  if (size >= MAX_ONCE_KEYS_PER_FAMILY) {
+    return false;
+  }
+  seenKeys.add(key);
+  familySizes.set(family, size + 1);
+  return true;
+}
 
 function compose(subsystem: Subsystem, message: string): string {
   // Self-emitted rather than left to the runtime: container runtimes timestamp only when
@@ -85,6 +103,7 @@ function writers(subsystem: Subsystem, gated: boolean): TierWriters {
 /** Tests only, in the shape of `resetAuth()`: a suite needs the first-call state back. */
 export function resetOnceWarnings(): void {
   seenKeys.clear();
+  familySizes.clear();
 }
 
 export function logger(subsystem: Subsystem): Logger {
@@ -93,11 +112,9 @@ export function logger(subsystem: Subsystem): Logger {
     ...always,
     verbose: writers(subsystem, true),
     warnOnce(key, message) {
-      if (seenKeys.has(key) || seenKeys.size >= MAX_ONCE_KEYS) {
-        return;
+      if (admitOnce(key)) {
+        always.warn(message);
       }
-      seenKeys.add(key);
-      always.warn(message);
     },
   };
 }

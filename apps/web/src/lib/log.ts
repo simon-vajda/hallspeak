@@ -4,9 +4,11 @@
  * A guest's console is not retrievable by anyone who could act on it, so narration here is
  * never telemetry — it is a development aid and nothing else. The informational and warning
  * writers therefore read Vite's build-time development flag directly, so a production build
- * substitutes the literal and drops both the call and its message. Errors are not gated: an
- * operation that failed in a way that degrades what the person gets is worth a line wherever
- * it happens.
+ * substitutes the literal and drops the console call itself. The call site still builds
+ * its own arguments, so keep an expensive message expression out of a hot path.
+ *
+ * Errors are not gated: an operation that failed in a way that degrades what the person
+ * gets is worth a line wherever it happens.
  *
  * The distinction is settled when the bundle is built. Nothing here is a runtime setting and
  * no surface exposes it.

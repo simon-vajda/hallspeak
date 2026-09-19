@@ -135,6 +135,19 @@ describe('warnOnce', () => {
     ).toHaveLength(1);
   });
 
+  it('caps each key family separately, so a full one cannot silence a quiet one', () => {
+    const log = logger('proxy');
+    for (let i = 0; i < 200; i++) {
+      log.warnOnce(`once:varying:${i}`, `address ${i}`);
+    }
+    warn.mockClear();
+
+    log.warnOnce('once:fixed', 'the condition nobody has reported yet');
+
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn.mock.calls[0]?.[0]).toContain('the condition nobody has reported yet');
+  });
+
   it('shares its keys across loggers, so a per-call-site logger still warns once', () => {
     logger('proxy').warnOnce('once:shared', 'same condition');
     logger('proxy').warnOnce('once:shared', 'same condition');
