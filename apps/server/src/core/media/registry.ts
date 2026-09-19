@@ -1,3 +1,4 @@
+import { logger } from '../../lib/log';
 import { ROOM_IDLE_GRACE_MS } from './config';
 import { Room } from './room';
 import type { WorkerLossReason, WorkerPool } from './workers';
@@ -127,7 +128,7 @@ export class RoomRegistry {
       return room;
     } catch (cause) {
       // One of the few things that explains a channel which never went live.
-      console.error(`media: could not create a room for event ${eventId}`, cause);
+      logger('media').error(`could not create a room for event ${eventId}`, cause);
       throw cause;
     }
   }

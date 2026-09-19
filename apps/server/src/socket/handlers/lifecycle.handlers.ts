@@ -12,6 +12,7 @@ import type { Notification } from '../../core/notifications';
 import { presence } from '../../core/presence';
 import { reports } from '../../core/reports';
 import type { Db } from '../../db/client';
+import { logger } from '../../lib/log';
 import { channelRoom, eventRoom } from '../lib/rooms';
 import { broadcastHandoverState } from './handover.handlers';
 import { type ReportsSocket, sendInitialReports } from './reports.handlers';
@@ -298,6 +299,6 @@ function seed(send: () => void, socketId: string, what: string): void {
   try {
     send();
   } catch (cause) {
-    console.error(`socket: could not send the initial ${what} to ${socketId}`, cause);
+    logger('socket').error(`could not send the initial ${what} to ${socketId}`, cause);
   }
 }
