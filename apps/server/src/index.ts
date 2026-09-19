@@ -1,11 +1,14 @@
 import { serve } from '@hono/node-server';
 import { app } from './app';
 import { credentialsPath, isConfigured, startAuth, sweepExpired } from './core/auth';
+import { getChannelById } from './core/channels.service';
 import { startMedia, stopMedia } from './core/media';
+import { notifications } from './core/notifications';
 import { closeDb, db } from './db';
 import { runMigrations } from './db/migrate';
 import { env } from './env';
 import { logger } from './lib/log';
+import { createChannelTimeline } from './logging/channel-timeline';
 import { attachSocket } from './socket';
 import { SERVER_VERSION } from './version';
 
@@ -66,6 +69,12 @@ const server = serve({ fetch: app.fetch, hostname: env.HOST, port: env.PORT }, (
 
 // Must come after serve(): Socket.IO takes over the HTTP server's request listeners.
 const io = attachSocket(server);
+
+// A reader of the log is not a subscriber the domain answers to: this only observes what
+// the bus already publishes, and lives outside core/ for that reason. The claim-change
+// notification is the one that names no slug, so the channel row supplies it — the slug
+// is immutable, so the answer cannot drift from the channel the line means.
+notifications.subscribe(createChannelTimeline((channelId) => getChannelById(db, channelId)?.slug));
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 let shuttingDown = false;
