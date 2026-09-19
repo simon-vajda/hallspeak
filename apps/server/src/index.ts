@@ -14,8 +14,8 @@ import { SERVER_VERSION } from './version';
 
 const log = logger('boot');
 
-// First line of every log: two release tracks and a version handshake make the version
-// the first thing a pasted log has to answer.
+// First thing the boot path logs: two release tracks and a version handshake make the
+// version the first thing a pasted log has to answer.
 log.info(`LinguaCast server ${SERVER_VERSION}`);
 
 // Before serve(): the process either has a current schema or fails to start, so the

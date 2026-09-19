@@ -21,7 +21,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const lines = () => info.mock.calls.map((call) => String(call[0]));
+const lines = () => info.mock.calls.map((call: unknown[]) => String(call[0]));
 const timeline = () => createChannelTimeline((channelId) => SLUGS.get(channelId));
 
 const onAir = (channelId = 11, slug = 'de'): Notification => ({

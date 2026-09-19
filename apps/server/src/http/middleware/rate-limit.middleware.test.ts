@@ -236,7 +236,7 @@ describe('trusted-proxy misconfiguration warnings', () => {
     vi.restoreAllMocks();
   });
 
-  const lines = () => warn.mock.calls.map((call) => String(call[0]));
+  const lines = () => warn.mock.calls.map((call: unknown[]) => String(call[0]));
 
   it('warns once when a trusted proxy appends no forwarded header', async () => {
     const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
