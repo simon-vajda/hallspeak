@@ -62,6 +62,11 @@ function writers(subsystem: string, gated: boolean): TierWriters {
   };
 }
 
+/** Tests only, in the shape of `resetAuth()`: a suite needs the first-call state back. */
+export function resetOnceWarnings(): void {
+  seenKeys.clear();
+}
+
 export function logger(subsystem: string): Logger {
   const always = writers(subsystem, false);
   return {
