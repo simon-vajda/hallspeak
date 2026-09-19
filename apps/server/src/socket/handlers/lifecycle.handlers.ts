@@ -17,6 +17,8 @@ import { channelRoom, eventRoom } from '../lib/rooms';
 import { broadcastHandoverState } from './handover.handlers';
 import { type ReportsSocket, sendInitialReports } from './reports.handlers';
 
+const log = logger('socket');
+
 /** The subset of Server this module needs; a real Server satisfies it. */
 export interface LifecycleServer {
   to(room: string): {
@@ -299,6 +301,6 @@ function seed(send: () => void, socketId: string, what: string): void {
   try {
     send();
   } catch (cause) {
-    logger('socket').error(`could not send the initial ${what} to ${socketId}`, cause);
+    log.error(`could not send the initial ${what} to ${socketId}`, cause);
   }
 }

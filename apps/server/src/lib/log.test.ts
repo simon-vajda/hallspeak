@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const { envMock } = vi.hoisted(() => ({ envMock: { LOG_VERBOSE: false } }));
 vi.mock('../env', () => ({ env: envMock }));
 
-const { logger } = await import('./log');
+const { logger, resetOnceWarnings } = await import('./log');
 
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z /;
 
@@ -12,6 +12,7 @@ let warn: ReturnType<typeof vi.spyOn>;
 let error: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
+  resetOnceWarnings();
   envMock.LOG_VERBOSE = false;
   info = vi.spyOn(console, 'log').mockImplementation(() => {});
   warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -117,6 +118,21 @@ describe('warnOnce', () => {
     log.warnOnce('once:a', 'first shape');
 
     expect(warn).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops recording new keys past its cap, so a varying key cannot grow without bound', () => {
+    const log = logger('proxy');
+    for (let i = 0; i < 200; i++) {
+      log.warnOnce(`once:cap:${i}`, `address ${i}`);
+    }
+
+    expect(warn.mock.calls.length).toBeLessThan(200);
+    // A key already recorded before the cap is still honoured rather than re-emitted.
+    log.warnOnce('once:cap:0', 'address 0');
+
+    expect(
+      warn.mock.calls.map(String).filter((line: string) => line.endsWith('address 0')),
+    ).toHaveLength(1);
   });
 
   it('shares its keys across loggers, so a per-call-site logger still warns once', () => {

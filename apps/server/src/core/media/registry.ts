@@ -3,6 +3,8 @@ import { ROOM_IDLE_GRACE_MS } from './config';
 import { Room } from './room';
 import type { WorkerLossReason, WorkerPool } from './workers';
 
+const log = logger('media');
+
 export type RoomClosedReason = WorkerLossReason | 'idle' | 'shutdown' | 'revoked';
 
 export interface RoomRegistryOptions {
@@ -128,7 +130,7 @@ export class RoomRegistry {
       return room;
     } catch (cause) {
       // One of the few things that explains a channel which never went live.
-      logger('media').error(`could not create a room for event ${eventId}`, cause);
+      log.error(`could not create a room for event ${eventId}`, cause);
       throw cause;
     }
   }

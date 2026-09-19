@@ -23,6 +23,10 @@ function build(capacity: number, now: () => number) {
 // argument is that env, so the same extraction path is exercised here as in production.
 const from = (ip: string) => ({ incoming: { socket: { remoteAddress: ip } } });
 
+// The header belongs in the request init; the connecting address belongs in the env.
+const forwarded = (ip: string, chain: string) =>
+  [{ headers: { 'x-forwarded-for': chain } }, from(ip)] as const;
+
 describe('createRateLimit', () => {
   it('never charges a successful lookup', async () => {
     const now = 0;
@@ -159,10 +163,6 @@ describe('chargeStatuses', () => {
 });
 
 describe('clientIp behind a proxy', () => {
-  // The header belongs in the request init; the connecting address belongs in the env.
-  const forwarded = (ip: string, chain: string) =>
-    [{ headers: { 'x-forwarded-for': chain } }, from(ip)] as const;
-
   it('buckets by the rightmost forwarded entry when the proxy is trusted', async () => {
     const app = buildFor({ capacity: 1, trustedProxies: ['10.0.0.9'] });
     const proxy = from('10.0.0.9');
@@ -220,11 +220,6 @@ describe('clientIp behind a proxy', () => {
 });
 
 describe('trusted-proxy misconfiguration warnings', () => {
-  // Unlike the helper above, the header goes in the request init — it has to actually
-  // reach the request for the untrusted-forwarder branch to see it at all.
-  const forwardedFrom = (ip: string, chain: string) =>
-    [{ headers: { 'x-forwarded-for': chain } }, from(ip)] as const;
-
   let warn: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -253,7 +248,7 @@ describe('trusted-proxy misconfiguration warnings', () => {
     const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
 
     for (let i = 0; i < 10; i++) {
-      await app.request('/miss', ...forwardedFrom('172.18.0.4', '1.1.1.1'));
+      await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
     }
 
     expect(warn).toHaveBeenCalledOnce();
@@ -263,8 +258,8 @@ describe('trusted-proxy misconfiguration warnings', () => {
   it('warns for a second unlisted address rather than suppressing it behind the first', async () => {
     const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
 
-    await app.request('/miss', ...forwardedFrom('172.18.0.4', '1.1.1.1'));
-    await app.request('/miss', ...forwardedFrom('203.0.113.7', '1.1.1.1'));
+    await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
+    await app.request('/miss', ...forwarded('203.0.113.7', '1.1.1.1'));
 
     expect(warn).toHaveBeenCalledTimes(2);
     expect(lines()[1]).toContain('203.0.113.7');
@@ -274,7 +269,7 @@ describe('trusted-proxy misconfiguration warnings', () => {
     const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
 
     await app.request('/miss', undefined, from('10.0.0.9'));
-    await app.request('/miss', ...forwardedFrom('172.18.0.4', '1.1.1.1'));
+    await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
 
     expect(warn).toHaveBeenCalledTimes(2);
     expect(lines()[0]).not.toBe(lines()[1]);
@@ -284,7 +279,7 @@ describe('trusted-proxy misconfiguration warnings', () => {
   it('stays silent when no proxy is trusted, which the boot warning already covers', async () => {
     const app = buildFor({ capacity: 1_000, trustedProxies: [] });
 
-    await app.request('/miss', ...forwardedFrom('172.18.0.4', '1.1.1.1'));
+    await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
     await app.request('/miss', undefined, from('172.18.0.4'));
 
     expect(warn).not.toHaveBeenCalled();

@@ -13,6 +13,19 @@ import { env } from '../env';
  * hundred-listener event buries every always-on line under a thousand that do not matter.
  */
 
+/**
+ * Closed on purpose: `logger` takes one of these and nothing else, so a typo cannot split
+ * one subsystem's lines across two prefixes nobody thinks to correlate.
+ */
+export type Subsystem =
+  | 'boot'
+  | 'channel'
+  | 'error'
+  | 'media'
+  | 'notifications'
+  | 'proxy'
+  | 'socket';
+
 export interface TierWriters {
   info(message: string): void;
   warn(message: string): void;
@@ -26,16 +39,23 @@ export interface Logger extends TierWriters {
   warnOnce(key: string, message: string): void;
 }
 
+/**
+ * Bounded because one of the keys carries an address the caller chose: a client appending
+ * a forwarded header from a fresh address each time would otherwise mint keys for the life
+ * of the process. Past the cap the condition stays true and stays unsaid — by then the
+ * operator has more examples than they need.
+ */
+const MAX_ONCE_KEYS = 50;
 const seenKeys = new Set<string>();
 
-function compose(subsystem: string, message: string): string {
+function compose(subsystem: Subsystem, message: string): string {
   // Self-emitted rather than left to the runtime: container runtimes timestamp only when
   // asked and journald rewrites what it captures, so this is the only value that survives
   // an arbitrary copy-paste into a ticket.
   return `${new Date().toISOString()} ${subsystem}: ${message}`;
 }
 
-function writers(subsystem: string, gated: boolean): TierWriters {
+function writers(subsystem: Subsystem, gated: boolean): TierWriters {
   const enabled = (): boolean => !gated || env.LOG_VERBOSE;
   return {
     info(message) {
@@ -67,13 +87,13 @@ export function resetOnceWarnings(): void {
   seenKeys.clear();
 }
 
-export function logger(subsystem: string): Logger {
+export function logger(subsystem: Subsystem): Logger {
   const always = writers(subsystem, false);
   return {
     ...always,
     verbose: writers(subsystem, true),
     warnOnce(key, message) {
-      if (seenKeys.has(key)) {
+      if (seenKeys.has(key) || seenKeys.size >= MAX_ONCE_KEYS) {
         return;
       }
       seenKeys.add(key);
