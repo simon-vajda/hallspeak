@@ -178,7 +178,12 @@ describe('warnOnce', () => {
   it('emits on the first call for a key and stays silent afterwards', () => {
     const log = logger('proxy');
     for (let i = 0; i < 100; i++) {
-      log.warnOnce('once:first', { header: 'x-forwarded-for' }, 'the proxy appends no header');
+      log.warnOnce(
+        'once:first',
+        null,
+        { header: 'x-forwarded-for' },
+        'the proxy appends no header',
+      );
     }
 
     expect(records).toHaveLength(1);
@@ -191,9 +196,9 @@ describe('warnOnce', () => {
 
   it('tracks two keys independently', () => {
     const log = logger('proxy');
-    log.warnOnce('once:a', {}, 'first shape');
-    log.warnOnce('once:b', {}, 'second shape');
-    log.warnOnce('once:a', {}, 'first shape');
+    log.warnOnce('once:a', null, {}, 'first shape');
+    log.warnOnce('once:b', null, {}, 'second shape');
+    log.warnOnce('once:a', null, {}, 'first shape');
 
     expect(records).toHaveLength(2);
   });
@@ -201,11 +206,11 @@ describe('warnOnce', () => {
   it('stops recording new keys past its cap, so a varying key cannot grow without bound', () => {
     const log = logger('proxy');
     for (let i = 0; i < 200; i++) {
-      log.warnOnce(`once:cap:${i}`, { address: `198.51.100.${i}` }, 'unlisted address');
+      log.warnOnce('once:cap', String(i), { address: `198.51.100.${i}` }, 'unlisted address');
     }
 
     expect(records.length).toBeLessThan(200);
-    log.warnOnce('once:cap:0', { address: '198.51.100.0' }, 'unlisted address');
+    log.warnOnce('once:cap', '0', { address: '198.51.100.0' }, 'unlisted address');
 
     expect(records.filter((record) => record.address === '198.51.100.0')).toHaveLength(1);
   });
@@ -213,21 +218,35 @@ describe('warnOnce', () => {
   it('caps each key family separately, so a full one cannot silence a quiet one', () => {
     const log = logger('proxy');
     for (let i = 0; i < 200; i++) {
-      log.warnOnce(`once:varying:${i}`, { address: `198.51.100.${i}` }, 'unlisted address');
+      log.warnOnce('once:varying', String(i), { address: `198.51.100.${i}` }, 'unlisted address');
     }
     records = [];
 
-    log.warnOnce('once:fixed', {}, 'the condition nobody has reported yet');
+    log.warnOnce('once:fixed', null, {}, 'the condition nobody has reported yet');
 
     expect(records).toHaveLength(1);
     expect(records[0]?.msg).toBe('the condition nobody has reported yet');
   });
 
   it('shares its keys across loggers, so a per-call-site logger still warns once', () => {
-    logger('proxy').warnOnce('once:shared', {}, 'same condition');
-    logger('proxy').warnOnce('once:shared', {}, 'same condition');
+    logger('proxy').warnOnce('once:shared', null, {}, 'same condition');
+    logger('proxy').warnOnce('once:shared', null, {}, 'same condition');
 
     expect(records).toHaveLength(1);
+  });
+
+  it('holds the cap when the discriminator is an address carrying separators', () => {
+    const log = logger('proxy');
+    for (let i = 0; i < 200; i++) {
+      log.warnOnce(
+        'once:v6',
+        `2001:db8:1:${i}::1`,
+        { peer: `2001:db8:1:${i}::1` },
+        'unlisted address',
+      );
+    }
+
+    expect(records.length).toBeLessThanOrEqual(50);
   });
 });
 
@@ -254,7 +273,7 @@ describe('the transport targets', () => {
       file: '/data/logs/linguacast.log',
       frequency: 'daily',
       dateFormat: 'yyyy-MM-dd',
-      limit: { count: 14 },
+      limit: { count: 14, removeOtherLogFiles: true },
     });
   });
 

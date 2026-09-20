@@ -48,8 +48,11 @@ export interface Logger {
   readonly info: Writer;
   readonly debug: Writer;
   readonly trace: Writer;
-  /** Writes the first time this key is seen in the process, then stays silent. */
-  warnOnce(key: string, fields: Fields, message: string): void;
+  /**
+   * Writes the first time this family and discriminator are seen together in the process,
+   * then stays silent. A condition that warns about one thing passes `null`.
+   */
+  warnOnce(family: string, of: string | null, fields: Fields, message: string): void;
 }
 
 /**
@@ -93,7 +96,13 @@ function bareError(value: unknown): unknown {
   return pino.stdSerializers.err(copy);
 }
 
-/** Daily files with a fortnight kept, so the directory has a ceiling an operator can state. */
+/**
+ * Daily files with a fortnight kept, so the directory has a ceiling an operator can state.
+ *
+ * `removeOtherLogFiles` is what makes that ceiling true across restarts: without it
+ * pino-roll prunes only the files it opened itself this run, and an upgrade — which here
+ * is "pull and restart" — starts a fresh list that never reaches the older ones.
+ */
 const LOG_FILE_FREQUENCY = 'daily';
 const LOG_FILE_COUNT = 14;
 /** Without this a rotated file is numbered but not dated, and says nothing about when it is from. */
@@ -105,24 +114,29 @@ const LOG_FILE_DATE_FORMAT = 'yyyy-MM-dd';
  * process. Past the cap that condition stays true and stays unsaid — by then the operator
  * has more examples than they need.
  *
- * The cap is per family — the key up to its last colon — rather than global, so filling
- * one condition's key space cannot silence a different condition that has not warned yet.
+ * The cap is per family rather than global, so filling one condition's key space cannot
+ * silence a different condition that has not warned yet. The family is passed rather than
+ * parsed back out of the key: an IPv6 address carries colons of its own, so splitting one
+ * key on a separator would read part of the address as the family and hand every prefix a
+ * budget of its own — the unbounded growth the cap exists to stop.
  */
 const MAX_ONCE_KEYS_PER_FAMILY = 50;
-const seenKeys = new Set<string>();
-const familySizes = new Map<string, number>();
+const seenKeys = new Map<string, Set<string>>();
 
-function admitOnce(key: string): boolean {
-  if (seenKeys.has(key)) {
+function admitOnce(family: string, of: string | null): boolean {
+  let seen = seenKeys.get(family);
+  if (!seen) {
+    seen = new Set<string>();
+    seenKeys.set(family, seen);
+  }
+  const key = of ?? '';
+  if (seen.has(key)) {
     return false;
   }
-  const family = key.slice(0, key.lastIndexOf(':') + 1) || key;
-  const size = familySizes.get(family) ?? 0;
-  if (size >= MAX_ONCE_KEYS_PER_FAMILY) {
+  if (seen.size >= MAX_ONCE_KEYS_PER_FAMILY) {
     return false;
   }
-  seenKeys.add(key);
-  familySizes.set(family, size + 1);
+  seen.add(key);
   return true;
 }
 
@@ -160,7 +174,7 @@ export function logTargets(level: string, directory: string, colorize: boolean):
         file: `${directory}/linguacast.log`,
         frequency: LOG_FILE_FREQUENCY,
         dateFormat: LOG_FILE_DATE_FORMAT,
-        limit: { count: LOG_FILE_COUNT },
+        limit: { count: LOG_FILE_COUNT, removeOtherLogFiles: true },
       },
     });
   }
@@ -235,7 +249,6 @@ const root = pino(
 /** Tests only, in the shape of `resetAuth()`: a suite needs the first-call state back. */
 export function resetOnceWarnings(): void {
   seenKeys.clear();
-  familySizes.clear();
 }
 
 /** Tests only: records go to this stream instead of the transport. */
@@ -271,8 +284,8 @@ export function flushLogs(done: () => void): void {
 export function logger(subsystem: Subsystem): Logger {
   const child = root.child({ subsystem });
   return Object.assign(child, {
-    warnOnce(key: string, fields: Fields, message: string): void {
-      if (admitOnce(key)) {
+    warnOnce(family: string, of: string | null, fields: Fields, message: string): void {
+      if (admitOnce(family, of)) {
         child.warn(fields, message);
       }
     },

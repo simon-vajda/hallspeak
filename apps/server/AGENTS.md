@@ -88,7 +88,7 @@ Rules local to the server. Repo-wide rules, the socket protocol and versioning l
 ## Deployment
 
 - `Dockerfile`, `.dockerignore`, `compose.yaml`, `.env.example`, `docker/entrypoint.sh` and `.github/workflows/server-release.yml` are the deployment artifact; `docs/hosting.md` is the operator guide.
-- The image compiles once on `$BUILDPLATFORM` and installs only the two tsdown externals per `$TARGETPLATFORM` from the manifest `scripts/emit-runtime-manifest.mjs` generates.
+- The image compiles once on `$BUILDPLATFORM` and installs only the tsdown externals per `$TARGETPLATFORM` from the manifest `scripts/emit-runtime-manifest.mjs` generates.
 - The mediasoup worker is fetched explicitly against a pinned `MEDIASOUP_WORKER_KERNEL`; the build asserts exit status 41 (a prebuilt binary ran). See `docs/solutions/integration-issues/pin-mediasoups-prebuilt-worker-to-a-kernel-line-the-base-image-can-load.md`.
 - The entrypoint owns `/data` and drops privileges with `setpriv` unless Compose's `user:` already did.
 - RTC ports are published one-to-one; a remapped port breaks audio silently.
