@@ -31,6 +31,23 @@ interface ChannelState {
 
 export type SlugResolver = (channelId: number) => string | undefined;
 
+/**
+ * The session id distinguishes a swap from a first claim but never reaches the log: it is
+ * a broadcasting credential.
+ */
+function claimLine(previous: string | null, holder: string | null): [string, string] {
+  if (holder === null) {
+    return ['rights-released', 'broadcast rights released'];
+  }
+  if (previous === null) {
+    return ['rights-taken', 'broadcast rights taken'];
+  }
+  if (previous === holder) {
+    return ['rights-rebound', 'broadcast rights rebound to a reconnected studio'];
+  }
+  return ['rights-handed', 'broadcast rights handed to another studio'];
+}
+
 export function createChannelTimeline(slugOf: SlugResolver): (n: Notification) => void {
   const channels = new Map<number, ChannelState>();
 
@@ -105,16 +122,7 @@ export function createChannelTimeline(slugOf: SlugResolver): (n: Notification) =
         const state = stateOf(notification.channelId);
         const previous = state.holder;
         state.holder = notification.sessionId;
-        // The session id distinguishes a swap from a first claim but never reaches the
-        // log: it is a broadcasting credential.
-        const [transition, message] =
-          notification.sessionId === null
-            ? ['rights-released', 'broadcast rights released']
-            : previous === null
-              ? ['rights-taken', 'broadcast rights taken']
-              : previous === notification.sessionId
-                ? ['rights-rebound', 'broadcast rights rebound to a reconnected studio']
-                : ['rights-handed', 'broadcast rights handed to another studio'];
+        const [transition, message] = claimLine(previous, notification.sessionId);
         log.info({ ...subject(notification.eventId, notification.channelId), transition }, message);
         return;
       }

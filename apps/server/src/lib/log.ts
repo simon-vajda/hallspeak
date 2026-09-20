@@ -73,6 +73,26 @@ const REDACTED_KEYS = [
 
 const REDACTED_PATHS = REDACTED_KEYS.flatMap((key) => [key, `*.${key}`]);
 
+/**
+ * Name, message and stack only, rebuilt rather than deleted off the original, which
+ * callers up the stack still own.
+ *
+ * pino's default serializer for this field copies every own property off the thrown value
+ * and attaches the original under `raw`. A socket handler's state carries the event PIN,
+ * so that default would put a listening credential into the log an operator is told to
+ * paste into a ticket. Redaction does not cover it: the paths are fixed spellings at a
+ * fixed depth, and a credential nested anywhere below a thrown value's own properties
+ * would pass through them.
+ */
+function bareError(value: unknown): unknown {
+  if (!(value instanceof Error)) {
+    return { type: typeof value };
+  }
+  const copy = new Error(value.message);
+  copy.stack = value.stack ?? `${value.name}: ${value.message}`;
+  return pino.stdSerializers.err(copy);
+}
+
 /** Daily files with a fortnight kept, so the directory has a ceiling an operator can state. */
 const LOG_FILE_FREQUENCY = 'daily';
 const LOG_FILE_COUNT = 14;
@@ -205,6 +225,7 @@ const root = pino(
     // survives an arbitrary copy-paste into a ticket.
     timestamp: pino.stdTimeFunctions.isoTime,
     redact: { paths: REDACTED_PATHS, censor: '[redacted]' },
+    serializers: { err: bareError },
   },
   // Resolved per write, so a suite can install its own destination and so the transport's
   // worker threads start only in a process that actually logs.
