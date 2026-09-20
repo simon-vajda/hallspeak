@@ -156,7 +156,8 @@ export class AnnouncedAddress {
         answers = await this.resolve(this.configured);
       } catch (cause) {
         log.warn(
-          `could not re-resolve ${this.configured}; still announcing ${this.value}: ${String(cause)}`,
+          { err: cause, configured: this.configured, announced: this.value },
+          'could not re-resolve the public address; still announcing the last known one',
         );
         return;
       }
@@ -165,8 +166,8 @@ export class AnnouncedAddress {
       const [next] = routable;
       if (next === undefined) {
         log.warn(
-          `${this.configured} resolves to nothing routable ` +
-            `(${answers.join(', ') || 'no answer'}); still announcing ${this.value}`,
+          { configured: this.configured, answers, announced: this.value },
+          'the public address resolves to nothing routable; still announcing the last known one',
         );
         return;
       }
@@ -179,7 +180,10 @@ export class AnnouncedAddress {
 
       const previous = this.value;
       this.value = next;
-      log.info(`${this.configured} moved from ${previous} to ${next}; re-announcing`);
+      log.info(
+        { configured: this.configured, previous, announced: next },
+        'public address moved; re-announcing',
+      );
       for (const listener of this.listeners) {
         listener(next);
       }

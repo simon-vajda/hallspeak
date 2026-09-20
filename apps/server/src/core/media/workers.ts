@@ -26,6 +26,19 @@ export interface WorkerPoolOptions {
 /** Why the rooms on a worker index are gone. A death is the only reason left. */
 export type WorkerLossReason = 'worker_died';
 
+/**
+ * The fields of the startup record, so the caller logs values rather than a sentence.
+ * An alias rather than an interface: only the former carries the implicit index signature
+ * the logger's field type requires.
+ */
+export type StartupSummary = {
+  workers: number;
+  cores: number;
+  ports: number[];
+  announced: string;
+  resolved?: string;
+};
+
 export interface RouterAllocation {
   router: types.Router;
   webRtcServer: types.WebRtcServer;
@@ -83,23 +96,26 @@ export class WorkerPool {
   }
 
   /**
-   * The one line that makes a misconfigured host diagnosable without instrumentation.
+   * The one record that makes a misconfigured host diagnosable without instrumentation.
    * Both counts, because `os.cpus()` reports the host's cores and not a cgroup quota:
    * an operator running under `--cpus` sees the mismatch here or nowhere.
    *
-   * Names the resolved address alongside the configured one: what the workers announce is
-   * `PUBLIC_ADDRESS` verbatim, which may be a name, and the operator would otherwise lose
-   * sight of the address guests actually reach.
+   * Carries the resolved address alongside the configured one: what the workers announce
+   * is `PUBLIC_ADDRESS` verbatim, which may be a name, and the operator would otherwise
+   * lose sight of the address guests actually reach. Absent when the two are the same,
+   * so a deployment configured with a literal is not told the same thing twice.
    */
-  startupSummary(resolvedAddress?: string): string {
+  startupSummary(resolvedAddress?: string): StartupSummary {
     const ports = [...this.slots.keys()].sort((a, b) => a - b).map((i) => this.net.rtcPortBase + i);
-    return [
-      `${this.slots.size} worker(s) of ${this.hostCpuCount} detected core(s)`,
-      `ports ${ports.join(', ')} (UDP and TCP)`,
-      resolvedAddress && resolvedAddress !== this.net.announcedIp
-        ? `guests connect to ${this.net.announcedIp} (${resolvedAddress})`
-        : `guests connect to ${this.net.announcedIp}`,
-    ].join(' · ');
+    return {
+      workers: this.slots.size,
+      cores: this.hostCpuCount,
+      ports,
+      announced: this.net.announcedIp,
+      ...(resolvedAddress && resolvedAddress !== this.net.announcedIp
+        ? { resolved: resolvedAddress }
+        : {}),
+    };
   }
 
   /** The registry subscribes here to drop the rooms that lived on a lost index. */
@@ -188,7 +204,7 @@ export class WorkerPool {
     }
     slot.pending.clear();
 
-    log.error(`worker ${slot.index} died; dropping its rooms`);
+    log.error({ index: slot.index }, 'worker died; dropping its rooms');
     for (const listener of this.listeners) {
       listener(slot.index, 'worker_died');
     }
@@ -196,9 +212,8 @@ export class WorkerPool {
     const recent = this.recordDeath(slot.index);
     if (recent.length > REPLACEMENT_LIMIT) {
       log.error(
-        `worker ${slot.index} died ${recent.length} times in ${
-          REPLACEMENT_WINDOW_MS / 1000
-        }s; left down rather than respawned`,
+        { index: slot.index, deaths: recent.length, windowMs: REPLACEMENT_WINDOW_MS },
+        'worker left down rather than respawned after repeated deaths',
       );
       this.scheduleRetry(slot.index);
       return;
@@ -245,9 +260,9 @@ export class WorkerPool {
   private async replace(index: number): Promise<void> {
     try {
       await this.spawn(index);
-      log.info(`worker ${index} replaced on port ${this.net.rtcPortBase + index}`);
+      log.info({ index, port: this.net.rtcPortBase + index }, 'worker replaced');
     } catch (cause) {
-      log.error(`could not replace worker ${index}`, cause);
+      log.error({ err: cause, index }, 'could not replace worker');
       this.scheduleRetry(index);
     }
   }

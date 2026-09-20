@@ -130,7 +130,7 @@ export class RoomRegistry {
       return room;
     } catch (cause) {
       // One of the few things that explains a channel which never went live.
-      log.error(`could not create a room for event ${eventId}`, cause);
+      log.error({ err: cause, eventId }, 'could not create a room');
       throw cause;
     }
   }

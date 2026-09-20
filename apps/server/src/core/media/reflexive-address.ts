@@ -165,19 +165,3 @@ export function discoverReflexiveAddress(
     });
   });
 }
-
-/**
- * The comparison the probe exists for. Returns the line to log, or null when there is
- * nothing worth saying — the two agree, or the answer never came.
- */
-export function reflexiveMismatch(announced: string, reflexive: string | null): string | null {
-  if (reflexive === null || reflexive === announced) {
-    return null;
-  }
-  return (
-    `mediasoup: guests are told to connect to ${announced}, but a STUN server sees this ` +
-    `host as ${reflexive}. If nobody can hear anything, PUBLIC_ADDRESS is the first thing ` +
-    'to check — though the two differ legitimately on a multi-WAN router, behind CGNAT, or ' +
-    'when the forwarded address is not the one this server dials out through.'
-  );
-}

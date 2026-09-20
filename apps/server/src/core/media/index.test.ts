@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useLogDestination } from '../../lib/log';
 import { handover } from '../handover';
 import type { Notification } from '../notifications';
 import { notifications } from '../notifications';
@@ -30,18 +31,33 @@ import {
   startFakeMedia,
 } from './testing';
 
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'trace', LOG_DIR: '' },
+}));
+vi.mock('../../env', () => ({ env: envMock }));
+
+const INFO = 30;
+const WARN = 40;
+
 const EVENT = 1;
 const ENGLISH = 10;
 const SPANISH = 11;
 
 let published: Notification[] = [];
 let unsubscribe: () => void;
+let records: Record<string, unknown>[] = [];
+
+const at = (level: number) => records.filter((record) => record.level === level);
 
 beforeEach(async () => {
   published = [];
+  records = [];
+  useLogDestination({
+    write(chunk: string) {
+      records.push(JSON.parse(chunk));
+    },
+  });
   unsubscribe = notifications.subscribe((n) => published.push(n));
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
 
   await startFakeMedia();
 });
@@ -449,27 +465,52 @@ describe('createTransport', () => {
     expect(iceCandidates.map((candidate) => candidate.address)).toContain('203.0.113.7');
   });
 
-  it('logs the configured hostname and the address it resolved to together', async () => {
+  it('records the configured hostname and the address it resolved to as separate fields', async () => {
     await stopMedia();
+    records = [];
     await startFakeMedia({
       announcedIp: 'media.example.org',
       resolveAddress: async () => ['203.0.113.7'],
     });
 
-    const summary = vi
-      .mocked(console.log)
-      .mock.calls.map(([line]) => String(line))
-      .findLast((line) => line.includes('worker(s)'));
-    expect(summary).toContain('media.example.org');
-    expect(summary).toContain('203.0.113.7');
+    expect(at(INFO)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          msg: 'public address resolved',
+          configured: 'media.example.org',
+          announced: '203.0.113.7',
+        }),
+      ]),
+    );
+  });
+
+  it('records the startup summary with the address, the worker count and the core count', async () => {
+    await stopMedia();
+    records = [];
+    await startFakeMedia({ announcedIp: '203.0.113.7' });
+
+    const ready = at(INFO).find((record) => record.msg === 'media ready');
+    expect(ready).toMatchObject({
+      announced: '203.0.113.7',
+      workers: 1,
+      cores: 1,
+      ports: [44400],
+      subsystem: 'media',
+    });
+    expect(ready).not.toHaveProperty('resolved');
   });
 
   it('warns about a private literal, naming the address guests would be given', async () => {
     await stopMedia();
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    records = [];
     await startFakeMedia({ announcedIp: '192.168.1.20' });
 
-    expect(warn.mock.calls.map(([line]) => String(line)).join('\n')).toContain('192.168.1.20');
+    expect(at(WARN)).toEqual([
+      expect.objectContaining({
+        msg: expect.stringContaining('private or loopback address'),
+        announced: '192.168.1.20',
+      }),
+    ]);
   });
 
   it('refuses to boot on a hostname that resolves only to private addresses', async () => {

@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useLogDestination } from '../../lib/log';
 import type { MediaNetworkConfig } from './config';
 import {
   REPLACEMENT_LIMIT,
@@ -7,6 +8,11 @@ import {
   type WorkerFactory,
   WorkerPool,
 } from './workers';
+
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'trace', LOG_DIR: '' },
+}));
+vi.mock('../../env', () => ({ env: envMock }));
 
 const net: MediaNetworkConfig = {
   listenIp: '0.0.0.0',
@@ -115,17 +121,19 @@ async function killPastTheCap(pool: WorkerPool) {
   await vi.waitFor(() => expect(pool.size).toBe(0));
 }
 
-let errors: string[] = [];
-let logs: string[] = [];
+const ERROR = 50;
+const INFO = 30;
+
+let records: Record<string, unknown>[] = [];
+
+const at = (level: number) => records.filter((record) => record.level === level);
 
 beforeEach(() => {
-  errors = [];
-  logs = [];
-  vi.spyOn(console, 'error').mockImplementation((...args) => {
-    errors.push(args.join(' '));
-  });
-  vi.spyOn(console, 'log').mockImplementation((...args) => {
-    logs.push(args.join(' '));
+  records = [];
+  useLogDestination({
+    write(chunk: string) {
+      records.push(JSON.parse(chunk));
+    },
   });
 });
 
@@ -159,26 +167,28 @@ describe('WorkerPool.start', () => {
     await pool.close();
   });
 
-  it('summarises both counts, the ports and the address', async () => {
+  it('summarises both counts, the ports and the address as separate fields', async () => {
     const { pool } = harness({ maxWorkers: 2 }, 8);
     await pool.start();
-    const summary = pool.startupSummary();
-    expect(summary).toContain('2');
-    expect(summary).toContain('8');
-    expect(summary).toContain('44400');
-    expect(summary).toContain('44401');
-    expect(summary).toContain('203.0.113.10');
-    expect(summary.toLowerCase()).not.toContain('turn');
+
+    expect(pool.startupSummary()).toEqual({
+      workers: 2,
+      cores: 8,
+      ports: [44400, 44401],
+      announced: '203.0.113.10',
+    });
     await pool.close();
   });
 
-  it('names the resolved literal beside a configured hostname, and only then', async () => {
+  it('carries the resolved literal beside a configured hostname, and only then', async () => {
     const { pool } = harness({ maxWorkers: 1 }, 1);
     await pool.start();
-    expect(pool.startupSummary('198.51.100.4')).toContain('203.0.113.10 (198.51.100.4)');
-    expect(pool.startupSummary('203.0.113.10').endsWith('guests connect to 203.0.113.10')).toBe(
-      true,
-    );
+
+    expect(pool.startupSummary('198.51.100.4')).toMatchObject({
+      announced: '203.0.113.10',
+      resolved: '198.51.100.4',
+    });
+    expect(pool.startupSummary('203.0.113.10')).not.toHaveProperty('resolved');
     await pool.close();
   });
 });
@@ -250,17 +260,32 @@ describe('WorkerPool worker death', () => {
     await pool.close();
   });
 
-  it('logs the death always-on, timestamped and under the media prefix', async () => {
+  it('records the death at error, with the slot index as a field', async () => {
     const { pool, spawned } = harness({ maxWorkers: 2 }, 2);
     await pool.start();
 
     spawned[1]?.die();
-    await vi.waitFor(() =>
-      expect(errors.some((line) => line.includes('worker 1 died'))).toBe(true),
-    );
+    await vi.waitFor(() => expect(at(ERROR)).toHaveLength(1));
 
-    const line = errors.find((entry) => entry.includes('worker 1 died')) ?? '';
-    expect(line).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z media: /);
+    expect(at(ERROR)[0]).toMatchObject({
+      msg: 'worker died; dropping its rooms',
+      index: 1,
+      subsystem: 'media',
+      time: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/),
+    });
+    await pool.close();
+  });
+
+  it('records the replacement at info, with the slot index and its port', async () => {
+    const { pool, spawned } = harness({ maxWorkers: 2 }, 2);
+    await pool.start();
+
+    spawned[1]?.die();
+    await vi.waitFor(() => expect(pool.size).toBe(2));
+
+    expect(at(INFO)).toEqual([
+      expect.objectContaining({ msg: 'worker replaced', index: 1, port: 44401 }),
+    ]);
     await pool.close();
   });
 
@@ -296,8 +321,16 @@ describe('WorkerPool worker death', () => {
     await killPastTheCap(pool);
 
     expect(pool.size).toBe(0);
-    expect(errors.join('\n')).toMatch(/0/);
-    expect(errors.join('\n').toLowerCase()).toMatch(/left down|giving up|not replac/);
+    expect(at(ERROR)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          msg: 'worker left down rather than respawned after repeated deaths',
+          index: 0,
+          deaths: REPLACEMENT_LIMIT + 1,
+          windowMs: REPLACEMENT_WINDOW_MS,
+        }),
+      ]),
+    );
     await pool.close();
   });
 

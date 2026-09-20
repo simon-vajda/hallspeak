@@ -287,7 +287,7 @@ export class Room {
         appData: { socketId, direction },
       });
     } catch (cause) {
-      log.error(`could not create a ${direction} transport on event ${this.eventId}`, cause);
+      log.error({ err: cause, eventId: this.eventId, direction }, 'could not create a transport');
       throw new AppError('media_unavailable', 'Could not allocate a media transport.');
     }
 

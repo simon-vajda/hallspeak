@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useLogDestination } from '../../lib/log';
 import { listenerHistory } from '../listener-history';
 import type { Notification } from '../notifications';
 import { notifications } from '../notifications';
@@ -17,6 +18,14 @@ import {
 } from './index';
 import { ListenerCountPublisher } from './listeners';
 import { failWorker, goLive as goLiveOn, startFakeMedia } from './testing';
+
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'trace', LOG_DIR: '' },
+}));
+vi.mock('../../env', () => ({ env: envMock }));
+
+/** Records bypass `console`, so this is what keeps the suite's output clean. */
+const discardLogRecords = () => useLogDestination({ write: () => {} });
 
 const WINDOW_MS = 300;
 
@@ -183,7 +192,7 @@ describe('listener counts through the media facade', () => {
   beforeEach(async () => {
     published = [];
     unsubscribe = notifications.subscribe((n) => published.push(n));
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    discardLogRecords();
     await startFakeMedia();
   });
 
@@ -314,7 +323,7 @@ describe('listener counts through the media facade', () => {
 
 describe('listener history through the media facade', () => {
   beforeEach(async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    discardLogRecords();
     await startFakeMedia();
   });
 

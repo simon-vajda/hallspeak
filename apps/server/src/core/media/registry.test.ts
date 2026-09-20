@@ -1,8 +1,14 @@
 import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useLogDestination } from '../../lib/log';
 import { RoomRegistry } from './registry';
 import type { Room } from './room';
 import type { RouterAllocation, WorkerPool } from './workers';
+
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'trace', LOG_DIR: '' },
+}));
+vi.mock('../../env', () => ({ env: envMock }));
 
 const GRACE_MS = 1000;
 
@@ -115,12 +121,16 @@ function harness() {
 // biome-ignore lint/suspicious/noExplicitAny: the fakes stand in for mediasoup's types.
 const as = (value: unknown) => value as any;
 
-let errors: string[] = [];
+const ERROR = 50;
+
+let records: Record<string, unknown>[] = [];
 
 beforeEach(() => {
-  errors = [];
-  vi.spyOn(console, 'error').mockImplementation((...args) => {
-    errors.push(args.join(' '));
+  records = [];
+  useLogDestination({
+    write(chunk: string) {
+      records.push(JSON.parse(chunk));
+    },
   });
 });
 
@@ -180,14 +190,20 @@ describe('RoomRegistry.getOrCreate failure', () => {
     await registry.closeAll();
   });
 
-  it('logs the failure with the event id and the cause', async () => {
+  it('records the failure at error, with the event id as a field and the cause serialized', async () => {
     const { registry, failNextCreation } = harness();
     failNextCreation(new Error('port exhausted'));
 
     await expect(registry.getOrCreate(42)).rejects.toThrow();
 
-    expect(errors.join('\n')).toContain('42');
-    expect(errors.join('\n')).toContain('port exhausted');
+    const failures = records.filter((record) => record.level === ERROR);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toMatchObject({
+      msg: 'could not create a room',
+      eventId: 42,
+      subsystem: 'media',
+      err: expect.objectContaining({ message: 'port exhausted' }),
+    });
   });
 
   it('rejects a creation whose worker dies mid-flight rather than leaving it pending', async () => {

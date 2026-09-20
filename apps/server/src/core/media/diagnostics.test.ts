@@ -1,14 +1,22 @@
 import { EventEmitter } from 'node:events';
 import type { types } from 'mediasoup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useLogDestination } from '../../lib/log';
 import { watchConsumer, watchProducer, watchTransport } from './diagnostics';
 
-const { envMock } = vi.hoisted(() => ({ envMock: { LOG_VERBOSE: false } }));
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'trace', LOG_DIR: '' },
+}));
 vi.mock('../../env', () => ({ env: envMock }));
 
 const SILENCE_CHECK_MS = 5_000;
 const REMOTE_ADDRESS = '198.51.100.77';
+const CANDIDATE_ADDRESS = '203.0.113.10';
 const TRANSPORT_ID = 'abcdef0123456789';
+
+const WARN = 40;
+const DEBUG = 20;
+const TRACE = 10;
 
 class FakeTransport extends EventEmitter {
   readonly id = TRANSPORT_ID;
@@ -16,7 +24,7 @@ class FakeTransport extends EventEmitter {
   closed = false;
   iceState = 'new';
   dtlsState = 'new';
-  readonly iceCandidates = [{ protocol: 'udp', address: '203.0.113.10', port: 44400 }];
+  readonly iceCandidates = [{ protocol: 'udp', address: CANDIDATE_ADDRESS, port: 44400 }];
 }
 
 class FakeProducer {
@@ -45,9 +53,7 @@ const asTransport = (t: FakeTransport) => t as unknown as types.WebRtcTransport;
 const asProducer = (p: FakeProducer) => p as unknown as types.Producer;
 const asConsumer = (c: FakeConsumer) => c as unknown as types.Consumer;
 
-let info: ReturnType<typeof vi.spyOn>;
-let warn: ReturnType<typeof vi.spyOn>;
-let error: ReturnType<typeof vi.spyOn>;
+let records: Record<string, unknown>[];
 
 /** Lets the getStats promise settle after the timer that started it has fired. */
 async function settle(): Promise<void> {
@@ -55,15 +61,17 @@ async function settle(): Promise<void> {
   await vi.waitFor(() => {});
 }
 
-const lines = () =>
-  [...info.mock.calls, ...warn.mock.calls, ...error.mock.calls].map((call) => String(call[0]));
+const at = (level: number) => records.filter((record) => record.level === level);
+const serialized = () => records.map((record) => JSON.stringify(record));
 
 beforeEach(() => {
   vi.useFakeTimers();
-  envMock.LOG_VERBOSE = false;
-  info = vi.spyOn(console, 'log').mockImplementation(() => {});
-  warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-  error = vi.spyOn(console, 'error').mockImplementation(() => {});
+  records = [];
+  useLogDestination({
+    write(chunk: string) {
+      records.push(JSON.parse(chunk));
+    },
+  });
 });
 
 afterEach(() => {
@@ -71,14 +79,23 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('the always-on silent-failure warnings', () => {
-  it('warns about a transport that never connected, with the flag unset', async () => {
+describe('the silent-failure warnings', () => {
+  it('warns about a transport that never connected, carrying both states as fields', async () => {
     watchTransport(asTransport(new FakeTransport()), 3, 'recv');
 
     await settle();
 
-    expect(warn).toHaveBeenCalledOnce();
-    expect(String(warn.mock.calls[0]?.[0])).toContain('no ICE connectivity');
+    const warnings = at(WARN);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatchObject({
+      msg: expect.stringContaining('no ICE connectivity'),
+      eventId: 3,
+      direction: 'recv',
+      iceState: 'new',
+      dtlsState: 'new',
+      afterMs: SILENCE_CHECK_MS,
+      subsystem: 'media',
+    });
   });
 
   it('stays silent about a transport that did connect', async () => {
@@ -88,48 +105,48 @@ describe('the always-on silent-failure warnings', () => {
 
     await settle();
 
-    expect(warn).not.toHaveBeenCalled();
+    expect(at(WARN)).toEqual([]);
   });
 
-  it('warns about a producer that received no RTP, with the flag unset', async () => {
+  it('warns about a producer that received no RTP, with the channel as a field', async () => {
     watchProducer(asProducer(new FakeProducer(0)), 3, 'de');
 
     await settle();
 
-    expect(warn).toHaveBeenCalledOnce();
-    expect(String(warn.mock.calls[0]?.[0])).toContain('no RTP received');
+    const warnings = at(WARN);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatchObject({
+      msg: expect.stringContaining('no RTP received'),
+      eventId: 3,
+      slug: 'de',
+    });
   });
 
-  it('warns about a consumer that sent no RTP, with the flag unset', async () => {
+  it('warns about a consumer that sent no RTP, with the channel as a field', async () => {
     watchConsumer(asConsumer(new FakeConsumer(0)), 3, 'de');
 
     await settle();
 
-    expect(warn).toHaveBeenCalledOnce();
-    expect(String(warn.mock.calls[0]?.[0])).toContain('no RTP sent');
+    const warnings = at(WARN);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatchObject({ msg: 'no RTP sent', eventId: 3, slug: 'de' });
   });
 
-  it('names the event and the channel slug rather than a transport identifier', async () => {
+  it('names no transport or producer identifier on a warning', async () => {
+    const transport = new FakeTransport();
+    watchTransport(asTransport(transport), 3, 'recv');
     watchProducer(asProducer(new FakeProducer(0)), 3, 'de');
     watchConsumer(asConsumer(new FakeConsumer(0)), 3, 'de');
 
     await settle();
 
-    for (const line of lines()) {
-      expect(line).toContain('event 3 de');
-      expect(line).not.toContain(TRANSPORT_ID.slice(0, 8));
+    expect(at(WARN)).toHaveLength(3);
+    for (const warning of at(WARN)) {
+      expect(JSON.stringify(warning)).not.toContain(TRANSPORT_ID.slice(0, 8));
     }
   });
 
-  it('names the event and direction for a transport, which belongs to no one channel', async () => {
-    watchTransport(asTransport(new FakeTransport()), 3, 'recv');
-
-    await settle();
-
-    expect(String(warn.mock.calls[0]?.[0])).toContain('event 3 recv');
-  });
-
-  it('carries no remote address and no transport identifier on any line', async () => {
+  it('carries no address on any record above trace', async () => {
     const transport = new FakeTransport();
     watchTransport(asTransport(transport), 3, 'recv');
     transport.emit('iceselectedtuplechange', {
@@ -139,18 +156,18 @@ describe('the always-on silent-failure warnings', () => {
       remoteIp: REMOTE_ADDRESS,
       remotePort: 50000,
     });
-    watchProducer(asProducer(new FakeProducer(0)), 3, 'de');
 
     await settle();
 
-    for (const line of lines()) {
+    for (const record of records.filter((entry) => Number(entry.level) > TRACE)) {
+      const line = JSON.stringify(record);
       expect(line).not.toContain(REMOTE_ADDRESS);
-      expect(line).not.toContain(TRANSPORT_ID.slice(0, 8));
+      expect(line).not.toContain(CANDIDATE_ADDRESS);
     }
   });
 });
 
-describe('the verbose transport narration', () => {
+describe('the connection narration', () => {
   function narrate(transport: FakeTransport): void {
     watchTransport(asTransport(transport), 3, 'recv');
     transport.emit('icestatechange', 'connected');
@@ -167,41 +184,84 @@ describe('the verbose transport narration', () => {
     transport.observer.emit('close');
   }
 
-  it('writes nothing with the flag unset', () => {
+  it('writes creation, ICE, DTLS and close at debug, each state as a field', () => {
     narrate(new FakeTransport());
 
-    expect(lines()).toEqual([]);
+    const debug = at(DEBUG);
+    expect(debug.map((record) => record.msg)).toEqual([
+      'transport created',
+      'ice state changed',
+      'ice state changed',
+      'dtls state changed',
+      'dtls state changed',
+      'transport closed',
+    ]);
+    expect(debug[0]).toMatchObject({ transportId: TRANSPORT_ID.slice(0, 8), candidateCount: 1 });
+    expect(debug.map((record) => record.iceState)).toContain('disconnected');
+    expect(debug.map((record) => record.dtlsState)).toContain('failed');
   });
 
-  it('writes creation, ICE, DTLS and close with the flag set', () => {
-    envMock.LOG_VERBOSE = true;
-
+  it('keeps the offered candidate and the selected pair at trace', () => {
     narrate(new FakeTransport());
 
-    const joined = lines().join('\n');
-    expect(joined).toContain('transport created, offering');
-    expect(joined).toContain('ice connected');
-    expect(joined).toContain('ice disconnected');
-    expect(joined).toContain('dtls failed');
-    expect(joined).toContain('transport closed');
-    expect(joined).toContain(REMOTE_ADDRESS);
+    const trace = at(TRACE);
+    expect(trace).toHaveLength(2);
+    expect(trace[0]).toMatchObject({
+      msg: 'candidate offered',
+      address: CANDIDATE_ADDRESS,
+      port: 44400,
+      protocol: 'udp',
+    });
+    expect(trace[1]).toMatchObject({
+      msg: 'ice pair selected',
+      localAddress: '0.0.0.0',
+      remoteAddress: REMOTE_ADDRESS,
+      remotePort: 50000,
+    });
   });
 
-  it('keeps the healthy byte counts verbose too', async () => {
-    envMock.LOG_VERBOSE = true;
+  it('reports a healthy byte count at debug and warns about nothing', async () => {
     watchProducer(asProducer(new FakeProducer(4_096)), 3, 'de');
+    watchConsumer(asConsumer(new FakeConsumer(2_048)), 3, 'de');
 
     await settle();
 
-    expect(lines().join('\n')).toContain('receiving RTP (4096 bytes)');
-    expect(warn).not.toHaveBeenCalled();
+    expect(at(DEBUG)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ msg: 'producer receiving RTP', bytes: 4_096 }),
+        expect.objectContaining({ msg: 'consumer sending RTP', bytes: 2_048 }),
+      ]),
+    );
+    expect(at(WARN)).toEqual([]);
   });
 
-  it("reports a healthy producer's bytes to nobody with the flag unset", async () => {
-    watchProducer(asProducer(new FakeProducer(4_096)), 3, 'de');
+  it('carries the paused state of a producer as a field', () => {
+    const producer = new FakeProducer(0);
+    producer.paused = true;
+    watchProducer(asProducer(producer), 3, 'de');
+
+    expect(at(DEBUG)[0]).toMatchObject({ msg: 'producer opened', paused: true, slug: 'de' });
+  });
+
+  it('stays out of the way of a closed producer, writing only its close', async () => {
+    const producer = new FakeProducer(0);
+    watchProducer(asProducer(producer), 3, 'de');
+    producer.closed = true;
+    producer.observer.emit('close');
 
     await settle();
 
-    expect(lines()).toEqual([]);
+    expect(at(WARN)).toEqual([]);
+    expect(serialized().filter((line) => line.includes('producer closed'))).toHaveLength(1);
+  });
+
+  it('stays silent about a consumer that is merely paused', async () => {
+    const consumer = new FakeConsumer(0);
+    consumer.paused = true;
+    watchConsumer(asConsumer(consumer), 3, 'de');
+
+    await settle();
+
+    expect(records).toEqual([]);
   });
 });
