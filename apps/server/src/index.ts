@@ -7,7 +7,7 @@ import { notifications } from './core/notifications';
 import { closeDb, db } from './db';
 import { runMigrations } from './db/migrate';
 import { env } from './env';
-import { logger } from './lib/log';
+import { flushLogs, logger } from './lib/log';
 import { createChannelTimeline } from './logging/channel-timeline';
 import { attachSocket } from './socket';
 import { SERVER_VERSION } from './version';
@@ -16,7 +16,7 @@ const log = logger('boot');
 
 // First thing the boot path logs: two release tracks and a version handshake make the
 // version the first thing a pasted log has to answer.
-log.info(`LinguaCast server ${SERVER_VERSION}`);
+log.info({ version: SERVER_VERSION }, 'LinguaCast server starting');
 
 // Before serve(): the process either has a current schema or fails to start, so the
 // operator's upgrade procedure stays "pull and restart".
@@ -28,9 +28,10 @@ startAuth();
 // Boot is the only scheduled sweep; later lookups delete expired rows where they find them.
 sweepExpired(db);
 log.info(
+  { path: credentialsPath(), configured: isConfigured() },
   isConfigured()
-    ? `Admin account loaded from ${credentialsPath()}`
-    : `No admin account at ${credentialsPath()} — the setup wizard is open to whoever reaches it first`,
+    ? 'Admin account loaded'
+    : 'No admin account yet — the setup wizard is open to whoever reaches it first',
 );
 // Reaching the server directly over plain HTTP gives a working listener page, a studio
 // that cannot open a microphone, and a sign-in that fails silently because the Secure
@@ -63,8 +64,10 @@ await startMedia({
 });
 
 const server = serve({ fetch: app.fetch, hostname: env.HOST, port: env.PORT }, (info) => {
-  log.info(`LinguaCast API listening on http://${env.HOST}:${info.port}`);
-  log.info(`Docs: http://${env.HOST}:${info.port}/api/docs`);
+  log.info(
+    { host: env.HOST, port: info.port, docs: `http://${env.HOST}:${info.port}/api/docs` },
+    'LinguaCast API listening',
+  );
 });
 
 // Must come after serve(): Socket.IO takes over the HTTP server's request listeners.
@@ -79,15 +82,23 @@ notifications.subscribe(createChannelTimeline((channelId) => getChannelById(db, 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 let shuttingDown = false;
 
+// The transports run on worker threads, which process.exit() does not wait for, so the
+// last records of a shutdown — the ones an operator most wants — are exactly the ones an
+// unflushed exit drops.
+function exit(code: number): void {
+  flushLogs(() => process.exit(code));
+}
+
 function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) {
     return;
   }
   shuttingDown = true;
-  log.info(`${signal} received, shutting down`);
+  log.info({ signal }, 'signal received, shutting down');
 
   const force = setTimeout(() => {
-    log.error(`Did not close within ${SHUTDOWN_TIMEOUT_MS}ms, forcing exit`);
+    // No flush here: a flush that never returns is the condition this timer exists for.
+    log.error({ timeoutMs: SHUTDOWN_TIMEOUT_MS }, 'did not close in time, forcing exit');
     process.exit(1);
   }, SHUTDOWN_TIMEOUT_MS);
   force.unref();
@@ -97,7 +108,7 @@ function shutdown(signal: NodeJS.Signals): void {
   void stopMedia()
     .catch((cause) => {
       // A failed worker teardown must not strand the socket, HTTP and database close.
-      log.error('Error stopping media', cause);
+      log.error({ err: cause }, 'could not stop media');
     })
     .then(() => {
       // Before server.close(): open sockets are live connections on that server, and
@@ -107,12 +118,13 @@ function shutdown(signal: NodeJS.Signals): void {
           // io.close() already closed the HTTP server, so "not running" is the expected
           // path; reporting it would make every clean SIGTERM exit 1.
           if (err && !('code' in err && err.code === 'ERR_SERVER_NOT_RUNNING')) {
-            log.error('Error during shutdown', err);
+            log.error({ err }, 'error during shutdown');
             closeDb();
-            process.exit(1);
+            exit(1);
+            return;
           }
           closeDb();
-          process.exit(0);
+          exit(0);
         });
       });
     });
