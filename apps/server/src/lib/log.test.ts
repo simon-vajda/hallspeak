@@ -133,12 +133,38 @@ describe('redaction', () => {
     }
   });
 
-  it('censors a secret nested one level inside a payload', () => {
+  it('censors every spelling one level down, where a payload puts it', () => {
+    const log = logger('socket');
+    // The depth a handshake, a request body and a handover payload actually use: the
+    // secret arrives inside the object the call site is already logging, not beside it.
+    log.info({ handshake: { pin: '123456', speakerCode: 'abcdef', studioSession: 'opaque' } }, 'a');
+    log.info({ payload: { speaker_code: 'abcdef', sessionId: 'opaque' } }, 'b');
+    log.info({ handover: { fromSessionId: 'opaque', toSessionId: 'opaque' } }, 'c');
+    log.info({ body: { password: 'hunter2', currentPassword: 'hunter2', newPassword: 'h3' } }, 'd');
+    log.info({ account: { passwordHash: 'scrypt$...' } }, 'e');
+
+    const serialized = JSON.stringify(records);
+    for (const value of ['123456', 'abcdef', 'opaque', 'hunter2', 'h3', 'scrypt$...']) {
+      expect(serialized).not.toContain(value);
+    }
+    expect(records).toHaveLength(5);
+  });
+
+  it('keeps the rest of the payload the secret arrived in', () => {
     logger('socket').info({ handshake: { pin: '123456', clientVersion: '0.11.0' } }, 'handshake');
 
     const serialized = JSON.stringify(records[0]);
     expect(serialized).not.toContain('123456');
     expect(serialized).toContain('0.11.0');
+  });
+
+  it('cannot censor a secret interpolated into the message', () => {
+    // Not a gap to close here but the reason values are fields: pino redacts serialized
+    // field paths and never reads `msg`, so this guard proves the fields are safe and
+    // says nothing about a call site that builds a sentence instead.
+    logger('socket').info(`pin 123456 accepted`);
+
+    expect(String(records[0]?.msg)).toContain('123456');
   });
 
   it('leaves a field that merely resembles a secret alone', () => {
