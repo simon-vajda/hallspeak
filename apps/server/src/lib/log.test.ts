@@ -1,102 +1,150 @@
+import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { envMock } = vi.hoisted(() => ({ envMock: { LOG_VERBOSE: false } }));
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'info', LOG_DIR: '' },
+}));
 vi.mock('../env', () => ({ env: envMock }));
 
-const { logger, resetOnceWarnings } = await import('./log');
+const { logger, logTargets, prepareLogDirectory, resetOnceWarnings, useLogDestination } =
+  await import('./log');
 
-const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z /;
+const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
-let info: ReturnType<typeof vi.spyOn>;
-let warn: ReturnType<typeof vi.spyOn>;
-let error: ReturnType<typeof vi.spyOn>;
+let records: Record<string, unknown>[];
 
 beforeEach(() => {
   resetOnceWarnings();
-  envMock.LOG_VERBOSE = false;
-  info = vi.spyOn(console, 'log').mockImplementation(() => {});
-  warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-  error = vi.spyOn(console, 'error').mockImplementation(() => {});
+  records = [];
+  useLogDestination({
+    write(chunk: string) {
+      records.push(JSON.parse(chunk));
+    },
+  });
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('the always-on tier', () => {
-  it('writes with the verbose flag unset', () => {
-    logger('media').info('a channel went on air');
+describe('the level gate', () => {
+  it('writes an info record and drops a debug one at the default level', () => {
+    const log = logger('media');
+    log.info({ slug: 'en' }, 'channel on air');
+    log.debug({ slug: 'en' }, 'transport connecting');
 
-    expect(info).toHaveBeenCalledOnce();
-    expect(info.mock.calls[0]?.[0]).toContain('media: a channel went on air');
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ msg: 'channel on air', slug: 'en' });
   });
 
-  it('carries an ISO-8601 timestamp and the subsystem prefix', () => {
-    logger('proxy').info('hello');
+  it('writes a debug record and drops a trace one at debug', () => {
+    const log = logger('media');
+    log.level = 'debug';
+    log.debug({ slug: 'en' }, 'transport connecting');
+    log.trace({ address: '198.51.100.7' }, 'candidate offered');
 
-    const line = String(info.mock.calls[0]?.[0]);
-    expect(line).toMatch(ISO);
-    expect(line).toMatch(/ proxy: hello$/);
-    expect(new Date(line.slice(0, 24)).toISOString()).toBe(line.slice(0, 24));
+    expect(records.map((record) => record.msg)).toEqual(['transport connecting']);
   });
 
-  it('preserves severity', () => {
+  it('writes a trace record at trace', () => {
+    const log = logger('media');
+    log.level = 'trace';
+    log.trace({ address: '198.51.100.7' }, 'candidate offered');
+
+    expect(records[0]).toMatchObject({ msg: 'candidate offered', address: '198.51.100.7' });
+  });
+
+  it('keeps every severity addressable', () => {
     const log = logger('media');
     log.info('informational');
     log.warn('a warning');
     log.error('an error');
 
-    expect(info).toHaveBeenCalledOnce();
-    expect(warn).toHaveBeenCalledOnce();
-    expect(error).toHaveBeenCalledOnce();
-    expect(warn.mock.calls[0]?.[0]).toContain('media: a warning');
-    expect(error.mock.calls[0]?.[0]).toContain('media: an error');
-  });
-
-  it('passes a cause through to the console alongside the line', () => {
-    const cause = new Error('boom');
-    logger('media').error('could not start', cause);
-
-    expect(error).toHaveBeenCalledWith(expect.stringContaining('media: could not start'), cause);
-  });
-
-  it('writes no second argument when there is no cause', () => {
-    logger('media').error('could not start');
-
-    expect(error.mock.calls[0]).toHaveLength(1);
+    expect(records.map((record) => record.msg)).toEqual(['informational', 'a warning', 'an error']);
+    expect(new Set(records.map((record) => record.level))).toEqual(new Set([30, 40, 50]));
   });
 });
 
-describe('the verbose tier', () => {
-  it('is suppressed when the flag is unset', () => {
-    const log = logger('media');
-    log.verbose.info('ice connected');
-    log.verbose.warn('ice disconnected');
-    log.verbose.error('dtls failed');
+describe('the record shape', () => {
+  it('carries the subsystem without the call site passing it', () => {
+    logger('proxy').info('hello');
 
-    expect(info).not.toHaveBeenCalled();
-    expect(warn).not.toHaveBeenCalled();
-    expect(error).not.toHaveBeenCalled();
+    expect(records[0]?.subsystem).toBe('proxy');
   });
 
-  it('writes when the flag is set, at each severity', () => {
-    envMock.LOG_VERBOSE = true;
-    const log = logger('media');
-    log.verbose.info('ice connected');
-    log.verbose.warn('ice disconnected');
-    log.verbose.error('dtls failed');
+  it('carries an ISO-8601 timestamp', () => {
+    logger('proxy').info('hello');
 
-    expect(info.mock.calls[0]?.[0]).toContain('media: ice connected');
-    expect(warn.mock.calls[0]?.[0]).toContain('media: ice disconnected');
-    expect(error.mock.calls[0]?.[0]).toContain('media: dtls failed');
+    const time = String(records[0]?.time);
+    expect(time).toMatch(ISO);
+    expect(new Date(time).toISOString()).toBe(time);
   });
 
-  it('reads the flag at call time, so the gate is not baked in at construction', () => {
-    const log = logger('media');
-    envMock.LOG_VERBOSE = true;
-    log.verbose.info('ice connected');
+  it('serializes an error and its stack as one line', () => {
+    logger('media').error(
+      { err: new Error('boom', { cause: new Error('underlying') }) },
+      'could not start',
+    );
 
-    expect(info).toHaveBeenCalledOnce();
+    const err = records[0]?.err as { stack: string; message: string };
+    expect(err.message).toContain('boom');
+    expect(err.stack).toContain('Error: boom');
+    // The whole record is one line, so a reader taking the last N lines of the file gets
+    // the whole trace rather than its tail.
+    expect(JSON.stringify(records[0])).not.toContain('\n');
+  });
+});
+
+describe('redaction', () => {
+  it('censors every secret spelling passed as a field', () => {
+    const log = logger('socket');
+    log.info(
+      {
+        pin: '123456',
+        speakerCode: 'abcdef',
+        speaker_code: 'abcdef',
+        sessionId: 'sess-one',
+        fromSessionId: 'sess-two',
+        toSessionId: 'sess-three',
+        studioSession: 'sess-four',
+        password: 'hunter2',
+        currentPassword: 'hunter2',
+        newPassword: 'hunter3',
+        passwordHash: 'scrypt$...',
+      },
+      'handshake accepted',
+    );
+
+    const serialized = JSON.stringify(records[0]);
+    for (const value of [
+      '123456',
+      'abcdef',
+      'sess-one',
+      'sess-two',
+      'sess-three',
+      'sess-four',
+      'hunter2',
+      'hunter3',
+      'scrypt$...',
+    ]) {
+      expect(serialized).not.toContain(value);
+    }
+  });
+
+  it('censors a secret nested one level inside a payload', () => {
+    logger('socket').info({ handshake: { pin: '123456', clientVersion: '0.11.0' } }, 'handshake');
+
+    const serialized = JSON.stringify(records[0]);
+    expect(serialized).not.toContain('123456');
+    expect(serialized).toContain('0.11.0');
+  });
+
+  it('leaves a field that merely resembles a secret alone', () => {
+    logger('socket').info({ pinned: 'yes', passwordPolicy: 'strong' }, 'settings');
+
+    expect(records[0]).toMatchObject({ pinned: 'yes', passwordPolicy: 'strong' });
   });
 });
 
@@ -104,54 +152,121 @@ describe('warnOnce', () => {
   it('emits on the first call for a key and stays silent afterwards', () => {
     const log = logger('proxy');
     for (let i = 0; i < 100; i++) {
-      log.warnOnce('once:first', 'the proxy appends no forwarded header');
+      log.warnOnce('once:first', { header: 'x-forwarded-for' }, 'the proxy appends no header');
     }
 
-    expect(warn).toHaveBeenCalledOnce();
-    expect(warn.mock.calls[0]?.[0]).toContain('proxy: the proxy appends no forwarded header');
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      msg: 'the proxy appends no header',
+      header: 'x-forwarded-for',
+      subsystem: 'proxy',
+    });
   });
 
   it('tracks two keys independently', () => {
     const log = logger('proxy');
-    log.warnOnce('once:a', 'first shape');
-    log.warnOnce('once:b', 'second shape');
-    log.warnOnce('once:a', 'first shape');
+    log.warnOnce('once:a', {}, 'first shape');
+    log.warnOnce('once:b', {}, 'second shape');
+    log.warnOnce('once:a', {}, 'first shape');
 
-    expect(warn).toHaveBeenCalledTimes(2);
+    expect(records).toHaveLength(2);
   });
 
   it('stops recording new keys past its cap, so a varying key cannot grow without bound', () => {
     const log = logger('proxy');
     for (let i = 0; i < 200; i++) {
-      log.warnOnce(`once:cap:${i}`, `address ${i}`);
+      log.warnOnce(`once:cap:${i}`, { address: `198.51.100.${i}` }, 'unlisted address');
     }
 
-    expect(warn.mock.calls.length).toBeLessThan(200);
-    // A key already recorded before the cap is still honoured rather than re-emitted.
-    log.warnOnce('once:cap:0', 'address 0');
+    expect(records.length).toBeLessThan(200);
+    log.warnOnce('once:cap:0', { address: '198.51.100.0' }, 'unlisted address');
 
-    expect(
-      warn.mock.calls.map(String).filter((line: string) => line.endsWith('address 0')),
-    ).toHaveLength(1);
+    expect(records.filter((record) => record.address === '198.51.100.0')).toHaveLength(1);
   });
 
   it('caps each key family separately, so a full one cannot silence a quiet one', () => {
     const log = logger('proxy');
     for (let i = 0; i < 200; i++) {
-      log.warnOnce(`once:varying:${i}`, `address ${i}`);
+      log.warnOnce(`once:varying:${i}`, { address: `198.51.100.${i}` }, 'unlisted address');
     }
-    warn.mockClear();
+    records = [];
 
-    log.warnOnce('once:fixed', 'the condition nobody has reported yet');
+    log.warnOnce('once:fixed', {}, 'the condition nobody has reported yet');
 
-    expect(warn).toHaveBeenCalledOnce();
-    expect(warn.mock.calls[0]?.[0]).toContain('the condition nobody has reported yet');
+    expect(records).toHaveLength(1);
+    expect(records[0]?.msg).toBe('the condition nobody has reported yet');
   });
 
   it('shares its keys across loggers, so a per-call-site logger still warns once', () => {
-    logger('proxy').warnOnce('once:shared', 'same condition');
-    logger('proxy').warnOnce('once:shared', 'same condition');
+    logger('proxy').warnOnce('once:shared', {}, 'same condition');
+    logger('proxy').warnOnce('once:shared', {}, 'same condition');
 
+    expect(records).toHaveLength(1);
+  });
+});
+
+describe('the transport targets', () => {
+  it('constructs stdout alone when no log directory is configured', () => {
+    const targets = logTargets('info', '', false);
+
+    expect(targets).toHaveLength(1);
+    expect(targets[0]?.target).toBe('pino-pretty');
+  });
+
+  it('gives each target the level the root logger was given', () => {
+    for (const target of logTargets('trace', '/data/logs', false)) {
+      expect(target.level).toBe('trace');
+    }
+  });
+
+  it('rotates the file daily and keeps a fortnight', () => {
+    const file = logTargets('info', '/data/logs', false).find(
+      (target) => target.target === 'pino-roll',
+    );
+
+    expect(file?.options).toMatchObject({
+      file: '/data/logs/linguacast.log',
+      frequency: 'daily',
+      limit: { count: 14 },
+    });
+  });
+
+  it('suppresses colour when stdout is not a terminal', () => {
+    expect(logTargets('info', '', false)[0]?.options.colorize).toBe(false);
+    expect(logTargets('info', '', true)[0]?.options.colorize).toBe(true);
+  });
+});
+
+describe('the log directory', () => {
+  const directories: string[] = [];
+
+  afterEach(() => {
+    for (const directory of directories.splice(0)) {
+      chmodSync(directory, 0o700);
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('creates a directory that does not exist yet', () => {
+    const parent = mkdtempSync(path.join(tmpdir(), 'linguacast-log-'));
+    directories.push(parent);
+    const directory = path.join(parent, 'logs');
+
+    expect(prepareLogDirectory(directory)).toBe(directory);
+  });
+
+  it('reports once and declines the file target when the directory is unusable', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const parent = mkdtempSync(path.join(tmpdir(), 'linguacast-log-'));
+    directories.push(parent);
+    chmodSync(parent, 0o500);
+
+    expect(prepareLogDirectory(path.join(parent, 'logs'))).toBe('');
     expect(warn).toHaveBeenCalledOnce();
+    expect(String(warn.mock.calls[0]?.[0])).toContain('continuing on stdout alone');
+  });
+
+  it('declines the file target when no directory is configured', () => {
+    expect(prepareLogDirectory('')).toBe('');
   });
 });

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EnvSchema } from './env';
 
@@ -52,21 +53,37 @@ describe('EnvSchema media configuration', () => {
   });
 });
 
-describe('EnvSchema verbose logging', () => {
-  it('leaves the verbose tier off when unset', () => {
-    expect(EnvSchema.parse({}).LOG_VERBOSE).toBe(false);
+describe('EnvSchema logging', () => {
+  it('defaults to the level that diagnoses a ticket without narration', () => {
+    expect(EnvSchema.parse({}).LOG_LEVEL).toBe('info');
   });
 
-  it('accepts the spellings an operator is likely to type', () => {
-    for (const value of ['1', 'true', 'TRUE', 'yes', 'on', ' true ']) {
-      expect(EnvSchema.parse({ LOG_VERBOSE: value }).LOG_VERBOSE).toBe(true);
+  it('accepts every level the logger understands', () => {
+    for (const value of ['error', 'warn', 'info', 'debug', 'trace']) {
+      expect(EnvSchema.parse({ LOG_LEVEL: value }).LOG_LEVEL).toBe(value);
     }
   });
 
-  it('reads anything else as off, so a typo does not enable it', () => {
-    for (const value of ['', '0', 'false', 'off', 'verbose']) {
-      expect(EnvSchema.parse({ LOG_VERBOSE: value }).LOG_VERBOSE).toBe(false);
-    }
+  it('refuses an unknown level rather than falling back to one', () => {
+    const result = EnvSchema.safeParse({ LOG_LEVEL: 'verbose' });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['LOG_LEVEL']);
+  });
+
+  it('writes the retained copy under the data directory by default', () => {
+    expect(EnvSchema.parse({}).LOG_DIR).toBe(path.join('./data', 'logs'));
+    expect(EnvSchema.parse({ DATA_DIR: '/srv/linguacast/data' }).LOG_DIR).toBe(
+      path.join('/srv/linguacast/data', 'logs'),
+    );
+  });
+
+  it('takes a configured log directory verbatim', () => {
+    expect(EnvSchema.parse({ LOG_DIR: '/var/log/linguacast' }).LOG_DIR).toBe('/var/log/linguacast');
+  });
+
+  it('reads an empty log directory as file logging declined', () => {
+    expect(EnvSchema.parse({ LOG_DIR: '' }).LOG_DIR).toBe('');
+    expect(EnvSchema.parse({ LOG_DIR: '   ' }).LOG_DIR).toBe('');
   });
 });
 

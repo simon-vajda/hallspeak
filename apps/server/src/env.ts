@@ -43,13 +43,16 @@ const BaseEnvSchema = z.object({
   MEDIA_MAX_WORKERS: z.coerce.number().int().positive().max(64).default(4),
   MEDIA_ROOM_IDLE_GRACE_MS: z.coerce.number().int().positive().optional(),
 
-  // The verbose logging tier: per-transport ICE and DTLS narration, and the guest
-  // addresses that go with it. Off by default because the always-on tier is sized to
-  // diagnose a ticket without it, and its volume would bury that tier at event scale.
-  LOG_VERBOSE: z
-    .string()
-    .default('')
-    .transform((value) => ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())),
+  // How much the server says. `info` is sized to diagnose a ticket on its own; `debug`
+  // adds per-transport ICE and DTLS narration; `trace` adds the guest addresses that go
+  // with it, which is why it is a level of its own rather than part of `debug`.
+  LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  // Where the rotated NDJSON copy of the log is written; empty declines it and leaves
+  // only the container's captured stdout, which an upgrade discards with the container.
+  // Defaulted under DATA_DIR in the transform below, because a field cannot read a
+  // sibling here — which is also why it stays optional: an unset variable takes that
+  // default, while an empty one is the operator declining it.
+  LOG_DIR: z.string().optional(),
 
   // Defaulted rather than left off: a guest behind a symmetric NAT needs one to discover
   // the address to advertise, and a deployment shipping without it fails for exactly the
@@ -69,7 +72,11 @@ export const EnvSchema = BaseEnvSchema.refine(
   },
   // Loopback is the only address that is honest when nothing was configured: it works for
   // a browser on this machine and fails visibly anywhere else.
-).transform((env) => ({ ...env, PUBLIC_ADDRESS: env.PUBLIC_ADDRESS ?? '127.0.0.1' }));
+).transform((env) => ({
+  ...env,
+  PUBLIC_ADDRESS: env.PUBLIC_ADDRESS ?? '127.0.0.1',
+  LOG_DIR: env.LOG_DIR === undefined ? path.join(env.DATA_DIR, 'logs') : env.LOG_DIR.trim(),
+}));
 
 const parsed = EnvSchema.safeParse(process.env);
 
