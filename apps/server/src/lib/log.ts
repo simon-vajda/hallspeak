@@ -76,6 +76,8 @@ const REDACTED_PATHS = REDACTED_KEYS.flatMap((key) => [key, `*.${key}`]);
 /** Daily files with a fortnight kept, so the directory has a ceiling an operator can state. */
 const LOG_FILE_FREQUENCY = 'daily';
 const LOG_FILE_COUNT = 14;
+/** Without this a rotated file is numbered but not dated, and says nothing about when it is from. */
+const LOG_FILE_DATE_FORMAT = 'yyyy-MM-dd';
 
 /**
  * Bounded because a key may carry a value the caller chose: a client appending a forwarded
@@ -137,6 +139,7 @@ export function logTargets(level: string, directory: string, colorize: boolean):
       options: {
         file: `${directory}/linguacast.log`,
         frequency: LOG_FILE_FREQUENCY,
+        dateFormat: LOG_FILE_DATE_FORMAT,
         limit: { count: LOG_FILE_COUNT },
       },
     });
@@ -158,9 +161,11 @@ export function prepareLogDirectory(directory: string): string {
     accessSync(directory, constants.W_OK);
     return directory;
   } catch (cause) {
+    // The message alone: a stack trace of an operator's wrong path helps nobody, and this
+    // is the one record written before the logger exists to carry it.
     console.warn(
-      `${new Date().toISOString()} boot: log directory ${directory} is unusable, continuing on stdout alone`,
-      cause,
+      `${new Date().toISOString()} boot: log directory ${directory} is unusable, ` +
+        `continuing on stdout alone (${cause instanceof Error ? cause.message : String(cause)})`,
     );
     return '';
   }

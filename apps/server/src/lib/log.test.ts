@@ -245,7 +245,7 @@ describe('the transport targets', () => {
     }
   });
 
-  it('rotates the file daily and keeps a fortnight', () => {
+  it('rotates the file daily, dates it, and keeps a fortnight', () => {
     const file = logTargets('info', '/data/logs', false).find(
       (target) => target.target === 'pino-roll',
     );
@@ -253,6 +253,7 @@ describe('the transport targets', () => {
     expect(file?.options).toMatchObject({
       file: '/data/logs/linguacast.log',
       frequency: 'daily',
+      dateFormat: 'yyyy-MM-dd',
       limit: { count: 14 },
     });
   });
