@@ -51,32 +51,34 @@ expected failure sequence rather than a set of unrelated faults.
 
 ## What the log gives you before you ask for anything
 
-Logging has two tiers. The **always-on** tier is sized so that a log pasted straight out of
-`docker compose logs` answers the checks below on its own: it carries the server version,
-the media configuration, both trusted-proxy misconfigurations, the three silent-failure
+`LOG_LEVEL` defaults to `info`, and that default is sized so that a log pasted straight
+out of `docker compose logs` answers the checks below on its own: it carries the server
+version, the media configuration, both trusted-proxy misconfigurations, the three silent-failure
 warnings (a transport that never connected, a producer receiving no RTP, a consumer
 sending none), worker death and replacement, room-creation failure, socket handler
 timeouts, unhandled errors, and a per-channel timeline of going on air and off air with
 the listener count at each boundary and the peak between them. The timeline's cost is
-flat per event — there is no always-on line per listener — so a healthy hundred-listener
-event and a healthy five-listener one produce comparable volume. The silent-failure
+flat per event — there is no record per listener at this level — so a healthy
+hundred-listener event and a healthy five-listener one produce comparable volume. The silent-failure
 warnings are per connection, so a deployment carrying no audio at all is loud in
 proportion to its audience; that is the signal, not noise.
 
-What is **not** always-on: a transport that connected and later dropped, and a DTLS
-failure after a successful handshake. Both are per-connection narration and live in the
-verbose tier. Every line carries a timestamp the server
-emits itself and a subsystem prefix.
+What the default level does **not** carry: a transport that connected and later dropped,
+and a DTLS failure after a successful handshake. Both are per-connection narration and sit
+at `debug`. Every record carries a timestamp the server emits itself and the subsystem it
+came from.
 
-The **verbose** tier is off unless the operator sets `LOG_VERBOSE`. It adds the
-per-transport narration: creation with its offered candidates, ICE and DTLS progress, the
-selected candidate pair, close — and the short transport identifiers and **the network
-addresses of the people listening** that go with them.
+`LOG_LEVEL=debug` adds the per-transport narration: creation with its offered candidates,
+ICE and DTLS progress, the selected candidate pair, close, and the short transport
+identifiers that go with them. `LOG_LEVEL=trace` adds **the network addresses of the
+people listening**.
 
-Ask for verbose only when the always-on tier has not settled it, and say this when you
-ask: turn it on, reproduce the problem, turn it back off, and **read the excerpt before
-pasting it into a ticket** — it names guests' addresses, and whether that disclosure is
-acceptable for a particular congregation is the operator's judgment, not ours.
+Ask for a raised level only when the default has not settled it, and say this when you
+ask: raise it, reproduce the problem, put it back, and **read the excerpt before pasting
+it into a ticket**. `trace` names guests' addresses, and writes them to `/data/logs` as
+well as to the screen, where they stay for a fortnight — so the operator is deciding about
+a retained record, not a moment on a screen. Whether that disclosure
+is acceptable for a particular congregation is their judgment, not ours.
 
 ## First things to check, in order
 
@@ -90,8 +92,8 @@ acceptable for a particular congregation is the operator's judgment, not ours.
 3. The announced address in the startup log is the router's public address. A stale value
    is the most common silent failure: the candidates are well-formed and unreachable, and
    nothing errors anywhere. On a dynamic residential IP this is a DDNS problem. The
-   always-on log says so from the other side too: a transport that has not connected
-   within the silence window warns, with no verbose tier needed.
+   default level says so from the other side too: a transport that has not connected
+   within the silence window warns, with nothing turned on.
 4. The guest link works from off the venue network — open it on mobile data. Silence there
    with audio on the LAN means the announced address is wrong.
 5. The number of `mediasoup-worker` processes matches the configured worker count. The
