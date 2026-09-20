@@ -1,9 +1,14 @@
 import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetOnceWarnings } from '../../lib/log';
+import { resetOnceWarnings, useLogDestination } from '../../lib/log';
 import { TokenBucketLimiter } from '../../lib/rate-limit';
 import { clientIp, createRateLimit } from './rate-limit.middleware';
+
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'trace', LOG_DIR: '', TRUSTED_PROXY_IPS: [] },
+}));
+vi.mock('../../env', () => ({ env: envMock }));
 
 function build(capacity: number, now: () => number) {
   const app = new Hono();
@@ -220,18 +225,21 @@ describe('clientIp behind a proxy', () => {
 });
 
 describe('trusted-proxy misconfiguration warnings', () => {
-  let warn: ReturnType<typeof vi.spyOn>;
+  let records: Record<string, unknown>[];
 
   beforeEach(() => {
     resetOnceWarnings();
-    warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    records = [];
+    useLogDestination({
+      write(chunk: string) {
+        records.push(JSON.parse(chunk));
+      },
+    });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
-
-  const lines = () => warn.mock.calls.map((call: unknown[]) => String(call[0]));
 
   it('warns once when a trusted proxy appends no forwarded header', async () => {
     const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
@@ -240,8 +248,13 @@ describe('trusted-proxy misconfiguration warnings', () => {
       await app.request('/miss', undefined, from('10.0.0.9'));
     }
 
-    expect(warn).toHaveBeenCalledOnce();
-    expect(lines()[0]).toContain('one throttle bucket');
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      subsystem: 'proxy',
+      level: 40,
+      peer: '10.0.0.9',
+    });
+    expect(String(records[0]?.msg)).toContain('one throttle bucket');
   });
 
   it('warns once per unlisted address that carries a forwarded header, naming it', async () => {
@@ -251,8 +264,9 @@ describe('trusted-proxy misconfiguration warnings', () => {
       await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
     }
 
-    expect(warn).toHaveBeenCalledOnce();
-    expect(lines()[0]).toContain('172.18.0.4');
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ subsystem: 'proxy', level: 40, peer: '172.18.0.4' });
+    expect(String(records[0]?.msg)).toContain('TRUSTED_PROXY_IPS');
   });
 
   it('warns for a second unlisted address rather than suppressing it behind the first', async () => {
@@ -261,8 +275,8 @@ describe('trusted-proxy misconfiguration warnings', () => {
     await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
     await app.request('/miss', ...forwarded('203.0.113.7', '1.1.1.1'));
 
-    expect(warn).toHaveBeenCalledTimes(2);
-    expect(lines()[1]).toContain('203.0.113.7');
+    expect(records).toHaveLength(2);
+    expect(records[1]).toMatchObject({ peer: '203.0.113.7' });
   });
 
   it('emits both warnings in a process that meets both shapes, distinguishably', async () => {
@@ -271,9 +285,10 @@ describe('trusted-proxy misconfiguration warnings', () => {
     await app.request('/miss', undefined, from('10.0.0.9'));
     await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
 
-    expect(warn).toHaveBeenCalledTimes(2);
-    expect(lines()[0]).not.toBe(lines()[1]);
-    expect(lines()[0]).not.toContain('172.18.0.4');
+    expect(records).toHaveLength(2);
+    expect(records[0]?.msg).not.toBe(records[1]?.msg);
+    expect(records[0]?.peer).toBe('10.0.0.9');
+    expect(records[1]?.peer).toBe('172.18.0.4');
   });
 
   it('stays silent when no proxy is trusted, which the boot warning already covers', async () => {
@@ -282,7 +297,7 @@ describe('trusted-proxy misconfiguration warnings', () => {
     await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
     await app.request('/miss', undefined, from('172.18.0.4'));
 
-    expect(warn).not.toHaveBeenCalled();
+    expect(records).toHaveLength(0);
   });
 
   it('stays silent on the correctly configured path', async () => {
@@ -290,7 +305,25 @@ describe('trusted-proxy misconfiguration warnings', () => {
 
     await app.request('/miss', { headers: { 'x-forwarded-for': '1.1.1.1' } }, from('10.0.0.9'));
 
-    expect(warn).not.toHaveBeenCalled();
+    expect(records).toHaveLength(0);
+  });
+
+  it('names the peer the header arrived from and never the address it forwards', async () => {
+    const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
+
+    await app.request('/miss', ...forwarded('172.18.0.4', '198.51.100.7'));
+
+    expect(records[0]).toMatchObject({ peer: '172.18.0.4' });
+    expect(JSON.stringify(records)).not.toContain('198.51.100.7');
+  });
+
+  it('warns without a peer address rather than staying silent about an unnamed one', async () => {
+    const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
+
+    await app.request('/miss', { headers: { 'x-forwarded-for': '1.1.1.1' } });
+
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ level: 40, peer: null });
   });
 
   it('resolves the same client address in every one of those shapes', () => {

@@ -31,7 +31,7 @@ const spaRoutes = createSpaRoutes(env.WEB_ROOT);
 if (spaRoutes) {
   app.route('/', spaRoutes);
 } else {
-  logger('boot').info(`SPA serving disabled (no build output at ${env.WEB_ROOT})`);
+  logger('boot').info({ webRoot: env.WEB_ROOT }, 'SPA serving disabled, no build output');
 }
 
 // Covers the unmatched non-GET case, and the whole server when there is no SPA build.

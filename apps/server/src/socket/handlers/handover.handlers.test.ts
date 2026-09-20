@@ -69,8 +69,6 @@ let emitted: Emission[];
 let disconnected: string[];
 
 beforeEach(async () => {
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
   stopMedia = await startFakeMedia();
   ({ db, cleanup: closeDb } = createTestDb());
 

@@ -38,8 +38,6 @@ let listener: SocketAuth;
 const socket = (id: string) => ({ id });
 
 beforeEach(async () => {
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
   ({ db, cleanup: cleanupDb } = createTestDb());
   stopMedia = await startFakeMedia();
 

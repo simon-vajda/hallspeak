@@ -1,5 +1,5 @@
 import type { Notification } from '../core/notifications';
-import { logger } from '../lib/log';
+import { type Fields, logger } from '../lib/log';
 
 /**
  * The always-on answer to "was this channel live at the time they say it went quiet, and
@@ -44,10 +44,12 @@ export function createChannelTimeline(slugOf: SlugResolver): (n: Notification) =
     return fresh;
   };
 
-  // An unknown reading is not a negative one: a channel row that has gone is named by its
-  // id rather than relabelled as some other channel's slug.
-  const subject = (eventId: number, channelId: number, slug?: string): string =>
-    `event ${eventId} ${slug ?? slugOf(channelId) ?? `channel ${channelId}`}`;
+  // An unknown reading is not a negative one: a channel row that has gone carries no slug
+  // rather than being relabelled with some other channel's.
+  const subject = (eventId: number, channelId: number, slug?: string): Fields => {
+    const resolved = slug ?? slugOf(channelId);
+    return resolved === undefined ? { eventId, channelId } : { eventId, channelId, slug: resolved };
+  };
 
   return (notification) => {
     switch (notification.type) {
@@ -66,8 +68,12 @@ export function createChannelTimeline(slugOf: SlugResolver): (n: Notification) =
         // not inherit the first one's peak.
         state.peak = state.count;
         log.info(
-          `${subject(notification.eventId, notification.channelId, notification.slug)} on air, ` +
-            `${state.count} listening`,
+          {
+            ...subject(notification.eventId, notification.channelId, notification.slug),
+            transition: 'on-air',
+            count: state.count,
+          },
+          'channel on air',
         );
         return;
       }
@@ -75,8 +81,14 @@ export function createChannelTimeline(slugOf: SlugResolver): (n: Notification) =
         const state = stateOf(notification.channelId);
         state.onAir = false;
         log.info(
-          `${subject(notification.eventId, notification.channelId, notification.slug)} off air ` +
-            `(${notification.reason}), ${state.count} listening, peak ${state.peak}`,
+          {
+            ...subject(notification.eventId, notification.channelId, notification.slug),
+            transition: 'off-air',
+            reason: notification.reason,
+            count: state.count,
+            peak: state.peak,
+          },
+          'channel off air',
         );
         state.peak = state.count;
         return;
@@ -95,15 +107,15 @@ export function createChannelTimeline(slugOf: SlugResolver): (n: Notification) =
         state.holder = notification.sessionId;
         // The session id distinguishes a swap from a first claim but never reaches the
         // log: it is a broadcasting credential.
-        const what =
+        const [transition, message] =
           notification.sessionId === null
-            ? 'broadcast rights released'
+            ? ['rights-released', 'broadcast rights released']
             : previous === null
-              ? 'broadcast rights taken'
+              ? ['rights-taken', 'broadcast rights taken']
               : previous === notification.sessionId
-                ? 'broadcast rights rebound to a reconnected studio'
-                : 'broadcast rights handed to another studio';
-        log.info(`${subject(notification.eventId, notification.channelId)} ${what}`);
+                ? ['rights-rebound', 'broadcast rights rebound to a reconnected studio']
+                : ['rights-handed', 'broadcast rights handed to another studio'];
+        log.info({ ...subject(notification.eventId, notification.channelId), transition }, message);
         return;
       }
       default:

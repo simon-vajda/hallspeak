@@ -99,7 +99,10 @@ export class NotificationHub {
       try {
         listener(notification);
       } catch (cause) {
-        logger('notifications').error('a subscriber threw', cause);
+        logger('notifications').error(
+          { err: cause, type: notification.type },
+          'a subscriber threw',
+        );
       }
     }
   }

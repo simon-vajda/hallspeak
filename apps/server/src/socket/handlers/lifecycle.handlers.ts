@@ -301,6 +301,6 @@ function seed(send: () => void, socketId: string, what: string): void {
   try {
     send();
   } catch (cause) {
-    log.error(`could not send the initial ${what} to ${socketId}`, cause);
+    log.error({ err: cause, socketId, seed: what }, 'could not send an initial reading');
   }
 }

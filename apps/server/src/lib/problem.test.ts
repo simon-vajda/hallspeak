@@ -1,21 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppError, toProblem } from './problem';
+
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'trace', LOG_DIR: '' },
+}));
+vi.mock('../env', () => ({ env: envMock }));
+
+const { useLogDestination } = await import('./log');
+const { AppError, toProblem } = await import('./problem');
 
 const PIN = '481902';
 const SPEAKER_CODE = 'GLASS-OTTER';
 const STUDIO_SESSION = 'ssn_7f3a9c1e';
 
-let error: ReturnType<typeof vi.spyOn>;
+let records: Record<string, unknown>[];
 
 beforeEach(() => {
-  error = vi.spyOn(console, 'error').mockImplementation(() => {});
+  records = [];
+  useLogDestination({
+    write(chunk: string) {
+      records.push(JSON.parse(chunk));
+    },
+  });
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const written = () => error.mock.calls.flat().map(String).join('\n');
+const written = () => JSON.stringify(records);
 
 describe('toProblem', () => {
   it('keeps an AppError on the wire and logs nothing', () => {
@@ -23,7 +35,7 @@ describe('toProblem', () => {
       code: 'channel_taken',
       message: 'Somebody else is broadcasting.',
     });
-    expect(error).not.toHaveBeenCalled();
+    expect(records).toHaveLength(0);
   });
 
   it('hides anything else behind internal_error', () => {
@@ -33,11 +45,18 @@ describe('toProblem', () => {
     });
   });
 
-  it('logs the name, message and stack of a thrown Error', () => {
+  it('logs the name, message and stack of a thrown Error as fields', () => {
     toProblem(new TypeError('cannot read properties of undefined'));
 
-    expect(written()).toContain('TypeError');
-    expect(written()).toContain('cannot read properties of undefined');
+    expect(records[0]).toMatchObject({
+      subsystem: 'error',
+      msg: 'unhandled error',
+      err: { message: 'cannot read properties of undefined' },
+    });
+    // The class name survives in the stack, which is where an operator reads it.
+    expect(String((records[0]?.err as { stack?: string } | undefined)?.stack)).toContain(
+      'TypeError',
+    );
   });
 
   it('reproduces no credential carried on the thrown value', () => {
@@ -56,18 +75,19 @@ describe('toProblem', () => {
     expect(written()).not.toContain(STUDIO_SESSION);
   });
 
-  it('reproduces nothing at all from a non-Error thrown value', () => {
+  it('reproduces nothing but the type from a non-Error thrown value', () => {
     toProblem({ pin: PIN, speakerCode: SPEAKER_CODE });
 
     expect(written()).not.toContain(PIN);
     expect(written()).not.toContain(SPEAKER_CODE);
-    expect(written()).toContain('non-Error');
+    expect(records[0]).toMatchObject({ msg: 'unhandled non-Error thrown', thrownType: 'object' });
   });
 
-  it('is written always-on, so a failure is visible without the verbose tier', () => {
+  it('writes at error, so a failure is visible at any level an operator runs', () => {
     toProblem(new Error('boom'));
 
-    expect(error).toHaveBeenCalledOnce();
-    expect(written()).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z error: /);
+    expect(records).toHaveLength(1);
+    expect(records[0]?.level).toBe(50);
+    expect(String(records[0]?.time)).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/);
   });
 });

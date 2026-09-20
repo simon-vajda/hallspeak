@@ -1,6 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppError } from '../../lib/problem';
-import { HANDLER_TIMEOUT_MS, handle } from './handle';
+
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'trace', LOG_DIR: '' },
+}));
+vi.mock('../../env', () => ({ env: envMock }));
+
+const { useLogDestination } = await import('../../lib/log');
+const { AppError } = await import('../../lib/problem');
+const { HANDLER_TIMEOUT_MS, handle } = await import('./handle');
+
+let records: Record<string, unknown>[];
+
+beforeEach(() => {
+  records = [];
+  useLogDestination({
+    write(chunk: string) {
+      records.push(JSON.parse(chunk));
+    },
+  });
+});
 
 describe('handle', () => {
   it('acks ok with the resolved value', async () => {
@@ -25,7 +43,6 @@ describe('handle', () => {
   });
 
   it('maps any other throw to internal_error', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
     const ack = vi.fn();
 
     await handle('ping', () => {
@@ -51,7 +68,6 @@ describe('handle', () => {
     });
 
     it('acks timeout when the handler never settles', async () => {
-      const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
       const ack = vi.fn();
 
       const settled = handle('ping', () => new Promise<number>(() => {}))({}, ack);
@@ -62,11 +78,17 @@ describe('handle', () => {
         ok: false,
         error: { code: 'timeout', message: 'Handler for "ping" timed out.' },
       });
-      // The server log must name the event, or a hung handler is unfindable — and it is
-      // always-on, so a wedged handler is visible without the verbose tier.
-      expect(logged).toHaveBeenCalledWith(expect.stringContaining('ping'));
-      const line = logged.mock.calls.map(String).find((entry) => entry.includes('ping')) ?? '';
-      expect(line).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z socket: /);
+      // The record must name the event as a field, or a hung handler is unfindable — and
+      // it is written at error, so a wedged handler is visible at any level.
+      expect(records).toContainEqual(
+        expect.objectContaining({
+          subsystem: 'socket',
+          level: 50,
+          msg: 'handler timed out',
+          event: 'ping',
+          timeoutMs: HANDLER_TIMEOUT_MS,
+        }),
+      );
     });
 
     it('does not fire the watchdog for a handler that settles in time', async () => {

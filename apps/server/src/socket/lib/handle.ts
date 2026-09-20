@@ -13,7 +13,7 @@ export const HANDLER_TIMEOUT_MS = 8_000;
 function withTimeout<T>(work: Promise<T> | T, event: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
-      log.error(`Handler for "${event}" exceeded ${HANDLER_TIMEOUT_MS}ms.`);
+      log.error({ event, timeoutMs: HANDLER_TIMEOUT_MS }, 'handler timed out');
       reject(new AppError('timeout', `Handler for "${event}" timed out.`));
     }, HANDLER_TIMEOUT_MS);
 

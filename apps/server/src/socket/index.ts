@@ -130,7 +130,7 @@ export function attachSocket(httpServer: ServerType): SocketServer {
           socketId: socket.id,
         });
       } catch (cause) {
-        log.error(`could not send the handover snapshot to ${socket.id}`, cause);
+        log.error({ err: cause, socketId: socket.id }, 'could not send the handover snapshot');
       }
       // A studio reconnecting onto a claim it still holds had that rebind published from
       // inside the handshake, before this socket could be addressed at all.

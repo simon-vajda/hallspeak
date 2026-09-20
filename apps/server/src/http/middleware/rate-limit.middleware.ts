@@ -37,16 +37,18 @@ export function clientIp(
     // and one guesser spends the throttle budget for all of them. Nothing else says so.
     log.warnOnce(
       'proxy:no-forwarded-header',
-      'A listed trusted proxy sent no X-Forwarded-For header, so every visitor shares ' +
-        "one throttle bucket. Configure the proxy to append the client's address.",
+      { peer: from },
+      'a listed trusted proxy sent no X-Forwarded-For header, so every visitor shares one ' +
+        "throttle bucket; configure the proxy to append the client's address",
     );
   } else if (appended && trustedProxies.length > 0) {
     // Named, not judged: a container bridge address is indistinguishable from a stray
     // client's forged header here, and only the operator knows which this is.
     log.warnOnce(
       `proxy:untrusted-forwarder:${from ?? 'unknown'}`,
-      `An X-Forwarded-For header arrived from ${from ?? 'an unidentifiable address'}, which ` +
-        'is not in TRUSTED_PROXY_IPS, so it was ignored. If that is your proxy, list it.',
+      { peer: from ?? null },
+      'an X-Forwarded-For header arrived from an address that is not in TRUSTED_PROXY_IPS, ' +
+        'so it was ignored; if that is your proxy, list it',
     );
   }
 

@@ -1,27 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Notification } from '../core/notifications';
-import { createChannelTimeline } from './channel-timeline';
 
-const { envMock } = vi.hoisted(() => ({ envMock: { LOG_VERBOSE: false } }));
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'trace', LOG_DIR: '' },
+}));
 vi.mock('../env', () => ({ env: envMock }));
+
+const { useLogDestination } = await import('../lib/log');
+const { createChannelTimeline } = await import('./channel-timeline');
 
 const SLUGS = new Map([
   [11, 'de'],
   [12, 'fr'],
 ]);
 
-let info: ReturnType<typeof vi.spyOn>;
+let records: Record<string, unknown>[];
 
 beforeEach(() => {
-  envMock.LOG_VERBOSE = false;
-  info = vi.spyOn(console, 'log').mockImplementation(() => {});
+  records = [];
+  useLogDestination({
+    write(chunk: string) {
+      records.push(JSON.parse(chunk));
+    },
+  });
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const lines = () => info.mock.calls.map((call: unknown[]) => String(call[0]));
+const messages = () => records.map((record) => String(record.msg));
 const timeline = () => createChannelTimeline((channelId) => SLUGS.get(channelId));
 
 const onAir = (channelId = 11, slug = 'de'): Notification => ({
@@ -53,27 +61,42 @@ const claim = (sessionId: string | null, channelId = 11): Notification => ({
 });
 
 describe('the channel timeline', () => {
-  it('logs going on air and going off air, one line each, named by event and slug', () => {
+  it('writes one record each for going on air and going off air, named by event and slug', () => {
     const apply = timeline();
 
     apply(onAir());
     apply(offAir());
 
-    expect(lines()).toHaveLength(2);
-    expect(lines()[0]).toContain('event 3 de on air');
-    expect(lines()[1]).toContain('event 3 de off air');
+    expect(records).toHaveLength(2);
+    expect(records[0]).toMatchObject({
+      subsystem: 'channel',
+      level: 30,
+      msg: 'channel on air',
+      eventId: 3,
+      channelId: 11,
+      slug: 'de',
+      transition: 'on-air',
+      count: 0,
+    });
+    expect(records[1]).toMatchObject({
+      msg: 'channel off air',
+      eventId: 3,
+      slug: 'de',
+      transition: 'off-air',
+      reason: 'ended',
+    });
   });
 
   it('writes nothing of its own for listener changes between the boundaries', () => {
     const apply = timeline();
     apply(onAir());
-    info.mockClear();
+    records.length = 0;
 
     for (let i = 1; i <= 100; i++) {
       apply(listeners(i));
     }
 
-    expect(info).not.toHaveBeenCalled();
+    expect(records).toHaveLength(0);
   });
 
   it('reports the peak reached during the session, not the final count', () => {
@@ -85,7 +108,7 @@ describe('the channel timeline', () => {
 
     apply(offAir());
 
-    expect(lines().at(-1)).toContain('3 listening, peak 120');
+    expect(records.at(-1)).toMatchObject({ count: 3, peak: 120 });
   });
 
   it("does not let a second broadcast inherit the first one's peak", () => {
@@ -94,13 +117,13 @@ describe('the channel timeline', () => {
     apply(listeners(120));
     apply(listeners(0));
     apply(offAir());
-    info.mockClear();
+    records.length = 0;
 
     apply(onAir());
     apply(listeners(5));
     apply(offAir());
 
-    expect(lines().at(-1)).toContain('peak 5');
+    expect(records.at(-1)).toMatchObject({ peak: 5 });
   });
 
   it('carries the peak through a handover rather than restarting it', () => {
@@ -119,7 +142,7 @@ describe('the channel timeline', () => {
     apply(listeners(118));
     apply(offAir());
 
-    expect(lines().at(-1)).toContain('118 listening, peak 120');
+    expect(records.at(-1)).toMatchObject({ count: 118, peak: 120 });
   });
 
   it('says a channel went on air once across a handover, not once per producer', () => {
@@ -128,18 +151,18 @@ describe('the channel timeline', () => {
     apply(onAir());
     apply(onAir());
 
-    expect(lines().filter((line: string) => line.includes('on air'))).toHaveLength(1);
+    expect(messages().filter((message) => message === 'channel on air')).toHaveLength(1);
   });
 
   it('still opens a new broadcast after the channel has gone off air', () => {
     const apply = timeline();
     apply(onAir());
     apply(offAir());
-    info.mockClear();
+    records.length = 0;
 
     apply(onAir());
 
-    expect(lines().filter((line: string) => line.includes('on air'))).toHaveLength(1);
+    expect(messages().filter((message) => message === 'channel on air')).toHaveLength(1);
   });
 
   it('counts listeners already present when a channel goes on air', () => {
@@ -148,7 +171,7 @@ describe('the channel timeline', () => {
 
     apply(onAir());
 
-    expect(lines()[0]).toContain('7 listening');
+    expect(records[0]).toMatchObject({ transition: 'on-air', count: 7 });
   });
 
   it('tracks two channels of one event independently', () => {
@@ -157,13 +180,13 @@ describe('the channel timeline', () => {
     apply(onAir(12, 'fr'));
     apply(listeners(90, 11, 'de'));
     apply(listeners(4, 12, 'fr'));
-    info.mockClear();
+    records.length = 0;
 
     apply(offAir(12, 'fr'));
     apply(offAir(11, 'de'));
 
-    expect(lines()[0]).toContain('event 3 fr off air (ended), 4 listening, peak 4');
-    expect(lines()[1]).toContain('event 3 de off air (ended), 90 listening, peak 90');
+    expect(records[0]).toMatchObject({ slug: 'fr', reason: 'ended', count: 4, peak: 4 });
+    expect(records[1]).toMatchObject({ slug: 'de', reason: 'ended', count: 90, peak: 90 });
   });
 
   it('puts a handover on the same timeline', () => {
@@ -173,9 +196,11 @@ describe('the channel timeline', () => {
     apply(claim('ssn_second'));
     apply(claim(null));
 
-    expect(lines()[0]).toContain('broadcast rights taken');
-    expect(lines()[1]).toContain('broadcast rights handed to another studio');
-    expect(lines()[2]).toContain('broadcast rights released');
+    expect(records.map((record) => record.transition)).toEqual([
+      'rights-taken',
+      'rights-handed',
+      'rights-released',
+    ]);
   });
 
   it('names a reconnected studio as a rebind rather than a handover', () => {
@@ -184,7 +209,7 @@ describe('the channel timeline', () => {
     apply(claim('ssn_first'));
     apply(claim('ssn_first'));
 
-    expect(lines()[1]).toContain('rebound');
+    expect(records[1]).toMatchObject({ transition: 'rights-rebound' });
   });
 
   it('never writes the studio session that identifies the holder', () => {
@@ -193,11 +218,10 @@ describe('the channel timeline', () => {
     apply(claim('ssn_first'));
     apply(claim('ssn_second'));
 
-    for (const line of lines()) {
-      expect(line).not.toContain('ssn_first');
-      expect(line).not.toContain('ssn_second');
-      expect(line).not.toContain('sock_1');
-    }
+    const written = JSON.stringify(records);
+    expect(written).not.toContain('ssn_first');
+    expect(written).not.toContain('ssn_second');
+    expect(written).not.toContain('sock_1');
   });
 
   it('resolves the slug of a claim change, which does not carry one', () => {
@@ -205,7 +229,7 @@ describe('the channel timeline', () => {
 
     apply(claim('ssn_first', 12));
 
-    expect(lines()[0]).toContain('event 3 fr');
+    expect(records[0]).toMatchObject({ eventId: 3, channelId: 12, slug: 'fr' });
   });
 
   it('names a vanished channel by its id rather than relabelling it', () => {
@@ -213,7 +237,8 @@ describe('the channel timeline', () => {
 
     apply(claim('ssn_first', 99));
 
-    expect(lines()[0]).toContain('event 3 channel 99');
+    expect(records[0]).toMatchObject({ eventId: 3, channelId: 99 });
+    expect(records[0]).not.toHaveProperty('slug');
   });
 
   it('carries no listener address, because none reaches it', () => {
@@ -222,15 +247,16 @@ describe('the channel timeline', () => {
     apply(listeners(3));
     apply(offAir());
 
-    expect(lines().join('\n')).not.toMatch(/\d+\.\d+\.\d+\.\d+/);
+    expect(JSON.stringify(records)).not.toMatch(/\d+\.\d+\.\d+\.\d+/);
   });
 
-  it('is always-on, timestamped and prefixed', () => {
+  it('writes at info with a timestamp, so an operator sees it without raising the level', () => {
     const apply = timeline();
 
     apply(onAir());
 
-    expect(lines()[0]).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z channel: /);
+    expect(records[0]?.level).toBe(30);
+    expect(String(records[0]?.time)).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/);
   });
 
   it('ignores the notifications it has no line for', () => {
@@ -240,6 +266,6 @@ describe('the channel timeline', () => {
     apply({ type: 'handover-changed', eventId: 3, channelId: 11 });
     apply({ type: 'room-evicted', eventId: 3, reason: 'worker_died' });
 
-    expect(info).not.toHaveBeenCalled();
+    expect(records).toHaveLength(0);
   });
 });

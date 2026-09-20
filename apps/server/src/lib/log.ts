@@ -180,10 +180,10 @@ function buildDestination(): Destination {
   }
   const transport = pino.transport({
     targets: logTargets(env.LOG_LEVEL, prepareLogDirectory(env.LOG_DIR), process.stdout.isTTY),
-  }) as Destination;
+  });
   // Without a listener a target that fails later throws out of the worker and takes the
   // process with it. Logging stops; the event does not.
-  transport.on?.('error', () => {});
+  transport.on('error', () => {});
   return transport;
 }
 
