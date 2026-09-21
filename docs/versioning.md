@@ -1,6 +1,6 @@
 # Versioning and compatibility
 
-LinguaCast ships two release artifacts on independent schedules. This file is the contract
+Hallspeak ships two release artifacts on independent schedules. This file is the contract
 between them: what each version number means, which client may talk to which server, and
 where the constants that decide it live. The step-by-step release procedure is not here —
 it is the `release` skill under `.claude/skills/release`.

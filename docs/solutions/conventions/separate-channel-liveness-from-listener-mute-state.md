@@ -28,7 +28,7 @@ tags:
 
 ## Context
 
-LinguaCast has several nearby states that answer different questions and must not be
+Hallspeak has several nearby states that answer different questions and must not be
 collapsed into one status:
 
 - **Enabled** is an administrator's access decision. An Event and its Channel must both be
@@ -59,7 +59,7 @@ shared REST channel representation as well as Socket.IO (session history). That 
 blurred two questions: “is an interpreter producing on this Channel?” and “why is this active
 Listener hearing silence?”
 
-The boundary was finalized in merged [PR #1](https://github.com/simon-vajda/linguacast/pull/1):
+The boundary was finalized in merged [PR #1](https://github.com/simon-vajda/hallspeak/pull/1):
 Producer existence is the authoritative liveness signal, while mute is a transient,
 listener-facing explanation for silence. Mute is not a REST field.
 
@@ -206,5 +206,5 @@ of `muted` unless a separately approved product requirement deliberately moves t
   complements this convention for silence not explained by an intentional mute.
 - [An identifier returned to a client is not a capability](an-identifier-returned-to-a-client-is-not-a-capability.md)
   is the sibling convention for authorizing Producer mutations.
-- [PR #1](https://github.com/simon-vajda/linguacast/pull/1) contains the implementation and
+- [PR #1](https://github.com/simon-vajda/hallspeak/pull/1) contains the implementation and
   regression tests that established this boundary.

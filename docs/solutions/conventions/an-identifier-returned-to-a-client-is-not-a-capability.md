@@ -24,7 +24,7 @@ tags:
 
 ## Context
 
-LinguaCast has no listener accounts. A guest is authorized by possessing the event's
+Hallspeak has no listener accounts. A guest is authorized by possessing the event's
 six-digit PIN; a speaker by possessing that channel's speaker code. Everybody in the room
 holds a valid credential — that is the normal state, not the attack. Which means the
 interesting question is never "is this caller authenticated" but "what does this particular

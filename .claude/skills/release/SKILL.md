@@ -1,11 +1,11 @@
 ---
 name: release
-description: Cut a LinguaCast server or mobile release — show what changed per track, bump the canonical version on a release branch, verify, commit and open the release PR. Use when asked to release, cut a version, ship a version, tag a release, or bump the server or mobile version.
+description: Cut a Hallspeak server or mobile release — show what changed per track, bump the canonical version on a release branch, verify, commit and open the release PR. Use when asked to release, cut a version, ship a version, tag a release, or bump the server or mobile version.
 ---
 
-# Release a LinguaCast version
+# Release a Hallspeak version
 
-LinguaCast has two independent release tracks. `docs/versioning.md` is the contract behind
+Hallspeak has two independent release tracks. `docs/versioning.md` is the contract behind
 this procedure — read it if a compatibility question comes up mid-release; do not restate
 it here.
 
@@ -74,7 +74,7 @@ git diff
 ```
 
 The bump command writes files only and restores every file it touched if its own check
-fails. For server it updates the manifest, the `LINGUACAST_VERSION` pin in `.env.example`,
+fails. For server it updates the manifest, the `HALLSPEAK_VERSION` pin in `.env.example`,
 and the generated OpenAPI artifacts. For mobile it updates the manifest alone;
 `app.config.ts` derives Expo's store-facing version from it.
 

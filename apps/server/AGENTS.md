@@ -30,7 +30,7 @@ Rules local to the server. Repo-wide rules, the socket protocol and versioning l
 ## HTTP
 
 - 404 parity: disabled event, disabled channel and unknown PIN produce byte-identical responses (test in `http/routes/events.routes.test.ts`). Channel lookup checks existence before the speaker code. Failed public lookups are rate limited per IP (burst 20, refill 1/s) with a smaller global budget, charged on 404 only.
-- `http/spa.routes.ts` serves the production SPA: every Vite output is static except `index.html`, read once at boot. It requires the single `linguacast:metadata` marker pair and replaces only the four escaped title/description tags. Exact event/channel URLs get indexed lookups and event/listener/speaker metadata; missing or disabled resources return the shell with 404, a stale non-empty speaker code with 403. The speaker code is compared, never rendered. Page lookups share the public rate-limit buckets. Rendered shells are `no-cache`; `/assets/*` stay immutable. A missing web build is normal in development; a present build with no usable index is fatal.
+- `http/spa.routes.ts` serves the production SPA: every Vite output is static except `index.html`, read once at boot. It requires the single `hallspeak:metadata` marker pair and replaces only the four escaped title/description tags. Exact event/channel URLs get indexed lookups and event/listener/speaker metadata; missing or disabled resources return the shell with 404, a stale non-empty speaker code with 403. The speaker code is compared, never rendered. Page lookups share the public rate-limit buckets. Rendered shells are `no-cache`; `/assets/*` stay immutable. A missing web build is normal in development; a present build with no usable index is fatal.
 
 ## Auth
 
@@ -38,7 +38,7 @@ Rules local to the server. Repo-wide rules, the socket protocol and versioning l
 - Credentials live only in `DATA_DIR/admin.json` — never SQLite, never a hand-edited config. Recovery is deleting that file and restarting. Read once at boot; a file that exists but does not parse is **fatal**, never "unconfigured" (that would reopen the account-claim window).
 - `createAccount` takes its claim synchronously before hashing. `resetAuth()` exists for tests.
 - Sessions are rows keyed on SHA-256 of the token, never the token. 30 days, renewed only within the last day, swept at boot and deleted when found expired.
-- Cookie `__Host-linguacast_session` (the prefix must appear at all three call sites in `http/session-cookie.ts`), httpOnly, `SameSite=Lax`, `Secure` unconditionally.
+- Cookie `__Host-hallspeak_session` (the prefix must appear at all three call sites in `http/session-cookie.ts`), httpOnly, `SameSite=Lax`, `Secure` unconditionally.
 - Endpoints are `/auth/*`, outside `/admin`. `http/middleware/require-admin.middleware.ts` checks an account exists **before** checking the session. Refusals are a 401 `Problem`, never a redirect.
 - Sign-in is throttled per address and never locked out: `createRateLimit` charges 401 and 409, with **no** shared global budget (against one account that is a lockout of the correct password). The semaphore bounds scrypt load instead.
 - `clientIp` believes the rightmost `X-Forwarded-For` entry only from an address in `TRUSTED_PROXY_IPS`; unset means never.
@@ -73,7 +73,7 @@ Rules local to the server. Repo-wide rules, the socket protocol and versioning l
 
 ## Environment
 
-- `DATA_DIR` holds both user-data files, `linguacast.db` and `admin.json`; each filename lives with its owner.
+- `DATA_DIR` holds both user-data files, `hallspeak.db` and `admin.json`; each filename lives with its owner.
 - `TRUSTED_PROXY_IPS` — optional, comma-separated, unset by default. A listed proxy sending no forwarded header, and a forwarded header from an unlisted address, each warn once per process (the second once per observed address); both are otherwise silent.
 - `LOG_LEVEL` — `error`, `warn`, `info`, `debug` or `trace`, defaulting to `info`. A Zod enum, so an unknown value refuses to boot rather than silently picking a level. `env.ts` keeps its own `console.error`: it fires before a parsed environment exists, and routing it through the logger would be an import cycle.
 - `LOG_DIR` — where the rotated NDJSON copy is written, defaulting to `logs` under `DATA_DIR` (derived in the object-level `transform`, since a field cannot read a sibling). Unset takes that default; empty declines the file target. The directory is proved writable before the target is built, because a failing target takes its sibling down with it and stdout must survive an operator's bad path.
@@ -82,7 +82,7 @@ Rules local to the server. Repo-wide rules, the socket protocol and versioning l
 
 ## Tests
 
-- `testing/api.ts` sets `DATA_DIR` before **dynamically** importing `../db`; a static import would provision the real `./data/linguacast.db`.
+- `testing/api.ts` sets `DATA_DIR` before **dynamically** importing `../db`; a static import would provision the real `./data/hallspeak.db`.
 - A test reaches `core/auth` **only** through `createTestApi()` (`signInAsAdmin`, `createSession`, `resetAuth`, `SESSION_TTL_MS`). A static `import … from '../core/auth'` anywhere in a test's graph loads `env.ts` early, and `resetAuth()` then deletes the operator's real `admin.json`. `createTestApi` passes an explicit `admin.json` path to `startAuth()` for the same reason.
 
 ## Deployment
@@ -92,4 +92,4 @@ Rules local to the server. Repo-wide rules, the socket protocol and versioning l
 - The mediasoup worker is fetched explicitly against a pinned `MEDIASOUP_WORKER_KERNEL`; the build asserts exit status 41 (a prebuilt binary ran). See `docs/solutions/integration-issues/pin-mediasoups-prebuilt-worker-to-a-kernel-line-the-base-image-can-load.md`.
 - The entrypoint owns `/data` and drops privileges with `setpriv` unless Compose's `user:` already did.
 - RTC ports are published one-to-one; a remapped port breaks audio silently.
-- Every operator setting lives in `.env.example` only. Uncommented lines are decisions (`PUBLIC_ADDRESS`, `TRUSTED_PROXY_IPS`, `LINGUACAST_VERSION`); defaults stay commented. `compose.yaml` reads it via `env_file` and interpolates `LINGUACAST_VERSION`; `PUBLIC_ADDRESS` is repeated under `environment:` only for its `:?` guard.
+- Every operator setting lives in `.env.example` only. Uncommented lines are decisions (`PUBLIC_ADDRESS`, `TRUSTED_PROXY_IPS`, `HALLSPEAK_VERSION`); defaults stay commented. `compose.yaml` reads it via `env_file` and interpolates `HALLSPEAK_VERSION`; `PUBLIC_ADDRESS` is repeated under `environment:` only for its `:?` guard.

@@ -1,6 +1,6 @@
 # @hallspeak/mobile
 
-The LinguaCast app for iOS and Android: Expo SDK 57, React Native 0.86, `expo-router`.
+The Hallspeak app for iOS and Android: Expo SDK 57, React Native 0.86, `expo-router`.
 
 ## What it does today
 
@@ -95,7 +95,7 @@ mounts a hook from the shared package — an invalid-hook-call with no obvious c
 
 ## The local audio module
 
-`modules/linguacast-audio` is tracked in git and autolinked by prebuild, unlike `ios/` and
+`modules/hallspeak-audio` is tracked in git and autolinked by prebuild, unlike `ios/` and
 `android/`. It owns the audio session, the Android `mediaPlayback` foreground service, the
 system media controls and the output route. Editing it needs a dev client rebuild, and on iOS
 it links against the same WebRTC framework `react-native-webrtc` does — the session it
