@@ -87,7 +87,7 @@ The app states the platform's audio settings and offers no control that would du
 ## Screens
 
 - Scanner: one layout on both platforms (close, left-aligned title, prompt, wide action beside the torch), glass on iOS, Material filled button and squircle on Android. No simulator substitute for the camera path.
-- Event picker: separate cards on iOS, one connected list on Android (`connectedListShape` in `src/theme/shape.ts`, shared by sheets). An on-air row takes the `live` wash with a `primary` play disc; an offline row is a dashed outline with a chevron.
+- Event picker: separate cards on iOS, one connected list on Android (`connectedListShape` in `src/theme/shape.ts`, shared by sheets). An on-air row takes the `live` wash with a `primary` play disc; an offline row carries a chevron and no play affordance, outlined on iOS and borderless on Android, where the connected list already separates rows by tone.
 - Channel: an unread channel prints neither online nor offline label; the badge slot is held in every state. The report action mounts only while listening. `ListenTarget` shows a native spinner during the `holding` grace, stays at full opacity, disables taps and reports busy to accessibility.
 - Listener rings: on mute, stop expanding then shrink and fade over 280ms; unmuting mid-transition resumes from the current phase; animations are cancelled while idle and on unmount.
 - The design's "on air for N minutes" sentence is on the forbidden-claim list: the public payload has no broadcast start time.
