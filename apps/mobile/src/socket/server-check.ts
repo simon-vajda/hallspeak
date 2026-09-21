@@ -2,7 +2,7 @@ import {
   assessServerCompatibility,
   type ServerCompatibility,
   type ServerVersionInfo,
-} from '@linguacast/client-core/server';
+} from '@hallspeak/client-core/server';
 
 export type ServerCheck =
   | { state: 'checking' }

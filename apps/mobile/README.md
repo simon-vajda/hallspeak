@@ -1,4 +1,4 @@
-# @linguacast/mobile
+# @hallspeak/mobile
 
 The LinguaCast app for iOS and Android: Expo SDK 57, React Native 0.86, `expo-router`.
 
@@ -33,12 +33,12 @@ is right there in the tree.
 
 ```sh
 pnpm install                                # from the repo root
-pnpm -F @linguacast/mobile ios              # builds and installs the dev client
-pnpm -F @linguacast/mobile android
-pnpm -F @linguacast/mobile start            # Metro, once a dev client is installed
+pnpm -F @hallspeak/mobile ios              # builds and installs the dev client
+pnpm -F @hallspeak/mobile android
+pnpm -F @hallspeak/mobile start            # Metro, once a dev client is installed
 ```
 
-`ios/` and `android/` are generated and gitignored. `pnpm -F @linguacast/mobile prebuild`
+`ios/` and `android/` are generated and gitignored. `pnpm -F @hallspeak/mobile prebuild`
 regenerates both from `app.json`; never hand-edit them, and never add an `app.config.ts` —
 TypeScript 7.0.2, which every package here pins, breaks the Expo CLI's compilation of it.
 
@@ -77,13 +77,13 @@ later entry wins on a shared key. `expo/tsconfig.base` contributes `customCondit
 
 ## Importing the workspace packages
 
-`@linguacast/contract` and `@linguacast/client-core` are both consumed as TypeScript source;
+`@hallspeak/contract` and `@hallspeak/client-core` are both consumed as TypeScript source;
 Metro transpiles what it resolves, so neither has a build step. Import the contract's subpaths,
 never its root barrel, which pulls in Hono — and note `./schemas` does too. This app uses
 `./openapi` (types only), `./patterns`, and `./socket` for the report vocabulary.
 `__tests__/contract-resolution.test.ts` guards that seam.
 
-`@linguacast/client-core` holds the decision logic shared with the web app: the socket
+`@hallspeak/client-core` holds the decision logic shared with the web app: the socket
 lifecycle and its hook, channel status, listen intent, the report helpers, and the media state
 machine with its recovery ladder. It imports no platform of any kind, which its own boundary
 test enforces. Anything coupled to `react-native-webrtc`, to `mediasoup-client` or to a

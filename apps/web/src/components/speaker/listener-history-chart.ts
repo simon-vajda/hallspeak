@@ -1,5 +1,5 @@
-import type { ListenerChartRow } from '@linguacast/client-core/channel';
-import { LISTENER_HISTORY_WINDOW_MS } from '@linguacast/contract/socket';
+import type { ListenerChartRow } from '@hallspeak/client-core/channel';
+import { LISTENER_HISTORY_WINDOW_MS } from '@hallspeak/contract/socket';
 import { plural } from '@/lib/format';
 
 const MINUTE_MS = 60_000;

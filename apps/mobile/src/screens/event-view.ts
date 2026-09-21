@@ -1,4 +1,4 @@
-import { apiProblemCode } from '@linguacast/client-core/query-retry';
+import { apiProblemCode } from '@hallspeak/client-core/query-retry';
 
 /**
  * On-air is what the socket last said, seeded by the fetch until it speaks. `unknown` is a

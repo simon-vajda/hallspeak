@@ -1,4 +1,4 @@
-import type { ReportCategory } from '@linguacast/contract/socket';
+import type { ReportCategory } from '@hallspeak/contract/socket';
 import { REPORT_CATEGORIES, reportAgeLabel } from './reports';
 
 /** The same two minutes the server enforces, so the two never disagree visibly. */

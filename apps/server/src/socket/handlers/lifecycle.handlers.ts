@@ -2,7 +2,7 @@ import type {
   HandoverState,
   ListenerHistoryPoint,
   ReportCategory,
-} from '@linguacast/contract/socket';
+} from '@hallspeak/contract/socket';
 import type { SocketAuth } from '../../core/access';
 import { getChannelById } from '../../core/channels.service';
 import { handover } from '../../core/handover';

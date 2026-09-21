@@ -2,14 +2,11 @@ import type {
   AnchoredListenerPoint,
   AnchoredResolution,
   AnchoredRow,
-} from '@linguacast/client-core/channel';
-import {
-  type ChannelStatusEntry,
-  rollbackMutedAfterFailure,
-} from '@linguacast/client-core/channel';
-import { isLinkUp, resolveLinkState } from '@linguacast/client-core/media';
-import type { AnchoredHandover, SocketClient, SocketStatus } from '@linguacast/client-core/socket';
-import type { components } from '@linguacast/contract/openapi';
+} from '@hallspeak/client-core/channel';
+import { type ChannelStatusEntry, rollbackMutedAfterFailure } from '@hallspeak/client-core/channel';
+import { isLinkUp, resolveLinkState } from '@hallspeak/client-core/media';
+import type { AnchoredHandover, SocketClient, SocketStatus } from '@hallspeak/client-core/socket';
+import type { components } from '@hallspeak/contract/openapi';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SpeakerDisplaced } from '@/components/speaker/speaker-displaced';
 import { SpeakerOnAir } from '@/components/speaker/speaker-on-air';

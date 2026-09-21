@@ -1,5 +1,5 @@
 import { SpaceGrotesk_600SemiBold, useFonts } from '@expo-google-fonts/space-grotesk';
-import { shouldRetryApiQuery } from '@linguacast/client-core/query-retry';
+import { shouldRetryApiQuery } from '@hallspeak/client-core/query-retry';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';

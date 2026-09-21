@@ -10,12 +10,12 @@ Rules local to the Expo listener. Repo-wide rules, the socket protocol, media re
 - SDK 57 facts: `edgeToEdgeEnabled` is no longer accepted; `userInterfaceStyle: "automatic"` no-ops without `expo-system-ui`; the `expo-camera` plugin's `cameraPermission` supplies `NSCameraUsageDescription`, without which iOS kills the app on camera use.
 - Bundle id and Android package `app.linguacast.mobile` are immutable once a store has seen them.
 - `@config-plugins/react-native-webrtc` declares `RECORD_AUDIO` and `SYSTEM_ALERT_WINDOW`; both are blocked in `app.json`. Its iOS microphone usage string cannot be removed without a config plugin of our own (not written).
-- No `dev` script, deliberately: root `pnpm dev` would otherwise start Metro. Use `pnpm -F @linguacast/mobile start`.
+- No `dev` script, deliberately: root `pnpm dev` would otherwise start Metro. Use `pnpm -F @hallspeak/mobile start`.
 - `tsconfig.json` extends `["../../tsconfig.base.json", "expo/tsconfig.base"]` **in that order** (later wins; the repo base supplies strictness). **No comments in that file** — `expo start` rewrites it.
 
 ## Contract and shared code
 
-- Depends on `@linguacast/contract` and `@linguacast/client-core` as TypeScript source, never on `@linguacast/web`. No build step is added to either package.
+- Depends on `@hallspeak/contract` and `@hallspeak/client-core` as TypeScript source, never on `@hallspeak/web`. No build step is added to either package.
 - Import contract subpaths only: type-only `./openapi` for payloads, `./patterns` for regexes, **type-only** `./socket` for the report vocabulary. Never the root barrel or `./schemas` (both pull in Hono). `__tests__/contract-resolution.test.ts` guards this.
 
 ## Tests
@@ -36,7 +36,7 @@ Rules local to the Expo listener. Repo-wide rules, the socket protocol, media re
 
 - `src/socket/provider.tsx` owns the event's one socket and publishes the socket, media leg, output route and report episode through one context. It is the nested layout `app/events/[host]/[pin]/_layout.tsx`, not a per-screen hook: the stack keeps Event mounted under Channel (two sockets otherwise) and sheet routes cannot take props.
 - That layout declares its own `unstable_settings.initialRouteName` (a deep link to a channel must still have Event underneath) and declares every screen in the order a guest meets them, **sheet last**. Expo Router passes declared screens first and the navigator has no initial route of its own, so a sheet declared first becomes the starting route.
-- The provider fetches `/api/version` before any event request or socket and applies the policy from `@linguacast/client-core/server`. The result is a `ServerGate` context; the navigator stays mounted through every verdict and each screen renders the gate's message in its own chrome with a back action. A verdict comes only from an answer actually read: a failed refetch over a compatible server leaves the event connected. Strings live in `src/socket/server-check.ts`.
+- The provider fetches `/api/version` before any event request or socket and applies the policy from `@hallspeak/client-core/server`. The result is a `ServerGate` context; the navigator stays mounted through every verdict and each screen renders the gate's message in its own chrome with a back action. A verdict comes only from an answer actually read: a failed refetch over a compatible server leaves the event connected. Strings live in `src/socket/server-check.ts`.
 - Reconnect signals, none of which covers the others: returning to foreground reopens a suspended socket; the native session heartbeat reopens a socket found disconnected; a network change **cycles** the socket. The media ladder reads the same heartbeat (`src/media/ice-clock.ts`) and cycles the connection when a step stalls past `STALLED_STEP_MS` (12s, above Socket.IO's ack deadline; 3s over a transport already `failed`). Signalling is skipped while the socket is known disconnected. See `docs/solutions/integration-issues/drive-mobile-listener-recovery-from-a-native-clock-behind-a-locked-screen.md`.
 - A transport failure shows one generic message naming no cause (React Native reports untrusted certificates and unreachable hosts identically); only a 404 reports a missing event.
 - `src/version.ts` derives the mobile version from `package.json` for the handshake.

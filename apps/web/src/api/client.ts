@@ -1,4 +1,4 @@
-import type { paths } from '@linguacast/contract/openapi';
+import type { paths } from '@hallspeak/contract/openapi';
 import createFetchClient from 'openapi-fetch';
 import createQueryClient from 'openapi-react-query';
 

@@ -5,7 +5,7 @@ import {
   type ListenIntentState,
   listenActionState,
   reconcileListenIntent,
-} from '@linguacast/client-core/channel';
+} from '@hallspeak/client-core/channel';
 import {
   consumerPlan,
   filledBars,
@@ -13,7 +13,7 @@ import {
   type LinkState,
   linkLabel,
   resolveLinkState,
-} from '@linguacast/client-core/media';
+} from '@hallspeak/client-core/media';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useEventSocket } from '@/socket/provider';
 import { logError } from '../log';

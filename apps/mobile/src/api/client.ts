@@ -1,4 +1,4 @@
-import type { paths } from '@linguacast/contract/openapi';
+import type { paths } from '@hallspeak/contract/openapi';
 import createFetchClient, { type Client } from 'openapi-fetch';
 import { unavailable } from './problem';
 

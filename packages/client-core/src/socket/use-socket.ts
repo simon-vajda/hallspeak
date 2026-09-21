@@ -1,4 +1,4 @@
-import { unwrap } from '@linguacast/contract/socket';
+import { unwrap } from '@hallspeak/contract/socket';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   extendListenerHistory,

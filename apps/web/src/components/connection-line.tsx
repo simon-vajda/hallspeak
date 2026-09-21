@@ -1,4 +1,4 @@
-import { BAR_COUNT, filledBars, type LinkState, linkLabel } from '@linguacast/client-core/media';
+import { BAR_COUNT, filledBars, type LinkState, linkLabel } from '@hallspeak/client-core/media';
 import { Loader2, OctagonX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

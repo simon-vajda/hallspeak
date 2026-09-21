@@ -1,5 +1,5 @@
+import { buildOpenApiDocument } from '@hallspeak/contract';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { buildOpenApiDocument } from '@linguacast/contract';
 import { Scalar } from '@scalar/hono-api-reference';
 import { env } from './env';
 import { defaultHook } from './http/default-hook';

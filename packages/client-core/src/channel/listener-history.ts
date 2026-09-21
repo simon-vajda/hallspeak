@@ -1,4 +1,4 @@
-import { LISTENER_HISTORY_WINDOW_MS, type ListenerHistoryPoint } from '@linguacast/contract/socket';
+import { LISTENER_HISTORY_WINDOW_MS, type ListenerHistoryPoint } from '@hallspeak/contract/socket';
 
 /** A count anchored to this client's clock at receipt, rather than to a server timestamp. */
 export interface AnchoredListenerPoint {

@@ -1,4 +1,4 @@
-import type { ReportCategory } from '@linguacast/contract/socket';
+import type { ReportCategory } from '@hallspeak/contract/socket';
 import type { SocketAuth } from '../../core/access';
 import { findEnabledChannelBySlug, getChannelById } from '../../core/channels.service';
 import * as media from '../../core/media';

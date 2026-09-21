@@ -1,5 +1,5 @@
+import * as routes from '@hallspeak/contract/routes';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import * as routes from '@linguacast/contract/routes';
 import { changePassword, createSession, deleteAllSessions } from '../../../core/auth';
 import { db } from '../../../db';
 import { defaultHook } from '../../default-hook';

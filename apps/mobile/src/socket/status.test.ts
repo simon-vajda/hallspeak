@@ -1,5 +1,5 @@
+import { PIN_PATTERN, SEMVER_PATTERN } from '@hallspeak/contract/patterns';
 import { describe, expect, it } from '@jest/globals';
-import { PIN_PATTERN, SEMVER_PATTERN } from '@linguacast/contract/patterns';
 import mobileManifest from '../../package.json';
 import { CLIENT_VERSION } from '../version';
 import { currentChannelStatus } from './status';

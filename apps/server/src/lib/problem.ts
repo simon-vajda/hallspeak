@@ -2,7 +2,7 @@ import { logger } from './log';
 
 const log = logger('error');
 
-/** Mirrors the Problem schema in @linguacast/contract/schemas. */
+/** Mirrors the Problem schema in @hallspeak/contract/schemas. */
 export interface Problem {
   code: string;
   message: string;

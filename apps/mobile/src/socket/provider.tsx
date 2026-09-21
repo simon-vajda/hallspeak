@@ -1,18 +1,18 @@
-import type { ChannelStatus, SentMap } from '@linguacast/client-core/channel';
+import type { ChannelStatus, SentMap } from '@hallspeak/client-core/channel';
 import {
   initialMediaState,
   type MediaHealth,
   type MediaState,
   type MediaStats,
-} from '@linguacast/client-core/media';
+} from '@hallspeak/client-core/media';
 import {
   createSocket,
   type SocketAuth,
   type SocketClient,
   type SocketStatus,
   useSocket,
-} from '@linguacast/client-core/socket';
-import type { ReportCategory } from '@linguacast/contract/socket';
+} from '@hallspeak/client-core/socket';
+import type { ReportCategory } from '@hallspeak/contract/socket';
 import { useQuery } from '@tanstack/react-query';
 import {
   createContext,

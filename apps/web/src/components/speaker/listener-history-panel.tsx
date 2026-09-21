@@ -1,4 +1,4 @@
-import { type AnchoredListenerPoint, listenerChartRows } from '@linguacast/client-core/channel';
+import { type AnchoredListenerPoint, listenerChartRows } from '@hallspeak/client-core/channel';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { useSettledFlag, WITHHOLD_GRACE_MS } from '@/lib/use-settled-flag';

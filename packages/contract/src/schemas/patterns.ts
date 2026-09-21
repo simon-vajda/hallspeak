@@ -1,4 +1,4 @@
-// No zod import: reachable from the browser as '@linguacast/contract/patterns', where
+// No zod import: reachable from the browser as '@hallspeak/contract/patterns', where
 // the root barrel and './schemas' would both pull Hono into the bundle.
 
 export const PIN_PATTERN = /^\d{6}$/;

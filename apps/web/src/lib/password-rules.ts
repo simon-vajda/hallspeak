@@ -3,7 +3,7 @@ import {
   PASSWORD_MIN_LENGTH,
   PASSWORD_NUMBER_PATTERN,
   PASSWORD_SPECIAL_PATTERN,
-} from '@linguacast/contract/patterns';
+} from '@hallspeak/contract/patterns';
 
 export interface PasswordRule {
   id: 'length' | 'number' | 'special';

@@ -1,5 +1,5 @@
-import type { ListenerChartRow } from '@linguacast/client-core/channel';
-import { LISTENER_HISTORY_WINDOW_MS } from '@linguacast/contract/socket';
+import type { ListenerChartRow } from '@hallspeak/client-core/channel';
+import { LISTENER_HISTORY_WINDOW_MS } from '@hallspeak/contract/socket';
 import { describe, expect, it } from 'vitest';
 import {
   LISTENER_HISTORY_HEADING,

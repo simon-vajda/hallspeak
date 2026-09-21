@@ -1,4 +1,4 @@
-import type { components } from '@linguacast/contract/openapi';
+import type { components } from '@hallspeak/contract/openapi';
 import { PowerOff } from 'lucide-react';
 import { useState } from 'react';
 import { $api } from '@/api/client';

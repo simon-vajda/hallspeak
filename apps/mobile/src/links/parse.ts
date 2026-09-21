@@ -1,4 +1,4 @@
-import { PIN_PATTERN, SLUG_PATTERN } from '@linguacast/contract/patterns';
+import { PIN_PATTERN, SLUG_PATTERN } from '@hallspeak/contract/patterns';
 import { isListenerHost } from './host';
 
 export type ListenerDestination = {

@@ -3,7 +3,7 @@ import type {
   clientToServer,
   ServerToClientEvents,
   serverToClient,
-} from '@linguacast/contract/socket';
+} from '@hallspeak/contract/socket';
 import type { Server, Socket } from 'socket.io';
 import type { SocketAuth } from '../../core/access';
 

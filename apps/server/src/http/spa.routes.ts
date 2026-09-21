@@ -1,12 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { serveStatic } from '@hono/node-server/serve-static';
 import {
   DEFAULT_PAGE_TITLE,
   formatChannelPageTitle,
   formatEventPageTitle,
-} from '@linguacast/contract/page-titles';
-import { PIN_PATTERN, SLUG_PATTERN } from '@linguacast/contract/patterns';
+} from '@hallspeak/contract/page-titles';
+import { PIN_PATTERN, SLUG_PATTERN } from '@hallspeak/contract/patterns';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { type Context, Hono } from 'hono';
 import { html } from 'hono/html';
 import { findEnabledChannelBySlug } from '../core/channels.service';

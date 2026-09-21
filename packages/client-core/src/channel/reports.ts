@@ -1,4 +1,4 @@
-import type { ReportCategory, ReportResolution, ReportRow } from '@linguacast/contract/socket';
+import type { ReportCategory, ReportResolution, ReportRow } from '@hallspeak/contract/socket';
 
 /** Re-exported so a consumer takes the whole report vocabulary from one place. */
 export type { ReportCategory };

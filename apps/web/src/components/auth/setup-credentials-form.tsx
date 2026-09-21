@@ -1,6 +1,6 @@
+import { apiProblemMessage } from '@hallspeak/client-core/query-retry';
+import { PASSWORD_MAX_LENGTH } from '@hallspeak/contract/patterns';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { apiProblemMessage } from '@linguacast/client-core/query-retry';
-import { PASSWORD_MAX_LENGTH } from '@linguacast/contract/patterns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useId } from 'react';

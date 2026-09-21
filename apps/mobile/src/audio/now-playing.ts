@@ -1,4 +1,4 @@
-import type { ListenActionState } from '@linguacast/client-core/channel';
+import type { ListenActionState } from '@hallspeak/client-core/channel';
 
 export interface NowPlaying {
   /** The channel, which is what a guest chose. */

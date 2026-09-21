@@ -1,5 +1,5 @@
-import { useSocket } from '@linguacast/client-core/socket';
-import type { components } from '@linguacast/contract/openapi';
+import { useSocket } from '@hallspeak/client-core/socket';
+import type { components } from '@hallspeak/contract/openapi';
 import { useState } from 'react';
 import { SpeakerStudio } from '@/components/speaker/speaker-studio';
 import { connectSocket } from '@/lib/socket';

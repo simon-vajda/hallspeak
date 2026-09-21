@@ -1,5 +1,5 @@
+import { clientToServer } from '@hallspeak/contract/socket';
 import type { ServerType } from '@hono/node-server';
-import { clientToServer } from '@linguacast/contract/socket';
 import { Server } from 'socket.io';
 import { notifications } from '../core/notifications';
 import { presence } from '../core/presence';

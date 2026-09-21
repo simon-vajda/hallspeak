@@ -3,8 +3,8 @@
  * browser.
  */
 
-import type { AnchoredHandover } from '@linguacast/client-core/socket';
-import { SocketError } from '@linguacast/contract/socket';
+import type { AnchoredHandover } from '@hallspeak/client-core/socket';
+import { SocketError } from '@hallspeak/contract/socket';
 
 /**
  * `live` is derived from a producer existing, never set optimistically on the click: the

@@ -1,4 +1,4 @@
-import type { Ack, EventMap } from '@linguacast/contract/socket';
+import type { Ack, EventMap } from '@hallspeak/contract/socket';
 import type { Event } from 'socket.io';
 import { z } from 'zod';
 

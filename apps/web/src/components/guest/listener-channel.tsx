@@ -1,6 +1,6 @@
-import { channelStatusFromHttp } from '@linguacast/client-core/channel';
-import { socketMessage, useSocket } from '@linguacast/client-core/socket';
-import type { components } from '@linguacast/contract/openapi';
+import { channelStatusFromHttp } from '@hallspeak/client-core/channel';
+import { socketMessage, useSocket } from '@hallspeak/client-core/socket';
+import type { components } from '@hallspeak/contract/openapi';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { GuestMessage, GuestMessageAction } from '@/components/guest/guest-message';

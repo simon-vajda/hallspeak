@@ -94,7 +94,7 @@ describe('the guard itself', () => {
   it.each([
     ["import { io } from 'socket.io-client';", 'socket.io-client'],
     ["import { useEffect } from 'react';", 'react'],
-    ["import { unwrap } from '@linguacast/contract/socket';", '@linguacast/contract/socket'],
+    ["import { unwrap } from '@hallspeak/contract/socket';", '@hallspeak/contract/socket'],
     ["import { gradeStats } from './stats';", './stats'],
   ])('allows %j', (source, specifier) => {
     expect(specifiersOf(source)).toContain(specifier);

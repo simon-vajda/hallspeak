@@ -3,7 +3,7 @@
  * the domain entity. Two modules named around "events" with unrelated meanings is a trap.
  */
 
-import type { ReportResolution, ReportRow } from '@linguacast/contract/socket';
+import type { ReportResolution, ReportRow } from '@hallspeak/contract/socket';
 import { logger } from '../lib/log';
 
 const log = logger('notifications');

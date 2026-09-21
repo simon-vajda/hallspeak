@@ -1,4 +1,4 @@
-import type { clientToServer, Payload, Response } from '@linguacast/contract/socket';
+import type { clientToServer, Payload, Response } from '@hallspeak/contract/socket';
 import { handle } from './handle';
 import type { ConnectedSocket } from './types';
 

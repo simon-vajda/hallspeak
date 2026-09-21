@@ -1,12 +1,12 @@
-import type { ReportCategory } from '@linguacast/client-core/channel';
+import type { ReportCategory } from '@hallspeak/client-core/channel';
 
-export type { ReportRowState, SelfCheck } from '@linguacast/client-core/channel';
+export type { ReportRowState, SelfCheck } from '@hallspeak/client-core/channel';
 export {
   LOW_VOLUME,
   REPORT_DISABLE_MS,
   reportRows,
   selfCheck,
-} from '@linguacast/client-core/channel';
+} from '@hallspeak/client-core/channel';
 export type { ReportCategory };
 
 /**

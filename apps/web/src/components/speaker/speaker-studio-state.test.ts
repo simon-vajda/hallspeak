@@ -1,5 +1,5 @@
-import type { AnchoredHandover } from '@linguacast/client-core/socket';
-import { SocketError } from '@linguacast/contract/socket';
+import type { AnchoredHandover } from '@hallspeak/client-core/socket';
+import { SocketError } from '@hallspeak/contract/socket';
 import { describe, expect, it } from 'vitest';
 import {
   type BroadcastEnd,

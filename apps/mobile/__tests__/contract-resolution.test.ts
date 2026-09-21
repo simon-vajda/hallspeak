@@ -1,6 +1,6 @@
+import type { components } from '@hallspeak/contract/openapi';
+import { PIN_PATTERN, SLUG_PATTERN } from '@hallspeak/contract/patterns';
 import { describe, expect, it } from '@jest/globals';
-import type { components } from '@linguacast/contract/openapi';
-import { PIN_PATTERN, SLUG_PATTERN } from '@linguacast/contract/patterns';
 
 // `./schemas` is deliberately absent from this file: it imports `@hono/zod-openapi`, so the
 // second subpath this seam has to cover is the type-only `./openapi`, asserted by `tsc`.

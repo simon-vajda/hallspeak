@@ -1,6 +1,6 @@
-import { shouldThrowSettledQueryError } from '@linguacast/client-core/query-retry';
-import { useSocket } from '@linguacast/client-core/socket';
-import { formatEventPageTitle } from '@linguacast/contract/page-titles';
+import { shouldThrowSettledQueryError } from '@hallspeak/client-core/query-retry';
+import { useSocket } from '@hallspeak/client-core/socket';
+import { formatEventPageTitle } from '@hallspeak/contract/page-titles';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { ChannelRow } from '@/components/guest/channel-row';

@@ -1,4 +1,4 @@
-import type { HandoverState } from '@linguacast/contract/socket';
+import type { HandoverState } from '@hallspeak/contract/socket';
 import type { SocketAuth } from '../../core/access';
 import { getChannelById } from '../../core/channels.service';
 import { type ChannelHandover, handover } from '../../core/handover';

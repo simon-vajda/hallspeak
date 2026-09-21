@@ -1,5 +1,5 @@
+import { shouldRetryApiQuery } from '@hallspeak/client-core/query-retry';
 import { describe, expect, it } from '@jest/globals';
-import { shouldRetryApiQuery } from '@linguacast/client-core/query-retry';
 import { apiBaseUrl, createApiClient } from './client';
 import { unavailable } from './problem';
 import { channelQueryKey, eventQueryKey } from './queries';

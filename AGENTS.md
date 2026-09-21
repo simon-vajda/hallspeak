@@ -36,7 +36,7 @@ Settings storage: mobile appearance is device-local (see mobile file); storage f
 
 ## Commands
 
-- `pnpm dev` — contract gen watcher, server on 3000 (`tsx watch`), Vite on 5173 proxying `/api`. Does **not** start Metro: run `pnpm -F @linguacast/mobile start`.
+- `pnpm dev` — contract gen watcher, server on 3000 (`tsx watch`), Vite on 5173 proxying `/api`. Does **not** start Metro: run `pnpm -F @hallspeak/mobile start`.
 - `pnpm gen` — regenerate `packages/contract/openapi.json` and `src/generated/api.d.ts`. Run after any schema or route change; CI fails on drift.
 - `pnpm typecheck` — runs `pnpm gen` first, so a clean `git status` afterwards *is* the drift check.
 - `pnpm check` / `pnpm check:fix` — Biome, plus `version:check`.

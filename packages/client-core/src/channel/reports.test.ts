@@ -1,4 +1,4 @@
-import type { ReportRow } from '@linguacast/contract/socket';
+import type { ReportRow } from '@hallspeak/contract/socket';
 import { describe, expect, it } from 'vitest';
 import {
   anchorResolution,

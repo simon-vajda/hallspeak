@@ -19,7 +19,7 @@ Rules local to the server. Repo-wide rules, the socket protocol and versioning l
 ## Database
 
 - better-sqlite3 + Drizzle. `db/client.ts` holds `createDb(path)` and must stay free of import side effects; `db/index.ts` holds the `db` singleton and opens the file at module scope. `db/testing.ts` imports the factory, never the singleton.
-- After changing `schema.ts`: `pnpm -F @linguacast/server db:generate`, read the SQL, commit it. `drizzle-kit push` is rejected. There is no `db:migrate` script — `runMigrations(db)` runs at boot, so upgrading is "pull and restart".
+- After changing `schema.ts`: `pnpm -F @hallspeak/server db:generate`, read the SQL, commit it. `drizzle-kit push` is rejected. There is no `db:migrate` script — `runMigrations(db)` runs at boot, so upgrading is "pull and restart".
 - `db/migrations` is excluded from Biome (drizzle-kit rewrites its JSON without a trailing newline). Migration `0000` stays in history although `0001` dropped its `meta` table.
 - `migrate.ts` resolves migrations against `import.meta.dirname` (they ship at `dist/migrations`); `DATA_DIR` resolves against the working directory, because the database is user data.
 - The four pragmas in `createDb` are non-defaults. `foreign_keys` is per-connection and silently inert when unset, hence its test.

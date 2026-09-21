@@ -5,7 +5,7 @@ import {
   type ListenNoteInput,
   playTargetLabel,
   statusNote,
-} from '@linguacast/client-core/channel';
+} from '@hallspeak/client-core/channel';
 
 /**
  * Every string the Channel screen can render. The point is the test beside this file: it
