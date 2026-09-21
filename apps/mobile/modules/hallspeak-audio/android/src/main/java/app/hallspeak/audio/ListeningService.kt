@@ -1,4 +1,4 @@
-package app.linguacast.audio
+package app.hallspeak.audio
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -43,7 +43,7 @@ class ListeningService : Service() {
   override fun onCreate() {
     super.onCreate()
 
-    val created = MediaSessionCompat(this, "LinguaCast").apply {
+    val created = MediaSessionCompat(this, "Hallspeak").apply {
       setCallback(object : MediaSessionCompat.Callback() {
         override fun onPlay() {
           remote?.invoke(RemoteCommand.PLAY)
@@ -188,10 +188,10 @@ class ListeningService : Service() {
   enum class RemoteCommand { PLAY, PAUSE }
 
   companion object {
-    const val CHANNEL_ID = "linguacast-listening"
+    const val CHANNEL_ID = "hallspeak-listening"
     const val NOTIFICATION_ID = 4711
 
-    private const val WAKE_LOCK_TAG = "linguacast:listening"
+    private const val WAKE_LOCK_TAG = "hallspeak:listening"
 
     /** Often enough that a dropped link recovers within a sentence, rare enough to ignore. */
     private const val TICK_MS = 2_000L

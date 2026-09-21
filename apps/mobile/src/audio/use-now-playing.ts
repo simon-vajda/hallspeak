@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
-import LinguacastAudio from '../../modules/linguacast-audio';
+import HallspeakAudio from '../../modules/hallspeak-audio';
 import { logError } from '../log';
 import type { SystemControls } from './now-playing';
 
@@ -35,8 +35,8 @@ export function useNowPlaying(
 
   useEffect(() => {
     if (!active) {
-      void LinguacastAudio.clearNowPlaying().catch(report);
-      void LinguacastAudio.deactivate().catch(report);
+      void HallspeakAudio.clearNowPlaying().catch(report);
+      void HallspeakAudio.deactivate().catch(report);
       return;
     }
 
@@ -45,8 +45,8 @@ export function useNowPlaying(
     let wait = RETRY_MS;
 
     const attempt = () => {
-      void LinguacastAudio.activate()
-        .then(() => LinguacastAudio.setNowPlaying({ title, artist }))
+      void HallspeakAudio.activate()
+        .then(() => HallspeakAudio.setNowPlaying({ title, artist }))
         .catch((cause) => {
           report(cause);
           if (!cancelled) {
@@ -72,14 +72,14 @@ export function useNowPlaying(
       return;
     }
 
-    void LinguacastAudio.setPlaybackState(playing).catch(report);
+    void HallspeakAudio.setPlaybackState(playing).catch(report);
   }, [active, playing]);
 
   // Routed into the same handlers the in-app target uses, so the two can never disagree.
   const { onPlay, onPause } = handlers;
   useEffect(() => {
-    const play = LinguacastAudio.addListener('onRemotePlay', onPlay);
-    const pause = LinguacastAudio.addListener('onRemotePause', onPause);
+    const play = HallspeakAudio.addListener('onRemotePlay', onPlay);
+    const pause = HallspeakAudio.addListener('onRemotePause', onPause);
 
     return () => {
       play.remove();
@@ -90,8 +90,8 @@ export function useNowPlaying(
   // The controls must not outlive the screen that published them.
   useEffect(
     () => () => {
-      void LinguacastAudio.clearNowPlaying().catch(report);
-      void LinguacastAudio.deactivate().catch(report);
+      void HallspeakAudio.clearNowPlaying().catch(report);
+      void HallspeakAudio.deactivate().catch(report);
     },
     [],
   );

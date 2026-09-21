@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import LinguacastAudio from '../../modules/linguacast-audio';
+import HallspeakAudio from '../../modules/hallspeak-audio';
 
 /**
  * Subscribes to the listening session's native heartbeat.
@@ -13,7 +13,7 @@ export function useSessionTick(onTick: () => void): void {
   handler.current = onTick;
 
   useEffect(() => {
-    const subscription = LinguacastAudio.addListener('onTick', () => handler.current());
+    const subscription = HallspeakAudio.addListener('onTick', () => handler.current());
     return () => subscription.remove();
   }, []);
 }
@@ -24,7 +24,7 @@ export function useNetworkChange(onChange: () => void): void {
   handler.current = onChange;
 
   useEffect(() => {
-    const subscription = LinguacastAudio.addListener('onNetworkChange', () => handler.current());
+    const subscription = HallspeakAudio.addListener('onNetworkChange', () => handler.current());
     return () => subscription.remove();
   }, []);
 }

@@ -1,6 +1,6 @@
 const { withMainApplication } = require('expo/config-plugins');
 
-const CALL = 'app.linguacast.audio.MediaStreamAudioInstaller.install(this)';
+const CALL = 'app.hallspeak.audio.MediaStreamAudioInstaller.install(this)';
 const ANCHOR = '    loadReactNative(this)';
 
 /**

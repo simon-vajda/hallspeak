@@ -1,4 +1,4 @@
-export type LinguacastAudioModuleEvents = {
+export type HallspeakAudioModuleEvents = {
   /** Fired when the platform moves the audio to a different output. */
   onRouteChange: (event: { name: string | null }) => void;
   /** Fired when the guest changes the device's own media volume. */

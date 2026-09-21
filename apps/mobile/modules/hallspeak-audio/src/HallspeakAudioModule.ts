@@ -1,7 +1,7 @@
 import { NativeModule, requireNativeModule } from 'expo';
-import type { LinguacastAudioModuleEvents, NowPlayingInfo } from './LinguacastAudio.types';
+import type { HallspeakAudioModuleEvents, NowPlayingInfo } from './HallspeakAudio.types';
 
-declare class LinguacastAudioModule extends NativeModule<LinguacastAudioModuleEvents> {
+declare class HallspeakAudioModule extends NativeModule<HallspeakAudioModuleEvents> {
   /**
    * Claims the platform's audio session for listening, and on Android starts the media
    * playback foreground service that keeps the process alive behind another app.
@@ -41,4 +41,4 @@ declare class LinguacastAudioModule extends NativeModule<LinguacastAudioModuleEv
   systemVolume(): number;
 }
 
-export default requireNativeModule<LinguacastAudioModule>('LinguacastAudio');
+export default requireNativeModule<HallspeakAudioModule>('HallspeakAudio');

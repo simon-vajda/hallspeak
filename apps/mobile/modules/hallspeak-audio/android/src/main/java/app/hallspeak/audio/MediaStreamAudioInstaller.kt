@@ -1,4 +1,4 @@
-package app.linguacast.audio
+package app.hallspeak.audio
 
 import android.content.Context
 import android.media.AudioAttributes

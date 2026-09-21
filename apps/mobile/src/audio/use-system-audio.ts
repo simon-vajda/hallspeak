@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
-import LinguacastAudio from '../../modules/linguacast-audio';
+import HallspeakAudio from '../../modules/hallspeak-audio';
 import { normalizeVolume } from './system-audio';
 
 export interface SystemAudio {
@@ -20,19 +20,19 @@ export function useSystemAudio(): SystemAudio {
   const [volume, setVolume] = useState(0);
 
   const read = useCallback(() => {
-    setRoute(LinguacastAudio.currentRoute());
-    setVolume(normalizeVolume(LinguacastAudio.systemVolume()));
+    setRoute(HallspeakAudio.currentRoute());
+    setVolume(normalizeVolume(HallspeakAudio.systemVolume()));
   }, []);
 
   useEffect(() => {
     read();
 
-    const volumes = LinguacastAudio.addListener('onVolumeChange', (event) =>
+    const volumes = HallspeakAudio.addListener('onVolumeChange', (event) =>
       setVolume(normalizeVolume(event.volume)),
     );
     // Read the level again rather than only the name: iOS keeps a volume per route, so a
     // headset arriving changes both at once and the level it reports is the old route's.
-    const routes = LinguacastAudio.addListener('onRouteChange', read);
+    const routes = HallspeakAudio.addListener('onRouteChange', read);
 
     // The change events do not arrive while the process is suspended, and Control Centre
     // and the volume keys both work over a backgrounded app — so what is on screen when a
