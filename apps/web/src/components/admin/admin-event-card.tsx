@@ -1,4 +1,4 @@
-import type { components } from '@linguacast/contract/openapi';
+import type { components } from '@hallspeak/contract/openapi';
 import { EventNameLink, ListenerEventLink } from '@/components/admin/admin-event-links';
 import { ChannelChips } from '@/components/admin/channel-chips';
 import { EventEnabledSwitch } from '@/components/admin/event-enabled-switch';

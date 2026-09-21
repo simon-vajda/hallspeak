@@ -96,7 +96,7 @@ describe('effectiveGainNodeValue', () => {
 
 describe('parseStoredPreferences', () => {
   it('keeps the browser-global storage key stable', () => {
-    expect(AUDIO_PREFERENCES_STORAGE_KEY).toBe('linguacast-audio-preferences');
+    expect(AUDIO_PREFERENCES_STORAGE_KEY).toBe('hallspeak-audio-preferences');
   });
 
   it('keeps the established manual gain default', () => {

@@ -1,5 +1,5 @@
 {
-  "name": "@linguacast/client-core",
+  "name": "@hallspeak/client-core",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,7 +16,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@linguacast/contract": "workspace:*",
+    "@hallspeak/contract": "workspace:*",
     "socket.io-client": "4.8.3"
   },
   "peerDependencies": {

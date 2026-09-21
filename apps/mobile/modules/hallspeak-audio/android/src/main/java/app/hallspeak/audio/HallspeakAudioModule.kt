@@ -1,4 +1,4 @@
-package app.linguacast.audio
+package app.hallspeak.audio
 
 import android.content.Context
 import android.content.Intent
@@ -32,7 +32,7 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * so an app that never asks is never told when another app starts, and the two streams play
  * over each other.
  */
-class LinguacastAudioModule : Module() {
+class HallspeakAudioModule : Module() {
   private var active = false
   private var lastVolume = -1
   private var lastNetwork: Long? = null
@@ -49,7 +49,7 @@ class LinguacastAudioModule : Module() {
     get() = context.getSystemService(ConnectivityManager::class.java)
 
   override fun definition() = ModuleDefinition {
-    Name("LinguacastAudio")
+    Name("HallspeakAudio")
 
     Events(
       "onRouteChange",

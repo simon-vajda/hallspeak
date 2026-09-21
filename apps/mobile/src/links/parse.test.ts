@@ -13,16 +13,16 @@ const reason = (input: string) => {
 
 describe('parseListenerLink', () => {
   it('reads an event URL', () => {
-    expect(destination('https://stpauls.linguacast.app/events/834912')).toEqual({
-      host: 'stpauls.linguacast.app',
+    expect(destination('https://stpauls.hallspeak.app/events/834912')).toEqual({
+      host: 'stpauls.hallspeak.app',
       pin: '834912',
       slug: null,
     });
   });
 
   it('reads a channel URL', () => {
-    expect(destination('https://stpauls.linguacast.app/events/834912/magyar')).toEqual({
-      host: 'stpauls.linguacast.app',
+    expect(destination('https://stpauls.hallspeak.app/events/834912/magyar')).toEqual({
+      host: 'stpauls.hallspeak.app',
       pin: '834912',
       slug: 'magyar',
     });
@@ -93,7 +93,7 @@ describe('parseListenerLink', () => {
 
   it('refuses an insecure scheme separately from a malformed one', () => {
     expect(reason('http://a.example/events/834912')).toBe('insecure-scheme');
-    expect(reason('linguacast.app/events/834912')).toBe('not-a-url');
+    expect(reason('hallspeak.app/events/834912')).toBe('not-a-url');
     expect(reason('')).toBe('not-a-url');
   });
 

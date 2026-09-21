@@ -10,8 +10,8 @@ import {
   showsTorch,
 } from './scanner-state';
 
-const EVENT_URL = 'https://stpauls.linguacast.app/events/834912';
-const CHANNEL_URL = 'https://stpauls.linguacast.app/events/834912/magyar';
+const EVENT_URL = 'https://stpauls.hallspeak.app/events/834912';
+const CHANNEL_URL = 'https://stpauls.hallspeak.app/events/834912/magyar';
 
 describe('the scan latch', () => {
   it('accepts one result and ignores repeats until reset', () => {
@@ -28,7 +28,7 @@ describe('the scan latch', () => {
 
   it('yields the channel destination for a channel code', () => {
     expect(scan(INITIAL_SCAN_STATE, CHANNEL_URL).destination).toEqual({
-      host: 'stpauls.linguacast.app',
+      host: 'stpauls.hallspeak.app',
       pin: '834912',
       slug: 'magyar',
     });

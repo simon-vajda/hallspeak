@@ -1,4 +1,4 @@
-import { type ChannelStatus, channelStatusFromHttp } from '@linguacast/client-core/channel';
+import { type ChannelStatus, channelStatusFromHttp } from '@hallspeak/client-core/channel';
 
 /**
  * The status to render a channel by: what the socket has read on this connection, or the

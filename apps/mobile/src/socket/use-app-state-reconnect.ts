@@ -1,4 +1,4 @@
-import type { SocketClient } from '@linguacast/client-core/socket';
+import type { SocketClient } from '@hallspeak/client-core/socket';
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useNetworkChange, useSessionTick } from '@/audio/use-session-tick';

@@ -9,7 +9,7 @@ export function LogoLockup() {
   return (
     <View style={styles.lockup}>
       <View style={[styles.mark, { backgroundColor: colors.primary }]} />
-      <Text style={[styles.wordmark, { color: colors.foreground }]}>LinguaCast</Text>
+      <Text style={[styles.wordmark, { color: colors.foreground }]}>Hallspeak</Text>
     </View>
   );
 }

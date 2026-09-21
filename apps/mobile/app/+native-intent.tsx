@@ -8,11 +8,11 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
     if (path.startsWith('/') && !path.startsWith('//') && !path.startsWith('/?')) {
       return path;
     }
-    const incoming = new URL(path, 'https://open.linguacast.app');
-    if (incoming.protocol === 'linguacast:') {
+    const incoming = new URL(path, 'https://open.hallspeak.app');
+    if (incoming.protocol === 'hallspeak:') {
       return path;
     }
-    if (incoming.origin !== 'https://open.linguacast.app' || incoming.pathname !== '/') {
+    if (incoming.origin !== 'https://open.hallspeak.app' || incoming.pathname !== '/') {
       return '/';
     }
 

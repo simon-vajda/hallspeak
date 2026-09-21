@@ -18,7 +18,7 @@ export type HistoryEntry = {
 /** A PIN is unique to its server, not to the world: two congregations can share one. */
 export type HistoryKey = Pick<HistoryEntry, 'host' | 'pin'>;
 
-export const HISTORY_STORAGE_KEY = 'linguacast-history-v1';
+export const HISTORY_STORAGE_KEY = 'hallspeak-history-v1';
 
 const isSame = (entry: HistoryEntry, key: HistoryKey) =>
   entry.host === key.host && entry.pin === key.pin;

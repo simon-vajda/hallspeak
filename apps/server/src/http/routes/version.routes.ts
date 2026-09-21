@@ -1,5 +1,5 @@
+import * as routes from '@hallspeak/contract/routes';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import * as routes from '@linguacast/contract/routes';
 import { MIN_MOBILE_VERSION, SERVER_VERSION } from '../../version';
 import { defaultHook } from '../default-hook';
 

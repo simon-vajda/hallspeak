@@ -1,4 +1,4 @@
-import type { Ack } from '@linguacast/contract/socket';
+import type { Ack } from '@hallspeak/contract/socket';
 import { logger } from '../../lib/log';
 import { AppError, toProblem } from '../../lib/problem';
 

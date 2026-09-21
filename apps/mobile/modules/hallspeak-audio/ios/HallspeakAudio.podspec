@@ -1,10 +1,10 @@
 Pod::Spec.new do |s|
-  s.name           = 'LinguacastAudio'
+  s.name           = 'HallspeakAudio'
   s.version        = '1.0.0'
   s.summary        = 'Owns the listener audio session and its system media controls.'
   s.description    = 'Local Expo module: audio session, background survival, now playing.'
   s.author         = ''
-  s.homepage       = 'https://linguacast.app'
+  s.homepage       = 'https://hallspeak.app'
   s.platforms      = { :ios => '15.1' }
   s.source         = { git: '' }
   s.static_framework = true

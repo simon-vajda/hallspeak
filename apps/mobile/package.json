@@ -1,5 +1,5 @@
 {
-  "name": "@linguacast/mobile",
+  "name": "@hallspeak/mobile",
   "version": "0.4.0",
   "private": true,
   "main": "expo-router/entry",
@@ -15,8 +15,8 @@
     "@config-plugins/react-native-webrtc": "15.0.2",
     "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@expo/ui": "~57.0.16",
-    "@linguacast/client-core": "workspace:*",
-    "@linguacast/contract": "workspace:*",
+    "@hallspeak/client-core": "workspace:*",
+    "@hallspeak/contract": "workspace:*",
     "@tanstack/react-query": "5.101.4",
     "expo": "~57.0.20",
     "expo-camera": "~57.0.4",

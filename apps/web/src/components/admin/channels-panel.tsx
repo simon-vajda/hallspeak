@@ -1,4 +1,4 @@
-import type { components } from '@linguacast/contract/openapi';
+import type { components } from '@hallspeak/contract/openapi';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { AdminChannelRow } from '@/components/admin/admin-channel-row';

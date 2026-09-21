@@ -1,7 +1,7 @@
-import type { SentMap } from '@linguacast/client-core/channel';
-import type { SocketClient } from '@linguacast/client-core/socket';
-import type { ReportCategory } from '@linguacast/contract/socket';
-import { unwrap } from '@linguacast/contract/socket';
+import type { SentMap } from '@hallspeak/client-core/channel';
+import type { SocketClient } from '@hallspeak/client-core/socket';
+import type { ReportCategory } from '@hallspeak/contract/socket';
+import { unwrap } from '@hallspeak/contract/socket';
 
 export type ReportOutcome = { ok: true } | { ok: false; message: string };
 

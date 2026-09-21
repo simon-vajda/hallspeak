@@ -1,4 +1,4 @@
-import type { Ack } from '@linguacast/contract/socket';
+import type { Ack } from '@hallspeak/contract/socket';
 import { describe, expect, it } from 'vitest';
 import type { SocketClient } from '../socket/client';
 import { signalling } from './signalling';

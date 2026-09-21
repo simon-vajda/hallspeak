@@ -1,4 +1,4 @@
-import type { SentMap } from '@linguacast/client-core/channel';
+import type { SentMap } from '@hallspeak/client-core/channel';
 import {
   badgeHasLiveDot,
   badgeLabel,
@@ -10,16 +10,16 @@ import {
   reconcileListenIntent,
   showListenRings,
   statusNote,
-} from '@linguacast/client-core/channel';
+} from '@hallspeak/client-core/channel';
 import {
   consumerPlan,
   isLinkUp,
   mayAttachConsumerTrack,
   resolveLinkState,
-} from '@linguacast/client-core/media';
-import type { SocketClient, SocketStatus } from '@linguacast/client-core/socket';
-import type { components } from '@linguacast/contract/openapi';
-import type { ReportCategory } from '@linguacast/contract/socket';
+} from '@hallspeak/client-core/media';
+import type { SocketClient, SocketStatus } from '@hallspeak/client-core/socket';
+import type { components } from '@hallspeak/contract/openapi';
+import type { ReportCategory } from '@hallspeak/contract/socket';
 import { Link } from '@tanstack/react-router';
 import { ChevronLeft, Loader2, Pause, Play } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';

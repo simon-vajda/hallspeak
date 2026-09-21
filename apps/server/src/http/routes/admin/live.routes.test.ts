@@ -1,4 +1,4 @@
-import { AdminLiveEvent } from '@linguacast/contract/schemas';
+import { AdminLiveEvent } from '@hallspeak/contract/schemas';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {

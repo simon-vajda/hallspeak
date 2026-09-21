@@ -5,7 +5,7 @@ import {
   reportLabel,
   reportTone,
   sortReportRows,
-} from '@linguacast/client-core/channel';
+} from '@hallspeak/client-core/channel';
 import { Check } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { MICRO_LABEL } from '@/components/micro-label';

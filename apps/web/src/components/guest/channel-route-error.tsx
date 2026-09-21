@@ -1,4 +1,4 @@
-import { apiProblemCode } from '@linguacast/client-core/query-retry';
+import { apiProblemCode } from '@hallspeak/client-core/query-retry';
 import { type ErrorComponentProps, getRouteApi, Link } from '@tanstack/react-router';
 import { GuestMessage, GuestMessageAction } from '@/components/guest/guest-message';
 import { Button } from '@/components/ui/button';

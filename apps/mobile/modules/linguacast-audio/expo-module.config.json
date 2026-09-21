@@ -1,9 +1,0 @@
-{
-  "platforms": ["ios", "android"],
-  "ios": {
-    "modules": ["LinguacastAudioModule"]
-  },
-  "android": {
-    "modules": ["app.linguacast.audio.LinguacastAudioModule"]
-  }
-}

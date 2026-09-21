@@ -1,4 +1,4 @@
-import { LISTENER_HISTORY_WINDOW_MS, type ListenerHistoryPoint } from '@linguacast/contract/socket';
+import { LISTENER_HISTORY_WINDOW_MS, type ListenerHistoryPoint } from '@hallspeak/contract/socket';
 import { presence } from './presence';
 
 interface StoredPoint {

@@ -1,4 +1,4 @@
-import { type ReportCategory, reportLabel } from '@linguacast/client-core/channel';
+import { type ReportCategory, reportLabel } from '@hallspeak/client-core/channel';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';

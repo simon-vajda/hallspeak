@@ -1,4 +1,4 @@
-import { Handshake } from '@linguacast/contract/schemas';
+import { Handshake } from '@hallspeak/contract/schemas';
 import type { Db } from '../db/client';
 import { semverLt } from '../lib/semver';
 import { MIN_MOBILE_VERSION, SERVER_VERSION } from '../version';

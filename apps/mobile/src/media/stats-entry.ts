@@ -1,4 +1,4 @@
-import type { StatsSample } from '@linguacast/client-core/media';
+import type { StatsSample } from '@hallspeak/client-core/media';
 
 interface ReportEntry {
   type?: unknown;

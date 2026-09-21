@@ -1,6 +1,6 @@
+import { apiProblemMessage } from '@hallspeak/client-core/query-retry';
+import { PASSWORD_MAX_LENGTH } from '@hallspeak/contract/patterns';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { apiProblemMessage } from '@linguacast/client-core/query-retry';
-import { PASSWORD_MAX_LENGTH } from '@linguacast/contract/patterns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useId } from 'react';
@@ -108,7 +108,7 @@ export function SetupCredentialsForm() {
       </Button>
       <p className="mt-4 text-note text-muted-foreground">
         Keep this somewhere safe. You can change it after signing in; a forgotten password needs
-        access to the machine LinguaCast runs on.
+        access to the machine Hallspeak runs on.
       </p>
     </form>
   );

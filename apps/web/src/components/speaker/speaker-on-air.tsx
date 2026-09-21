@@ -2,9 +2,9 @@ import type {
   AnchoredListenerPoint,
   AnchoredResolution,
   AnchoredRow,
-} from '@linguacast/client-core/channel';
-import { isLinkUp, type LinkState } from '@linguacast/client-core/media';
-import type { components } from '@linguacast/contract/openapi';
+} from '@hallspeak/client-core/channel';
+import { isLinkUp, type LinkState } from '@hallspeak/client-core/media';
+import type { components } from '@hallspeak/contract/openapi';
 import { Mic, MicOff } from 'lucide-react';
 import { useLayoutEffect, useState } from 'react';
 import { AppHeader } from '@/components/app-header';

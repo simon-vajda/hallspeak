@@ -1,4 +1,4 @@
-import { event } from '@linguacast/contract/socket';
+import { event } from '@hallspeak/contract/socket';
 import type { Event } from 'socket.io';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';

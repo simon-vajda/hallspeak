@@ -1,4 +1,4 @@
-import { showListenRings } from '@linguacast/client-core/channel';
+import { showListenRings } from '@hallspeak/client-core/channel';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';

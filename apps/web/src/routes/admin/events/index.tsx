@@ -1,4 +1,4 @@
-import { shouldThrowSettledQueryError } from '@linguacast/client-core/query-retry';
+import { shouldThrowSettledQueryError } from '@hallspeak/client-core/query-retry';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';

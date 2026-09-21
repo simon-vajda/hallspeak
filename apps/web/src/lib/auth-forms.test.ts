@@ -1,4 +1,4 @@
-import { PASSWORD_MAX_LENGTH } from '@linguacast/contract/patterns';
+import { PASSWORD_MAX_LENGTH } from '@hallspeak/contract/patterns';
 import { describe, expect, it } from 'vitest';
 import { changePasswordFormSchema, loginFormSchema, setupFormSchema } from './auth-forms';
 

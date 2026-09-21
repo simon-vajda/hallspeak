@@ -1,4 +1,4 @@
-import type { ListenerChartRow } from '@linguacast/client-core/channel';
+import type { ListenerChartRow } from '@hallspeak/client-core/channel';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
 import {
   type ChartConfig,

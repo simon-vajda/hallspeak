@@ -1,4 +1,4 @@
-import type { components } from '@linguacast/contract/openapi';
+import type { components } from '@hallspeak/contract/openapi';
 import { Link } from '@tanstack/react-router';
 import { Pin } from '@/components/pin';
 import { cn } from '@/lib/utils';

@@ -1,4 +1,4 @@
-import type { components } from '@linguacast/contract/openapi';
+import type { components } from '@hallspeak/contract/openapi';
 import { eventStatusLabel, plural } from '@/lib/format';
 
 type AdminEventDetail = components['schemas']['AdminEventDetail'];

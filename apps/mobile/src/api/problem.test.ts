@@ -1,12 +1,12 @@
+import { shouldRetryApiQuery } from '@hallspeak/client-core/query-retry';
 import { describe, expect, it } from '@jest/globals';
-import { shouldRetryApiQuery } from '@linguacast/client-core/query-retry';
 import { apiBaseUrl, createApiClient } from './client';
 import { unavailable } from './problem';
 import { channelQueryKey, eventQueryKey } from './queries';
 
 describe('apiBaseUrl', () => {
   it('composes an HTTPS origin from a bare host', () => {
-    expect(apiBaseUrl('stpauls.linguacast.app')).toBe('https://stpauls.linguacast.app/api');
+    expect(apiBaseUrl('stpauls.hallspeak.app')).toBe('https://stpauls.hallspeak.app/api');
   });
 
   it('keeps a port intact', () => {

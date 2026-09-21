@@ -1,5 +1,5 @@
+import * as routes from '@hallspeak/contract/routes';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import * as routes from '@linguacast/contract/routes';
 import type { Context } from 'hono';
 import {
   createAccount,

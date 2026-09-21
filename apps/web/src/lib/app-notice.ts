@@ -1,7 +1,7 @@
-export const APP_NOTICE_KEY = 'linguacast-app-notice';
+export const APP_NOTICE_KEY = 'hallspeak-app-notice';
 
 export function appListenerLink(channelUrl: string): string {
-  return `https://open.linguacast.app/?url=${encodeURIComponent(channelUrl)}`;
+  return `https://open.hallspeak.app/?url=${encodeURIComponent(channelUrl)}`;
 }
 
 export function hasAnsweredAppNotice(): boolean {

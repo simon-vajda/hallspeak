@@ -10,7 +10,7 @@ export function buildOpenApiDocument(serverVersion: string) {
   // Not getOpenAPIDocument: it emits 3.0-shaped schemas even when handed openapi: '3.1.0'.
   return registry.getOpenAPI31Document({
     openapi: '3.1.0',
-    info: { title: 'LinguaCast API', version: serverVersion },
+    info: { title: 'Hallspeak API', version: serverVersion },
     servers: [{ url: '/api' }],
   });
 }

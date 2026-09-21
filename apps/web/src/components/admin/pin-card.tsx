@@ -1,4 +1,4 @@
-import type { components } from '@linguacast/contract/openapi';
+import type { components } from '@hallspeak/contract/openapi';
 import { Download, RefreshCw } from 'lucide-react';
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { memo, type RefObject, useRef, useState } from 'react';
@@ -61,7 +61,7 @@ export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin' 
 
     const link = document.createElement('a');
     link.href = canvas.toDataURL('image/png');
-    link.download = `linguacast-${event.pin}.png`;
+    link.download = `hallspeak-${event.pin}.png`;
     // Firefox ignores a download click on an anchor that is not in the document.
     document.body.append(link);
     link.click();

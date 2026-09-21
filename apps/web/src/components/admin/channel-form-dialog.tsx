@@ -1,4 +1,4 @@
-import type { components } from '@linguacast/contract/openapi';
+import type { components } from '@hallspeak/contract/openapi';
 import { ChannelForm } from '@/components/admin/channel-form';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 

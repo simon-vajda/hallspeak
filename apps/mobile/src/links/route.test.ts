@@ -12,7 +12,7 @@ import {
 
 describe('route builders', () => {
   it('builds an event path for a plain host', () => {
-    expect(buildEventPath('linguacast.app', '834912')).toBe('/events/linguacast.app/834912');
+    expect(buildEventPath('hallspeak.app', '834912')).toBe('/events/hallspeak.app/834912');
   });
 
   it('builds an event path for a host carrying a port', () => {

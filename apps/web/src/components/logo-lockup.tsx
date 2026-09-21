@@ -7,7 +7,7 @@ export function LogoLockup({ className }: { className?: string }) {
       <div className="size-6.5 rounded-full bg-primary lg:size-5.5" />
       {/* leading-none so the circle, not the body line-height, sets the lockup's height. */}
       <span className="text-lg leading-none font-semibold tracking-[-0.03em] lg:text-section">
-        LinguaCast
+        Hallspeak
       </span>
     </div>
   );

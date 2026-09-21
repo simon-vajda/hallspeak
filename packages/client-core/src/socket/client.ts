@@ -3,7 +3,7 @@ import type {
   clientToServer,
   ServerToClientEvents,
   serverToClient,
-} from '@linguacast/contract/socket';
+} from '@hallspeak/contract/socket';
 import { io, type Socket } from 'socket.io-client';
 
 export type SocketClient = Socket<

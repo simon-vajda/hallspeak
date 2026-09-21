@@ -1,4 +1,4 @@
-import { apiProblemCode } from '@linguacast/client-core/query-retry';
+import { apiProblemCode } from '@hallspeak/client-core/query-retry';
 import type { ErrorComponentProps } from '@tanstack/react-router';
 import { MissingEvent } from '@/components/admin/missing-event';
 import { useRouteQueryRetry } from '@/lib/use-route-query-retry';

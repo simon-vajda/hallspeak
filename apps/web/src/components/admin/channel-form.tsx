@@ -1,5 +1,5 @@
+import type { components } from '@hallspeak/contract/openapi';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { components } from '@linguacast/contract/openapi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useId, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';

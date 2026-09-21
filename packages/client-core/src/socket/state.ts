@@ -1,4 +1,4 @@
-import type { HandoverHolder, HandoverRole, HandoverState } from '@linguacast/contract/socket';
+import type { HandoverHolder, HandoverRole, HandoverState } from '@hallspeak/contract/socket';
 
 export type SocketStatus = 'idle' | 'connecting' | 'connected' | 'lost' | 'error';
 

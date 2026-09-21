@@ -67,10 +67,10 @@ describe('formatLastJoined', () => {
 });
 
 describe('row lines', () => {
-  const row = entry({ host: 'stpauls.linguacast.app', lastJoinedAt: Date.UTC(2026, 7, 31, 12) });
+  const row = entry({ host: 'stpauls.hallspeak.app', lastJoinedAt: Date.UTC(2026, 7, 31, 12) });
 
   it('gives the host its own line, with no scheme', () => {
-    expect(rowHost(row)).toBe('stpauls.linguacast.app');
+    expect(rowHost(row)).toBe('stpauls.hallspeak.app');
     expect(rowHost(row)).not.toContain('://');
   });
 
@@ -79,7 +79,7 @@ describe('row lines', () => {
   });
 
   it('reads as one line for a screen reader', () => {
-    expect(rowSubtitle(row, NOW)).toBe('stpauls.linguacast.app · Last joined 31 August');
+    expect(rowSubtitle(row, NOW)).toBe('stpauls.hallspeak.app · Last joined 31 August');
   });
 });
 

@@ -1,4 +1,4 @@
-import { clientToServer } from '@linguacast/contract/socket';
+import { clientToServer } from '@hallspeak/contract/socket';
 import type { Event } from 'socket.io';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SocketAuth } from '../../core/access';

@@ -1,4 +1,4 @@
-import type { ReportRow } from '@linguacast/contract/socket';
+import type { ReportRow } from '@hallspeak/contract/socket';
 
 export interface PresentReportRow {
   row: ReportRow;

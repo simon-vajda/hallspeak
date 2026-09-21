@@ -12,7 +12,7 @@ export function SetupWelcome({ onContinue }: { onContinue: () => void }) {
     <>
       <h1 className="mb-2.5 text-section">This server has no account yet</h1>
       <p className="mb-6 text-sm leading-normal text-muted-foreground">
-        Create the administrator account to finish installing LinguaCast. It is the only account on
+        Create the administrator account to finish installing Hallspeak. It is the only account on
         this server — speakers and guests join an event with a link or a PIN and never sign in.
       </p>
 

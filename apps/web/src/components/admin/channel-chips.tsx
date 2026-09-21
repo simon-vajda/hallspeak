@@ -1,4 +1,4 @@
-import type { components } from '@linguacast/contract/openapi';
+import type { components } from '@hallspeak/contract/openapi';
 import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';

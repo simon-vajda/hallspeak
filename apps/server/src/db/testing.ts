@@ -7,10 +7,10 @@ import { runMigrations } from './migrate';
 /**
  * A real, migrated, throwaway database in its own temp directory; call `cleanup()` when
  * done. Imports `createDb` from ./client, never ./index: loading the singleton would
- * provision ./data/linguacast.db as a side effect of running the tests.
+ * provision ./data/hallspeak.db as a side effect of running the tests.
  */
 export function createTestDb(): { db: Db; cleanup: () => void } {
-  const dir = mkdtempSync(join(tmpdir(), 'linguacast-test-'));
+  const dir = mkdtempSync(join(tmpdir(), 'hallspeak-test-'));
   const db = createDb(join(dir, 'test.db'));
   runMigrations(db);
 

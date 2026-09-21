@@ -1,4 +1,4 @@
-import { LISTENER_HISTORY_WINDOW_MS } from '@linguacast/contract/socket';
+import { LISTENER_HISTORY_WINDOW_MS } from '@hallspeak/contract/socket';
 import { describe, expect, it } from 'vitest';
 import {
   type AnchoredListenerPoint,

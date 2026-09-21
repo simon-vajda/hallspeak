@@ -5,7 +5,7 @@
 //
 // Unlike scripts/copy-web-dist.mjs at the repo root, this lives inside apps/server on
 // purpose: migrations are internal to this package and it reaches into no sibling, so
-// `pnpm -F @linguacast/server build` stays a standalone command.
+// `pnpm -F @hallspeak/server build` stays a standalone command.
 import { cp, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 

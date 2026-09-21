@@ -8,12 +8,12 @@ import { createTestApi } from '../testing/api';
 const INDEX = `<!doctype html>
 <html>
   <head>
-    <!-- linguacast:metadata:start -->
-    <title>LinguaCast</title>
+    <!-- hallspeak:metadata:start -->
+    <title>Hallspeak</title>
     <meta name="description" content="Listen to live interpretation in your language." />
-    <meta property="og:title" content="LinguaCast" />
+    <meta property="og:title" content="Hallspeak" />
     <meta property="og:description" content="Listen to live interpretation in your language." />
-    <!-- linguacast:metadata:end -->
+    <!-- hallspeak:metadata:end -->
     <script type="module" src="/assets/app-hash.js"></script>
   </head>
   <body><div id="root"></div></body>
@@ -30,7 +30,7 @@ let originalWebRoot: string | undefined;
 let createSpaRoutes: typeof import('./spa.routes')['createSpaRoutes'];
 
 beforeAll(async () => {
-  webRoot = mkdtempSync(join(tmpdir(), 'linguacast-web-'));
+  webRoot = mkdtempSync(join(tmpdir(), 'hallspeak-web-'));
   mkdirSync(join(webRoot, 'assets'));
   writeFileSync(join(webRoot, 'index.html'), INDEX);
   writeFileSync(join(webRoot, 'assets', 'app-hash.js'), 'console.log("asset");');
@@ -100,10 +100,10 @@ describe('SPA build handling', () => {
   it('fails on a present build without the metadata markers', () => {
     const malformed = join(webRoot, 'malformed');
     mkdirSync(malformed);
-    writeFileSync(join(malformed, 'index.html'), '<html><title>LinguaCast</title></html>');
+    writeFileSync(join(malformed, 'index.html'), '<html><title>Hallspeak</title></html>');
 
     expect(() => createSpaRoutes(malformed)).toThrow(
-      'Built index.html must contain exactly one LinguaCast metadata marker pair.',
+      'Built index.html must contain exactly one Hallspeak metadata marker pair.',
     );
   });
 
@@ -122,7 +122,7 @@ describe('static files and default shell', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('no-cache');
-    expect(body).toContain('<title>LinguaCast</title>');
+    expect(body).toContain('<title>Hallspeak</title>');
     expect(body).toContain(
       '<meta name="description" content="Listen to live interpretation in your language." />',
     );
@@ -133,7 +133,7 @@ describe('static files and default shell', () => {
     const response = await app.request('/somewhere');
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain('<title>LinguaCast</title>');
+    expect(await response.text()).toContain('<title>Hallspeak</title>');
   });
 
   it('serves hashed assets unchanged with immutable caching', async () => {
@@ -158,9 +158,9 @@ describe('public-link metadata', () => {
     const body = await response.text();
 
     expect(response.status).toBe(200);
-    expect(body).toContain('<title>Sunday Service | LinguaCast</title>');
+    expect(body).toContain('<title>Sunday Service | Hallspeak</title>');
     expect(body).toContain('<meta name="description" content="Weekly gathering." />');
-    expect(body).toContain('<meta property="og:title" content="Sunday Service | LinguaCast" />');
+    expect(body).toContain('<meta property="og:title" content="Sunday Service | Hallspeak" />');
     expect(body).toContain('<meta property="og:description" content="Weekly gathering." />');
   });
 
@@ -178,7 +178,7 @@ describe('public-link metadata', () => {
       const body = await response.text();
 
       expect(response.status).toBe(200);
-      expect(body).toContain('<title>Sunday Service - English | LinguaCast</title>');
+      expect(body).toContain('<title>Sunday Service - English | Hallspeak</title>');
       expect(body).toContain(
         '<meta name="description" content="Listen to Sunday Service on the English channel." />',
       );
@@ -198,11 +198,11 @@ describe('public-link metadata', () => {
 
   it('returns generic metadata for missing resources and stale speaker links', async () => {
     const cases = [
-      ['/events/000000', 404, 'Link not found | LinguaCast'],
-      ['/events/not-a-pin', 404, 'Link not found | LinguaCast'],
-      ['/events/123456/missing', 404, 'Link not found | LinguaCast'],
-      ['/events/123456/INVALID', 404, 'Link not found | LinguaCast'],
-      ['/events/123456/english?speaker_code=wrong', 403, 'Speaker link expired | LinguaCast'],
+      ['/events/000000', 404, 'Link not found | Hallspeak'],
+      ['/events/not-a-pin', 404, 'Link not found | Hallspeak'],
+      ['/events/123456/missing', 404, 'Link not found | Hallspeak'],
+      ['/events/123456/INVALID', 404, 'Link not found | Hallspeak'],
+      ['/events/123456/english?speaker_code=wrong', 403, 'Speaker link expired | Hallspeak'],
     ] as const;
 
     for (const [path, status, title] of cases) {
@@ -256,6 +256,6 @@ describe('public-link metadata', () => {
     expect(response.headers.get('Retry-After')).toBe('1');
     expect(response.headers.get('Cache-Control')).toBe('no-cache');
     expect(response.headers.get('Content-Type')).toContain('text/html');
-    expect(body).toContain('<title>Too many incorrect links | LinguaCast</title>');
+    expect(body).toContain('<title>Too many incorrect links | Hallspeak</title>');
   });
 });

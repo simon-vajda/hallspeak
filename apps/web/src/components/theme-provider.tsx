@@ -6,7 +6,7 @@ export type Theme = 'light' | 'dark' | 'system';
  * The pre-paint script in `index.html` hard-codes the same string: it runs before any module
  * loads, so the two cannot import from each other. Change one and you must change the other.
  */
-export const THEME_STORAGE_KEY = 'linguacast-theme';
+export const THEME_STORAGE_KEY = 'hallspeak-theme';
 
 type ThemeContextValue = {
   theme: Theme;

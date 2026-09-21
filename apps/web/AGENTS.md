@@ -55,9 +55,9 @@ Procedure for a new value: `docs/solutions/conventions/design-values-onto-the-sc
 ## Shared chrome
 
 - Every guest and studio screen shares one `AppHeader`: sticky, 62px, brand lockup and theme toggle over a bottom border — no event name, no PIN. The channel listener page replaces the lockup with a back link (chevron plus event name truncated at 230px, 320px from `lg`). No channel strip or phone PIN line.
-- Phone user agents alone see the app notice: a first-visit dialog, then an `About the app` chip; either answer is stored under `linguacast-app-notice`, and the chip slot stays reserved while the dialog is open. `Listen in the app` links to `https://open.linguacast.app/?url=` with the absolute channel URL encoded once.
+- Phone user agents alone see the app notice: a first-visit dialog, then an `About the app` chip; either answer is stored under `hallspeak-app-notice`, and the chip slot stays reserved while the dialog is open. `Listen in the app` links to `https://open.hallspeak.app/?url=` with the absolute channel URL encoded once.
 - `lib/phone-browser.ts`: `isPhoneBrowser` (excludes tablets; app notice) and `isHandheldBrowser` (includes iPadOS via touch count; wake-lock chip).
-- Public route components call `useDocumentTitle` with the contract's formatters; leaving resets the tab to `LinguaCast`.
+- Public route components call `useDocumentTitle` with the contract's formatters; leaving resets the tab to `Hallspeak`.
 
 ## Guest listener
 
@@ -74,7 +74,7 @@ Procedure for a new value: `docs/solutions/conventions/design-values-onto-the-sc
 Web-only; not a `packages/client-core` candidate.
 
 - `level.ts` RMS, decibel mapping, thresholds, meter motion; `devices.ts` microphone list shaping; `preferences.ts` preference type, constraint and gain mapping, defaults, tolerant parse/serialize; `media-session.ts` pure Media Session mapping; `use-audio-preferences.ts` storage; `use-listener-media-session.ts` lock-screen metadata, Play/Pause and real playback state; `use-mic-capture.ts` devices, streams, one `AudioContext`/`AnalyserNode` per stream.
-- Microphone preferences are one unversioned `linguacast-audio-preferences` object, parsed field by field against `DEFAULT_AUDIO_PREFERENCES`. Stored values are mount-time defaults, never adopted live; writes merge field by field. Echo cancellation defaults to and emits explicit `false`. Never restore gain below `MIN_RESTORED_GAIN`. Enabling browser auto gain forces the app `GainNode` to unity without discarding the stored gain.
+- Microphone preferences are one unversioned `hallspeak-audio-preferences` object, parsed field by field against `DEFAULT_AUDIO_PREFERENCES`. Stored values are mount-time defaults, never adopted live; writes merge field by field. Echo cancellation defaults to and emits explicit `false`. Never restore gain below `MIN_RESTORED_GAIN`. Enabling browser auto gain forces the app `GainNode` to unity without discarding the stored gain.
 - Open a stream before enumerating (labels are empty before permission); collapse the `default`/`communications` aliases. Release capture only through the path that stops tracks and closes the context.
 - Meter values and thresholds are positions on the `METER_FLOOR_DB`-to-full-scale decibel scale. Use `getFloatTimeDomainData`, never the byte API. Fill uses a timestamp-driven one-pole filter (`ATTACK_MS` 20, `RELEASE_MS` 280); `levelStatus` and `data-peaking` use a decaying peak-hold of raw RMS (`HOLD_DECAY_MS`). `speaker-studio.tsx`'s `SIGNAL_POLL_MS` latch stays raw so smoothing cannot delay Go live. See `docs/solutions/ui-bugs/a-gesture-gated-audiocontext-deadlocks-a-signal-gated-control.md`.
 - Media Session is best effort. On Android the listener loops an unmuted silent WAV carrier (`media-session-carrier.ts`, `use-media-session-carrier.ts`) only while listening; never mute it or zero its volume; position duration stays `Infinity`; an unrequested pause is the interruption signal. See `docs/solutions/integration-issues/loop-an-unmuted-silent-file-so-android-grants-a-webrtc-listener-media-focus.md`.

@@ -8,7 +8,7 @@ describe('socketMessage', () => {
 
   it('tells unsupported mobile releases to update', () => {
     expect(socketMessage('mobile_version_too_old')).toBe(
-      'This app version is no longer supported. Update LinguaCast.',
+      'This app version is no longer supported. Update Hallspeak.',
     );
   });
 });

@@ -1,4 +1,4 @@
-import { apiProblemCode } from '@linguacast/client-core/query-retry';
+import { apiProblemCode } from '@hallspeak/client-core/query-retry';
 
 /**
  * On-air is what the socket last said, seeded by the fetch until it speaks. `unknown` is a
@@ -70,7 +70,7 @@ export function eventErrorMessage(error: unknown): EventErrorMessage {
  * retrying an address that cannot be an event only spends the server's per-address budget.
  */
 export const BAD_ROUTE_MESSAGE: EventErrorMessage = {
-  title: 'This link is not a LinguaCast event',
+  title: 'This link is not a Hallspeak event',
   body: 'Check the link, or scan the code at your venue again.',
 };
 

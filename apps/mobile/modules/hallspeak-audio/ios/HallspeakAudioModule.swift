@@ -17,7 +17,7 @@ struct NowPlayingInfo: Record {
   @Field var artist: String = ""
 }
 
-public class LinguacastAudioModule: Module {
+public class HallspeakAudioModule: Module {
   private var active = false
   private var playing = false
   private var playTarget: Any?
@@ -28,7 +28,7 @@ public class LinguacastAudioModule: Module {
   private var lastInterface: NWInterface.InterfaceType?
 
   public func definition() -> ModuleDefinition {
-    Name("LinguacastAudio")
+    Name("HallspeakAudio")
 
     Events(
       "onRouteChange",

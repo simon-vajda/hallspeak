@@ -1,4 +1,4 @@
-import { SLUG_PATTERN } from '@linguacast/contract/patterns';
+import { SLUG_PATTERN } from '@hallspeak/contract/patterns';
 import { z } from 'zod';
 
 /** `Slug` in the contract is `min(1).max(40)` over `SLUG_PATTERN`. */

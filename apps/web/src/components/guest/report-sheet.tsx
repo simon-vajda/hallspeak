@@ -1,5 +1,5 @@
-import { reportLabel, reportRows, type SentMap, selfCheck } from '@linguacast/client-core/channel';
-import type { ReportCategory } from '@linguacast/contract/socket';
+import { reportLabel, reportRows, type SentMap, selfCheck } from '@hallspeak/client-core/channel';
+import type { ReportCategory } from '@hallspeak/contract/socket';
 import { Check, MessageCircleWarning } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MICRO_LABEL } from '@/components/micro-label';

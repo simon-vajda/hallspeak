@@ -70,7 +70,7 @@ export function useListenerMediaSession({
         session.metadata = new MediaMetadata({
           title: channelName,
           artist: eventName,
-          album: 'LinguaCast',
+          album: 'Hallspeak',
         });
       } catch {
         // Metadata is optional; action controls and normal playback still work without it.

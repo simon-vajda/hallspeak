@@ -72,13 +72,13 @@ describe('EnvSchema logging', () => {
 
   it('writes the retained copy under the data directory by default', () => {
     expect(EnvSchema.parse({}).LOG_DIR).toBe(path.join('./data', 'logs'));
-    expect(EnvSchema.parse({ DATA_DIR: '/srv/linguacast/data' }).LOG_DIR).toBe(
-      path.join('/srv/linguacast/data', 'logs'),
+    expect(EnvSchema.parse({ DATA_DIR: '/srv/hallspeak/data' }).LOG_DIR).toBe(
+      path.join('/srv/hallspeak/data', 'logs'),
     );
   });
 
   it('takes a configured log directory verbatim', () => {
-    expect(EnvSchema.parse({ LOG_DIR: '/var/log/linguacast' }).LOG_DIR).toBe('/var/log/linguacast');
+    expect(EnvSchema.parse({ LOG_DIR: '/var/log/hallspeak' }).LOG_DIR).toBe('/var/log/hallspeak');
   });
 
   it('reads an empty log directory as file logging declined', () => {
@@ -93,8 +93,8 @@ describe('EnvSchema data directory', () => {
   });
 
   it('takes a configured directory verbatim', () => {
-    expect(EnvSchema.parse({ DATA_DIR: '/srv/linguacast/data' }).DATA_DIR).toBe(
-      '/srv/linguacast/data',
+    expect(EnvSchema.parse({ DATA_DIR: '/srv/hallspeak/data' }).DATA_DIR).toBe(
+      '/srv/hallspeak/data',
     );
   });
 });

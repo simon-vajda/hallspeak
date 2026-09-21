@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_TITLE } from '@linguacast/contract/page-titles';
+import { DEFAULT_PAGE_TITLE } from '@hallspeak/contract/page-titles';
 import { useEffect } from 'react';
 
 export function useDocumentTitle(title: string): void {

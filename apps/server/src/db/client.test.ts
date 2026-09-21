@@ -8,7 +8,7 @@ describe('createDb', () => {
   let dir: string;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'linguacast-client-'));
+    dir = mkdtempSync(join(tmpdir(), 'hallspeak-client-'));
   });
 
   afterEach(() => {

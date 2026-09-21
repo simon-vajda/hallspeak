@@ -1,4 +1,4 @@
-import type { ReportCategory, ReportResolution, ReportRow } from '@linguacast/contract/socket';
+import type { ReportCategory, ReportResolution, ReportRow } from '@hallspeak/contract/socket';
 import { type Notification, notifications } from './notifications';
 
 /** How long a report counts for. Past it the interpreter is looking at a session log. */

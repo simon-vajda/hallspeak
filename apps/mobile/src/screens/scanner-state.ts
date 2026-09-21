@@ -77,12 +77,12 @@ export const offersSettings = (permission: CameraPermission): boolean => permiss
 export const showsTorch = (permission: CameraPermission): boolean => permission === 'granted';
 
 const REFUSALS: Record<LinkRefusalReason, string> = {
-  'not-a-url': "That is not a link. A LinguaCast link starts with 'https://'.",
-  'insecure-scheme': 'LinguaCast links are always https.',
+  'not-a-url': "That is not a link. A Hallspeak link starts with 'https://'.",
+  'insecure-scheme': 'Hallspeak links are always https.',
   'unknown-host': 'That link does not name a server this app can reach.',
-  'wrong-path': 'That is not a LinguaCast event link.',
+  'wrong-path': 'That is not a Hallspeak event link.',
   'bad-pin': 'An event PIN is six digits.',
-  'bad-slug': 'That link names a channel in a form LinguaCast does not use.',
+  'bad-slug': 'That link names a channel in a form Hallspeak does not use.',
 };
 
 /** Names what is wrong with the link. Nothing here needs a server to say it. */

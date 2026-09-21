@@ -1,5 +1,5 @@
-import { shouldThrowSettledQueryError } from '@linguacast/client-core/query-retry';
-import { formatChannelPageTitle } from '@linguacast/contract/page-titles';
+import { shouldThrowSettledQueryError } from '@hallspeak/client-core/query-retry';
+import { formatChannelPageTitle } from '@hallspeak/contract/page-titles';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';

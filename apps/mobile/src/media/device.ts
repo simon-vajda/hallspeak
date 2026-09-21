@@ -1,4 +1,4 @@
-import type { Signalling } from '@linguacast/client-core/media';
+import type { Signalling } from '@hallspeak/client-core/media';
 import { Device } from 'mediasoup-client';
 import type { BuiltinHandlerName } from 'mediasoup-client/types';
 

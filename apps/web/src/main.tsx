@@ -1,4 +1,4 @@
-import { shouldRetryApiQuery } from '@linguacast/client-core/query-retry';
+import { shouldRetryApiQuery } from '@hallspeak/client-core/query-retry';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';

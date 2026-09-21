@@ -1,4 +1,4 @@
-import type { Signalling } from '@linguacast/client-core/media';
+import type { Signalling } from '@hallspeak/client-core/media';
 import type { Device, types } from 'mediasoup-client';
 import { logIceRecovery, watchTransport } from './diagnostics';
 

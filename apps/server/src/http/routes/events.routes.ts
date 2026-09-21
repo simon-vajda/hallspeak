@@ -1,5 +1,5 @@
+import * as routes from '@hallspeak/contract/routes';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import * as routes from '@linguacast/contract/routes';
 import { findEnabledChannelBySlug, listEnabledChannels } from '../../core/channels.service';
 import { findEnabledEventByPin } from '../../core/events.service';
 import { db } from '../../db';

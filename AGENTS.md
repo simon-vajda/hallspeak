@@ -10,7 +10,7 @@ Keep these files current as decisions are made. A rule goes in the narrowest fil
 
 ## Product
 
-LinguaCast is a self-hosted, open-source simultaneous-interpretation platform for live in-person events; low audio latency is the core requirement. It targets one modest server run by a church or educational institution, a handful of concurrent events, and tens to low hundreds of listeners. Prefer simple operation over scale; horizontal scaling, multi-tenancy, sharding and cloud-managed dependencies are out of scope.
+Hallspeak is a self-hosted, open-source simultaneous-interpretation platform for live in-person events; low audio latency is the core requirement. It targets one modest server run by a church or educational institution, a handful of concurrent events, and tens to low hundreds of listeners. Prefer simple operation over scale; horizontal scaling, multi-tenancy, sharding and cloud-managed dependencies are out of scope.
 
 There is one authenticated Admin. Events own Channels; an Event PIN grants listening, a per-Channel Speaker code grants broadcasting. Speakers and listeners have no accounts: possession of the link or code is the entire authorization. Preserve that property and question features that appear to need listener identity. `CONCEPTS.md` is the authoritative domain vocabulary.
 
@@ -19,6 +19,8 @@ There is one authenticated Admin. Events own Channels; an Event PIN grants liste
 Implemented: workspace, contract, API, SQLite persistence, validated Socket.IO transport, authenticated admin, design-complete web screens, end-to-end mediasoup audio, and a working Expo listener (`apps/mobile`) with lock-screen media controls. Two interpreters sharing a channel swap through a negotiated handover, not a takeover.
 
 Not built: the **mobile speaker studio** — the next mobile work. Deferred with reasons: moving `apps/mobile/src/media/{transport,device,diagnostics}.ts` into `packages/client-core` (wait for a second mediasoup shell to shape the seam); an app-drawn output device list (neither platform offers one); replacing the web silent-WAV carrier; app icon, splash, store metadata, EAS config and store automation.
+
+Deferred from the rename to Hallspeak: standing up `open.hallspeak.app` with its `apple-app-site-association` and `assetlinks.json`, without which a store build falls back to the scheme rather than the universal link, and DNS and certificates for `hallspeak.app`. A repository rename neither renames nor retires its GHCR package, and `ghcr-cleanup.yml` passes no explicit package name, so the package published under the previous name keeps every tag it has and is covered by nothing — delete it by hand once the first post-rename build has pushed. The store metadata and EAS config already listed above inherit the new name. The image assets carry no letterform tied to either name, so they need no redraw.
 
 Non-blocking follow-ups: automated `/data` backup and a pre-flight "someone is waiting" signal. That signal needs channel-room membership and a new concept — do not relax the meaning of `Listening`, because a guest waiting on an offline Channel allocates nothing server-side.
 
@@ -36,7 +38,7 @@ Settings storage: mobile appearance is device-local (see mobile file); storage f
 
 ## Commands
 
-- `pnpm dev` — contract gen watcher, server on 3000 (`tsx watch`), Vite on 5173 proxying `/api`. Does **not** start Metro: run `pnpm -F @linguacast/mobile start`.
+- `pnpm dev` — contract gen watcher, server on 3000 (`tsx watch`), Vite on 5173 proxying `/api`. Does **not** start Metro: run `pnpm -F @hallspeak/mobile start`.
 - `pnpm gen` — regenerate `packages/contract/openapi.json` and `src/generated/api.d.ts`. Run after any schema or route change; CI fails on drift.
 - `pnpm typecheck` — runs `pnpm gen` first, so a clean `git status` afterwards *is* the drift check.
 - `pnpm check` / `pnpm check:fix` — Biome, plus `version:check`.

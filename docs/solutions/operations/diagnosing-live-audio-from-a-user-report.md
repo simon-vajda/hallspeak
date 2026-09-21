@@ -25,7 +25,7 @@ tags:
 
 ## Problem
 
-A LinguaCast deployment has no monitoring stack, by design: it runs on a NAS box or a
+A Hallspeak deployment has no monitoring stack, by design: it runs on a NAS box or a
 consumer server in a church or a school, and nobody is watching a dashboard. A support
 request is the only telemetry that exists, so the description of the symptom has to be
 enough to identify the cause.

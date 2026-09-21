@@ -171,7 +171,7 @@ export function logTargets(level: string, directory: string, colorize: boolean):
       target: 'pino-roll',
       level,
       options: {
-        file: `${directory}/linguacast.log`,
+        file: `${directory}/hallspeak.log`,
         frequency: LOG_FILE_FREQUENCY,
         dateFormat: LOG_FILE_DATE_FORMAT,
         limit: { count: LOG_FILE_COUNT, removeOtherLogFiles: true },

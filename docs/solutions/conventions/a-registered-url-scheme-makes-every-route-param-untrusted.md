@@ -33,8 +33,8 @@ tags:
 before anything is opened. That parser is careful and well tested, and it is easy to read the
 app as though it were the only way in.
 
-It is not. `app.json:8` declares `"scheme": "linguacast"`, and expo-router registers a deep
-link for **every** file under `app/`. So `linguacast://events/<host>/<pin>` opens the Event
+It is not. `app.json:8` declares `"scheme": "hallspeak"`, and expo-router registers a deep
+link for **every** file under `app/`. So `hallspeak://events/<host>/<pin>` opens the Event
 screen directly, from any web page, QR code or chat message, with the parser never on the
 path. The screen read those segments raw and handed them to `apiFor(host)`, which reaches
 `apiBaseUrl` (`src/api/client.ts:12`):
@@ -104,7 +104,7 @@ registered scheme has this shape.
 
 **What this does not do, and must not be read as doing:** it does not restrict *which* server
 the app will talk to. `isListenerHost` (`src/links/host.ts:2`) accepts any well-formed
-domain, because LinguaCast is self-hosted and every congregation runs its own origin — and
+domain, because Hallspeak is self-hosted and every congregation runs its own origin — and
 `parseListenerLink` has always accepted any well-formed host too. Pointing the app at an
 unfamiliar server is a property of the product, not a defect. What the reader closes is
 malformed input: path and userinfo injection into the origin, bad PINs and slugs, and hosts
@@ -143,7 +143,7 @@ if (route === null) {
 }
 ```
 
-Verified on an Android device: `linguacast://events/a.example/12` reaches the refusal screen
+Verified on an Android device: `hallspeak://events/a.example/12` reaches the refusal screen
 with no network request and no history row written, while a real event and channel still load.
 
 ## Related

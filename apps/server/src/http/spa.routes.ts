@@ -1,12 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { serveStatic } from '@hono/node-server/serve-static';
 import {
   DEFAULT_PAGE_TITLE,
   formatChannelPageTitle,
   formatEventPageTitle,
-} from '@linguacast/contract/page-titles';
-import { PIN_PATTERN, SLUG_PATTERN } from '@linguacast/contract/patterns';
+} from '@hallspeak/contract/page-titles';
+import { PIN_PATTERN, SLUG_PATTERN } from '@hallspeak/contract/patterns';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { type Context, Hono } from 'hono';
 import { html } from 'hono/html';
 import { findEnabledChannelBySlug } from '../core/channels.service';
@@ -14,8 +14,8 @@ import { findEnabledEventByPin } from '../core/events.service';
 import { db } from '../db';
 import { createPublicRateLimit } from './middleware/rate-limit.middleware';
 
-const INDEX_META_START = '<!-- linguacast:metadata:start -->';
-const INDEX_META_END = '<!-- linguacast:metadata:end -->';
+const INDEX_META_START = '<!-- hallspeak:metadata:start -->';
+const INDEX_META_END = '<!-- hallspeak:metadata:end -->';
 
 interface PageMetadata {
   title: string;
@@ -34,7 +34,7 @@ const DEFAULT_METADATA: PageMetadata = {
 
 const LINK_NOT_FOUND: PageResponse = {
   metadata: {
-    title: 'Link not found | LinguaCast',
+    title: 'Link not found | Hallspeak',
     description: 'This link is no longer available.',
   },
   status: 404,
@@ -42,7 +42,7 @@ const LINK_NOT_FOUND: PageResponse = {
 
 const SPEAKER_LINK_EXPIRED: PageResponse = {
   metadata: {
-    title: 'Speaker link expired | LinguaCast',
+    title: 'Speaker link expired | Hallspeak',
     description: 'This speaker link is no longer valid. Ask the organiser for a current link.',
   },
   status: 403,
@@ -50,7 +50,7 @@ const SPEAKER_LINK_EXPIRED: PageResponse = {
 
 const RATE_LIMITED: PageResponse = {
   metadata: {
-    title: 'Too many incorrect links | LinguaCast',
+    title: 'Too many incorrect links | Hallspeak',
     description: 'Wait a moment before trying this link again.',
   },
   status: 429,
@@ -70,7 +70,7 @@ function createIndexRenderer(template: string) {
     template.indexOf(INDEX_META_END, end + INDEX_META_END.length) === -1;
 
   if (!exactlyOnePair) {
-    throw new Error('Built index.html must contain exactly one LinguaCast metadata marker pair.');
+    throw new Error('Built index.html must contain exactly one Hallspeak metadata marker pair.');
   }
 
   const before = template.slice(0, start);

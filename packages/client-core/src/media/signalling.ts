@@ -1,4 +1,4 @@
-import { unwrap } from '@linguacast/contract/socket';
+import { unwrap } from '@hallspeak/contract/socket';
 import type { SocketClient } from '../socket/client';
 
 /**

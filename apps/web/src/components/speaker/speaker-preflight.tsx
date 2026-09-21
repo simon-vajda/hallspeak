@@ -1,5 +1,5 @@
-import type { LinkState } from '@linguacast/client-core/media';
-import type { components } from '@linguacast/contract/openapi';
+import type { LinkState } from '@hallspeak/client-core/media';
+import type { components } from '@hallspeak/contract/openapi';
 import { Mic } from 'lucide-react';
 import { useLayoutEffect } from 'react';
 import { AppHeader } from '@/components/app-header';

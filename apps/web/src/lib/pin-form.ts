@@ -1,4 +1,4 @@
-import { PIN_PATTERN } from '@linguacast/contract/patterns';
+import { PIN_PATTERN } from '@hallspeak/contract/patterns';
 import { z } from 'zod';
 
 // The six-digit rule is a protocol fact, so it comes from the contract; the error copy around

@@ -14,7 +14,7 @@ root_cause: async_timing
 resolution_type: code_fix
 severity: high
 related_components:
-  - apps/mobile/modules/linguacast-audio
+  - apps/mobile/modules/hallspeak-audio
   - packages/client-core
 tags:
   - react-native
@@ -51,9 +51,9 @@ React Native does not service JavaScript timers while an Android app is not visi
 
 Move the clock into the local Expo module, where the platform keeps servicing it, and let JavaScript act on its events.
 
-**A native heartbeat.** On Android, `ListeningService` takes a `PARTIAL_WAKE_LOCK` (`ListeningService.kt:92-98`) and posts a main-looper tick every `TICK_MS = 2_000L` (`ListeningService.kt:34-38`, `:197`). The module forwards each tick as `onTick` (`LinguacastAudioModule.kt:74`). The manifest declares `android.permission.WAKE_LOCK`. iOS mirrors this with a main-runloop `Timer` in common modes, started and stopped with the audio session (`LinguacastAudioModule.swift:152-157`, `:168-176`, interval `:288`).
+**A native heartbeat.** On Android, `ListeningService` takes a `PARTIAL_WAKE_LOCK` (`ListeningService.kt:92-98`) and posts a main-looper tick every `TICK_MS = 2_000L` (`ListeningService.kt:34-38`, `:197`). The module forwards each tick as `onTick` (`HallspeakAudioModule.kt:74`). The manifest declares `android.permission.WAKE_LOCK`. iOS mirrors this with a main-runloop `Timer` in common modes, started and stopped with the audio session (`HallspeakAudioModule.swift:152-157`, `:168-176`, interval `:288`).
 
-**A network-change event that fires only on a real change.** Android registers `registerDefaultNetworkCallback` (`LinguacastAudioModule.kt:78`) and compares `network.networkHandle` against the last one seen (`:300-310`). iOS runs `NWPathMonitor` and compares the first available interface's type (`LinguacastAudioModule.swift:189-203`). Both callbacks also fire on registration and on ordinary capability or path updates. Emitting on those would cycle a healthy connection.
+**A network-change event that fires only on a real change.** Android registers `registerDefaultNetworkCallback` (`HallspeakAudioModule.kt:78`) and compares `network.networkHandle` against the last one seen (`:300-310`). iOS runs `NWPathMonitor` and compares the first available interface's type (`HallspeakAudioModule.swift:189-203`). Both callbacks also fire on registration and on ordinary capability or path updates. Emitting on those would cycle a healthy connection.
 
 **JavaScript acts on three signals, none of which covers the others** (`apps/mobile/src/socket/use-app-state-reconnect.ts`):
 

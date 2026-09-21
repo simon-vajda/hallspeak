@@ -53,7 +53,7 @@ export function AppNotice() {
         showCloseButton={false}
         className="w-[calc(100%-var(--spacing-gutter)*2)] max-w-100 gap-3 p-panel sm:max-w-100"
       >
-        <DialogTitle className="text-section">LinguaCast has an app</DialogTitle>
+        <DialogTitle className="text-section">Hallspeak has an app</DialogTitle>
         <DialogDescription>
           For smoother background listening, download the app. It also makes it easier to connect to
           the events you attend often.

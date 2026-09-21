@@ -5,17 +5,17 @@ Rules local to the Expo listener. Repo-wide rules, the socket protocol, media re
 ## Platform and build
 
 - Expo SDK 57 + React Native 0.86. Targets a **custom dev client, never Expo Go** (`expo-camera`, `expo-sqlite`, `react-native-svg`, `react-native-webrtc` and the local audio module are native). A native dependency or config change needs a dev client rebuild; Metro alone will not pick it up.
-- `ios/` and `android/` are generated, gitignored and never hand-edited; native configuration belongs in `app.json` and config plugins. `modules/linguacast-audio` is a tracked local Expo module, autolinked by prebuild.
+- `ios/` and `android/` are generated, gitignored and never hand-edited; native configuration belongs in `app.json` and config plugins. `modules/hallspeak-audio` is a tracked local Expo module, autolinked by prebuild.
 - `app.config.ts` only derives `version` from `package.json` and must stay that thin: TypeScript 7.0.2 breaks the Expo CLI's compilation of anything beyond a spread and one field.
 - SDK 57 facts: `edgeToEdgeEnabled` is no longer accepted; `userInterfaceStyle: "automatic"` no-ops without `expo-system-ui`; the `expo-camera` plugin's `cameraPermission` supplies `NSCameraUsageDescription`, without which iOS kills the app on camera use.
-- Bundle id and Android package `app.linguacast.mobile` are immutable once a store has seen them.
+- Bundle id and Android package `app.hallspeak.mobile` are immutable once a store has seen them.
 - `@config-plugins/react-native-webrtc` declares `RECORD_AUDIO` and `SYSTEM_ALERT_WINDOW`; both are blocked in `app.json`. Its iOS microphone usage string cannot be removed without a config plugin of our own (not written).
-- No `dev` script, deliberately: root `pnpm dev` would otherwise start Metro. Use `pnpm -F @linguacast/mobile start`.
+- No `dev` script, deliberately: root `pnpm dev` would otherwise start Metro. Use `pnpm -F @hallspeak/mobile start`.
 - `tsconfig.json` extends `["../../tsconfig.base.json", "expo/tsconfig.base"]` **in that order** (later wins; the repo base supplies strictness). **No comments in that file** — `expo start` rewrites it.
 
 ## Contract and shared code
 
-- Depends on `@linguacast/contract` and `@linguacast/client-core` as TypeScript source, never on `@linguacast/web`. No build step is added to either package.
+- Depends on `@hallspeak/contract` and `@hallspeak/client-core` as TypeScript source, never on `@hallspeak/web`. No build step is added to either package.
 - Import contract subpaths only: type-only `./openapi` for payloads, `./patterns` for regexes, **type-only** `./socket` for the report vocabulary. Never the root barrel or `./schemas` (both pull in Hono). `__tests__/contract-resolution.test.ts` guards this.
 
 ## Tests
@@ -28,7 +28,7 @@ Rules local to the Expo listener. Repo-wide rules, the socket protocol, media re
 ## Routing
 
 - `expo-router`: a file under `app/` is a route. Event and Channel are addressed by host and PIN (`app/events/[host]/[pin]/[slug].tsx`), not a stored record id, so a scanned code opens Event before anything is remembered. `src/links/route.ts` encodes nothing (a dot in a segment was verified to round-trip); it is the one place to change if a router version reserves the character.
-- `app/+native-intent.tsx` unwraps `open.linguacast.app`'s `url` parameter through `parseListenerLink`; malformed links go Home. Associated domains and verified intent filters need the external host's association files, which are separate work.
+- `app/+native-intent.tsx` unwraps `open.hallspeak.app`'s `url` parameter through `parseListenerLink`; malformed links go Home. Associated domains and verified intent filters need the external host's association files, which are separate work.
 - Back controls follow fixed hierarchy: Channel dismisses to its Event URL, Event to Home, via `router.dismissTo`.
 - Home's title is **Join**, not Listen: it opens speaker links too. A channel link carrying a non-empty `speaker_code` — entered, scanned or arriving through `+native-intent` — opens the `speaker-link` sheet via `destinationHref` in `src/links/route.ts`, which offers the system browser (`Linking.openURL`, never an in-app browser or WebView) or the listener channel. The app never sends, stores or logs the code. The sheet is addressed by validated host, PIN, slug and code and rebuilds the studio URL itself; it must never accept a URL param (`docs/solutions/conventions/a-registered-url-scheme-makes-every-route-param-untrusted.md`).
 
@@ -36,7 +36,7 @@ Rules local to the Expo listener. Repo-wide rules, the socket protocol, media re
 
 - `src/socket/provider.tsx` owns the event's one socket and publishes the socket, media leg, output route and report episode through one context. It is the nested layout `app/events/[host]/[pin]/_layout.tsx`, not a per-screen hook: the stack keeps Event mounted under Channel (two sockets otherwise) and sheet routes cannot take props.
 - That layout declares its own `unstable_settings.initialRouteName` (a deep link to a channel must still have Event underneath) and declares every screen in the order a guest meets them, **sheet last**. Expo Router passes declared screens first and the navigator has no initial route of its own, so a sheet declared first becomes the starting route.
-- The provider fetches `/api/version` before any event request or socket and applies the policy from `@linguacast/client-core/server`. The result is a `ServerGate` context; the navigator stays mounted through every verdict and each screen renders the gate's message in its own chrome with a back action. A verdict comes only from an answer actually read: a failed refetch over a compatible server leaves the event connected. Strings live in `src/socket/server-check.ts`.
+- The provider fetches `/api/version` before any event request or socket and applies the policy from `@hallspeak/client-core/server`. The result is a `ServerGate` context; the navigator stays mounted through every verdict and each screen renders the gate's message in its own chrome with a back action. A verdict comes only from an answer actually read: a failed refetch over a compatible server leaves the event connected. Strings live in `src/socket/server-check.ts`.
 - Reconnect signals, none of which covers the others: returning to foreground reopens a suspended socket; the native session heartbeat reopens a socket found disconnected; a network change **cycles** the socket. The media ladder reads the same heartbeat (`src/media/ice-clock.ts`) and cycles the connection when a step stalls past `STALLED_STEP_MS` (12s, above Socket.IO's ack deadline; 3s over a transport already `failed`). Signalling is skipped while the socket is known disconnected. See `docs/solutions/integration-issues/drive-mobile-listener-recovery-from-a-native-clock-behind-a-locked-screen.md`.
 - A transport failure shows one generic message naming no cause (React Native reports untrusted certificates and unreachable hosts identically); only a 404 reports a missing event.
 - `src/version.ts` derives the mobile version from `package.json` for the handshake.
@@ -47,7 +47,7 @@ Rules local to the Expo listener. Repo-wide rules, the socket protocol, media re
 - The mediasoup handler is named (`ReactNative106`, typed against mediasoup-client's union so a rename fails `pnpm typecheck`); detection would read a browser user agent. `registerGlobals()` runs at app entry.
 - When the recovery ladder gives up, the Channel screen offers a session restart (there is no page to reload).
 
-## Native audio module (`modules/linguacast-audio`)
+## Native audio module (`modules/hallspeak-audio`)
 
 Owns the platform audio session, Android `mediaPlayback` foreground service, system media controls, output route and volume readings, recovery clock and network watch. It exists because no maintained package shows lock-screen controls for audio it doesn't play.
 
@@ -95,6 +95,6 @@ The app states the platform's audio settings and offers no control that would du
 ## Sheets and storage
 
 - Sheets (`link`, `appearance`, `speaker-link`, `[slug]/report`) are `expo-router` routes with `presentation: 'formSheet'`, not a sheet library. Each owns its title and dismiss control as content (Android caps detents at three and renders no header inside a form sheet). `SheetChrome` puts header and body in **one** scroll container.
-- Appearance opens from the Home header, uses `SheetChoice` rows (iOS checkmark, Android radio), defaults to System, and stores `system`/`light`/`dark` under `linguacast-appearance` in `expo-sqlite/kv-store`. The theme provider restores it synchronously at boot and syncs React Native's native appearance override (`unspecified` for System). A failed write keeps the session's choice and shows an inline message.
+- Appearance opens from the Home header, uses `SheetChoice` rows (iOS checkmark, Android radio), defaults to System, and stores `system`/`light`/`dark` under `hallspeak-appearance` in `expo-sqlite/kv-store`. The theme provider restores it synchronously at boot and syncs React Native's native appearance override (`unspecified` for System). A failed write keeps the session's choice and shows an inline message.
 - History lives in `expo-sqlite/kv-store`, not `expo-secure-store` (Keychain API, truncates past ~2 KB); synchronous reads paint pinned rows on the first frame. A row records **no channel**. Availability is checked only when tapped — never a launch sweep, which would be slow and disclose to servers where a person worships. Only the guest removes a row; an unreachable event is marked and kept. Home re-reads on focus and on pull.
 - Pinning is a visible star button; Remove is also an accessibility action (gestures aren't reachable under VoiceOver/TalkBack). Removal is not confirmed; a snackbar offers Undo.

@@ -8,7 +8,7 @@ import { SESSION_TTL_MS } from '../core/auth';
  * when given the prefix — but it has to be supplied at all three call sites below, or the
  * name will not match.
  */
-const NAME = 'linguacast_session';
+const NAME = 'hallspeak_session';
 
 export function readSessionCookie(c: Context): string | undefined {
   return getCookie(c, NAME, 'host');

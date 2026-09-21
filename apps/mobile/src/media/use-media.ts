@@ -1,4 +1,4 @@
-import type { MediaHealth } from '@linguacast/client-core/media';
+import type { MediaHealth } from '@hallspeak/client-core/media';
 import {
   afterConnect,
   beginRebuild,
@@ -16,8 +16,8 @@ import {
   type TransportConnectionState,
   type TransportDirection,
   transportOpened,
-} from '@linguacast/client-core/media';
-import type { SocketClient } from '@linguacast/client-core/socket';
+} from '@hallspeak/client-core/media';
+import type { SocketClient } from '@hallspeak/client-core/socket';
 import type { types } from 'mediasoup-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSessionTick } from '@/audio/use-session-tick';

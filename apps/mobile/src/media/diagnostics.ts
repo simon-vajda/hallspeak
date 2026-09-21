@@ -1,7 +1,7 @@
 import {
   hasCandidateAddressFamilyMismatch,
   ICE_RECOVERY_DELAY_MS,
-} from '@linguacast/client-core/media';
+} from '@hallspeak/client-core/media';
 import type { types } from 'mediasoup-client';
 import { logInfo, logWarn } from '../log';
 

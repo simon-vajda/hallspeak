@@ -38,7 +38,7 @@ The mobile listener only receives audio, so `AVAudioSession.Category.playback` l
 - **A second audio library.** libwebrtc's `RTCAudioSession` fights any other library that sets a category. That is why `expo-audio` is not installed in `apps/mobile` at all.
 
 ## Solution
-One module, `apps/mobile/modules/linguacast-audio`, owns the session. It sets libwebrtc's shared configuration before any peer connection exists, because libwebrtc reads it when it builds its audio unit (`apps/mobile/modules/linguacast-audio/ios/LinguacastAudioModule.swift:42-60`):
+One module, `apps/mobile/modules/hallspeak-audio`, owns the session. It sets libwebrtc's shared configuration before any peer connection exists, because libwebrtc reads it when it builds its audio unit (`apps/mobile/modules/hallspeak-audio/ios/HallspeakAudioModule.swift:42-60`):
 
 ```swift
 OnCreate {
@@ -50,7 +50,7 @@ OnCreate {
 }
 ```
 
-It activates the session explicitly, under libwebrtc's configuration lock. Activation is idempotent, so the playback hold can span it (`LinguacastAudioModule.swift:143-161`):
+It activates the session explicitly, under libwebrtc's configuration lock. Activation is idempotent, so the playback hold can span it (`HallspeakAudioModule.swift:143-161`):
 
 ```swift
 let session = RTCAudioSession.sharedInstance()

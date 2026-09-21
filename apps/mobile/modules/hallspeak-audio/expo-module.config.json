@@ -1,0 +1,9 @@
+{
+  "platforms": ["ios", "android"],
+  "ios": {
+    "modules": ["HallspeakAudioModule"]
+  },
+  "android": {
+    "modules": ["app.hallspeak.audio.HallspeakAudioModule"]
+  }
+}

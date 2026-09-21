@@ -106,8 +106,8 @@ export default function ScannerScreen() {
             <>
               <Text style={[type.note, styles.centred, styles.overlayMuted]}>
                 {offersSettings(permission)
-                  ? 'LinguaCast cannot use the camera. You can turn it on in Settings.'
-                  : 'LinguaCast needs the camera to read the code at your venue.'}
+                  ? 'Hallspeak cannot use the camera. You can turn it on in Settings.'
+                  : 'Hallspeak needs the camera to read the code at your venue.'}
               </Text>
               <WideAction
                 label={offersSettings(permission) ? 'Open Settings' : 'Allow the camera'}

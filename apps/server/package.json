@@ -1,5 +1,5 @@
 {
-  "name": "@linguacast/server",
+  "name": "@hallspeak/server",
   "version": "0.11.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
   "dependencies": {
     "@hono/node-server": "2.1.0",
     "@hono/zod-openapi": "1.4.0",
-    "@linguacast/contract": "workspace:*",
+    "@hallspeak/contract": "workspace:*",
     "@scalar/hono-api-reference": "0.11.13",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.2",

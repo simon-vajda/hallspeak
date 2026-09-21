@@ -1,4 +1,4 @@
-import type { paths } from '@linguacast/contract/openapi';
+import type { paths } from '@hallspeak/contract/openapi';
 import createFetchClient, { type Client } from 'openapi-fetch';
 import { unavailable } from './problem';
 
@@ -7,7 +7,7 @@ import { unavailable } from './problem';
  * and `credentials: 'include'`, both of which are same-origin browser assumptions; this app
  * takes the host from the route, and the listener has no session to send.
  *
- * HTTPS is not a choice the app offers: every LinguaCast server is reachable over it.
+ * HTTPS is not a choice the app offers: every Hallspeak server is reachable over it.
  */
 export function apiOrigin(host: string): string {
   return `https://${host}`;

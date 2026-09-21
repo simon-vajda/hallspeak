@@ -1,4 +1,4 @@
-import type { components } from '@linguacast/contract/openapi';
+import type { components } from '@hallspeak/contract/openapi';
 import { Link } from '@tanstack/react-router';
 import { Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
