@@ -40,8 +40,6 @@ must be the same outside and inside the container. Instead set `MEDIA_RTC_PORT_B
 `MEDIA_MAX_WORKERS` ports counting up from `MEDIA_RTC_PORT_BASE` (see
 [cores and events](#cores-events-and-ports)).
 
-The host needs Linux kernel 6 or newer: the bundled media engine is built for it.
-
 ### 3. Reverse proxy
 
 Your proxy needs to terminate TLS, pass WebSocket upgrades for `/api/socket.io`, and

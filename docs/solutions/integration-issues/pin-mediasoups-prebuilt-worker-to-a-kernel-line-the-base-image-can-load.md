@@ -136,8 +136,9 @@ Pinning removes the derivation. `MEDIASOUP_WORKER_KERNEL` is a build arg, not a 
 so the same Dockerfile produces the same worker regardless of which machine builds it. Kernel 6
 was verified rather than assumed: the kernel6 asset ran inside `node:24-bookworm-slim` (exit
 41) and the kernel7 asset did not (the glibc errors above, exit 1). The kernel5 asset 404s for
-this version, so kernel 6 is also the floor — which is why the published image requires a host
-on Linux kernel 6 or newer.
+this version, so kernel 6 is also the oldest line available. The label names the build era, not
+a host requirement: a container runs the image's glibc on the host's kernel, and glibc 2.36
+itself needs only kernel 3.2.
 
 ## Prevention
 
