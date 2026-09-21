@@ -1,9 +1,131 @@
 # Hosting Hallspeak
 
-One container, behind a reverse proxy you supply. Files you need: `compose.yaml` and
-`env.example`, both attached to the
-[latest release](https://github.com/simon-vajda/hallspeak/releases/latest). Take them from
-the release, not from `main`: `main` can already name a version that has not been published.
+One container behind a reverse proxy you supply. You need `compose.yaml` and
+`.env.example` from the [latest release](https://github.com/simon-vajda/hallspeak/releases/latest)
+— take them from the release, not from `main`, which can name a version not yet published.
+GitHub renames release files that start with a dot, so the release lists it as `env.example`.
+
+## Run it
+
+### 1. Settings
+
+Save `.env.example` as `.env` next to `compose.yaml` and set:
+
+- **`PUBLIC_ADDRESS`** (required) — where guests reach this server for audio: your public
+  hostname, usually the one your proxy serves (`hallspeak.example.com`), or your public IP
+  if you have none. Audio bypasses the proxy, so this must be reachable from the internet
+  on the RTC ports. A hostname is re-resolved every minute, so a dynamic IP behind a
+  dynamic-DNS name keeps working — see [dynamic IP addresses](#dynamic-ip-addresses).
+- **`TRUSTED_PROXY_IPS`** (recommended) — the address your proxy connects to the container
+  from. Without it, every visitor shares one sign-in throttle bucket. It is rarely the
+  address you expect: see [`TRUSTED_PROXY_IPS`](#trusted_proxy_ips).
+- **`HALLSPEAK_DATA_DIR`** (optional) — the host directory holding all of your state.
+  Defaults to `./data` beside `compose.yaml`.
+
+Every other setting, with its default and what it does, is documented in `.env.example`.
+
+### 2. Ports
+
+| Port          | Protocol        | Who must reach it                         | Purpose                         |
+| ------------- | --------------- | ----------------------------------------- | ------------------------------- |
+| `3000`        | TCP             | Only your reverse proxy, not the internet | Web app and API, as plain HTTP  |
+| `44400–44403` | UDP **and** TCP | Guests — forward them on your router      | Audio                           |
+
+Port 3000 carries no encryption and serves the setup wizard, so keep it closed to the
+internet and let guests in only through your proxy.
+
+To use different ports for audio, don't remap the defaults in `compose.yaml` — the ports
+must be the same outside and inside the container. Instead set `MEDIA_RTC_PORT_BASE` in
+`.env` and change both port ranges in `compose.yaml` to match. Open one port per worker:
+`MEDIA_MAX_WORKERS` ports counting up from `MEDIA_RTC_PORT_BASE` (see
+[cores and events](#cores-events-and-ports)).
+
+The host needs Linux kernel 6 or newer: the bundled media engine is built for it.
+
+### 3. Reverse proxy
+
+Your proxy needs to terminate TLS, pass WebSocket upgrades for `/api/socket.io`, and
+append `X-Forwarded-For`. HTTPS is not optional: without it the browser won't allow
+microphone access, and signing in fails silently.
+
+**Caddy** does all three unprompted:
+
+```caddy
+hallspeak.example.com {
+    reverse_proxy 127.0.0.1:3000
+}
+```
+
+**nginx**:
+
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 443 ssl;
+    server_name hallspeak.example.com;
+    # ssl_certificate and ssl_certificate_key for your certificate
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $connection_upgrade;
+        proxy_read_timeout 300s;
+    }
+}
+```
+
+**Nginx Proxy Manager** — put it on this service's network (add `networks:` to
+`compose.yaml` naming the one NPM is on) and add a Proxy Host: scheme `http`, Forward
+Hostname `hallspeak`, Forward Port `3000`, **Websockets Support on**, and on the SSL tab
+request a certificate with Force SSL.
+
+### 4. Start it with Docker Compose
+
+```sh
+docker compose up -d
+```
+
+Then open your HTTPS URL promptly: the setup wizard gives the admin account to whoever
+reaches it first.
+
+### Check the logs
+
+```sh
+docker compose logs -f
+```
+
+Check the media line against what the internet actually sees — a wrong public address is
+the one failure that produces no error:
+
+```text
+mediasoup: 4 worker(s) of 8 detected core(s) · ports 44400, 44401, 44402, 44403 (UDP and TCP) · guests connect to 203.0.113.10
+```
+
+### Alternative: `docker run`
+
+```sh
+docker run -d --name hallspeak --restart unless-stopped \
+  -e PUBLIC_ADDRESS=hallspeak.example.com \
+  -e TRUSTED_PROXY_IPS=172.17.0.1 \
+  -p 3000:3000 \
+  -p 44400-44403:44400-44403/udp \
+  -p 44400-44403:44400-44403/tcp \
+  -v /srv/hallspeak/data:/data \
+  ghcr.io/simon-vajda/hallspeak:latest
+```
+
+`172.17.0.1` is the default bridge gateway, which is what a proxy on the host appears as;
+confirm yours with `docker network inspect bridge`. Pin a version tag instead of `latest`
+to control upgrades, and add `--env-file .env` to use the remaining settings from
+`.env.example`.
 
 ## How it fits together
 
@@ -23,285 +145,82 @@ flowchart LR
   C --> D
 ```
 
-- **Pages and signalling** go through the proxy over HTTPS. Without TLS the speaker
-  studio cannot open a microphone and signing in fails silently, because the session
-  cookie is a `__Host-` cookie the browser discards.
-- **Audio never touches the proxy.** It goes straight to the RTC ports, so those must
-  be forwarded on your router and published one-to-one — the port a guest dials is the
-  port inside the ICE candidate, so remapping it breaks audio while leaving every
-  screen looking healthy.
-- **`/data` is all of your state.** Back it up; nothing else survives a recreate. Its
-  `logs/` subdirectory is the exception — diagnostics, not state, and not worth backing up.
-
-## Prerequisites
-
-- A reverse proxy terminating TLS for a hostname pointing at this server.
-- Router forwarding for **44400–44403, UDP and TCP**, to the host running the container —
-  one port per CPU core Hallspeak may use, which is four by default.
-- A public address stable enough to put in a config file, and a host on Linux kernel 6
-  or newer.
-
-## Deploy
-
-Download `compose.yaml` and `env.example` from the
-[latest release](https://github.com/simon-vajda/hallspeak/releases/latest) into wherever you
-keep your Compose stacks, save the second one as `.env`, and set:
-
-- **`PUBLIC_ADDRESS`** — where guests reach this server: your public hostname, usually
-  the same one your reverse proxy serves, `hallspeak.example.com`. A public IP address
-  works too if you have no hostname. The only value you must fill in. Audio connects here
-  directly rather than through your proxy, so this must be reachable from the internet on
-  the RTC ports even though your proxy already works. A hostname is resolved to an address
-  at startup and re-checked every minute, so a home connection whose public IP changes
-  keeps working on its own — see [dynamic IP addresses](#dynamic-ip-addresses).
-- **`TRUSTED_PROXY_IPS`** — the address your reverse proxy reaches the container from.
-  See the proxy section below, and note it is rarely the address you expect.
-- **`MEDIA_MAX_WORKERS`** — how many events can run at once. See below.
-
-The Compose file mounts `./data` for the database and your admin account. Point it at
-wherever you keep persistent data instead if you prefer; nothing outside it has to
-survive.
-
-```sh
-# Only while the package is private. This step disappears once it is published.
-docker login ghcr.io -u <your-github-username>
-
-docker compose up -d && docker compose logs -f
-```
-
-Check the media line against what the internet actually sees — a wrong public address is
-the one failure that produces no error anywhere:
-
-```
-mediasoup: 4 worker(s) of 8 detected core(s) · ports 44400, 44401, 44402, 44403 (UDP and TCP) · guests connect to 203.0.113.10
-```
-
-Configure your proxy (below), then open the HTTPS URL. The setup wizard claims the
-admin account for whoever reaches it first, so do this promptly.
-
-### Cores, events, and how many ports to open
-
-**One event runs on one CPU core, start to finish.** It is never spread across two, so
-`MEDIA_MAX_WORKERS` is really "how many cores Hallspeak may use", and each one it uses
-carries a different simultaneous event.
-
-That makes it a concurrency setting, not a capacity one:
-
-- Raising it lets parallel events genuinely run in parallel instead of sharing a core,
-  and it buys crash protection — if one core's process dies, it takes only the events
-  on that core with it.
-- It does nothing for the size of a single event. One event is capped at one core
-  however high you set this.
-- The effective value is the smaller of your setting and the host's core count, so
-  asking for more than you have just opens ports nothing listens on.
-
-If you will only ever run one event at a time, `MEDIA_MAX_WORKERS=1` is honest.
-
-**Each core in use needs one forwarded port**, starting at `MEDIA_RTC_PORT_BASE` and
-counting up — four cores means 44400 through 44403. The startup line above names them
-exactly; forward those on your router, on UDP and TCP, with no remapping. If you change
-`MEDIA_MAX_WORKERS`, edit the port publications in `compose.yaml` by hand too: Compose
-cannot derive a range from a variable.
-
-## Reverse proxy
-
-Each proxy needs the same three things: TLS, WebSocket upgrades passed through for
-`/api/socket.io`, and the visitor's address appended so the sign-in throttle can tell
-callers apart.
-
-The Compose file publishes the HTTP port on loopback only, so a proxy on this host
-reaches `127.0.0.1:3000` and nothing else on the network reaches it at all. A proxy
-running as a container instead joins this service's network and uses `hallspeak:3000`,
-needing no published port. Only a proxy on a *different* host needs the publication
-widened, and that host's firewall then becomes the thing standing between the internet
-and a cleartext setup wizard.
-
-**Caddy** — does all three unprompted:
-
-```caddy
-hallspeak.example.org {
-    reverse_proxy 127.0.0.1:3000
-}
-```
-
-**nginx** — with `map $http_upgrade $connection_upgrade { default upgrade; '' close; }`
-in the `http { }` block, inside your TLS server:
-
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:3000;
-    proxy_http_version 1.1;
-    proxy_set_header Host              $host;
-    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header Upgrade           $http_upgrade;
-    proxy_set_header Connection        $connection_upgrade;
-    proxy_read_timeout 300s;
-}
-```
-
-**Nginx Proxy Manager** — it runs as a container, so put it on this service's network
-(add `networks:` to `compose.yaml` naming the one NPM is already on) and add a Proxy
-Host: scheme `http`, Forward Hostname `hallspeak`, Forward Port `3000`, **Websockets
-Support on**. On the SSL tab, request a certificate and enable Force SSL. It appends
-`X-Forwarded-For` on its own.
-
-### `TRUSTED_PROXY_IPS`
-
-Hallspeak believes an `X-Forwarded-For` header only when the connection itself arrives
-from an address you listed. Left empty behind a proxy, every visitor shares one sign-in
-throttle bucket — so anyone hitting your login page spends the budget you need. It is
-an exact list, not a CIDR range.
-
-The value is the address **the container sees the proxy connect from**, which is rarely
-the proxy's LAN address:
-
-| Where the proxy runs | What to set | How to find it |
-|---|---|---|
-| On the host, reaching a published port | The Compose network's gateway, e.g. `172.18.0.1` | `docker inspect $(docker compose ps -q hallspeak) -f '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}'` |
-| As a container on a shared Docker network | That container's address on the network | `docker inspect <proxy> -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}'` |
-
-Container addresses can move on recreate, so pin the proxy's address if you want this
-to survive unattended.
+- **Pages and signalling** go through the proxy over HTTPS.
+- **Audio never touches the proxy.** It goes straight to the forwarded RTC ports.
+- **`/data` is all of your state.** Its `logs/` subdirectory is diagnostics, not state.
 
 ## Prove audio works
 
 Loading the page proves nothing. Create an event and a channel, enable both, go live in
 the speaker studio, then open the listener page **from a phone on mobile data with Wi-Fi
-off**. Not the venue Wi-Fi, and not the same LAN as the server — a listener on your own
-LAN can succeed or fail for reasons no real guest will ever hit.
+off** — a listener on your own LAN can succeed or fail for reasons no real guest hits.
+
+## `TRUSTED_PROXY_IPS`
+
+Hallspeak believes `X-Forwarded-For` only from connections arriving from a listed
+address — an exact list, not CIDR. The value is the address **the container sees the
+proxy connect from**.
+
+Container addresses can move on recreate, so pin the proxy's address if this must
+survive unattended.
+
+## Cores, events and ports
+
+One event runs on one CPU core, start to finish. `MEDIA_MAX_WORKERS` (default 4) is how
+many cores Hallspeak may use, so it sets how many events run in parallel and limits a
+crash to the events on one core — it never makes a single event bigger. It is capped by
+the host's core count; if you only run one event at a time, `1` is honest.
+
+Each core in use needs one port, counting up from `MEDIA_RTC_PORT_BASE` (44400). If you
+change either setting, edit the port ranges in `compose.yaml` and your router forwarding
+to match; Compose cannot derive a range from a variable.
 
 ## Upgrading and backups
 
-Upgrade by editing `HALLSPEAK_VERSION` in `.env` to the version of the release you are
-moving to. If that release's `compose.yaml` or `env.example` differs from the one you deployed,
-carry its changes over first. Then:
+Set `HALLSPEAK_VERSION` in `.env` to the new release. If that release's `compose.yaml` or
+`.env.example` differs from yours, carry the changes over first. Then:
 
 ```sh
 docker compose pull && docker compose up -d
 ```
 
-Migrations run at boot before the server accepts a request, and `data/` is untouched.
-
-Back up `data/` with the container stopped — SQLite runs in WAL mode, so a live copy can
-capture a mid-transaction write. The logs are excluded: they are diagnostics, not state,
-and a fortnight of them in every tarball is a fortnight nobody is restoring.
-
-```sh
-docker compose stop \
-  && tar czf backup-$(date +%F).tar.gz --exclude='data/logs' data/ \
-  && docker compose start
-```
+Migrations run at boot; the data directory is untouched.
 
 ## Dynamic IP addresses
 
-A home connection's public IP usually changes on an ISP reconnect, which is why
-`PUBLIC_ADDRESS` takes a hostname: point a dynamic-DNS record at your connection and put
-that name in `.env`.
-
-Hallspeak resolves that name itself as well as sending it. Each guest is offered both
-forms of the address it should connect back on, because browsers disagree about which one
-works: Firefox ([bug 1713128](https://bugzilla.mozilla.org/show_bug.cgi?id=1713128))
-ignores anything that names a host and needs the address, while a phone on a
-mobile-only-IPv6 carrier can reach you *only* by looking the name up. Offering both is
-what makes one deployment serve them all.
-
-The name is resolved at startup — the log line reads `mediasoup: home.example.org resolved
-to 203.0.113.10` — and re-checked every minute. When your IP moves, Hallspeak starts
-handing out the new one immediately; nothing is restarted and no room is torn down.
-Anyone who was connected has to reconnect, which their browser attempts on its own within
-a few seconds — their audio was already gone, because the old address stopped working the
-moment it changed. A hostname that does not resolve at startup stops the server rather
-than letting it run with nothing usable to hand out, and so does one that resolves only to
-a private address — inside a container that usually means the name is answered by a LAN
-resolver rather than the public one.
-
-A name with several A records is fine. Hallspeak keeps using whichever address it is
-already on while the name still answers with it, so a record that hands out its addresses
-in a different order each time is not mistaken for a move.
-
-At startup Hallspeak also asks a STUN server what address the internet sees this host as,
-and warns if that disagrees with what it is handing out:
-
-```
-mediasoup: guests are told to connect to 203.0.113.10, but a STUN server sees this host as 198.51.100.7.
-```
-
-That is a hint, not a verdict, and it never changes what guests are told. The two differ
-legitimately when your router has more than one WAN link, when your connection is behind
-carrier-grade NAT, or when the forwarded address is not the one this server dials out
-through. But if guests cannot hear anything, this line is the first thing to read. It is
-skipped when `MEDIA_STUN_URL` is empty.
+Dynamic DNS is supported. Point a DDNS name at your connection and set `PUBLIC_ADDRESS`
+to it. Hallspeak re-resolves the name every minute, so when your IP changes new
+connections use the new address without a restart, and connected guests reconnect on
+their own within seconds.
 
 ## When it doesn't work
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| Every screen loads, nobody hears anything | `PUBLIC_ADDRESS` is wrong, or the RTC ports are not forwarded | Confirm the address in the startup log is your public hostname (or, without one, matches `curl -s https://api.ipify.org`); confirm the router forwards 44400–44403 on **both** UDP and TCP; confirm you did not remap the ports |
-| The studio cannot open the microphone; signing in does nothing | You are on plain HTTP | Use the proxy's HTTPS URL, not `http://<host>:3000` |
-| Container exits with `/data is not writable` | Read-only mount, or a uid that does not own the directory | Drop the `:ro`; set `PUID`/`PGID` to the owner, or `chown` it on the host if you set Docker's `user:` yourself |
-| A correct password is refused after a few tries | `TRUSTED_PROXY_IPS` unset behind a proxy | See the table above |
-| Everyone shares one throttle bucket although `TRUSTED_PROXY_IPS` is set | The proxy is listed but is not appending `X-Forwarded-For`, or reaches the server from an address you did not list | The log warns about each of these once, naming the address it saw in the second case |
-| Only listeners on your own LAN hear nothing | Your router does not do NAT hairpinning | Split-horizon DNS on the LAN — a router problem, not a Hallspeak one |
-| Container exits naming private or loopback addresses | The hostname is resolved by a LAN resolver, not the public one | Set `PUBLIC_ADDRESS` to your public address directly, or give the container a resolver that answers with it |
-| Audio breaks for some listeners, not others | Not a deployment fault | [`docs/solutions/operations/diagnosing-live-audio-from-a-user-report.md`](solutions/operations/diagnosing-live-audio-from-a-user-report.md) |
+| Symptom                                                                 | Cause                                                                         | Fix                                                                                                                                       |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Every screen loads, nobody hears anything                               | `PUBLIC_ADDRESS` is wrong, or the RTC ports are not forwarded                 | Check the address in the startup log (or `curl -s https://api.ipify.org`); forward 44400–44403 on **both** UDP and TCP, without remapping |
+| The browser won't allow microphone access; signing in does nothing      | Plain HTTP                                                                    | Use the proxy's HTTPS URL, not `http://<host>:3000`                                                                                       |
+| Container exits with `/data is not writable`                            | Read-only mount, or a uid that does not own the directory                     | Drop `:ro`; set `PUID`/`PGID` to the owner, or `chown` it on the host if you set Docker's `user:` yourself                                |
+| A correct password is refused after a few tries                         | `TRUSTED_PROXY_IPS` unset behind a proxy                                      | See [`TRUSTED_PROXY_IPS`](#trusted_proxy_ips)                                                                                             |
+| Everyone shares one throttle bucket although `TRUSTED_PROXY_IPS` is set | Proxy not appending `X-Forwarded-For`, or connecting from an unlisted address | The log warns once about each, naming the address it saw                                                                                  |
+| Only listeners on your own LAN hear nothing                             | Router lacks NAT hairpinning                                                  | Split-horizon DNS on the LAN                                                                                                              |
+| Container exits naming private or loopback addresses                    | Hostname answered by a LAN resolver                                           | Set `PUBLIC_ADDRESS` to your public IP, or give the container a public resolver                                                           |
+| Audio breaks for some listeners, not others                             | Not a deployment fault                                                        | [`diagnosing-live-audio-from-a-user-report.md`](solutions/operations/diagnosing-live-audio-from-a-user-report.md)                         |
+
+A guest on a network blocking **both** UDP and TCP to the RTC ports — some corporate and
+hotel networks — cannot receive audio.
 
 ## Reading the log
 
-`docker compose logs hallspeak` is the whole of your monitoring. It is written to be
-pasted into a bug report as-is: the first line names the version, every line after it
-carries the time the server stamped on it, and what you get by default is sized to answer
-a support question without anybody asking you to turn anything on. A healthy event costs
-the same handful of lines whether five people listened or five hundred. A broken one is
-louder on purpose: the warning that a connection carried no audio is written per
-connection, so a deployment whose audio reaches nobody will say so once per listener.
+`docker compose logs hallspeak` is written to be pasted into a bug report as-is. The
+default `info` level costs the same handful of lines whether five people listened or five
+hundred; a broken deployment is louder on purpose, warning once per listener whose
+connection carried no audio.
 
-If someone asks you for more, raise `LOG_LEVEL`, recreate the container, reproduce the
-problem, then set it back and recreate again.
+If asked for more, raise `LOG_LEVEL` to `debug`, recreate the container, reproduce the
+problem, then set it back. **`trace` adds the network addresses of the people
+listening**, both on screen and in `/data/logs`, where it stays for the 14-day retention
+window — read an excerpt before you share it.
 
-| `LOG_LEVEL` | What it adds |
-|---|---|
-| `info` (default) | Deployment facts, failures, and one timeline per channel. |
-| `debug` | Per-connection detail: transport lifecycle, ICE and DTLS progress. No listener addresses. |
-| `trace` | **The network addresses of the people listening**, on top of `debug`. |
-
-`trace` is a level of its own because of that last row, and because the disclosure is not
-momentary: everything on your screen is also written to `/data/logs`, where it stays for
-the retention window — a fortnight by default — and rides along in any log you send on
-afterwards. Read an excerpt before you share it, and decide for yourself whether sharing
-that is acceptable for your congregation. Nobody else can make that call for you.
-
-Docker keeps the container's output only for as long as the container exists, and an
-upgrade recreates it — so the history disappears at the moment an upgrade changed
-something. Hallspeak therefore writes its own copy to `/data/logs` as one JSON object per
-line: `hallspeak.<date>.<n>.log`, a new file each day, the oldest deleted once 14 have
-accumulated. Set `LOG_DIR` empty to decline that copy.
-
-## What this deployment cannot serve
-
-Guests connect straight to the RTC ports on UDP, falling back to TCP. A guest on a
-network blocking **both** — some corporate and hotel networks — cannot receive audio.
-
-`MEDIA_STUN_URL` defaults to a public server, which helps a guest behind a restrictive
-NAT discover the address to advertise. Set it empty to use none.
-
-## Every setting
-
-All of these go in `.env`. Everything except `PUBLIC_ADDRESS` has a working
-default, and the last four rows are ones you should not normally need to touch.
-
-| Variable | Default | What it does |
-|---|---|---|
-| `HALLSPEAK_VERSION` | — | The image tag Compose runs. Edit it, pull, recreate: that is the upgrade. |
-| `PUBLIC_ADDRESS` | **required** | Your public hostname (`hallspeak.example.com`) or public IP — where guests connect for audio, bypassing your reverse proxy. Wrong means every screen loads and no audio arrives. |
-| `TRUSTED_PROXY_IPS` | empty | Comma-separated addresses whose `X-Forwarded-For` is believed. Empty means none is, which behind a proxy shares one sign-in throttle bucket across every visitor. |
-| `MEDIA_MAX_WORKERS` | `4` | How many CPU cores Hallspeak may use, which is how many events can run at once. Capped by the host's core count; each core in use needs one RTC port. |
-| `MEDIA_RTC_PORT_BASE` | `44400` | The first RTC port; the rest count up from it, one per core in use, on UDP and TCP. Change it and change the publications and the router forwarding. |
-| `MEDIA_STUN_URL` | `stun:stun.l.google.com:19302` | Helps a guest behind a restrictive NAT discover the address to advertise. Empty uses none. |
-| `LOG_LEVEL` | `info` | How much the server says: `error`, `warn`, `info`, `debug` or `trace`. `debug` adds per-connection detail; `trace` adds listeners' network addresses, on screen and on disk. Raise it only while reproducing a problem. |
-| `LOG_DIR` | `/data/logs` | Where the retained copy of the log is written, one JSON object per line, rotated daily and kept for 14 files. Empty writes none. |
-| `PUID` / `PGID` | `1000` | The uid/gid the server runs as, and the owner the container gives the data directory. |
-| `MEDIA_ROOM_IDLE_GRACE_MS` | `60000` | How long an event's router survives with nobody on it. Shorter renegotiates every guest across a gap between broadcasts. |
-| `DATA_DIR` | `/data` | Where `hallspeak.db` and `admin.json` live. Change the mount, not this. |
-| `PORT` | `3000` | The HTTP port inside the container. Publish a different one instead of changing this. |
-| `MEDIA_LISTEN_IP` | `0.0.0.0` | What the RTC ports bind to inside the container. |
+Docker discards a container's output when an upgrade recreates it, so Hallspeak keeps its
+own copy in `/data/logs` (`hallspeak.<date>.<n>.log`, one JSON object per line). Set
+`LOG_DIR` empty to decline it.
