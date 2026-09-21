@@ -18,6 +18,7 @@ import { goLive, startFakeMedia } from '../../core/media/testing';
 import { presence } from '../../core/presence';
 import type { Db } from '../../db/client';
 import { createTestDb } from '../../db/testing';
+import { useLogDestination } from '../../lib/log';
 import { channelRoom, eventRoom } from '../lib/rooms';
 import {
   applyNotification,
@@ -70,10 +71,15 @@ function fakeIo() {
 let stopMedia: () => Promise<void>;
 let db: Db;
 let closeDb: () => void;
+let records: Record<string, unknown>[];
 
 beforeEach(async () => {
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
+  records = [];
+  useLogDestination({
+    write(chunk: string) {
+      records.push(JSON.parse(chunk));
+    },
+  });
   stopMedia = await startFakeMedia();
   ({ db, cleanup: closeDb } = createTestDb());
 });
@@ -642,7 +648,15 @@ describe('applyNotification claim changes', () => {
     seedClaimAudience(db, io, eventId, channelId, 'speaker-a');
 
     expect(emitted.map((entry) => entry.event)).toEqual(['channel:listeners', 'channel:reports']);
-    expect(console.error).toHaveBeenCalled();
+    expect(records).toContainEqual(
+      expect.objectContaining({
+        subsystem: 'socket',
+        level: 50,
+        msg: 'could not send an initial reading',
+        seed: 'listener history',
+        socketId: 'speaker-a',
+      }),
+    );
   });
 
   it('seeds nobody when the claim was dropped, and still tells every studio', () => {

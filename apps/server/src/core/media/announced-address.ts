@@ -1,6 +1,9 @@
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
+import { logger } from '../../lib/log';
 import { isUnroutableAnnouncedAddress } from './config';
+
+const log = logger('media');
 
 /**
  * The address that goes into every ICE candidate, kept current on a deployment whose
@@ -152,9 +155,9 @@ export class AnnouncedAddress {
       try {
         answers = await this.resolve(this.configured);
       } catch (cause) {
-        console.warn(
-          `mediasoup: could not re-resolve ${this.configured}; still announcing ${this.value}`,
-          cause,
+        log.warn(
+          { err: cause, configured: this.configured, announced: this.value },
+          'could not re-resolve the public address; still announcing the last known one',
         );
         return;
       }
@@ -162,9 +165,9 @@ export class AnnouncedAddress {
       const routable = answers.filter((address) => !isUnroutableAnnouncedAddress(address));
       const [next] = routable;
       if (next === undefined) {
-        console.warn(
-          `mediasoup: ${this.configured} resolves to nothing routable ` +
-            `(${answers.join(', ') || 'no answer'}); still announcing ${this.value}`,
+        log.warn(
+          { configured: this.configured, answers, announced: this.value },
+          'the public address resolves to nothing routable; still announcing the last known one',
         );
         return;
       }
@@ -177,7 +180,10 @@ export class AnnouncedAddress {
 
       const previous = this.value;
       this.value = next;
-      console.log(`mediasoup: ${this.configured} moved from ${previous} to ${next}; re-announcing`);
+      log.info(
+        { configured: this.configured, previous, announced: next },
+        'public address moved; re-announcing',
+      );
       for (const listener of this.listeners) {
         listener(next);
       }

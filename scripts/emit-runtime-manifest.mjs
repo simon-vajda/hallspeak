@@ -4,16 +4,25 @@
 // and the application build deliberately runs on the *build* platform, so a tree
 // installed there carries the wrong worker for a cross-built image.
 //
-// This emits a standalone manifest holding only the two packages
+// This emits a standalone manifest holding only the packages
 // apps/server/tsdown.config.ts leaves external — everything else is inside the
 // bundle — so the target-platform stage can install them and get the right worker.
+// The pino packages are external for their own reason: a transport target is resolved
+// by module path inside a worker thread, so they must exist on disk in the image.
 // It also carries "type": "module", because the emitted file is what lands beside
 // dist/index.js in the image and an ESM bundle needs that field to load.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const RUNTIME_DEPENDENCIES = ['mediasoup', 'better-sqlite3'];
+const RUNTIME_DEPENDENCIES = [
+  'mediasoup',
+  'better-sqlite3',
+  'pino',
+  'pino-pretty',
+  'pino-roll',
+  'thread-stream',
+];
 
 const outDir = process.argv[2];
 

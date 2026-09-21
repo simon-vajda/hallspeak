@@ -1,3 +1,7 @@
+import { logger } from './log';
+
+const log = logger('error');
+
 /** Mirrors the Problem schema in @linguacast/contract/schemas. */
 export interface Problem {
   code: string;
@@ -23,6 +27,10 @@ export function toProblem(err: unknown): Problem {
   if (err instanceof AppError) {
     return { code: err.code, message: err.message };
   }
-  console.error('Unhandled error:', err);
+  if (err instanceof Error) {
+    log.error({ err }, 'unhandled error');
+  } else {
+    log.error({ thrownType: typeof err }, 'unhandled non-Error thrown');
+  }
   return { code: 'internal_error', message: 'An unexpected error occurred.' };
 }

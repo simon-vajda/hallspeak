@@ -1,7 +1,14 @@
+import type { Context } from 'hono';
 import { Hono } from 'hono';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetOnceWarnings, useLogDestination } from '../../lib/log';
 import { TokenBucketLimiter } from '../../lib/rate-limit';
-import { createRateLimit } from './rate-limit.middleware';
+import { clientIp, createRateLimit } from './rate-limit.middleware';
+
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'trace', LOG_DIR: '', TRUSTED_PROXY_IPS: [] },
+}));
+vi.mock('../../env', () => ({ env: envMock }));
 
 function build(capacity: number, now: () => number) {
   const app = new Hono();
@@ -20,6 +27,10 @@ function build(capacity: number, now: () => number) {
 // @hono/node-server puts the IncomingMessage on c.env.incoming; app.request's third
 // argument is that env, so the same extraction path is exercised here as in production.
 const from = (ip: string) => ({ incoming: { socket: { remoteAddress: ip } } });
+
+// The header belongs in the request init; the connecting address belongs in the env.
+const forwarded = (ip: string, chain: string) =>
+  [{ headers: { 'x-forwarded-for': chain } }, from(ip)] as const;
 
 describe('createRateLimit', () => {
   it('never charges a successful lookup', async () => {
@@ -157,11 +168,6 @@ describe('chargeStatuses', () => {
 });
 
 describe('clientIp behind a proxy', () => {
-  const forwarded = (ip: string, chain: string) => ({
-    ...from(ip),
-    headers: { 'x-forwarded-for': chain },
-  });
-
   it('buckets by the rightmost forwarded entry when the proxy is trusted', async () => {
     const app = buildFor({ capacity: 1, trustedProxies: ['10.0.0.9'] });
     const proxy = from('10.0.0.9');
@@ -193,21 +199,17 @@ describe('clientIp behind a proxy', () => {
   it('ignores the header from an address that is not a trusted proxy', async () => {
     const app = buildFor({ capacity: 1, trustedProxies: ['10.0.0.9'] });
 
-    await app.request('/miss', undefined, forwarded('8.8.8.8', '1.1.1.1'));
+    await app.request('/miss', ...forwarded('8.8.8.8', '1.1.1.1'));
 
-    expect((await app.request('/miss', undefined, forwarded('8.8.8.8', '2.2.2.2'))).status).toBe(
-      429,
-    );
+    expect((await app.request('/miss', ...forwarded('8.8.8.8', '2.2.2.2'))).status).toBe(429);
   });
 
   it('ignores the header entirely when no proxy is trusted', async () => {
     const app = buildFor({ capacity: 1, trustedProxies: [] });
 
-    await app.request('/miss', undefined, forwarded('8.8.8.9', '1.1.1.1'));
+    await app.request('/miss', ...forwarded('8.8.8.9', '1.1.1.1'));
 
-    expect((await app.request('/miss', undefined, forwarded('8.8.8.9', '2.2.2.2'))).status).toBe(
-      429,
-    );
+    expect((await app.request('/miss', ...forwarded('8.8.8.9', '2.2.2.2'))).status).toBe(429);
   });
 
   it('matches a configured IPv4 address against an IPv4-mapped connection', async () => {
@@ -219,5 +221,124 @@ describe('clientIp behind a proxy', () => {
     expect(
       (await app.request('/miss', { headers: { 'x-forwarded-for': '1.1.1.1' } }, proxy)).status,
     ).toBe(429);
+  });
+});
+
+describe('trusted-proxy misconfiguration warnings', () => {
+  let records: Record<string, unknown>[];
+
+  beforeEach(() => {
+    resetOnceWarnings();
+    records = [];
+    useLogDestination({
+      write(chunk: string) {
+        records.push(JSON.parse(chunk));
+      },
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('warns once when a trusted proxy appends no forwarded header', async () => {
+    const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
+
+    for (let i = 0; i < 100; i++) {
+      await app.request('/miss', undefined, from('10.0.0.9'));
+    }
+
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      subsystem: 'proxy',
+      level: 40,
+      peer: '10.0.0.9',
+    });
+    expect(String(records[0]?.msg)).toContain('one throttle bucket');
+  });
+
+  it('warns once per unlisted address that carries a forwarded header, naming it', async () => {
+    const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
+
+    for (let i = 0; i < 10; i++) {
+      await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
+    }
+
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ subsystem: 'proxy', level: 40, peer: '172.18.0.4' });
+    expect(String(records[0]?.msg)).toContain('TRUSTED_PROXY_IPS');
+  });
+
+  it('warns for a second unlisted address rather than suppressing it behind the first', async () => {
+    const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
+
+    await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
+    await app.request('/miss', ...forwarded('203.0.113.7', '1.1.1.1'));
+
+    expect(records).toHaveLength(2);
+    expect(records[1]).toMatchObject({ peer: '203.0.113.7' });
+  });
+
+  it('emits both warnings in a process that meets both shapes, distinguishably', async () => {
+    const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
+
+    await app.request('/miss', undefined, from('10.0.0.9'));
+    await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
+
+    expect(records).toHaveLength(2);
+    expect(records[0]?.msg).not.toBe(records[1]?.msg);
+    expect(records[0]?.peer).toBe('10.0.0.9');
+    expect(records[1]?.peer).toBe('172.18.0.4');
+  });
+
+  it('stays silent when no proxy is trusted, which the boot warning already covers', async () => {
+    const app = buildFor({ capacity: 1_000, trustedProxies: [] });
+
+    await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
+    await app.request('/miss', undefined, from('172.18.0.4'));
+
+    expect(records).toHaveLength(0);
+  });
+
+  it('stays silent on the correctly configured path', async () => {
+    const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
+
+    await app.request('/miss', { headers: { 'x-forwarded-for': '1.1.1.1' } }, from('10.0.0.9'));
+
+    expect(records).toHaveLength(0);
+  });
+
+  it('names the peer the header arrived from and never the address it forwards', async () => {
+    const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
+
+    await app.request('/miss', ...forwarded('172.18.0.4', '198.51.100.7'));
+
+    expect(records[0]).toMatchObject({ peer: '172.18.0.4' });
+    expect(JSON.stringify(records)).not.toContain('198.51.100.7');
+  });
+
+  it('warns without a peer address rather than staying silent about an unnamed one', async () => {
+    const app = buildFor({ capacity: 1_000, trustedProxies: ['10.0.0.9'] });
+
+    await app.request('/miss', { headers: { 'x-forwarded-for': '1.1.1.1' } });
+
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ level: 40, peer: null });
+  });
+
+  it('resolves the same client address in every one of those shapes', () => {
+    const contextFor = (remoteAddress: string, chain?: string) =>
+      ({
+        env: { incoming: { socket: { remoteAddress } } },
+        req: { header: () => chain },
+      }) as unknown as Context;
+
+    const trusted = ['10.0.0.9'];
+
+    expect(clientIp(contextFor('10.0.0.9'), trusted)).toBe('10.0.0.9');
+    expect(clientIp(contextFor('10.0.0.9', '1.1.1.1'), trusted)).toBe('1.1.1.1');
+    expect(clientIp(contextFor('172.18.0.4', '1.1.1.1'), trusted)).toBe('172.18.0.4');
+    expect(clientIp(contextFor('172.18.0.4', '1.1.1.1'), [])).toBe('172.18.0.4');
+    expect(clientIp(contextFor('::ffff:10.0.0.9', '1.1.1.1'), trusted)).toBe('1.1.1.1');
   });
 });

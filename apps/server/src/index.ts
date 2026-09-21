@@ -1,11 +1,22 @@
 import { serve } from '@hono/node-server';
 import { app } from './app';
 import { credentialsPath, isConfigured, startAuth, sweepExpired } from './core/auth';
+import { getChannelById } from './core/channels.service';
 import { startMedia, stopMedia } from './core/media';
+import { notifications } from './core/notifications';
 import { closeDb, db } from './db';
 import { runMigrations } from './db/migrate';
 import { env } from './env';
+import { flushLogs, logger } from './lib/log';
+import { createChannelTimeline } from './logging/channel-timeline';
 import { attachSocket } from './socket';
+import { SERVER_VERSION } from './version';
+
+const log = logger('boot');
+
+// First thing the boot path logs: two release tracks and a version handshake make the
+// version the first thing a pasted log has to answer.
+log.info({ version: SERVER_VERSION }, 'LinguaCast server starting');
 
 // Before serve(): the process either has a current schema or fails to start, so the
 // operator's upgrade procedure stays "pull and restart".
@@ -16,20 +27,21 @@ runMigrations(db);
 startAuth();
 // Boot is the only scheduled sweep; later lookups delete expired rows where they find them.
 sweepExpired(db);
-console.log(
+log.info(
+  { path: credentialsPath(), configured: isConfigured() },
   isConfigured()
-    ? `Admin account loaded from ${credentialsPath()}`
-    : `No admin account at ${credentialsPath()} — the setup wizard is open to whoever reaches it first`,
+    ? 'Admin account loaded'
+    : 'No admin account yet — the setup wizard is open to whoever reaches it first',
 );
 // Reaching the server directly over plain HTTP gives a working listener page, a studio
 // that cannot open a microphone, and a sign-in that fails silently because the Secure
 // cookie is discarded — with no error anywhere.
-console.log('Serve this behind HTTPS: microphone capture and the admin session both require it.');
+log.info('Serve this behind HTTPS: microphone capture and the admin session both require it.');
 if (env.TRUSTED_PROXY_IPS.length === 0) {
   // Unset is the safe default — a forged header must never move a bucket — but behind a
   // reverse proxy it means every visitor shares the proxy's address, so one guesser can
   // spend the sign-in budget the administrator needs.
-  console.warn(
+  log.warn(
     'TRUSTED_PROXY_IPS is unset: if a reverse proxy fronts this server, every client shares ' +
       "one sign-in throttle bucket. Set it to the proxy's address.",
   );
@@ -52,25 +64,41 @@ await startMedia({
 });
 
 const server = serve({ fetch: app.fetch, hostname: env.HOST, port: env.PORT }, (info) => {
-  console.log(`LinguaCast API listening on http://${env.HOST}:${info.port}`);
-  console.log(`Docs: http://${env.HOST}:${info.port}/api/docs`);
+  log.info(
+    { host: env.HOST, port: info.port, docs: `http://${env.HOST}:${info.port}/api/docs` },
+    'LinguaCast API listening',
+  );
 });
 
 // Must come after serve(): Socket.IO takes over the HTTP server's request listeners.
 const io = attachSocket(server);
 
+// A reader of the log is not a subscriber the domain answers to: this only observes what
+// the bus already publishes, and lives outside core/ for that reason. The claim-change
+// notification is the one that names no slug, so the channel row supplies it — the slug
+// is immutable, so the answer cannot drift from the channel the line means.
+notifications.subscribe(createChannelTimeline((channelId) => getChannelById(db, channelId)?.slug));
+
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 let shuttingDown = false;
+
+// The transports run on worker threads, which process.exit() does not wait for, so the
+// last records of a shutdown — the ones an operator most wants — are exactly the ones an
+// unflushed exit drops.
+function exit(code: number): void {
+  flushLogs(() => process.exit(code));
+}
 
 function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) {
     return;
   }
   shuttingDown = true;
-  console.log(`${signal} received, shutting down`);
+  log.info({ signal }, 'signal received, shutting down');
 
   const force = setTimeout(() => {
-    console.error(`Did not close within ${SHUTDOWN_TIMEOUT_MS}ms, forcing exit`);
+    // No flush here: a flush that never returns is the condition this timer exists for.
+    log.error({ timeoutMs: SHUTDOWN_TIMEOUT_MS }, 'did not close in time, forcing exit');
     process.exit(1);
   }, SHUTDOWN_TIMEOUT_MS);
   force.unref();
@@ -80,7 +108,7 @@ function shutdown(signal: NodeJS.Signals): void {
   void stopMedia()
     .catch((cause) => {
       // A failed worker teardown must not strand the socket, HTTP and database close.
-      console.error('Error stopping media:', cause);
+      log.error({ err: cause }, 'could not stop media');
     })
     .then(() => {
       // Before server.close(): open sockets are live connections on that server, and
@@ -90,12 +118,13 @@ function shutdown(signal: NodeJS.Signals): void {
           // io.close() already closed the HTTP server, so "not running" is the expected
           // path; reporting it would make every clean SIGTERM exit 1.
           if (err && !('code' in err && err.code === 'ERR_SERVER_NOT_RUNNING')) {
-            console.error('Error during shutdown:', err);
+            log.error({ err }, 'error during shutdown');
             closeDb();
-            process.exit(1);
+            exit(1);
+            return;
           }
           closeDb();
-          process.exit(0);
+          exit(0);
         });
       });
     });

@@ -10,7 +10,8 @@ Rules local to the server. Repo-wide rules, the socket protocol and versioning l
   - `core/` — the domain. Must not import `hono`, `@hono/zod-openapi` or `socket.io`, nor reach into `http/` or `socket/`. May import `drizzle-orm`, `better-sqlite3`, `mediasoup`.
   - `http/` — every Hono-coupled module.
   - `socket/` — every Socket.IO-coupled module; `socket/lib/` plumbing, `socket/handlers/` per-feature events.
-  - `lib/` — neither domain knowledge nor transport coupling (`problem.ts`, `rate-limit.ts`, `semver.ts`).
+  - `lib/` — neither domain knowledge nor transport coupling (`log.ts`, `problem.ts`, `rate-limit.ts`, `semver.ts`).
+  - `logging/` — subscribers that read the notification bus to write a log line. Consumers of `core/`, never a dependency of it, so they sit outside it; they stay free of the `db` and `notifications` singletons (importing either opens a file at module scope) and `index.ts` does the wiring.
   - `db/` — its own conventions (below).
 - Boundary enforced by `core/boundary.test.ts`, a source scan that includes relative paths: `docs/solutions/architecture-patterns/guard-a-layer-boundary-with-a-self-testing-import-scan.md`.
 - Nothing is injected into `core/`. Module singletons (`db`, `core/media`, `core/auth`) are reached by import. No handler registry maps event names to handlers as data.
@@ -73,7 +74,9 @@ Rules local to the server. Repo-wide rules, the socket protocol and versioning l
 ## Environment
 
 - `DATA_DIR` holds both user-data files, `linguacast.db` and `admin.json`; each filename lives with its owner.
-- `TRUSTED_PROXY_IPS` — optional, comma-separated, unset by default.
+- `TRUSTED_PROXY_IPS` — optional, comma-separated, unset by default. A listed proxy sending no forwarded header, and a forwarded header from an unlisted address, each warn once per process (the second once per observed address); both are otherwise silent.
+- `LOG_LEVEL` — `error`, `warn`, `info`, `debug` or `trace`, defaulting to `info`. A Zod enum, so an unknown value refuses to boot rather than silently picking a level. `env.ts` keeps its own `console.error`: it fires before a parsed environment exists, and routing it through the logger would be an import cycle.
+- `LOG_DIR` — where the rotated NDJSON copy is written, defaulting to `logs` under `DATA_DIR` (derived in the object-level `transform`, since a field cannot read a sibling). Unset takes that default; empty declines the file target. The directory is proved writable before the target is built, because a failing target takes its sibling down with it and stdout must survive an operator's bad path.
 - Media: `PUBLIC_ADDRESS` (required in production, no safe default), `MEDIA_LISTEN_IP`, `MEDIA_RTC_PORT_BASE` (worker *i* binds base + *i* on UDP and TCP), `MEDIA_MAX_WORKERS`, `MEDIA_ROOM_IDLE_GRACE_MS`, `MEDIA_STUN_URL` (public default; empty means off, parsed as a defaulted string trimmed to `undefined`). A network blocking both UDP and TCP to the RTC ports is not served.
 - Operator-facing text (`.env.example`, `docs/hosting.md`, boot logs, errors) says "public address", never "announced address" or "ICE candidate". Internally it stays `announcedIp`. The startup summary names both the configured and resolved address.
 
@@ -85,7 +88,7 @@ Rules local to the server. Repo-wide rules, the socket protocol and versioning l
 ## Deployment
 
 - `Dockerfile`, `.dockerignore`, `compose.yaml`, `.env.example`, `docker/entrypoint.sh` and `.github/workflows/server-release.yml` are the deployment artifact; `docs/hosting.md` is the operator guide.
-- The image compiles once on `$BUILDPLATFORM` and installs only the two tsdown externals per `$TARGETPLATFORM` from the manifest `scripts/emit-runtime-manifest.mjs` generates.
+- The image compiles once on `$BUILDPLATFORM` and installs only the tsdown externals per `$TARGETPLATFORM` from the manifest `scripts/emit-runtime-manifest.mjs` generates.
 - The mediasoup worker is fetched explicitly against a pinned `MEDIASOUP_WORKER_KERNEL`; the build asserts exit status 41 (a prebuilt binary ran). See `docs/solutions/integration-issues/pin-mediasoups-prebuilt-worker-to-a-kernel-line-the-base-image-can-load.md`.
 - The entrypoint owns `/data` and drops privileges with `setpriv` unless Compose's `user:` already did.
 - RTC ports are published one-to-one; a remapped port breaks audio silently.

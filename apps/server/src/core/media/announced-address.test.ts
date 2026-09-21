@@ -1,10 +1,32 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useLogDestination } from '../../lib/log';
 import { AnnouncedAddress } from './announced-address';
+
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'trace', LOG_DIR: '' },
+}));
+vi.mock('../../env', () => ({ env: envMock }));
+
+const INFO = 30;
+const WARN = 40;
+
+let records: Record<string, unknown>[] = [];
+
+beforeEach(() => {
+  records = [];
+  useLogDestination({
+    write(chunk: string) {
+      records.push(JSON.parse(chunk));
+    },
+  });
+});
 
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
+
+const at = (level: number) => records.filter((record) => record.level === level);
 
 function tracker(resolve: (hostname: string) => Promise<string[]>) {
   return new AnnouncedAddress({ configured: 'home.example.org', resolve, pollMs: 1000 });
@@ -64,6 +86,15 @@ describe('AnnouncedAddress polling', () => {
 
     expect(seen).toEqual(['198.51.100.7']);
     expect(announced.current).toBe('198.51.100.7');
+    expect(at(INFO)).toEqual([
+      expect.objectContaining({
+        msg: 'public address moved; re-announcing',
+        configured: 'home.example.org',
+        previous: '203.0.113.10',
+        announced: '198.51.100.7',
+        subsystem: 'media',
+      }),
+    ]);
     announced.close();
   });
 
@@ -82,7 +113,6 @@ describe('AnnouncedAddress polling', () => {
 
   it('keeps the last known address through a failed lookup, which is not a move', async () => {
     vi.useFakeTimers();
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
     let fail = false;
     const announced = tracker(async () => {
       if (fail) {
@@ -99,6 +129,14 @@ describe('AnnouncedAddress polling', () => {
 
     expect(seen).toEqual([]);
     expect(announced.current).toBe('203.0.113.10');
+    expect(at(WARN)).toEqual([
+      expect.objectContaining({
+        msg: 'could not re-resolve the public address; still announcing the last known one',
+        configured: 'home.example.org',
+        announced: '203.0.113.10',
+        err: expect.objectContaining({ message: 'SERVFAIL' }),
+      }),
+    ]);
     announced.close();
   });
 
@@ -117,7 +155,6 @@ describe('AnnouncedAddress polling', () => {
 
   it('keeps the last known address when the name goes private, which is not a move', async () => {
     vi.useFakeTimers();
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
     let answers = ['203.0.113.10'];
     const announced = tracker(async () => answers);
     const seen: string[] = [];
@@ -129,6 +166,14 @@ describe('AnnouncedAddress polling', () => {
 
     expect(seen).toEqual([]);
     expect(announced.current).toBe('203.0.113.10');
+    expect(at(WARN)).toEqual([
+      expect.objectContaining({
+        msg: 'the public address resolves to nothing routable; still announcing the last known one',
+        configured: 'home.example.org',
+        answers: ['192.168.1.20'],
+        announced: '203.0.113.10',
+      }),
+    ]);
     announced.close();
   });
 

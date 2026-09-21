@@ -1,5 +1,13 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type Notification, NotificationHub } from './notifications';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Notification } from './notifications';
+
+const { envMock } = vi.hoisted(() => ({
+  envMock: { NODE_ENV: 'test', LOG_LEVEL: 'trace', LOG_DIR: '' },
+}));
+vi.mock('../env', () => ({ env: envMock }));
+
+const { useLogDestination } = await import('../lib/log');
+const { NotificationHub } = await import('./notifications');
 
 const opened: Notification = {
   type: 'producer-opened',
@@ -7,6 +15,17 @@ const opened: Notification = {
   channelId: 10,
   slug: 'english',
 };
+
+let records: Record<string, unknown>[];
+
+beforeEach(() => {
+  records = [];
+  useLogDestination({
+    write(chunk: string) {
+      records.push(JSON.parse(chunk));
+    },
+  });
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -104,7 +123,6 @@ describe('NotificationHub', () => {
   });
 
   it('does not let one throwing subscriber stop the others', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
     const hub = new NotificationHub();
     const seen: Notification[] = [];
     hub.subscribe(() => {
@@ -117,10 +135,6 @@ describe('NotificationHub', () => {
   });
 
   it('logs a throwing subscriber rather than swallowing it silently', () => {
-    const errors: unknown[][] = [];
-    vi.spyOn(console, 'error').mockImplementation((...args) => {
-      errors.push(args);
-    });
     const hub = new NotificationHub();
     hub.subscribe(() => {
       throw new Error('subscriber blew up');
@@ -128,7 +142,14 @@ describe('NotificationHub', () => {
 
     hub.publish(opened);
 
-    expect(errors).toHaveLength(1);
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      subsystem: 'notifications',
+      level: 50,
+      msg: 'a subscriber threw',
+      type: 'producer-opened',
+      err: { message: 'subscriber blew up' },
+    });
   });
 
   it('unsubscribing twice is a no-op', () => {

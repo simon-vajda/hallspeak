@@ -1,6 +1,6 @@
 import { createSocket, type Socket } from 'node:dgram';
 import { afterEach, describe, expect, it } from 'vitest';
-import { discoverReflexiveAddress, parseStunUrl, reflexiveMismatch } from './reflexive-address';
+import { discoverReflexiveAddress, parseStunUrl } from './reflexive-address';
 
 const MAGIC_COOKIE = 0x2112a442;
 
@@ -176,23 +176,5 @@ describe('discoverReflexiveAddress', () => {
 
   it('returns null for a url it cannot use, without sending anything', async () => {
     expect(await discoverReflexiveAddress('stuns:stun.example.org:5349')).toBeNull();
-  });
-});
-
-describe('reflexiveMismatch', () => {
-  it('says nothing when the two agree', () => {
-    expect(reflexiveMismatch('203.0.113.10', '203.0.113.10')).toBeNull();
-  });
-
-  it('says nothing when the probe found nothing, because it decides nothing', () => {
-    expect(reflexiveMismatch('203.0.113.10', null)).toBeNull();
-  });
-
-  it('names both addresses and stays a warning, since the two may differ legitimately', () => {
-    const message = reflexiveMismatch('203.0.113.10', '198.51.100.7');
-
-    expect(message).toContain('203.0.113.10');
-    expect(message).toContain('198.51.100.7');
-    expect(message).toContain('PUBLIC_ADDRESS');
   });
 });

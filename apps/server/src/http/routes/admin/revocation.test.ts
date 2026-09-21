@@ -34,8 +34,6 @@ afterAll(() => {
 });
 
 beforeEach(async () => {
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
   stopMedia = await startFakeMedia();
 
   const event = createEvent(db, { name: 'Sunday', enabled: true });

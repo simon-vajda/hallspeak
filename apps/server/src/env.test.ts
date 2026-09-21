@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EnvSchema } from './env';
 
@@ -49,6 +50,40 @@ describe('EnvSchema media configuration', () => {
   it('reads an empty MEDIA_STUN_URL as off, so the default can be declined', () => {
     expect(EnvSchema.parse({ MEDIA_STUN_URL: '' }).MEDIA_STUN_URL).toBeUndefined();
     expect(EnvSchema.parse({ MEDIA_STUN_URL: '   ' }).MEDIA_STUN_URL).toBeUndefined();
+  });
+});
+
+describe('EnvSchema logging', () => {
+  it('defaults to the level that diagnoses a ticket without narration', () => {
+    expect(EnvSchema.parse({}).LOG_LEVEL).toBe('info');
+  });
+
+  it('accepts every level the logger understands', () => {
+    for (const value of ['error', 'warn', 'info', 'debug', 'trace']) {
+      expect(EnvSchema.parse({ LOG_LEVEL: value }).LOG_LEVEL).toBe(value);
+    }
+  });
+
+  it('refuses an unknown level rather than falling back to one', () => {
+    const result = EnvSchema.safeParse({ LOG_LEVEL: 'verbose' });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(['LOG_LEVEL']);
+  });
+
+  it('writes the retained copy under the data directory by default', () => {
+    expect(EnvSchema.parse({}).LOG_DIR).toBe(path.join('./data', 'logs'));
+    expect(EnvSchema.parse({ DATA_DIR: '/srv/linguacast/data' }).LOG_DIR).toBe(
+      path.join('/srv/linguacast/data', 'logs'),
+    );
+  });
+
+  it('takes a configured log directory verbatim', () => {
+    expect(EnvSchema.parse({ LOG_DIR: '/var/log/linguacast' }).LOG_DIR).toBe('/var/log/linguacast');
+  });
+
+  it('reads an empty log directory as file logging declined', () => {
+    expect(EnvSchema.parse({ LOG_DIR: '' }).LOG_DIR).toBe('');
+    expect(EnvSchema.parse({ LOG_DIR: '   ' }).LOG_DIR).toBe('');
   });
 });
 

@@ -1,4 +1,5 @@
 import type { types } from 'mediasoup';
+import { logger } from '../../lib/log';
 import { AppError } from '../../lib/problem';
 import { type GrantCancellation, handover } from '../handover';
 import { listenerHistory } from '../listener-history';
@@ -16,13 +17,15 @@ import {
 import { watchConsumer, watchProducer } from './diagnostics';
 import { ListenerCountPublisher } from './listeners';
 import type { TransportDirection } from './peer';
-import { discoverReflexiveAddress, reflexiveMismatch } from './reflexive-address';
+import { discoverReflexiveAddress } from './reflexive-address';
 import { RoomRegistry } from './registry';
 
 export type { ChannelBroadcastStatus } from './room';
 
 import { type ChannelBroadcastStatus, markClosing, type Room } from './room';
 import { type WorkerFactory, WorkerPool } from './workers';
+
+const log = logger('media');
 
 /**
  * How long both interpreters may transmit at once when every listener has not yet swapped.
@@ -96,7 +99,10 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
   });
   const announcedIp = await announced.start();
   if (announcedIp !== options.net.announcedIp) {
-    console.log(`mediasoup: ${options.net.announcedIp} resolved to ${announcedIp}`);
+    log.info(
+      { configured: options.net.announcedIp, announced: announcedIp },
+      'public address resolved',
+    );
   }
 
   // The configured value is what the workers announce, hostname and all: `createTransport`
@@ -108,7 +114,7 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
     createWorker: options.createWorker,
   });
   await pool.start();
-  console.log(pool.startupSummary(announcedIp));
+  log.info(pool.startupSummary(announcedIp), 'media ready');
 
   const listeners = new ListenerCountPublisher({
     // A recount rather than a delta, and a room that has gone answers zero: the window is
@@ -157,9 +163,10 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
   };
 
   if (isUnroutableAnnouncedAddress(announcedIp)) {
-    console.warn(
-      `mediasoup: guests are told to connect to ${announcedIp}, which is a private or ` +
-        'loopback address; nobody outside this machine can reach it. Set PUBLIC_ADDRESS.',
+    log.warn(
+      { announced: announcedIp },
+      'guests are told to connect to a private or loopback address nobody outside this ' +
+        'machine can reach; set PUBLIC_ADDRESS',
     );
     return;
   }
@@ -173,10 +180,17 @@ export async function startMedia(options: StartMediaOptions): Promise<void> {
   }
   const crossCheck = (address: string) => {
     void discoverReflexiveAddress(stunUrl).then((reflexive) => {
-      const mismatch = reflexiveMismatch(address, reflexive);
-      if (mismatch) {
-        console.warn(mismatch);
+      // An answer that never came says nothing, and the two agreeing is the healthy case.
+      if (reflexive === null || reflexive === address) {
+        return;
       }
+      log.warn(
+        { announced: address, reflexive },
+        'a STUN server sees this host at a different address than guests are told to ' +
+          'connect to; check PUBLIC_ADDRESS first if nobody can hear anything, though the ' +
+          'two differ legitimately on a multi-WAN router, behind CGNAT, or when the ' +
+          'forwarded address is not the one this server dials out through',
+      );
     });
   };
   crossCheck(announcedIp);

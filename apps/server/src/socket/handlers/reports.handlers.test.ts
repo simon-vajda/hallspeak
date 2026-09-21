@@ -54,8 +54,6 @@ let foreignSlug: string;
 let listener: SocketAuth;
 
 beforeEach(async () => {
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
   ({ db, cleanup } = createTestDb());
   stopMedia = await startFakeMedia();
 

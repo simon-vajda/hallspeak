@@ -16,7 +16,7 @@ flowchart LR
   P["Reverse proxy<br/>TLS · WebSocket upgrade<br/>X-Forwarded-For"]
   R["Router<br/>forwards 44400-44403<br/>UDP and TCP"]
   C["linguacast container<br/>:3000 HTTP · :44400+ RTC"]
-  D[("/data<br/>linguacast.db<br/>admin.json")]
+  D[("/data<br/>linguacast.db<br/>admin.json<br/>logs/")]
 
   G -- "HTTPS: pages, API, signalling" --> P --> C
   G -- "audio, direct" --> R --> C
@@ -30,7 +30,8 @@ flowchart LR
   be forwarded on your router and published one-to-one — the port a guest dials is the
   port inside the ICE candidate, so remapping it breaks audio while leaving every
   screen looking healthy.
-- **`/data` is all of your state.** Back it up; nothing else survives a recreate.
+- **`/data` is all of your state.** Back it up; nothing else survives a recreate. Its
+  `logs/` subdirectory is the exception — diagnostics, not state, and not worth backing up.
 
 ## Prerequisites
 
@@ -183,10 +184,13 @@ docker compose pull && docker compose up -d
 Migrations run at boot before the server accepts a request, and `data/` is untouched.
 
 Back up `data/` with the container stopped — SQLite runs in WAL mode, so a live copy can
-capture a mid-transaction write:
+capture a mid-transaction write. The logs are excluded: they are diagnostics, not state,
+and a fortnight of them in every tarball is a fortnight nobody is restoring.
 
 ```sh
-docker compose stop && tar czf backup-$(date +%F).tar.gz data/ && docker compose start
+docker compose stop \
+  && tar czf backup-$(date +%F).tar.gz --exclude='data/logs' data/ \
+  && docker compose start
 ```
 
 ## Dynamic IP addresses
@@ -237,9 +241,41 @@ skipped when `MEDIA_STUN_URL` is empty.
 | The studio cannot open the microphone; signing in does nothing | You are on plain HTTP | Use the proxy's HTTPS URL, not `http://<host>:3000` |
 | Container exits with `/data is not writable` | Read-only mount, or a uid that does not own the directory | Drop the `:ro`; set `PUID`/`PGID` to the owner, or `chown` it on the host if you set Docker's `user:` yourself |
 | A correct password is refused after a few tries | `TRUSTED_PROXY_IPS` unset behind a proxy | See the table above |
+| Everyone shares one throttle bucket although `TRUSTED_PROXY_IPS` is set | The proxy is listed but is not appending `X-Forwarded-For`, or reaches the server from an address you did not list | The log warns about each of these once, naming the address it saw in the second case |
 | Only listeners on your own LAN hear nothing | Your router does not do NAT hairpinning | Split-horizon DNS on the LAN — a router problem, not a LinguaCast one |
 | Container exits naming private or loopback addresses | The hostname is resolved by a LAN resolver, not the public one | Set `PUBLIC_ADDRESS` to your public address directly, or give the container a resolver that answers with it |
 | Audio breaks for some listeners, not others | Not a deployment fault | [`docs/solutions/operations/diagnosing-live-audio-from-a-user-report.md`](solutions/operations/diagnosing-live-audio-from-a-user-report.md) |
+
+## Reading the log
+
+`docker compose logs linguacast` is the whole of your monitoring. It is written to be
+pasted into a bug report as-is: the first line names the version, every line after it
+carries the time the server stamped on it, and what you get by default is sized to answer
+a support question without anybody asking you to turn anything on. A healthy event costs
+the same handful of lines whether five people listened or five hundred. A broken one is
+louder on purpose: the warning that a connection carried no audio is written per
+connection, so a deployment whose audio reaches nobody will say so once per listener.
+
+If someone asks you for more, raise `LOG_LEVEL`, recreate the container, reproduce the
+problem, then set it back and recreate again.
+
+| `LOG_LEVEL` | What it adds |
+|---|---|
+| `info` (default) | Deployment facts, failures, and one timeline per channel. |
+| `debug` | Per-connection detail: transport lifecycle, ICE and DTLS progress. No listener addresses. |
+| `trace` | **The network addresses of the people listening**, on top of `debug`. |
+
+`trace` is a level of its own because of that last row, and because the disclosure is not
+momentary: everything on your screen is also written to `/data/logs`, where it stays for
+the retention window — a fortnight by default — and rides along in any log you send on
+afterwards. Read an excerpt before you share it, and decide for yourself whether sharing
+that is acceptable for your congregation. Nobody else can make that call for you.
+
+Docker keeps the container's output only for as long as the container exists, and an
+upgrade recreates it — so the history disappears at the moment an upgrade changed
+something. LinguaCast therefore writes its own copy to `/data/logs` as one JSON object per
+line: `linguacast.<date>.<n>.log`, a new file each day, the oldest deleted once 14 have
+accumulated. Set `LOG_DIR` empty to decline that copy.
 
 ## What this deployment cannot serve
 
@@ -262,6 +298,8 @@ default, and the last four rows are ones you should not normally need to touch.
 | `MEDIA_MAX_WORKERS` | `4` | How many CPU cores LinguaCast may use, which is how many events can run at once. Capped by the host's core count; each core in use needs one RTC port. |
 | `MEDIA_RTC_PORT_BASE` | `44400` | The first RTC port; the rest count up from it, one per core in use, on UDP and TCP. Change it and change the publications and the router forwarding. |
 | `MEDIA_STUN_URL` | `stun:stun.l.google.com:19302` | Helps a guest behind a restrictive NAT discover the address to advertise. Empty uses none. |
+| `LOG_LEVEL` | `info` | How much the server says: `error`, `warn`, `info`, `debug` or `trace`. `debug` adds per-connection detail; `trace` adds listeners' network addresses, on screen and on disk. Raise it only while reproducing a problem. |
+| `LOG_DIR` | `/data/logs` | Where the retained copy of the log is written, one JSON object per line, rotated daily and kept for 14 files. Empty writes none. |
 | `PUID` / `PGID` | `1000` | The uid/gid the server runs as, and the owner the container gives the data directory. |
 | `MEDIA_ROOM_IDLE_GRACE_MS` | `60000` | How long an event's router survives with nobody on it. Shorter renegotiates every guest across a gap between broadcasts. |
 | `DATA_DIR` | `/data` | Where `linguacast.db` and `admin.json` live. Change the mount, not this. |
