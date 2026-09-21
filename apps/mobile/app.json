@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "LinguaCast",
-    "slug": "linguacast",
+    "name": "Hallspeak",
+    "slug": "hallspeak",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "linguacast",
+    "scheme": "hallspeak",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "bundleIdentifier": "app.linguacast.mobile",
+      "bundleIdentifier": "app.hallspeak.mobile",
       "supportsTablet": true,
       "infoPlist": {
         "UIBackgroundModes": ["audio"]
       },
-      "associatedDomains": ["applinks:open.linguacast.app"]
+      "associatedDomains": ["applinks:open.hallspeak.app"]
     },
     "android": {
-      "package": "app.linguacast.mobile",
+      "package": "app.hallspeak.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#0B1220",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -35,7 +35,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "open.linguacast.app"
+              "host": "open.hallspeak.app"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
@@ -56,13 +56,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "LinguaCast uses the camera to scan an event's QR code."
+          "cameraPermission": "Hallspeak uses the camera to scan an event's QR code."
         }
       ],
       [
         "@config-plugins/react-native-webrtc",
         {
-          "cameraPermission": "LinguaCast uses the camera to scan an event's QR code."
+          "cameraPermission": "Hallspeak uses the camera to scan an event's QR code."
         }
       ],
       "expo-sqlite",

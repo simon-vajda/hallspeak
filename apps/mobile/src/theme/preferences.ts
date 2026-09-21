@@ -2,7 +2,7 @@ import type { ColorScheme } from './tokens';
 
 export type ThemePreference = 'system' | ColorScheme;
 
-export const THEME_STORAGE_KEY = 'linguacast-appearance';
+export const THEME_STORAGE_KEY = 'hallspeak-appearance';
 
 export function parseThemePreference(value: string | null): ThemePreference {
   return value === 'light' || value === 'dark' ? value : 'system';

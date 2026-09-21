@@ -18,7 +18,7 @@ beforeEach(() => {
 
 describe('appearance storage', () => {
   it('round-trips all choices without touching event history', () => {
-    const values = new Map([['linguacast-history', 'untouched']]);
+    const values = new Map([['hallspeak-history', 'untouched']]);
     getItem.mockImplementation((key) => values.get(key) ?? null);
     setItem.mockImplementation((key, value) => {
       values.set(key, typeof value === 'function' ? value(values.get(key) ?? null) : value);
@@ -29,7 +29,7 @@ describe('appearance storage', () => {
       expect(readThemePreference()).toBe(preference);
     }
     expect(values.size).toBe(2);
-    expect(values.get('linguacast-history')).toBe('untouched');
+    expect(values.get('hallspeak-history')).toBe('untouched');
     expect(values.get(THEME_STORAGE_KEY)).toBe('system');
   });
 

@@ -3,8 +3,8 @@ import { displayHost, isListenerHost } from './host';
 
 describe('displayHost', () => {
   it('strips the scheme and any path', () => {
-    expect(displayHost('https://stpauls.linguacast.app/events/834912')).toBe(
-      'stpauls.linguacast.app',
+    expect(displayHost('https://stpauls.hallspeak.app/events/834912')).toBe(
+      'stpauls.hallspeak.app',
     );
   });
 

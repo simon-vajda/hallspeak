@@ -32,7 +32,7 @@ export default function LinkEntrySheet() {
     <SheetChrome title="Enter the link" onDone={() => router.back()}>
       <Text style={[type.note, { color: colors.mutedForeground }]}>
         Paste the link from your venue. It is checked on this phone; nothing is sent until it is a
-        LinguaCast event.
+        Hallspeak event.
       </Text>
 
       <LinkField

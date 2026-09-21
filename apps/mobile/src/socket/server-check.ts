@@ -16,10 +16,10 @@ export type ServerCheck =
 export const ALL_SERVER_CHECK_COPY: readonly string[] = [
   'This server could not be reached',
   'Check your connection, then pull down to try again.',
-  'LinguaCast needs an update',
+  'Hallspeak needs an update',
   'Install the latest app version, then open this event again.',
   'This server needs an update',
-  'Ask the organiser to update LinguaCast before opening this event.',
+  'Ask the organiser to update Hallspeak before opening this event.',
   'This server is not compatible',
   'The server returned an invalid version. Ask the organiser to check the installation.',
 ];
@@ -30,7 +30,7 @@ function blocked(compatibility: Exclude<ServerCompatibility, 'supported'>): Serv
   if (compatibility === 'mobile-too-old' || compatibility === 'server-too-new') {
     return {
       state: 'blocked',
-      title: 'LinguaCast needs an update',
+      title: 'Hallspeak needs an update',
       body: 'Install the latest app version, then open this event again.',
       retryable: false,
     };
@@ -40,7 +40,7 @@ function blocked(compatibility: Exclude<ServerCompatibility, 'supported'>): Serv
     return {
       state: 'blocked',
       title: 'This server needs an update',
-      body: 'Ask the organiser to update LinguaCast before opening this event.',
+      body: 'Ask the organiser to update Hallspeak before opening this event.',
       retryable: false,
     };
   }
