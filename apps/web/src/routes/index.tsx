@@ -72,11 +72,7 @@ function IndexPage() {
         <form onSubmit={onSubmit} className="flex flex-col lg:w-full lg:max-w-115">
           <h1 className="mb-1.5 text-screen lg:mb-3.5 lg:text-screen-lg">Enter your PIN</h1>
           <p className="mb-gutter text-sm leading-normal text-muted-foreground lg:mb-7.5 lg:text-body-lg">
-            Six digits, printed on the card at your seat.
-            <span className="hidden lg:inline">
-              {' '}
-              On a laptop you can just type — or paste the whole PIN at once.
-            </span>
+            Enter the six-digit PIN from the event poster, or scan its QR code.
           </p>
 
           <Field>
