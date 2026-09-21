@@ -1,4 +1,4 @@
-export const DEFAULT_PAGE_TITLE = 'LinguaCast';
+export const DEFAULT_PAGE_TITLE = 'Hallspeak';
 
 export function formatEventPageTitle(eventName: string): string {
   return `${eventName} | ${DEFAULT_PAGE_TITLE}`;

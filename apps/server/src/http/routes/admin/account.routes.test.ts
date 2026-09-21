@@ -73,7 +73,7 @@ describe('POST /admin/password', () => {
 
     expect(res.status).toBe(204);
     const rotated = jarOf(res);
-    expect(rotated.cookie).toContain('__Host-linguacast_session=');
+    expect(rotated.cookie).toContain('__Host-hallspeak_session=');
     expect(rotated.cookie).not.toBe(laptop.cookie);
     expect((await adminRequest(rotated)).status).toBe(200);
     expect((await adminRequest(laptop)).status).toBe(401);

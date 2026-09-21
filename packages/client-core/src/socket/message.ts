@@ -4,7 +4,7 @@ export function socketMessage(code: string): string {
     return 'This page is out of date. Reload it.';
   }
   if (code === 'mobile_version_too_old') {
-    return 'This app version is no longer supported. Update LinguaCast.';
+    return 'This app version is no longer supported. Update Hallspeak.';
   }
   return `Connection failed: ${code}`;
 }

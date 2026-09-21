@@ -81,7 +81,7 @@ describe('POST /auth/setup', () => {
 
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ configured: true, authenticated: true, username: 'admin' });
-    expect(cookieOf(res)).toContain('__Host-linguacast_session=');
+    expect(cookieOf(res)).toContain('__Host-hallspeak_session=');
   });
 
   it('issues an httpOnly, Secure, Lax cookie on the whole site', async () => {
@@ -135,7 +135,7 @@ describe('POST /auth/login', () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ configured: true, authenticated: true, username: 'admin' });
-    expect(cookieOf(res)).toContain('__Host-linguacast_session=');
+    expect(cookieOf(res)).toContain('__Host-hallspeak_session=');
   });
 
   it('answers a wrong password and an unknown username identically', async () => {

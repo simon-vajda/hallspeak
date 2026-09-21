@@ -195,7 +195,7 @@ describe('isUnroutableAnnouncedAddress', () => {
   });
 
   it('does not flag a hostname, which is the DDNS case and cannot be judged here', () => {
-    expect(isUnroutableAnnouncedAddress('linguacast.example.org')).toBe(false);
+    expect(isUnroutableAnnouncedAddress('hallspeak.example.org')).toBe(false);
   });
 });
 

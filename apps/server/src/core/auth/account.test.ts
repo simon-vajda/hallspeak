@@ -24,7 +24,7 @@ let dir: string;
 let file: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'linguacast-account-'));
+  dir = mkdtempSync(join(tmpdir(), 'hallspeak-account-'));
   file = join(dir, 'admin.json');
 });
 

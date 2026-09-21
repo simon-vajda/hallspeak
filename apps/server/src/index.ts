@@ -16,7 +16,7 @@ const log = logger('boot');
 
 // First thing the boot path logs: two release tracks and a version handshake make the
 // version the first thing a pasted log has to answer.
-log.info({ version: SERVER_VERSION }, 'LinguaCast server starting');
+log.info({ version: SERVER_VERSION }, 'Hallspeak server starting');
 
 // Before serve(): the process either has a current schema or fails to start, so the
 // operator's upgrade procedure stays "pull and restart".
@@ -66,7 +66,7 @@ await startMedia({
 const server = serve({ fetch: app.fetch, hostname: env.HOST, port: env.PORT }, (info) => {
   log.info(
     { host: env.HOST, port: info.port, docs: `http://${env.HOST}:${info.port}/api/docs` },
-    'LinguaCast API listening',
+    'Hallspeak API listening',
   );
 });
 

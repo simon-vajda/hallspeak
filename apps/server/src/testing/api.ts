@@ -17,7 +17,7 @@ export type ApiRequest = (
  * One call per test file: a second returns the same singletons.
  */
 export async function createTestApi() {
-  const dir = mkdtempSync(join(tmpdir(), 'linguacast-api-'));
+  const dir = mkdtempSync(join(tmpdir(), 'hallspeak-api-'));
   process.env.DATA_DIR = dir;
 
   const { closeDb, db } = await import('../db');
@@ -42,7 +42,7 @@ export async function createTestApi() {
      */
     signInAsAdmin: async (): Promise<ApiRequest> => {
       await createAccount('admin', 'hunter2!');
-      const cookie = `__Host-linguacast_session=${createSession(db)}`;
+      const cookie = `__Host-hallspeak_session=${createSession(db)}`;
       return (path, init, env) => {
         const headers = new Headers(init?.headers);
         headers.set('cookie', cookie);

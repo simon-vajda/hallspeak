@@ -270,7 +270,7 @@ describe('the transport targets', () => {
     );
 
     expect(file?.options).toMatchObject({
-      file: '/data/logs/linguacast.log',
+      file: '/data/logs/hallspeak.log',
       frequency: 'daily',
       dateFormat: 'yyyy-MM-dd',
       limit: { count: 14, removeOtherLogFiles: true },
@@ -294,7 +294,7 @@ describe('the log directory', () => {
   });
 
   it('creates a directory that does not exist yet', () => {
-    const parent = mkdtempSync(path.join(tmpdir(), 'linguacast-log-'));
+    const parent = mkdtempSync(path.join(tmpdir(), 'hallspeak-log-'));
     directories.push(parent);
     const directory = path.join(parent, 'logs');
 
@@ -303,7 +303,7 @@ describe('the log directory', () => {
 
   it('reports once and declines the file target when the directory is unusable', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const parent = mkdtempSync(path.join(tmpdir(), 'linguacast-log-'));
+    const parent = mkdtempSync(path.join(tmpdir(), 'hallspeak-log-'));
     directories.push(parent);
     chmodSync(parent, 0o500);
 

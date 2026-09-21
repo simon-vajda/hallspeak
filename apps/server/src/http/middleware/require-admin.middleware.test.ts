@@ -14,7 +14,7 @@ let resetAuth: () => void;
 let SESSION_TTL_MS: number;
 let pin: string;
 
-const cookie = (token: string) => ({ cookie: `__Host-linguacast_session=${token}` });
+const cookie = (token: string) => ({ cookie: `__Host-hallspeak_session=${token}` });
 
 beforeAll(async () => {
   const created = await createTestApi();
@@ -46,6 +46,14 @@ describe('without a session', () => {
 
   it('refuses a cookie value that was never a token', async () => {
     const res = await api.request('/admin/events', { headers: cookie('not-a-token') });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('refuses a valid token presented under any other cookie name', async () => {
+    const res = await api.request('/admin/events', {
+      headers: { cookie: `__Host-other_session=${createSession()}` },
+    });
 
     expect(res.status).toBe(401);
   });
@@ -83,7 +91,7 @@ describe('with a session', () => {
     const res = await api.request('/admin/events', { headers: cookie(ageing) });
 
     expect(res.status).toBe(200);
-    expect(res.headers.get('set-cookie')).toContain('__Host-linguacast_session=');
+    expect(res.headers.get('set-cookie')).toContain('__Host-hallspeak_session=');
     expect(res.headers.get('set-cookie')).toContain('Max-Age=');
   });
 });
