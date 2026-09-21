@@ -82,7 +82,7 @@ export async function checkRepository(root) {
   }
 
   const env = await readFile(path.join(root, '.env.example'), 'utf8');
-  const envVersion = /^LINGUACAST_VERSION=(.+)$/m.exec(env)?.[1];
+  const envVersion = /^HALLSPEAK_VERSION=(.+)$/m.exec(env)?.[1];
   if (envVersion !== serverVersion) {
     errors.push(`.env.example pins ${envVersion ?? 'nothing'}; server is ${serverVersion}`);
   }
@@ -144,12 +144,12 @@ export async function writeVersionFiles(root, track, nextVersion) {
   if (track === 'server') {
     const envPath = path.join(root, '.env.example');
     const env = await readFile(envPath, 'utf8');
-    if (!/^LINGUACAST_VERSION=.+$/m.test(env)) {
-      throw new Error('.env.example has no LINGUACAST_VERSION assignment.');
+    if (!/^HALLSPEAK_VERSION=.+$/m.test(env)) {
+      throw new Error('.env.example has no HALLSPEAK_VERSION assignment.');
     }
     await writeFile(
       envPath,
-      env.replace(/^LINGUACAST_VERSION=.+$/m, `LINGUACAST_VERSION=${nextVersion}`),
+      env.replace(/^HALLSPEAK_VERSION=.+$/m, `HALLSPEAK_VERSION=${nextVersion}`),
     );
   }
 }

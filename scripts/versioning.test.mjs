@@ -29,7 +29,7 @@ async function writeSource(root, relativePath, version) {
 }
 
 async function fixture() {
-  const root = await mkdtemp(path.join(tmpdir(), 'linguacast-versioning-'));
+  const root = await mkdtemp(path.join(tmpdir(), 'hallspeak-versioning-'));
   roots.push(root);
   const manifests = [
     ['package.json', '0.0.0'],
@@ -45,7 +45,7 @@ async function fixture() {
     await mkdir(path.dirname(target), { recursive: true });
     await writeFile(target, `${JSON.stringify({ version })}\n`);
   }
-  await writeFile(path.join(root, '.env.example'), 'LINGUACAST_VERSION=0.4.0\n');
+  await writeFile(path.join(root, '.env.example'), 'HALLSPEAK_VERSION=0.4.0\n');
   await writeFile(
     path.join(root, 'packages/contract/openapi.json'),
     `${JSON.stringify({ info: { version: '0.4.0' } })}\n`,
@@ -70,7 +70,7 @@ describe('repository consistency', () => {
   it('accepts canonical versions and catches stale mirrors', async () => {
     const root = await fixture();
     assert.deepEqual((await checkRepository(root)).errors, []);
-    await writeFile(path.join(root, '.env.example'), 'LINGUACAST_VERSION=0.3.0\n');
+    await writeFile(path.join(root, '.env.example'), 'HALLSPEAK_VERSION=0.3.0\n');
     assert.match((await checkRepository(root)).errors.join('\n'), /\.env\.example pins 0\.3\.0/);
   });
 
@@ -111,12 +111,12 @@ describe('repository consistency', () => {
     );
     assert.equal(
       await readFile(path.join(root, '.env.example'), 'utf8'),
-      'LINGUACAST_VERSION=0.4.0\n',
+      'HALLSPEAK_VERSION=0.4.0\n',
     );
     await writeVersionFiles(root, 'server', '0.5.0');
     assert.equal(
       await readFile(path.join(root, '.env.example'), 'utf8'),
-      'LINGUACAST_VERSION=0.5.0\n',
+      'HALLSPEAK_VERSION=0.5.0\n',
     );
   });
 });

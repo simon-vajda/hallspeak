@@ -1,19 +1,19 @@
-# LinguaCast — one container behind a reverse proxy you supply.
+# Hallspeak — one container behind a reverse proxy you supply.
 #
 # Copy .env.example to .env and fill it in; every setting lives there, including the
 # version this runs. HTTPS is not optional: microphone capture and the admin session
 # cookie both require it. Full walkthrough: docs/hosting.md.
 
 services:
-  linguacast:
-    image: ghcr.io/simon-vajda/linguacast:${LINGUACAST_VERSION:?copy .env.example to .env first}
+  hallspeak:
+    image: ghcr.io/simon-vajda/hallspeak:${HALLSPEAK_VERSION:?copy .env.example to .env first}
     restart: unless-stopped
 
     env_file: .env
     environment:
       # Declared again so an unfilled .env fails `docker compose up` by name, before a
       # container exists that could only ever load and stay silent.
-      PUBLIC_ADDRESS: ${PUBLIC_ADDRESS:?set this to your public hostname, e.g. linguacast.example.com}
+      PUBLIC_ADDRESS: ${PUBLIC_ADDRESS:?set this to your public hostname, e.g. hallspeak.example.com}
 
     ports:
       # HTTP: the SPA, the API and the Socket.IO endpoint, in cleartext. Bound to
@@ -21,7 +21,7 @@ services:
       # reaches this before you do can claim the admin account through the setup wizard.
       # Widen it to '3000:3000' only if your proxy runs on another host — and put a
       # firewall in front of it if you do. A proxy in a container needs no publication
-      # at all: put it on this service's network and reach it as `linguacast:3000`.
+      # at all: put it on this service's network and reach it as `hallspeak:3000`.
       - '127.0.0.1:3000:3000'
 
       # RTC: worker i binds MEDIA_RTC_PORT_BASE + i on UDP and TCP alike. The external and

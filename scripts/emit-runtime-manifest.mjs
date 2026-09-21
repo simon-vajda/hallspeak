@@ -55,7 +55,7 @@ await writeFile(
   target,
   `${JSON.stringify(
     {
-      name: 'linguacast-runtime',
+      name: 'hallspeak-runtime',
       version: serverManifest.version,
       private: true,
       type: 'module',
