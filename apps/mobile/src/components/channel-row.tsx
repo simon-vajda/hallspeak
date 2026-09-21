@@ -21,8 +21,8 @@ const TARGET = IOS ? 44 : 52;
  * withheld one included, so a channel coming on air is a data change and never a re-layout.
  *
  * An on-air row takes the `live` wash and its play affordance takes `primary`: the wash says
- * audio is moving, the teal disc says this is the thing to press. An offline row is a dashed
- * outline with a chevron, which is a destination rather than an action.
+ * audio is moving, the teal disc says this is the thing to press. An offline row keeps the
+ * neutral outline and a chevron, which is a destination rather than an action.
  */
 export function ChannelRow({
   name,
@@ -64,7 +64,7 @@ export function ChannelRow({
               // as one object; iOS keeps it an outline, which is what a separate card is.
               backgroundColor: IOS ? undefined : surfaces.base,
               borderColor: colors.border,
-              borderStyle: 'dashed',
+              borderWidth: IOS ? 1 : 0,
             },
         // The one elevated surface in the Android app, and the rule is that narrow: a shadow
         // means audio is moving. Every other container is flat and separated by tone, which is
