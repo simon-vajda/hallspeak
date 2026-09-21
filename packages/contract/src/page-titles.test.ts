@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PAGE_TITLE, formatChannelPageTitle, formatEventPageTitle } from './page-titles';
+import {
+  DEFAULT_PAGE_TITLE,
+  formatChannelPageTitle,
+  formatEventPageTitle,
+  formatNotFoundPageTitle,
+} from './page-titles';
 
 describe('public page titles', () => {
   it('keeps the product title as the default', () => {
     expect(DEFAULT_PAGE_TITLE).toBe('Hallspeak');
+  });
+
+  it('formats the fallback title', () => {
+    expect(formatNotFoundPageTitle()).toBe('Page not found | Hallspeak');
   });
 
   it('formats event titles', () => {
