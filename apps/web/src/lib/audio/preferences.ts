@@ -46,8 +46,8 @@ export function effectiveGainNodeValue(
  * left behind by an older build — are testable without a DOM or a stubbed storage.
  */
 
-/** One key, mirroring `linguacast-theme`; four keys would make a partial write possible. */
-export const AUDIO_PREFERENCES_STORAGE_KEY = 'linguacast-audio-preferences';
+/** One key, mirroring `hallspeak-theme`; four keys would make a partial write possible. */
+export const AUDIO_PREFERENCES_STORAGE_KEY = 'hallspeak-audio-preferences';
 
 /**
  * The one authoritative fallback: a browser with blocked storage and a browser with nothing

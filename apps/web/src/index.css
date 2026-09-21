@@ -9,7 +9,7 @@
   --font-heading: var(--font-sans);
   --font-sans: "Space Grotesk Variable", system-ui, sans-serif;
 
-  /* LinguaCast additions — no stock shadcn equivalent. `primary` is the action colour
+  /* Hallspeak additions — no stock shadcn equivalent. `primary` is the action colour
      and `live` is the state colour: `primary` marks what you can press, `live` marks
      that audio is moving. They are never swapped or substituted for each other — an
      earlier design used one green for both and it read as ambiguous. Because the two

@@ -61,7 +61,7 @@ export function PinCard({ event }: { event: Pick<AdminEventDetail, 'id' | 'pin' 
 
     const link = document.createElement('a');
     link.href = canvas.toDataURL('image/png');
-    link.download = `linguacast-${event.pin}.png`;
+    link.download = `hallspeak-${event.pin}.png`;
     // Firefox ignores a download click on an anchor that is not in the document.
     document.body.append(link);
     link.click();

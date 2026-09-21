@@ -108,7 +108,7 @@ export function SetupCredentialsForm() {
       </Button>
       <p className="mt-4 text-note text-muted-foreground">
         Keep this somewhere safe. You can change it after signing in; a forgotten password needs
-        access to the machine LinguaCast runs on.
+        access to the machine Hallspeak runs on.
       </p>
     </form>
   );
