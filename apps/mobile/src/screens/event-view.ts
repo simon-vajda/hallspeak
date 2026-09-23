@@ -1,4 +1,5 @@
 import { apiProblemCode } from '@hallspeak/client-core/query-retry';
+import type { ServerCheck } from '@/socket/server-check';
 
 /**
  * On-air is what the socket last said, seeded by the fetch until it speaks. `unknown` is a
@@ -60,14 +61,13 @@ export function eventErrorMessage(error: unknown): EventErrorMessage {
 
   return {
     title: 'This event could not be opened',
-    body: 'Check the link or the code at your venue, then pull down to try again.',
+    body: 'Check the link or the code at your venue, then open the event again.',
   };
 }
 
 /**
  * Refused before any request, so this one does name its cause: the address itself is not an
- * event, which is a thing the guest can see and fix. Pull-to-refresh is withheld with it —
- * retrying an address that cannot be an event only spends the server's per-address budget.
+ * event, which is a thing the guest can see and fix.
  */
 export const BAD_ROUTE_MESSAGE: EventErrorMessage = {
   title: 'This link is not a Hallspeak event',
@@ -78,6 +78,37 @@ export const EVENT_REFRESH_NOTE = 'Channels turn on when their interpreter conne
 
 export const NO_CHANNELS_TITLE = 'No channels yet';
 export const NO_CHANNELS_BODY =
-  'This event has no channels to listen to. Pull down once the organiser adds one.';
+  'This event has no channels to listen to yet. Open it again once the organiser adds one.';
 
 export const CHOOSE_A_CHANNEL = 'Choose a channel';
+
+export type EventScreenState = 'bad-route' | 'blocked' | 'error' | 'loading' | 'ready';
+
+/**
+ * Failure copy waits for a read that settled as failed. While the version check or the event
+ * request is still in flight — retries included — the screen is loading, not failing; and a
+ * refetch that fails over an event already on screen leaves that event showing.
+ */
+export function eventScreenState(input: {
+  routeValid: boolean;
+  gate: ServerCheck['state'];
+  isError: boolean;
+  hasEvent: boolean;
+}): EventScreenState {
+  if (!input.routeValid) {
+    return 'bad-route';
+  }
+
+  if (input.gate === 'blocked') {
+    return 'blocked';
+  }
+
+  if (input.hasEvent) {
+    return 'ready';
+  }
+
+  return input.isError ? 'error' : 'loading';
+}
+
+/** The one line a screen reader hears for the whole skeleton, rather than a list of blanks. */
+export const LOADING_EVENT = 'Loading event';

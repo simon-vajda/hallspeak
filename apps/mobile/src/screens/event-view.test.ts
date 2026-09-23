@@ -4,6 +4,8 @@ import {
   channelReadingAccessibleLabel,
   channelReadingLabel,
   eventErrorMessage,
+  eventScreenState,
+  NO_CHANNELS_BODY,
 } from './event-view';
 
 describe('channelReading', () => {
@@ -47,5 +49,51 @@ describe('eventErrorMessage', () => {
 
   it('separates a rate limit, which the guest can act on', () => {
     expect(eventErrorMessage({ code: 'rate_limited' }).title).toBe('Too many tries');
+  });
+
+  it('offers no pull-down the screen does not have', () => {
+    const bodies = [
+      eventErrorMessage({ code: 'not_found' }).body,
+      eventErrorMessage({ code: 'rate_limited' }).body,
+      NO_CHANNELS_BODY,
+    ];
+
+    for (const body of bodies) {
+      expect(`${body}: ${body.toLowerCase().includes('pull down')}`).toBe(`${body}: false`);
+    }
+  });
+});
+
+describe('eventScreenState', () => {
+  const base = { routeValid: true, gate: 'ready', isError: false, hasEvent: false } as const;
+
+  it('loads while the server version is still being checked', () => {
+    expect(eventScreenState({ ...base, gate: 'checking' })).toBe('loading');
+  });
+
+  it('loads while the event request is in flight', () => {
+    expect(eventScreenState(base)).toBe('loading');
+  });
+
+  it('is ready once the event has arrived', () => {
+    expect(eventScreenState({ ...base, hasEvent: true })).toBe('ready');
+  });
+
+  it('reports a failure only once the read settled as failed with nothing to show', () => {
+    expect(eventScreenState({ ...base, isError: true })).toBe('error');
+  });
+
+  it('keeps showing an event a later refetch failed to refresh', () => {
+    expect(eventScreenState({ ...base, isError: true, hasEvent: true })).toBe('ready');
+  });
+
+  it('blocks on the version gate even while the event would still be loading', () => {
+    expect(eventScreenState({ ...base, gate: 'blocked' })).toBe('blocked');
+  });
+
+  it('refuses an address that is not an event ahead of everything else', () => {
+    expect(
+      eventScreenState({ routeValid: false, gate: 'blocked', isError: true, hasEvent: true }),
+    ).toBe('bad-route');
   });
 });
