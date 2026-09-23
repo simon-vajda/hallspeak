@@ -17,11 +17,80 @@ export function apiBaseUrl(host: string): string {
   return `${apiOrigin(host)}/api`;
 }
 
+/**
+ * How long one attempt waits for a response before it counts as unreachable. React Native's
+ * fetch has no deadline of its own, so a server that accepts the connection and never answers
+ * would otherwise hold a screen in its loading state indefinitely.
+ */
+export const REQUEST_TIMEOUT_MS = 8_000;
+
+class RequestTimeoutError extends Error {
+  override name = 'RequestTimeoutError';
+}
+
+function abortError(): Error {
+  const error = new Error('The request was aborted.');
+  error.name = 'AbortError';
+
+  return error;
+}
+
+/**
+ * openapi-fetch hands its fetch a built `Request`, so the caller's cancellation arrives as
+ * that request's signal. The attempt listens to it and to its own deadline, and settles on
+ * whichever comes first even if the underlying fetch ignores the abort.
+ */
+function withTimeout(fetchImpl: typeof fetch): typeof fetch {
+  return (input, init) => {
+    const callerSignal = input instanceof Request ? input.signal : (init?.signal ?? undefined);
+    const controller = new AbortController();
+
+    return new Promise<Response>((resolve, reject) => {
+      const settle = () => {
+        clearTimeout(timer);
+        callerSignal?.removeEventListener('abort', onCallerAbort);
+      };
+      const onCallerAbort = () => {
+        settle();
+        controller.abort();
+        reject(abortError());
+      };
+      const timer = setTimeout(() => {
+        settle();
+        controller.abort();
+        reject(new RequestTimeoutError('The server did not answer in time.'));
+      }, REQUEST_TIMEOUT_MS);
+
+      if (callerSignal?.aborted) {
+        onCallerAbort();
+        return;
+      }
+      callerSignal?.addEventListener('abort', onCallerAbort);
+
+      const request =
+        input instanceof Request
+          ? new Request(input, { signal: controller.signal })
+          : new Request(input, { ...init, signal: controller.signal });
+
+      fetchImpl(request, input instanceof Request ? init : undefined).then(
+        (response) => {
+          settle();
+          resolve(response);
+        },
+        (error: unknown) => {
+          settle();
+          reject(error);
+        },
+      );
+    });
+  };
+}
+
 /** `fetchImpl` exists so the two middlewares can be driven without a network. */
-export function createApiClient(host: string, fetchImpl?: typeof fetch): Client<paths> {
+export function createApiClient(host: string, fetchImpl: typeof fetch = fetch): Client<paths> {
   const client = createFetchClient<paths>({
     baseUrl: apiBaseUrl(host),
-    ...(fetchImpl ? { fetch: fetchImpl } : {}),
+    fetch: withTimeout(fetchImpl),
   });
 
   client.use({
@@ -35,7 +104,13 @@ export function createApiClient(host: string, fetchImpl?: typeof fetch): Client<
       return unavailable(response.status, `The server returned ${response.status}.`);
     },
 
-    onError() {
+    onError({ request, error }) {
+      // Returning nothing rethrows the original: a cancelled query must reject as cancelled,
+      // not settle as a failure that would mark the event unreachable.
+      if (request.signal.aborted && !(error instanceof RequestTimeoutError)) {
+        return;
+      }
+
       // 503 is this client's own word for it: no status ever arrived to report.
       return unavailable(503, 'The server could not be reached.');
     },
