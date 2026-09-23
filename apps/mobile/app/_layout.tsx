@@ -1,4 +1,8 @@
-import { SpaceGrotesk_600SemiBold, useFonts } from '@expo-google-fonts/space-grotesk';
+import {
+  SpaceGrotesk_600SemiBold,
+  SpaceGrotesk_700Bold,
+  useFonts,
+} from '@expo-google-fonts/space-grotesk';
 import { shouldRetryApiQuery } from '@hallspeak/client-core/query-retry';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
@@ -51,7 +55,7 @@ function Navigator() {
 export default function RootLayout() {
   // React Native resolves an unregistered family by falling back rather than erroring, so an
   // unloaded face is silent. Holding the splash screen is what makes it observable.
-  const [fontsLoaded] = useFonts({ SpaceGrotesk_600SemiBold });
+  const [fontsLoaded] = useFonts({ SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold });
 
   useEffect(() => {
     if (fontsLoaded) {
