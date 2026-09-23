@@ -29,6 +29,12 @@ describe('server check copy', () => {
     }
   });
 
+  it('offers no pull-down the screen does not have', () => {
+    for (const line of ALL_SERVER_CHECK_COPY) {
+      expect(`${line}: ${line.toLowerCase().includes('pull down')}`).toBe(`${line}: false`);
+    }
+  });
+
   it('renders nothing this module does not enumerate', () => {
     const rendered = new Set<string>();
 
