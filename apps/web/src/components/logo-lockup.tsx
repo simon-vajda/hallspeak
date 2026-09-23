@@ -7,7 +7,7 @@ export function LogoLockup({ className }: { className?: string }) {
     <div className={cn('flex items-center gap-2.5', className)}>
       <img src={logoMark} alt="" className="h-6.5 w-auto lg:h-5.5" />
       {/* leading-none so the mark, not the body line-height, sets the lockup's height. */}
-      <span className="text-lg leading-none font-semibold tracking-[-0.03em] lg:text-section">
+      <span className="text-xl leading-none font-semibold tracking-[-0.03em] lg:text-lg">
         Hallspeak
       </span>
     </div>
