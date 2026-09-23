@@ -47,7 +47,7 @@ export function SpeakerChannel({
       pin={view.event.pin}
       channel={view.channel}
       speakerCode={speakerCode}
-      listeners={listeners[view.channel.slug] ?? 0}
+      listeners={listeners[view.channel.slug]}
       listenerHistory={listenerHistory[view.channel.slug]}
       reports={reports[view.channel.slug] ?? []}
       reportResolution={reportResolutions[view.channel.slug] ?? null}

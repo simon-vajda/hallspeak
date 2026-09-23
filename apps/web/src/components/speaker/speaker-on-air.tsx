@@ -68,7 +68,7 @@ export function SpeakerOnAir({
   mic: ReturnType<typeof useMicCapture>;
   /** When the channel went on air, across every interpreter who has held it. */
   startedAt: number | null;
-  listeners: number;
+  listeners: number | undefined;
   /** This channel's recent counts, or undefined while none has been sent to this studio. */
   listenerHistory: AnchoredListenerPoint[] | undefined;
   reports: AnchoredRow[];

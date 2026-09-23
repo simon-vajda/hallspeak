@@ -61,8 +61,8 @@ export function SpeakerStudio({
   pin: string;
   channel: PublicChannel;
   speakerCode: string;
-  /** Guests currently receiving this channel's audio. */
-  listeners: number;
+  /** Guests currently receiving this channel's audio; undefined while no current report exists. */
+  listeners: number | undefined;
   /** This channel's recent counts, or undefined while none has been sent to this studio. */
   listenerHistory: AnchoredListenerPoint[] | undefined;
   reports: AnchoredRow[];
