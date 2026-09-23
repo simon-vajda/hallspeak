@@ -7,6 +7,7 @@ import { AdminEventCard } from '@/components/admin/admin-event-card';
 import { AdminEventRow } from '@/components/admin/admin-event-row';
 import { EventFormDialog } from '@/components/admin/event-form-dialog';
 import { EventsRouteError } from '@/components/admin/events-route-error';
+import { EventsSkeleton } from '@/components/admin/events-skeleton';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { Button } from '@/components/ui/button';
 import { ADMIN_EVENT_TABLE_COLUMNS, summariseAdminEvents } from '@/lib/admin-event-list';
@@ -15,7 +16,7 @@ import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin/events/')({
   loader: ({ context }) => context.queryClient.ensureQueryData(eventsListQueryOptions()),
-  pendingComponent: () => <p className="text-sm text-muted-foreground">Loading events…</p>,
+  pendingComponent: EventsSkeleton,
   errorComponent: EventsRouteError,
   component: AdminEventsPage,
 });
