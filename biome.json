@@ -12,7 +12,9 @@
       "!packages/contract/openapi.json",
       "!packages/contract/src/generated",
       "!apps/web/src/routeTree.gen.ts",
-      "!apps/server/src/db/migrations"
+      "!apps/server/src/db/migrations",
+      "!apps/web/src/assets/logo-mark.svg",
+      "!apps/mobile/assets/brand"
     ]
   },
   "formatter": {
