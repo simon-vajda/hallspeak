@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { CHANNEL_ROW, CHANNEL_ROW_NAME } from './channel-row';
 
-const ROW_COUNT = 3;
+const ROWS = [0, 1, 2];
 
 /**
  * Each block wraps invisible text set in the loaded element's type step, so it takes that
@@ -25,16 +25,18 @@ export function EventSkeleton() {
           <Skeleton className="mb-2 w-4/5 rounded-full text-sm leading-normal lg:mb-6 lg:text-body-lg">
             <span className="invisible">Description</span>
           </Skeleton>
-          <Skeleton className="inline-flex rounded-full px-3 py-1.5 text-meta lg:px-4.5 lg:py-2.5 lg:text-note">
-            <span className="invisible">PIN 000 000</span>
+          <Skeleton className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-meta lg:gap-2.5 lg:px-4.5 lg:py-2.5 lg:text-note lg:font-medium">
+            <span className="invisible">PIN</span>
+            <span className="invisible text-note font-semibold tracking-[0.04em] lg:text-pin">
+              000 000
+            </span>
           </Skeleton>
         </div>
 
         <div className="flex flex-col gap-2.5 lg:gap-3">
           <h2 className={MICRO_LABEL}>Choose a channel</h2>
-          {Array.from({ length: ROW_COUNT }, (_, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: a fixed count of identical blocks
-            <Skeleton key={index} className={cn(CHANNEL_ROW, 'rounded-lg')}>
+          {ROWS.map((row) => (
+            <Skeleton key={row} className={cn(CHANNEL_ROW, 'rounded-lg border border-transparent')}>
               <span className="size-2.5 shrink-0" />
               <div className="invisible flex-1">
                 <div className={CHANNEL_ROW_NAME}>Channel</div>
