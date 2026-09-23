@@ -16,6 +16,7 @@ Rules local to the Expo listener. Repo-wide rules, the socket protocol, media re
 ## Contract and shared code
 
 - Depends on `@hallspeak/contract` and `@hallspeak/client-core` as TypeScript source, never on `@hallspeak/web`. No build step is added to either package.
+- `src/api/client.ts` gives each request attempt `REQUEST_TIMEOUT_MS` (8s) to reach response headers; a timeout settles as the client's `unavailable(503)`, which `shouldRetryApiQuery` retries, while a React Query cancellation still rejects as a cancellation. Body reading after the headers has no app-level deadline.
 - Import contract subpaths only: type-only `./openapi` for payloads, `./patterns` for regexes, **type-only** `./socket` for the report vocabulary. Never the root barrel or `./schemas` (both pull in Hono). `__tests__/contract-resolution.test.ts` guards this.
 
 ## Tests
@@ -88,7 +89,10 @@ The app states the platform's audio settings and offers no control that would du
 
 - Scanner: one layout on both platforms (close, left-aligned title, prompt, wide action beside the torch), glass on iOS, Material filled button and squircle on Android. No simulator substitute for the camera path.
 - Event picker: separate cards on iOS, one connected list on Android (`connectedListShape` in `src/theme/shape.ts`, shared by sheets). An on-air row takes the `live` wash with a `primary` play disc; an offline row carries a chevron and no play affordance, outlined on iOS and borderless on Android, where the connected list already separates rows by tone.
-- Channel: an unread channel prints neither online nor offline label; the badge slot is held in every state. The report action mounts only while listening. `ListenTarget` shows a native spinner during the `holding` grace, stays at full opacity, disables taps and reports busy to accessibility.
+- Loading: a screen waiting on a read draws its skeleton from `Placeholder`/`PlaceholderLine` (`src/components/placeholder.tsx`), never failure copy. A placeholder pulses opacity and holds its resting frame under Reduce Motion (`placeholderFrame`); `PlaceholderLine` stands on an invisible line of the same type step so the text replacing it lands without moving anything. Skeletons share their loaded view's styles rather than copying numbers (`eventLayout` in `event-skeleton.tsx`, `channelRowStyles` in `channel-row.tsx`). One accessibility line per skeleton announces loading; the blocks are hidden.
+- Event: `eventScreenState` resolves bad route, blocked, error, loading, ready in that order; loading covers the server version check as well as the event request, and a failed refetch over a shown event stays ready.
+- Channel: an unread channel prints neither online nor offline label; the badge slot is held in every state. Before the first read the badge and name slots draw placeholders and `ListenTarget` stays in place, disabled and busy, with no spinner. The report action mounts only while listening. `ListenTarget` shows a native spinner during the `holding` grace, stays at full opacity, disables taps and reports busy to accessibility.
+- No copy tells a guest to pull down: there is no pull-to-refresh.
 - Listener rings: on mute, stop expanding then shrink and fade over 280ms; unmuting mid-transition resumes from the current phase; animations are cancelled while idle and on unmount.
 - The design's "on air for N minutes" sentence is on the forbidden-claim list: the public payload has no broadcast start time.
 
