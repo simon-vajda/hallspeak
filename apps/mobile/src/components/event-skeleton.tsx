@@ -73,7 +73,9 @@ export function EventSkeleton() {
               <Placeholder width={10} height={10} />
               <View style={channelRowStyles.text}>
                 <PlaceholderLine step="subtitle" width={`${60 - index * 12}%`} />
-                <Text style={[type.note, channelRowStyles.status, styles.holder]}> </Text>
+                <View style={channelRowStyles.status}>
+                  <PlaceholderLine step="note" width={56} />
+                </View>
               </View>
               <View style={channelRowStyles.target} />
             </View>
@@ -86,5 +88,4 @@ export function EventSkeleton() {
 
 const styles = StyleSheet.create({
   chip: { alignSelf: 'flex-start', marginTop: 4 },
-  holder: { color: 'transparent' },
 });
