@@ -4,6 +4,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { setUnauthenticatedHandler } from './api/client';
+import { AppPending } from './components/app-pending';
 import { ThemeProvider } from './components/theme-provider';
 import { sessionKey } from './lib/auth-queries';
 import { routeTree } from './routeTree.gen';
@@ -17,6 +18,7 @@ const router = createRouter({
   context: { queryClient },
   // Query owns freshness; Router should always ask it when a preloaded route is entered.
   defaultPreloadStaleTime: 0,
+  defaultPendingComponent: AppPending,
 });
 
 // A 401 from any admin call means the session died server-side. Removed rather than
