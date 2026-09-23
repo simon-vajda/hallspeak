@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { eventQueryOptions } from '@/api/queries';
 import { ActionButton } from '@/components/action-button';
 import { ChannelRow } from '@/components/channel-row';
 import { ErrorState } from '@/components/error-state';
+import { EventSkeleton, eventLayout } from '@/components/event-skeleton';
 import { ScreenHeader } from '@/components/screen-header';
 import { markEventUnavailable, rememberEvent } from '@/history/store';
 import { displayHost } from '@/links/host';
@@ -16,6 +17,7 @@ import {
   channelReadingFor,
   EVENT_REFRESH_NOTE,
   eventErrorMessage,
+  eventScreenState,
   NO_CHANNELS_BODY,
   NO_CHANNELS_TITLE,
 } from '@/screens/event-view';
@@ -24,8 +26,6 @@ import { currentChannelStatus } from '@/socket/status';
 import { useColors } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
-
-const IOS = Platform.OS === 'ios';
 
 export default function EventScreen() {
   const colors = useColors();
@@ -62,7 +62,14 @@ export default function EventScreen() {
     }
   }, [query.isError, event, host, pin]);
 
-  if (route === null) {
+  const screen = eventScreenState({
+    routeValid: route !== null,
+    gate: gate.check.state,
+    isError: query.isError,
+    hasEvent: event !== undefined,
+  });
+
+  if (screen === 'bad-route') {
     return (
       <ErrorState title={BAD_ROUTE_MESSAGE.title} body={BAD_ROUTE_MESSAGE.body} icon="badLink">
         <ActionButton
@@ -75,7 +82,7 @@ export default function EventScreen() {
     );
   }
 
-  if (gate.check.state === 'blocked') {
+  if (screen === 'blocked' && gate.check.state === 'blocked') {
     return (
       <ErrorState title={gate.check.title} body={gate.check.body}>
         <ActionButton
@@ -88,7 +95,7 @@ export default function EventScreen() {
     );
   }
 
-  if (query.isError && event === undefined) {
+  if (screen === 'error') {
     const message = eventErrorMessage(query.error);
 
     return (
@@ -108,17 +115,22 @@ export default function EventScreen() {
   return (
     <View style={styles.screen}>
       <ScreenHeader backHref="/" />
-      <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="never">
-        {event ? (
+      <ScrollView
+        contentContainerStyle={eventLayout.content}
+        contentInsetAdjustmentBehavior="never"
+      >
+        {event === undefined ? (
+          <EventSkeleton />
+        ) : (
           <>
-            <View style={styles.header}>
+            <View style={eventLayout.header}>
               <Text style={[type.screen, { color: colors.foreground }]}>{event.name}</Text>
               {event.description ? (
                 <Text style={[type.bodyLg, { color: colors.mutedForeground }]}>
                   {event.description}
                 </Text>
               ) : null}
-              <View style={[styles.hostChip, { backgroundColor: colors.secondary }]}>
+              <View style={[eventLayout.hostChip, { backgroundColor: colors.secondary }]}>
                 <Text style={[type.meta, { color: colors.mutedForeground }]}>
                   {displayHost(host)}
                 </Text>
@@ -135,13 +147,13 @@ export default function EventScreen() {
                 </Text>
               </View>
             ) : (
-              <View style={styles.section}>
+              <View style={eventLayout.section}>
                 <Text style={[type.label, { color: colors.mutedForeground }]}>
                   {CHOOSE_A_CHANNEL.toUpperCase()}
                 </Text>
                 {/* Separate cards on iOS, one connected Material list on Android: the gap is
                     what makes those two readings, so it lives beside the row's own shape. */}
-                <View style={styles.list}>
+                <View style={eventLayout.list}>
                   {channels.map((channel, index) => (
                     <ChannelRow
                       key={channel.slug}
@@ -161,7 +173,7 @@ export default function EventScreen() {
               </View>
             )}
           </>
-        ) : null}
+        )}
       </ScrollView>
     </View>
   );
@@ -169,19 +181,7 @@ export default function EventScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: IOS ? 20 : 24, paddingTop: IOS ? 18 : 12, paddingBottom: 44 },
   centred: { textAlign: 'center' },
-  header: { gap: 12 },
-  hostChip: {
-    alignSelf: 'flex-start',
-    marginTop: 4,
-    paddingHorizontal: 15,
-    paddingVertical: 7,
-    borderRadius: radius.full,
-  },
-  section: { gap: 12, paddingTop: IOS ? 24 : 26 },
-  // The picker runs wider than the prose above it, as the design draws it.
-  list: { gap: IOS ? 10 : 3, marginHorizontal: IOS ? -4 : -8 },
   empty: {
     alignItems: 'center',
     gap: 8,

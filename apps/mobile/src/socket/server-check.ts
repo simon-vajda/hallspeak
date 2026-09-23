@@ -15,7 +15,7 @@ export type ServerCheck =
  */
 export const ALL_SERVER_CHECK_COPY: readonly string[] = [
   'This server could not be reached',
-  'Check your connection, then pull down to try again.',
+  'Check your connection, then open the event again.',
   'Hallspeak needs an update',
   'Install the latest app version, then open this event again.',
   'This server needs an update',
@@ -71,7 +71,7 @@ export function serverCheck(input: {
     return {
       state: 'blocked',
       title: 'This server could not be reached',
-      body: 'Check your connection, then pull down to try again.',
+      body: 'Check your connection, then open the event again.',
       retryable: true,
     };
   }

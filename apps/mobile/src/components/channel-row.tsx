@@ -50,8 +50,8 @@ export function ChannelRow({
       onPress={onPress}
       android_ripple={ripple(withAlpha(onAir ? colors.live : colors.foreground, 0.14))}
       style={({ pressed }) => [
-        styles.row,
-        IOS ? styles.iosRow : connectedListShape(index, count),
+        channelRowStyles.row,
+        IOS ? channelRowStyles.iosRow : connectedListShape(index, count),
         onAir
           ? {
               // Opaque on Android, because that platform draws an elevated view's shadow
@@ -74,7 +74,7 @@ export function ChannelRow({
       ]}
     >
       <LiveDot tone={onAir ? 'live' : 'offline'} />
-      <View style={styles.text}>
+      <View style={channelRowStyles.text}>
         <Text
           numberOfLines={1}
           style={[type.subtitle, { color: onAir ? colors.foreground : colors.mutedForeground }]}
@@ -84,7 +84,7 @@ export function ChannelRow({
         <Text
           style={[
             type.note,
-            styles.status,
+            channelRowStyles.status,
             { color: onAir ? colors.liveOnMuted : colors.mutedForeground },
           ]}
         >
@@ -94,7 +94,7 @@ export function ChannelRow({
       {onAir ? (
         <View
           style={[
-            styles.target,
+            channelRowStyles.target,
             IOS ? styles.targetDisc : styles.targetSquircle,
             { backgroundColor: colors.primary, shadowColor: colors.primary },
           ]}
@@ -102,7 +102,7 @@ export function ChannelRow({
           <Icon name="listen" size={IOS ? 15 : 18} color={colors.primaryForeground} filled />
         </View>
       ) : (
-        <View style={styles.target}>
+        <View style={channelRowStyles.target}>
           <Icon name="forward" size={IOS ? 18 : 20} color={colors.mutedForeground} />
         </View>
       )}
@@ -110,7 +110,8 @@ export function ChannelRow({
   );
 }
 
-const styles = StyleSheet.create({
+/** Shared with the event skeleton, whose rows must stand at exactly this size. */
+export const channelRowStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -132,6 +133,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+});
+
+const styles = StyleSheet.create({
   // Half the box rather than `radius.full`: Android drops a radius that far past the view's
   // own size on a small square, and the affordance renders as a hard square.
   targetDisc: {

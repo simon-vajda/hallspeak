@@ -1,6 +1,7 @@
 import { type AnchoredListenerPoint, listenerChartRows } from '@hallspeak/client-core/channel';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { MICRO_LABEL } from '@/components/micro-label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useSettledFlag, WITHHOLD_GRACE_MS } from '@/lib/use-settled-flag';
 import { cn } from '@/lib/utils';
 import {
@@ -68,9 +69,12 @@ export function ListenerHistoryPanel({
 }
 
 function WithheldSlot({ settled }: { settled: boolean }) {
+  if (!settled) {
+    return <Skeleton className="h-full rounded-md" />;
+  }
   return (
     <div className="flex h-full items-center justify-center rounded-md border border-border border-dashed text-note text-muted-foreground">
-      <span aria-hidden>{settled ? '—' : null}</span>
+      <span aria-hidden>—</span>
     </div>
   );
 }

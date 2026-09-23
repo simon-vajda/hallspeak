@@ -2,10 +2,10 @@ import { describe, expect, it } from '@jest/globals';
 import {
   ALL_CHANNEL_COPY,
   channelCopy,
+  LOADING_BADGE,
   OFFLINE_NOTE,
   READY_NOTE,
   targetLabel,
-  UNKNOWN_BADGE,
 } from './channel-copy';
 
 /**
@@ -50,9 +50,26 @@ describe('channel copy', () => {
     expect(ALL_CHANNEL_COPY.length).toBeGreaterThan(10);
   });
 
-  it('withholds both labels for a reading nobody has taken', () => {
+  it('withholds both labels, and any note, while the channel has not been read', () => {
     expect(channelCopy('unknown').badge).toBe(null);
-    expect(channelCopy('unknown').accessibleBadge).toBe(UNKNOWN_BADGE);
+    expect(channelCopy('unknown').accessibleBadge).toBe(LOADING_BADGE);
+    expect(channelCopy('unknown').note).toBe(null);
+  });
+
+  it('enumerates the loading line with the rest', () => {
+    expect(ALL_CHANNEL_COPY).toContain(LOADING_BADGE);
+  });
+
+  it('never reports a failure that has not happened, nor a pull-down that does not exist', () => {
+    for (const line of ALL_CHANNEL_COPY) {
+      const lower = line.toLowerCase();
+
+      for (const phrase of ['could not be read', 'pull down']) {
+        expect(`${phrase} in "${line}": ${lower.includes(phrase)}`).toBe(
+          `${phrase} in "${line}": false`,
+        );
+      }
+    }
   });
 
   it('separates the states the socket now supplies', () => {

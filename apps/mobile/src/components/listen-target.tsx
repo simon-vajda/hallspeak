@@ -36,6 +36,7 @@ export function ListenTarget({
   rings = false,
   muted = false,
   disabled = false,
+  busy = false,
   onPress,
 }: {
   label: string;
@@ -46,6 +47,8 @@ export function ListenTarget({
   /** A muted producer lets existing rings settle; other stops remain immediate. */
   muted?: boolean;
   disabled?: boolean;
+  /** Reports busy to accessibility without the spinner: what it waits on is not the audio. */
+  busy?: boolean;
   onPress?: () => void;
 }) {
   const colors = useColors();
@@ -86,7 +89,7 @@ export function ListenTarget({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
-        accessibilityState={{ disabled: disabled || loading, busy: loading }}
+        accessibilityState={{ disabled: disabled || loading, busy: loading || busy }}
         disabled={disabled || loading}
         onPress={onPress}
         style={({ pressed }) => [

@@ -13,12 +13,14 @@ import { GlassSurface } from '@/components/glass-surface';
 import { Icon } from '@/components/icon';
 import { ListenTarget } from '@/components/listen-target';
 import { LiveBadge } from '@/components/live-badge';
+import { Placeholder, PlaceholderLine } from '@/components/placeholder';
 import { ScreenHeader } from '@/components/screen-header';
 import { rememberEvent } from '@/history/store';
 import { eventHref, readChannelParams, reportSheetHref } from '@/links/route';
 import { useListener } from '@/media/use-listener';
 import {
   channelCopy,
+  LOADING_TARGET_LABEL,
   REPORT_ACTION_LABEL,
   TRY_AGAIN_LABEL,
   targetLabel,
@@ -128,6 +130,7 @@ export default function ChannelScreen() {
     return <ErrorState title={message.title} body={message.body} />;
   }
 
+  const loading = view === undefined;
   const copy = channelCopy(
     channelStatus === undefined
       ? 'unknown'
@@ -147,28 +150,38 @@ export default function ChannelScreen() {
       {/* The stage takes the height the screen has: the target sits in the middle of it,
           and the report action stays at the thumb line however tall the phone is. */}
       <ScrollView contentContainerStyle={styles.stage} contentInsetAdjustmentBehavior="never">
-        <View style={styles.badgeSlot}>
+        {/* Before the channel is read, the slot is the one line a screen reader hears for the
+            loading screen; the placeholders inside it and below are hidden from it. */}
+        <View
+          accessible={loading}
+          accessibilityLabel={loading ? copy.accessibleBadge : undefined}
+          accessibilityState={loading ? { busy: true } : undefined}
+          style={styles.badgeSlot}
+        >
           {copy.badge ? (
             <LiveBadge live={listener.hasLiveDot} label={copy.badge} />
           ) : (
-            <Text style={[type.meta, { color: colors.mutedForeground }]}>
-              {copy.accessibleBadge}
-            </Text>
+            <Placeholder width={96} height={type.label.lineHeight + 10} />
           )}
         </View>
 
-        <Text numberOfLines={2} style={[type.hero, styles.centred, { color: colors.foreground }]}>
-          {view?.channel.name ?? ' '}
-        </Text>
+        {view ? (
+          <Text numberOfLines={2} style={[type.hero, styles.centred, { color: colors.foreground }]}>
+            {view.channel.name}
+          </Text>
+        ) : (
+          <PlaceholderLine step="hero" width={180} centred />
+        )}
 
         <ListenTarget
-          label={targetLabel(listener.actionState)}
+          label={loading ? LOADING_TARGET_LABEL : targetLabel(listener.actionState)}
           active={listener.actionState === 'playing'}
           loading={listener.actionState === 'holding'}
           // Muting stops new pulses while the existing rings settle into the target.
           rings={showListenRings(listener.isPlaying, channelStatus?.muted ?? null)}
           muted={channelStatus?.muted === true}
-          disabled={listener.actionState === 'unavailable'}
+          disabled={loading || listener.actionState === 'unavailable'}
+          busy={loading}
           onPress={listener.actionState === 'playing' ? listener.stop : listener.start}
         />
 

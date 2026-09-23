@@ -27,15 +27,18 @@ export type ChannelCopy = {
   note: string | null;
 };
 
-/** A reading nobody has taken. Neither label, rather than the negative one. */
-export const UNKNOWN_BADGE = 'Status unknown';
+/**
+ * The channel has not been read yet. Neither label, rather than the negative one, and no note:
+ * a failed read settles into the screen's own error, so this state is only ever loading.
+ */
+export const LOADING_BADGE = 'Loading channel';
 
 export const OFFLINE_NOTE = 'This channel will update as soon as a speaker goes on air.';
 export const READY_NOTE = 'Press play to start listening.';
 
 export function channelCopy(input: (ListenBadgeInput & ListenNoteInput) | 'unknown'): ChannelCopy {
   if (input === 'unknown') {
-    return { badge: null, accessibleBadge: UNKNOWN_BADGE, note: UNKNOWN_NOTE };
+    return { badge: null, accessibleBadge: LOADING_BADGE, note: null };
   }
 
   const badge = badgeLabel(input);
@@ -52,7 +55,8 @@ export function channelCopy(input: (ListenBadgeInput & ListenNoteInput) | 'unkno
   return { badge, accessibleBadge: badge, note };
 }
 
-export const UNKNOWN_NOTE = 'This channel could not be read. Pull down to try again.';
+/** The target while the channel has not been read: in place, and not yet pressable. */
+export const LOADING_TARGET_LABEL = 'Listen, loading channel';
 
 /** The word for a target that is playing. Every other state's word is the shared state's. */
 export const STOP_LABEL = 'Stop listening';
@@ -111,6 +115,7 @@ export const ALL_CHANNEL_COPY: string[] = [
     [badge, accessibleBadge, note].filter((value): value is string => value !== null),
   ),
   ...ACTION_STATES.map(targetLabel),
+  LOADING_TARGET_LABEL,
   STOP_LABEL,
   TRY_AGAIN_LABEL,
   AUDIO_ACTION_LABEL,

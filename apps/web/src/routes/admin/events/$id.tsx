@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ChannelsPanel } from '@/components/admin/channels-panel';
 import { DeleteEventDialog } from '@/components/admin/delete-event-dialog';
 import { EventDetailRouteError } from '@/components/admin/event-detail-route-error';
+import { EventDetailSkeleton } from '@/components/admin/event-detail-skeleton';
 import { EventEnabledSwitch } from '@/components/admin/event-enabled-switch';
 import { EventFormDialog } from '@/components/admin/event-form-dialog';
 import { PinCard } from '@/components/admin/pin-card';
@@ -29,7 +30,7 @@ export const Route = createFileRoute('/admin/events/$id')({
   // so it gets the same page rather than the router's error screen.
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(eventDetailQueryOptions(params.id)),
-  pendingComponent: () => <p className="text-sm text-muted-foreground">Loading event…</p>,
+  pendingComponent: EventDetailSkeleton,
   errorComponent: EventDetailRouteError,
   component: AdminEventPage,
 });

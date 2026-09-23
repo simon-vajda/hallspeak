@@ -184,7 +184,10 @@ export const spacing = {
   control: 56,
 } as const;
 
-/** Two animations exist, both tied to audio state; nothing else moves except a press. */
+/**
+ * Two animations exist tied to audio state, plus the pulse of a screen still loading; nothing
+ * else moves except a press.
+ */
 export const motion = {
   pressMs: 120,
   colourMs: 300,
@@ -193,6 +196,12 @@ export const motion = {
   ringDelayMs: 1300,
   /** The frame both animations hold at under Reduce Motion, rather than disappearing. */
   ringRestOpacity: 0.45,
+  /** One full dim-and-return of a loading placeholder. */
+  placeholderPulseMs: 1600,
+  /** The frame a placeholder rests at, and holds under Reduce Motion. */
+  placeholderRestOpacity: 1,
+  /** The far end of the pulse. */
+  placeholderDimOpacity: 0.5,
 } as const;
 
 /**
