@@ -1,16 +1,7 @@
+import { SkeletonLine } from '@/components/admin/skeleton-line';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 
 const CHANNEL_ROWS = [0, 1, 2];
-
-/** Invisible text sets each block to the loaded element's line height. */
-function Line({ className, text }: { className: string; text: string }) {
-  return (
-    <Skeleton className={cn('rounded-full', className)}>
-      <span className="invisible">{text}</span>
-    </Skeleton>
-  );
-}
 
 export function EventDetailSkeleton() {
   return (
@@ -20,12 +11,12 @@ export function EventDetailSkeleton() {
       </p>
 
       <div aria-hidden>
-        <Line className="w-40 text-meta" text="Events" />
+        <SkeletonLine className="w-40 text-meta" text="Events" />
 
         <header className="mt-2.5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-7.5">
           <div className="lg:w-140">
-            <Line className="w-3/5 text-screen" text="Event" />
-            <Line className="mt-2 w-4/5 text-sm leading-relaxed" text="Description" />
+            <SkeletonLine className="w-3/5 text-screen" text="Event" />
+            <SkeletonLine className="mt-2 w-4/5 text-sm leading-relaxed" text="Description" />
           </div>
           <div className="flex gap-2.5 lg:flex-none">
             <Skeleton className="h-11 flex-1 rounded-full lg:h-action lg:w-24 lg:flex-none" />

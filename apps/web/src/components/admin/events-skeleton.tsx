@@ -1,18 +1,10 @@
+import { SkeletonLine } from '@/components/admin/skeleton-line';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ADMIN_EVENT_TABLE_COLUMNS } from '@/lib/admin-event-list';
 import { cn } from '@/lib/utils';
 
 const ROWS = [0, 1, 2, 3];
-
-/** Invisible text sets each block to the loaded element's line height. */
-function Line({ className, text }: { className: string; text: string }) {
-  return (
-    <Skeleton className={cn('rounded-full', className)}>
-      <span className="invisible">{text}</span>
-    </Skeleton>
-  );
-}
 
 export function EventsSkeleton() {
   return (
@@ -24,7 +16,7 @@ export function EventsSkeleton() {
       <div aria-hidden>
         <header>
           <h1 className="text-screen">Events</h1>
-          <Line className="mt-1 w-48 text-sm" text="Events" />
+          <SkeletonLine className="mt-1 w-48 text-sm" text="Events" />
         </header>
 
         <ul className="mt-5 flex flex-col gap-3 lg:hidden">
@@ -59,10 +51,10 @@ export function EventsSkeleton() {
                   ADMIN_EVENT_TABLE_COLUMNS,
                 )}
               >
-                <Line className="w-3/4 text-subtitle" text="Event" />
-                <Line className="w-2/3 text-base" text="000 000" />
-                <Line className="w-3/4 text-meta" text="Channels" />
-                <Line className="w-2/3 text-meta" text="Status" />
+                <SkeletonLine className="w-3/4 text-subtitle" text="Event" />
+                <SkeletonLine className="w-2/3 text-base" text="000 000" />
+                <SkeletonLine className="w-3/4 text-meta" text="Channels" />
+                <SkeletonLine className="w-2/3 text-meta" text="Status" />
                 <div className="flex justify-end">
                   <Skeleton className="h-6.75 w-11.5 rounded-full" />
                 </div>
