@@ -50,8 +50,8 @@ export function EventDetailSkeleton() {
           </Skeleton>
 
           <div className="order-1 flex flex-col gap-3.5 lg:order-none">
-            <Skeleton className="h-109 rounded-lg" />
-            <Skeleton className="rounded-lg px-5 py-4.5">
+            <Skeleton className="h-106.25 rounded-lg" />
+            <Skeleton className="rounded-lg border border-transparent px-5 py-4.5">
               <div className="invisible">
                 <div className="text-section">Event enabled</div>
                 <p className="mt-0.5 text-note">Guests can join right now</p>

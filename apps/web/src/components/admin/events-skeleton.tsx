@@ -34,7 +34,7 @@ export function EventsSkeleton() {
                 <div className="invisible">
                   <div className="text-subtitle">Event</div>
                   <p className="mt-0.5 text-note">PIN</p>
-                  <div className="mt-3 h-7" />
+                  <div className="mt-3 h-6.25" />
                   <p className="mt-3 text-meta">Status</p>
                 </div>
               </Skeleton>
@@ -64,7 +64,7 @@ export function EventsSkeleton() {
                 <Line className="w-3/4 text-meta" text="Channels" />
                 <Line className="w-2/3 text-meta" text="Status" />
                 <div className="flex justify-end">
-                  <Skeleton className="h-6 w-11 rounded-full" />
+                  <Skeleton className="h-6.75 w-11.5 rounded-full" />
                 </div>
               </li>
             ))}
