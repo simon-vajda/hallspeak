@@ -6,7 +6,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { ChannelRow } from '@/components/guest/channel-row';
 import { EventHeader } from '@/components/guest/event-header';
 import { EventRouteError } from '@/components/guest/event-route-error';
-import { GuestMessage, GuestShell } from '@/components/guest/guest-message';
+import { EventSkeleton } from '@/components/guest/event-skeleton';
+import { GuestShell } from '@/components/guest/guest-message';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { publicEventQueryOptions } from '@/lib/public-queries';
 import { connectSocket } from '@/lib/socket';
@@ -15,9 +16,7 @@ import { useDocumentTitle } from '@/lib/use-document-title';
 export const Route = createFileRoute('/events/$pin/')({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(publicEventQueryOptions(params.pin)),
-  pendingComponent: () => (
-    <GuestMessage title="Looking for your event" body="One moment — checking that PIN." />
-  ),
+  pendingComponent: EventSkeleton,
   errorComponent: EventRouteError,
   component: EventPage,
 });

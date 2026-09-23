@@ -8,8 +8,9 @@ type PublicChannel = components['schemas']['PublicChannel'];
 
 // One-offs of this screen: the ramp's section step would flatten the row against its own
 // metadata line.
-const ROW = 'flex items-center gap-3.5 rounded-lg px-5 py-4.25 lg:gap-4 lg:px-6 lg:py-5';
-const NAME = 'text-subtitle lg:text-title';
+export const CHANNEL_ROW =
+  'flex items-center gap-3.5 rounded-lg px-5 py-4.25 lg:gap-4 lg:px-6 lg:py-5';
+export const CHANNEL_ROW_NAME = 'text-subtitle lg:text-title';
 
 /** The play affordance is decorative, since the row itself is the link. */
 export function ChannelRow({
@@ -26,7 +27,7 @@ export function ChannelRow({
       to="/events/$pin/$slug"
       params={{ pin, slug: channel.slug }}
       className={cn(
-        ROW,
+        CHANNEL_ROW,
         'focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
         online
           ? // The design draws no hover; a wash of the row's own fill reads in both themes
@@ -37,7 +38,9 @@ export function ChannelRow({
     >
       <LiveDot tone={online ? 'live' : 'offline'} />
       <div className="flex-1">
-        <div className={cn(NAME, !online && 'text-muted-foreground')}>{channel.name}</div>
+        <div className={cn(CHANNEL_ROW_NAME, !online && 'text-muted-foreground')}>
+          {channel.name}
+        </div>
         <div className="mt-px text-note text-muted-foreground lg:mt-0.5">
           {online ? 'On air' : 'Offline'}
         </div>
