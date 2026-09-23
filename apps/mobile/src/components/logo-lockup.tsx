@@ -1,14 +1,19 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useColors } from '@/theme/provider';
 import { type } from '@/theme/typography';
 
-/** The wordmark, in Space Grotesk, with the teal mark that means what can be pressed. */
+const logoMark = require('../../assets/images/logo-mark.png');
+
+/**
+ * The logo mark beside the wordmark in Space Grotesk. The mark is a raster because its
+ * shading uses multiply blending, which react-native-svg does not implement.
+ */
 export function LogoLockup() {
   const colors = useColors();
 
   return (
     <View style={styles.lockup}>
-      <View style={[styles.mark, { backgroundColor: colors.primary }]} />
+      <Image source={logoMark} style={styles.mark} accessible={false} />
       <Text style={[styles.wordmark, { color: colors.foreground }]}>Hallspeak</Text>
     </View>
   );
@@ -16,6 +21,6 @@ export function LogoLockup() {
 
 const styles = StyleSheet.create({
   lockup: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  mark: { width: 16, height: 16, borderRadius: 4 },
+  mark: { width: 16, height: 24 },
   wordmark: type.wordmark,
 });
