@@ -9,6 +9,11 @@
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "app.hallspeak.mobile",
+      "icon": {
+        "light": "./assets/images/icon.png",
+        "dark": "./assets/images/ios-icon-dark.png",
+        "tinted": "./assets/images/ios-icon-tinted.png"
+      },
       "supportsTablet": true,
       "infoPlist": {
         "UIBackgroundModes": ["audio"]
@@ -18,9 +23,8 @@
     "android": {
       "package": "app.hallspeak.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#0B1220",
+        "backgroundColor": "#0BC3BC",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
@@ -48,9 +52,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0B1220",
+          "backgroundColor": "#F2F7F8",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 200,
+          "dark": {
+            "backgroundColor": "#101E2C",
+            "image": "./assets/images/splash-icon.png"
+          }
         }
       ],
       [
