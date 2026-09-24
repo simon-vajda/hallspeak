@@ -277,7 +277,7 @@ describe('the transport targets', () => {
     });
   });
 
-  it('suppresses colour when stdout is not a terminal', () => {
+  it('passes the colour choice through', () => {
     expect(logTargets('info', '', false)[0]?.options.colorize).toBe(false);
     expect(logTargets('info', '', true)[0]?.options.colorize).toBe(true);
   });

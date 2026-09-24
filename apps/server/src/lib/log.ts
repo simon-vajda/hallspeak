@@ -161,7 +161,7 @@ export function logTargets(level: string, directory: string, colorize: boolean):
       // dropped from the object so they are not printed twice.
       options: {
         colorize,
-        messageFormat: '{subsystem}: {msg}',
+        messageFormat: '[{subsystem}] {msg}',
         ignore: 'pid,hostname,subsystem',
       },
     },
@@ -198,7 +198,7 @@ export function prepareLogDirectory(directory: string): string {
     // The message alone: a stack trace of an operator's wrong path helps nobody, and this
     // is the one record written before the logger exists to carry it.
     console.warn(
-      `${new Date().toISOString()} boot: log directory ${directory} is unusable, ` +
+      `${new Date().toISOString()} [boot] log directory ${directory} is unusable, ` +
         `continuing on stdout alone (${cause instanceof Error ? cause.message : String(cause)})`,
     );
     return '';
@@ -218,7 +218,9 @@ function buildDestination(): Destination {
     return { write: () => {} };
   }
   const transport = pino.transport({
-    targets: logTargets(env.LOG_LEVEL, prepareLogDirectory(env.LOG_DIR), process.stdout.isTTY),
+    // Coloured whether or not stdout is a terminal: under Docker it never is, and
+    // `docker compose logs` renders the escapes. NO_COLOR is the operator's way out.
+    targets: logTargets(env.LOG_LEVEL, prepareLogDirectory(env.LOG_DIR), !env.NO_COLOR),
   });
   // Without a listener a target that fails later throws out of the worker and takes the
   // process with it. Logging stops; the event does not.

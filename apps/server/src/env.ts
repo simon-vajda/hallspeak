@@ -53,6 +53,8 @@ const BaseEnvSchema = z.object({
   // sibling here — which is also why it stays optional: an unset variable takes that
   // default, while an empty one is the operator declining it.
   LOG_DIR: z.string().optional(),
+  // https://no-color.org: any non-empty value turns off the escapes on stdout.
+  NO_COLOR: z.string().optional(),
 
   // Defaulted rather than left off: a guest behind a symmetric NAT needs one to discover
   // the address to advertise, and a deployment shipping without it fails for exactly the
