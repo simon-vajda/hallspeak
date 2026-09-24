@@ -10,13 +10,14 @@ import { ActionButton } from '@/components/action-button';
 import { ConnectionLine } from '@/components/connection-line';
 import { ErrorState } from '@/components/error-state';
 import { GlassSurface } from '@/components/glass-surface';
+import { HeaderMenu } from '@/components/header-menu';
 import { Icon } from '@/components/icon';
 import { ListenTarget } from '@/components/listen-target';
 import { LiveBadge } from '@/components/live-badge';
 import { Placeholder, PlaceholderLine } from '@/components/placeholder';
 import { ScreenHeader } from '@/components/screen-header';
 import { rememberEvent } from '@/history/store';
-import { eventHref, readChannelParams, reportSheetHref } from '@/links/route';
+import { eventHref, readChannelParams, reportSheetHref, shareEventHref } from '@/links/route';
 import { useListener } from '@/media/use-listener';
 import {
   channelCopy,
@@ -146,7 +147,13 @@ export default function ChannelScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader backHref={eventHref(host, pin)} title={view?.event.name} />
+      <ScreenHeader
+        backHref={eventHref(host, pin)}
+        title={view?.event.name}
+        menu={
+          <HeaderMenu shareHref={view === undefined ? undefined : shareEventHref({ host, pin })} />
+        }
+      />
       {/* The stage takes the height the screen has: the target sits in the middle of it,
           and the report action stays at the thumb line however tall the phone is. */}
       <ScrollView contentContainerStyle={styles.stage} contentInsetAdjustmentBehavior="never">

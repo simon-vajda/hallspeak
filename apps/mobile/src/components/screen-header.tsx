@@ -1,4 +1,5 @@
 import { type Href, useRouter } from 'expo-router';
+import type { ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/theme/provider';
@@ -21,7 +22,16 @@ const BUTTON = IOS ? 38 : 48;
  * behind it, so nothing casts the drop shadow that dates a plain top app bar. And the
  * screen's own background — a glow included — runs under the row instead of stopping at it.
  */
-export function ScreenHeader({ backHref, title }: { backHref: Href; title?: string }) {
+export function ScreenHeader({
+  backHref,
+  title,
+  menu,
+}: {
+  backHref: Href;
+  title?: string;
+  /** Sits opposite the back control at the same width, so a centred title stays centred. */
+  menu?: ReactNode;
+}) {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -58,8 +68,10 @@ export function ScreenHeader({ backHref, title }: { backHref: Href; title?: stri
           </Text>
         ) : null}
       </View>
-      {/* Balances the back control so a centred title stays centred. */}
-      <View style={styles.press} />
+      {menu ?? (
+        // Balances the back control so a centred title stays centred.
+        <View style={styles.press} />
+      )}
     </View>
   );
 }

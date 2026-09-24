@@ -4,6 +4,9 @@ import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import Check from 'lucide-react-native/icons/check';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import Copy from 'lucide-react-native/icons/copy';
+import Ellipsis from 'lucide-react-native/icons/ellipsis';
+import EllipsisVertical from 'lucide-react-native/icons/ellipsis-vertical';
 import ExternalLink from 'lucide-react-native/icons/external-link';
 import Flashlight from 'lucide-react-native/icons/flashlight';
 import FlashlightOff from 'lucide-react-native/icons/flashlight-off';
@@ -47,6 +50,9 @@ export const icons = {
   back: ArrowLeft,
   backChevron: ChevronLeft,
   close: X,
+  more: Ellipsis,
+  moreVertical: EllipsisVertical,
+  copy: Copy,
   torchOn: Flashlight,
   torchOff: FlashlightOff,
   headphones: Headphones,
