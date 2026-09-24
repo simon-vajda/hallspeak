@@ -125,6 +125,22 @@ export function speakerStudioUrl({ host, pin, slug, code }: SpeakerLinkParams): 
   return `${apiOrigin(host)}/events/${pin}/${slug}?speaker_code=${encodeURIComponent(code)}`;
 }
 
+/** Like the speaker-link sheet, addressed under names the event route's segments do not use. */
+export function shareEventHref({ host, pin }: EventParams): Href {
+  const query = new URLSearchParams({ server: host, eventPin: pin });
+
+  return `/share-event?${query.toString()}` as Href;
+}
+
+export function readShareEventParams(host: RouteSegment, pin: RouteSegment): EventParams | null {
+  return readEventParams(host, pin);
+}
+
+/** The event, never a channel: a newcomer who scans it picks their own language. */
+export function eventListenerUrl(host: string, pin: string): string {
+  return `${apiOrigin(host)}/events/${pin}`;
+}
+
 export function destinationHref(
   destination: ListenerDestination,
   speakerCode: string | null,
