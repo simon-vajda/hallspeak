@@ -42,7 +42,7 @@ export function clientIp(
       'a listed trusted proxy sent no X-Forwarded-For header, so every visitor shares one ' +
         "throttle bucket; configure the proxy to append the client's address",
     );
-  } else if (appended && trustedProxies.length > 0) {
+  } else if (appended) {
     // Named, not judged: a container bridge address is indistinguishable from a stray
     // client's forged header here, and only the operator knows which this is.
     log.warnOnce(
