@@ -41,7 +41,7 @@ if (env.TRUSTED_PROXY_IPS.length === 0) {
   // Unset is the safe default — a forged header must never move a bucket — but behind a
   // reverse proxy it means every visitor shares the proxy's address, so one guesser can
   // spend the sign-in budget the administrator needs.
-  log.warn(
+  logger('proxy').warn(
     'TRUSTED_PROXY_IPS is unset: if a reverse proxy fronts this server, every client shares ' +
       "one sign-in throttle bucket. Set it to the proxy's address.",
   );
