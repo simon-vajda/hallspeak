@@ -291,13 +291,14 @@ describe('trusted-proxy misconfiguration warnings', () => {
     expect(records[1]?.peer).toBe('172.18.0.4');
   });
 
-  it('stays silent when no proxy is trusted, which the boot warning already covers', async () => {
+  it('warns for a forwarded header when no proxy is trusted at all', async () => {
     const app = buildFor({ capacity: 1_000, trustedProxies: [] });
 
     await app.request('/miss', ...forwarded('172.18.0.4', '1.1.1.1'));
     await app.request('/miss', undefined, from('172.18.0.4'));
 
-    expect(records).toHaveLength(0);
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ subsystem: 'proxy', level: 40, peer: '172.18.0.4' });
   });
 
   it('stays silent on the correctly configured path', async () => {
