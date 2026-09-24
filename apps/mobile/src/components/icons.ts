@@ -41,6 +41,7 @@ export type IconProps = SvgProps & { size?: number; color?: string; strokeWidth?
 export const icons = {
   appearance: SunMoon,
   scan: QrCode,
+  share: QrCode,
   link: Link,
   external: ExternalLink,
   badLink: Link2Off,

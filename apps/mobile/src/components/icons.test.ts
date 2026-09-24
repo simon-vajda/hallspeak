@@ -28,6 +28,7 @@ const EXPECTED = [
   'report',
   'retry',
   'scan',
+  'share',
   'stop',
   'torchOff',
   'torchOn',
