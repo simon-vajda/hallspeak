@@ -6,7 +6,6 @@ import {
   eventListenerUrl,
   readChannelParams,
   readEventParams,
-  readShareEventParams,
   readSpeakerLinkParams,
   shareEventHref,
   speakerLinkHref,
@@ -169,7 +168,7 @@ describe('share event sheet', () => {
       );
 
       expect(
-        readShareEventParams(query.get('server') ?? undefined, query.get('eventPin') ?? undefined),
+        readEventParams(query.get('server') ?? undefined, query.get('eventPin') ?? undefined),
       ).toEqual({
         host,
         pin: '481209',
@@ -178,10 +177,10 @@ describe('share event sheet', () => {
   });
 
   it('refuses a malformed host or PIN', () => {
-    expect(readShareEventParams('user@a.example', '481209')).toBeNull();
-    expect(readShareEventParams('a.example/evil', '481209')).toBeNull();
-    expect(readShareEventParams('a.example', '48120')).toBeNull();
-    expect(readShareEventParams(undefined, undefined)).toBeNull();
+    expect(readEventParams('user@a.example', '481209')).toBeNull();
+    expect(readEventParams('a.example/evil', '481209')).toBeNull();
+    expect(readEventParams('a.example', '48120')).toBeNull();
+    expect(readEventParams(undefined, undefined)).toBeNull();
   });
 });
 

@@ -7,7 +7,7 @@ import { ActionButton } from '@/components/action-button';
 import { QrCode } from '@/components/qr-code';
 import { RefusalBanner } from '@/components/refusal-banner';
 import { SheetChrome } from '@/components/sheet-chrome';
-import { eventListenerUrl, readShareEventParams } from '@/links/route';
+import { eventListenerUrl, readEventParams } from '@/links/route';
 import { pinDisplay, SHARE_COPY, shareQrLabel } from '@/screens/share-copy';
 import { useColors } from '@/theme/provider';
 import { type } from '@/theme/typography';
@@ -22,7 +22,7 @@ export default function ShareEventSheet() {
   const colors = useColors();
   const router = useRouter();
   const params = useLocalSearchParams<{ server: string; eventPin: string }>();
-  const event = readShareEventParams(params.server, params.eventPin);
+  const event = readEventParams(params.server, params.eventPin);
   const [copy, setCopy] = useState<'idle' | 'copied' | 'failed'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 

@@ -132,10 +132,6 @@ export function shareEventHref({ host, pin }: EventParams): Href {
   return `/share-event?${query.toString()}` as Href;
 }
 
-export function readShareEventParams(host: RouteSegment, pin: RouteSegment): EventParams | null {
-  return readEventParams(host, pin);
-}
-
 /** The event, never a channel: a newcomer who scans it picks their own language. */
 export function eventListenerUrl(host: string, pin: string): string {
   return `${apiOrigin(host)}/events/${pin}`;
