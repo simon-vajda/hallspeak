@@ -8,7 +8,7 @@ Rules local to the web app. Repo-wide rules, the socket protocol, media recovery
 - `tsconfig.json` must not declare `baseUrl`.
 - `src/api` is web-only (same-origin base path, credentials); mobile shares its shape, not the module.
 - `src/lib/socket.ts` exports `connectSocket(auth)`, not a singleton: the handshake carries the event PIN, so one socket per page.
-- Components are filed by flow: `components/guest`, `speaker`, `admin`, `auth`. Anything used by more than one flow lives at `components/` root (`logo-lockup.tsx`, `PlayTarget`, `LevelMeter`, `LiveDot`, `LiveBadge`, `AppHeader`, `ConnectionLine`, `ConfirmDialog`, `MICRO_LABEL`, `Pin`, `ResponsiveSurface`). The second flow needing a component moves it to root rather than importing across. None of it is a `packages/client-core` candidate.
+- Components are filed by flow: `components/guest`, `speaker`, `admin`, `auth`. Anything used by more than one flow lives at `components/` root (`logo-lockup.tsx`, `PlayTarget`, `LevelMeter`, `LiveDot`, `LiveBadge`, `AppHeader`, `ConnectionLine`, `ConfirmDialog`, `MICRO_LABEL`, `Pin`, `ResponsiveSurface`, `EventShareCard`, `ShareEventDialog`, `CopyButton`, `ThemeMenuItem`). The second flow needing a component moves it to root rather than importing across. None of it is a `packages/client-core` candidate.
 - One non-trivial product component per `.tsx` file (screens, stateful forms, mutation owners, reusable views), even with one importer. Small private render helpers and small compound families may stay together. No feature barrel files.
 - Tests are pure-helper only: `vitest.config.ts` sets the `@` alias and nothing else, no jsdom, not reusing `vite.config.ts`. A test that needs rendering is a reason to reconsider the test.
 
@@ -55,7 +55,8 @@ Procedure for a new value: `docs/solutions/conventions/design-values-onto-the-sc
 
 ## Shared chrome
 
-- Every guest and studio screen shares one `AppHeader`: sticky, 62px, brand lockup and theme toggle over a bottom border — no event name, no PIN. The channel listener page replaces the lockup with a back link (chevron plus event name truncated at 230px, 320px from `lg`). No channel strip or phone PIN line.
+- Every guest and studio screen shares one `AppHeader`: sticky, 62px, brand lockup and theme toggle over a bottom border. The header itself prints no event name or PIN; they appear only inside the share dialog.
+- A header given `share` (`{ pin, eventName }`) — the event page, channel listener page and both studio screens — shows a `QrCode` button beside the theme toggle from `lg`, and below `lg` one `EllipsisVertical` menu holding `Share event` and the theme item. Both open one `ShareEventDialog` (`EventShareCard`: PIN, QR, Copy link, PNG download). The shared link is always `listenerEventUrl` — the event, never a channel or a speaker code. Headers with no loaded event (not found, guest messages, skeleton, displaced) pass no `share`. The admin `PinCard` composes the same card. The channel listener page replaces the lockup with a back link (chevron plus event name truncated at 230px, 320px from `lg`). No channel strip or phone PIN line.
 - Phone user agents alone see the app notice: a first-visit dialog, then an `About the app` chip; either answer is stored under `hallspeak-app-notice`, and the chip slot stays reserved while the dialog is open. `Listen in the app` links to `https://open.hallspeak.app/?url=` with the absolute channel URL encoded once.
 - `lib/phone-browser.ts`: `isPhoneBrowser` (excludes tablets; app notice) and `isHandheldBrowser` (includes iPadOS via touch count; wake-lock chip).
 - Public route components call `useDocumentTitle` with the contract's formatters; leaving resets the tab to `Hallspeak`.

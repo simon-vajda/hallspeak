@@ -79,11 +79,11 @@ The app states the platform's audio settings and offers no control that would du
 
 ## Native components
 
-- `@expo/ui` supplies only the switch, slider and picker, each behind one local wrapper. Text fields are React Native's own (`@expo/ui`'s draws no Android container). Brand-bearing controls, including Home's full-width actions, are plain React Native.
+- `@expo/ui` supplies only the switch, slider, picker and the header's overflow menu, each behind one local wrapper. The menu is `header-menu.tsx` (Compose `DropdownMenu` behind the 48px target) with `header-menu.ios.tsx` (SwiftUI `Menu` whose label is the 38px glass disc); both take `shareHref`. Items are text on Android and SF Symbols on iOS; no lucide glyph is registered for them. Text fields are React Native's own (`@expo/ui`'s draws no Android container). Brand-bearing controls, including Home's full-width actions, are plain React Native.
 - Every `Host` passes `matchContents={{ vertical: true }}` and `seedColor` (omitting it opts into Material You, letting wallpaper blur teal vs green).
 - Liquid glass is gated on `isGlassEffectAPIAvailable()`, not iOS version; Android never gets it. A `GlassView` ignores flex — give it a measured width. Glass tint is opt-in (tinted clear glass over light ground renders solid). Never set `opacity: 0` on a glass view or its parent; animate `glassEffectStyle` to `'none'`.
 - `ScreenGlow` is iOS-only, behind Home and the Channel thumb line. The Channel screen's upper wash belongs to `ListenTarget` itself. Event has no glow.
-- Every screen draws its header as content (`ScreenHeader`); the navigator supplies none. iOS: a glass disc with a chevron only. Android: Material's flat 48px target, no elevated bar. Background runs under the header.
+- Every screen draws its header as content (`ScreenHeader`); the navigator supplies none. iOS: a glass disc with a chevron only. Android: Material's flat 48px target, no elevated bar. Background runs under the header. Its optional `menu` slot replaces the balancing spacer at the same width; Event and Channel put `HeaderMenu` there (`Share event` only once the screen has read its event, plus `Appearance`). Home keeps its own Appearance button.
 
 ## Screens
 
@@ -98,7 +98,8 @@ The app states the platform's audio settings and offers no control that would du
 
 ## Sheets and storage
 
-- Sheets (`link`, `appearance`, `speaker-link`, `[slug]/report`) are `expo-router` routes with `presentation: 'formSheet'`, not a sheet library. Each owns its title and dismiss control as content (Android caps detents at three and renders no header inside a form sheet). `SheetChrome` puts header and body in **one** scroll container.
+- Sheets (`link`, `appearance`, `speaker-link`, `share-event`, `[slug]/report`) are `expo-router` routes with `presentation: 'formSheet'`, not a sheet library. Each owns its title and dismiss control as content (Android caps detents at three and renders no header inside a form sheet). `SheetChrome` puts header and body in **one** scroll container.
+- `share-event` shows the PIN, a QR code (`qr-code.tsx`, drawn with `react-native-svg` from `qrcode`'s core matrix, imported as `qrcode/lib/core/qrcode` so Metro never sees its Node renderers) and Copy link; no download and no system share sheet. Like `speaker-link` it is addressed by validated `server`/`eventPin` params and rebuilds `eventListenerUrl` itself — never the channel.
 - Appearance opens from the Home header, uses `SheetChoice` rows (iOS checkmark, Android radio), defaults to System, and stores `system`/`light`/`dark` under `hallspeak-appearance` in `expo-sqlite/kv-store`. The theme provider restores it synchronously at boot and syncs React Native's native appearance override (`unspecified` for System). A failed write keeps the session's choice and shows an inline message.
 - History lives in `expo-sqlite/kv-store`, not `expo-secure-store` (Keychain API, truncates past ~2 KB); synchronous reads paint pinned rows on the first frame. A row records **no channel**. Availability is checked only when tapped — never a launch sweep, which would be slow and disclose to servers where a person worships. Only the guest removes a row; an unreachable event is marked and kept. Home re-reads on focus and on pull.
 - Pinning is a visible star button; Remove is also an accessibility action (gestures aren't reachable under VoiceOver/TalkBack). Removal is not confirmed; a snackbar offers Undo.
