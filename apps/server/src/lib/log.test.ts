@@ -241,7 +241,7 @@ describe('warnOnce', () => {
       log.warnOnce(
         'once:v6',
         `2001:db8:1:${i}::1`,
-        { peer: `2001:db8:1:${i}::1` },
+        { address: `2001:db8:1:${i}::1` },
         'unlisted address',
       );
     }

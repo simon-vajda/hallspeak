@@ -38,7 +38,7 @@ export function clientIp(
     log.warnOnce(
       'proxy:no-forwarded-header',
       null,
-      { peer: from },
+      { address: from },
       'a listed trusted proxy sent no X-Forwarded-For header, so every visitor shares one ' +
         "throttle bucket; configure the proxy to append the client's address",
     );
@@ -48,9 +48,9 @@ export function clientIp(
     log.warnOnce(
       'proxy:untrusted-forwarder',
       from ?? 'unknown',
-      { peer: from ?? null },
-      'an X-Forwarded-For header arrived from an address that is not in TRUSTED_PROXY_IPS, ' +
-        'so it was ignored; if that is your proxy, list it',
+      { address: from ?? null },
+      'unknown proxy: an X-Forwarded-For header arrived from an address that is not in ' +
+        'TRUSTED_PROXY_IPS, so it was ignored; if that is your proxy, list it',
     );
   }
 
