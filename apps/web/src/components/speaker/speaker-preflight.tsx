@@ -71,7 +71,7 @@ export function SpeakerPreflight({
   const gated = !canGoLive;
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <AppHeader />
+      <AppHeader share={{ pin, eventName }} />
 
       <main className="mx-auto flex w-full max-w-shell flex-1 flex-col px-gutter pt-4 pb-8.5 lg:px-10 lg:pt-11 lg:pb-12">
         {/* One region for every holder state, mounted throughout: the alert and the note each

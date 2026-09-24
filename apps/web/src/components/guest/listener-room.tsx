@@ -369,6 +369,7 @@ export function ListenerRoom({
   return (
     <div className="relative flex min-h-dvh flex-col">
       <AppHeader
+        share={{ pin, eventName }}
         left={
           <Link
             to="/events/$pin"
