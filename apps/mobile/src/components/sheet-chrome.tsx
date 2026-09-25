@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/theme/provider';
+import { column } from '@/theme/shape';
 import { spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 import { GlassSurface } from './glass-surface';
@@ -86,6 +87,7 @@ export function SheetChrome({
 
 const styles = StyleSheet.create({
   sheet: {
+    ...column,
     paddingHorizontal: spacing.overlay,
     paddingTop: Platform.OS === 'android' ? 12 : 18,
     gap: 16,

@@ -19,6 +19,7 @@ import {
   showsTorch,
 } from '@/screens/scanner-state';
 import { useColors } from '@/theme/provider';
+import { column } from '@/theme/shape';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
   },
   screenTitle: { ...type.prompt, flex: 1, color: OVER_CAMERA },
   centreBox: { alignItems: 'center', justifyContent: 'center' },
-  bottom: { gap: 14, paddingHorizontal: 24, paddingBottom: 26 },
+  bottom: { ...column, gap: 14, paddingHorizontal: 24, paddingBottom: 26 },
   prompt: { ...type.prompt, textAlign: 'center', color: OVER_CAMERA },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stretch: { alignSelf: 'stretch' },

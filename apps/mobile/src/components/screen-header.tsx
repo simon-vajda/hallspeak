@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/theme/provider';
+import { column } from '@/theme/shape';
 import { spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 import { GlassSurface } from './glass-surface';
@@ -77,7 +78,13 @@ export function ScreenHeader({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.gutter },
+  row: {
+    ...column,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: spacing.gutter,
+  },
   disc: { width: BUTTON, height: BUTTON, borderRadius: BUTTON / 2 },
   press: { width: BUTTON, height: BUTTON, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, minWidth: 0 },

@@ -1,4 +1,4 @@
-import { radius } from './tokens';
+import { radius, spacing } from './tokens';
 
 const JOIN = 6;
 
@@ -18,3 +18,5 @@ export function connectedListShape(index: number, count: number) {
     borderBottomRightRadius: last,
   };
 }
+
+export const column = { width: '100%', maxWidth: spacing.column, alignSelf: 'center' } as const;

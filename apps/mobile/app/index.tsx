@@ -16,6 +16,7 @@ import { listHistorySync, removeEvent, restoreEvent, setEventPinned } from '@/hi
 import { eventHref } from '@/links/route';
 import { EMPTY_HISTORY_BODY, EMPTY_HISTORY_TITLE, sectionHistory } from '@/screens/home-list';
 import { useColors, useSurfaces } from '@/theme/provider';
+import { column } from '@/theme/shape';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 
@@ -182,7 +183,13 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   // flexGrow with the footer's auto margin is what puts the footer at the bottom of a short
   // list and after the content of a long one.
-  content: { flexGrow: 1, paddingHorizontal: spacing.gutter, paddingBottom: 44, gap: 26 },
+  content: {
+    ...column,
+    flexGrow: 1,
+    paddingHorizontal: spacing.gutter,
+    paddingBottom: 44,
+    gap: 26,
+  },
   footer: { marginTop: 'auto' },
   // The design gives the wordmark room above it and sets the title well clear of both the
   // mark and the line under it; the cramped version had all three on one 6px rhythm.

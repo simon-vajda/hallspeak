@@ -1,7 +1,7 @@
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { CHOOSE_A_CHANNEL, LOADING_EVENT } from '@/screens/event-view';
 import { useColors, useSurfaces } from '@/theme/provider';
-import { connectedListShape } from '@/theme/shape';
+import { column, connectedListShape } from '@/theme/shape';
 import { radius } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 import { channelRowStyles } from './channel-row';
@@ -16,7 +16,12 @@ const CHIP_PADDING_Y = 7;
  * drift apart and an arriving event replaces the skeleton in place.
  */
 export const eventLayout = StyleSheet.create({
-  content: { paddingHorizontal: IOS ? 20 : 24, paddingTop: IOS ? 18 : 12, paddingBottom: 44 },
+  content: {
+    ...column,
+    paddingHorizontal: IOS ? 20 : 24,
+    paddingTop: IOS ? 18 : 12,
+    paddingBottom: 44,
+  },
   header: { gap: 12 },
   hostChip: {
     alignSelf: 'flex-start',
