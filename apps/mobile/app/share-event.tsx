@@ -2,15 +2,12 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
 import { ActionButton } from '@/components/action-button';
 import { QrCode } from '@/components/qr-code';
 import { RefusalBanner } from '@/components/refusal-banner';
 import { SheetChrome } from '@/components/sheet-chrome';
 import { eventListenerUrl, readEventParams } from '@/links/route';
-import { pinDisplay, SHARE_COPY, shareQrLabel } from '@/screens/share-copy';
-import { useColors } from '@/theme/provider';
-import { type } from '@/theme/typography';
+import { SHARE_COPY, shareQrLabel } from '@/screens/share-copy';
 
 const CONFIRM_MS = 2000;
 
@@ -19,7 +16,6 @@ const CONFIRM_MS = 2000;
  * is rebuilt from the validated host and PIN, never taken as a parameter.
  */
 export default function ShareEventSheet() {
-  const colors = useColors();
   const router = useRouter();
   const params = useLocalSearchParams<{ server: string; eventPin: string }>();
   const event = readEventParams(params.server, params.eventPin);
@@ -37,7 +33,6 @@ export default function ShareEventSheet() {
   }
 
   const url = eventListenerUrl(event.host, event.pin);
-  const pin = pinDisplay(event.pin);
 
   const copyLink = () => {
     clearTimeout(timer.current);
@@ -53,15 +48,6 @@ export default function ShareEventSheet() {
 
   return (
     <SheetChrome title={SHARE_COPY.title} onDone={() => router.back()}>
-      <View style={styles.pin}>
-        <Text style={[type.label, { color: colors.mutedForeground }]}>
-          {SHARE_COPY.pinLabel.toUpperCase()}
-        </Text>
-        <Text accessibilityLabel={pin.spoken} style={[type.statLg, { color: colors.foreground }]}>
-          {pin.text}
-        </Text>
-      </View>
-
       <QrCode value={url} label={shareQrLabel(url)} />
 
       {copy === 'failed' ? <RefusalBanner message={SHARE_COPY.copyFailed} /> : null}
@@ -69,12 +55,9 @@ export default function ShareEventSheet() {
       <ActionButton
         label={copy === 'copied' ? SHARE_COPY.copied : SHARE_COPY.copyAction}
         icon={copy === 'copied' ? 'confirm' : 'copy'}
+        compact
         onPress={copyLink}
       />
     </SheetChrome>
   );
 }
-
-const styles = StyleSheet.create({
-  pin: { alignItems: 'center', gap: 6 },
-});

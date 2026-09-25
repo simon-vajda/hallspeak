@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/theme/provider';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
@@ -30,11 +31,14 @@ export function SheetChrome({
   children: ReactNode;
 }) {
   const colors = useColors();
+  const { bottom } = useSafeAreaInsets();
 
   return (
     <ScrollView
       style={{ backgroundColor: colors.background }}
-      contentContainerStyle={styles.sheet}
+      // A sheet reaches the bottom edge, so its last control would otherwise sit under the home
+      // indicator or the gesture handle.
+      contentContainerStyle={[styles.sheet, { paddingBottom: bottom + 24 }]}
       contentInsetAdjustmentBehavior="never"
       keyboardShouldPersistTaps="handled"
     >
@@ -66,7 +70,6 @@ const styles = StyleSheet.create({
   sheet: {
     paddingHorizontal: spacing.overlay,
     paddingTop: Platform.OS === 'android' ? 12 : 18,
-    paddingBottom: 32,
     gap: 16,
   },
   handle: { width: 32, height: 4, borderRadius: 999, alignSelf: 'center', marginBottom: 2 },

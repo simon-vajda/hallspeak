@@ -6,7 +6,7 @@ import { useTheme } from '@/theme/provider';
 import { radius } from '@/theme/tokens';
 import { qrModulesPath } from './qr-path';
 
-const CODE_SIZE = 144;
+const CODE_SIZE = 200;
 const QUIET_ZONE = 12;
 
 /**
