@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { ChevronDown, KeyRound, LogOut, Moon, Sun } from 'lucide-react';
+import { ChevronDown, KeyRound, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { $api } from '@/api/client';
 import { ChangePasswordDialog } from '@/components/admin/change-password-dialog';
-import { useTheme } from '@/components/theme-provider';
+import { ThemeMenuItem } from '@/components/theme-menu-item';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,14 +13,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { sessionQueryOptions } from '@/lib/auth-queries';
-import { themeFlip } from '@/lib/theme-flip';
 
 export function AccountMenu() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: session } = useQuery(sessionQueryOptions());
   const username = session?.username ?? '';
-  const { theme, setTheme } = useTheme();
   const [changingPassword, setChangingPassword] = useState(false);
 
   const signOut = $api.useMutation('post', '/auth/logout', {
@@ -46,7 +44,7 @@ export function AccountMenu() {
             <KeyRound />
             Change password
           </DropdownMenuItem>
-          <ThemeItem theme={theme} onSelect={setTheme} />
+          <ThemeMenuItem />
           <DropdownMenuSeparator />
           <DropdownMenuItem disabled={signOut.isPending} onClick={() => signOut.mutate({})}>
             <LogOut />
@@ -61,25 +59,5 @@ export function AccountMenu() {
         username={username}
       />
     </>
-  );
-}
-
-function ThemeItem({
-  theme,
-  onSelect,
-}: {
-  theme: ReturnType<typeof useTheme>['theme'];
-  onSelect: (theme: 'light' | 'dark') => void;
-}) {
-  const { next, label } = themeFlip(
-    theme,
-    window.matchMedia('(prefers-color-scheme: dark)').matches,
-  );
-
-  return (
-    <DropdownMenuItem onClick={() => onSelect(next)}>
-      {next === 'light' ? <Sun /> : <Moon />}
-      {label}
-    </DropdownMenuItem>
   );
 }

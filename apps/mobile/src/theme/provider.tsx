@@ -6,7 +6,8 @@ import { type ColorScheme, colors, type Palette, type SurfaceLevel, surfaces } f
 
 export type Theme = {
   preference: ThemePreference;
-  setPreference: (preference: ThemePreference) => void;
+  /** Applies the choice for the session and reports whether it was also saved. */
+  setPreference: (preference: ThemePreference) => boolean;
   saveFailed: boolean;
   scheme: ColorScheme;
   colors: Palette;
@@ -36,7 +37,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     // scheme rather than the previous explicit choice.
     Appearance.setColorScheme(nativeColorScheme(next));
     setPreferenceState(next);
-    setSaveFailed(!saveThemePreference(next));
+    const saved = saveThemePreference(next);
+    setSaveFailed(!saved);
+    return saved;
   }, []);
   const theme = useMemo(
     () => ({

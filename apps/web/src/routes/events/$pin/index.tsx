@@ -34,7 +34,7 @@ function EventPage() {
   }
 
   return (
-    <GuestShell>
+    <GuestShell share={{ pin: data.pin, eventName: data.name }}>
       <div className="grid items-start gap-6 lg:grid-cols-2 lg:gap-16">
         <EventHeader
           name={data.name}

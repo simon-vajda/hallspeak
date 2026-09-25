@@ -7,10 +7,11 @@ import { ActionButton } from '@/components/action-button';
 import { ChannelRow } from '@/components/channel-row';
 import { ErrorState } from '@/components/error-state';
 import { EventSkeleton, eventLayout } from '@/components/event-skeleton';
+import { HeaderMenu } from '@/components/header-menu';
 import { ScreenHeader } from '@/components/screen-header';
 import { markEventUnavailable, rememberEvent } from '@/history/store';
 import { displayHost } from '@/links/host';
-import { channelHref, readEventParams } from '@/links/route';
+import { channelHref, readEventParams, shareEventHref } from '@/links/route';
 import {
   BAD_ROUTE_MESSAGE,
   CHOOSE_A_CHANNEL,
@@ -114,7 +115,12 @@ export default function EventScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader backHref="/" />
+      <ScreenHeader
+        backHref="/"
+        menu={
+          <HeaderMenu shareHref={event === undefined ? undefined : shareEventHref({ host, pin })} />
+        }
+      />
       <ScrollView
         contentContainerStyle={eventLayout.content}
         contentInsetAdjustmentBehavior="never"

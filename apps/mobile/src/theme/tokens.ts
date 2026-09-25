@@ -247,3 +247,6 @@ export const surfaces: Record<ColorScheme, Record<SurfaceLevel, string>> = {
   light: lightSurfaces,
   dark: darkSurfaces,
 };
+
+/** Material 3's scrim: black at 32% behind a dialog, the same in both schemes. */
+export const scrim = withAlpha('#000000', 0.32);
