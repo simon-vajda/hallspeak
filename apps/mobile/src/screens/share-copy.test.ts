@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { allShareCopy, SHARE_COPY, shareQrLabel } from './share-copy';
+import { allShareCopy, pinDisplay, SHARE_COPY, shareQrLabel } from './share-copy';
 
 /**
  * The listener-copy rule, plus "on air" and "listening": the sheet shares an event, and nothing
@@ -46,5 +46,9 @@ describe('share copy', () => {
     expect(shareQrLabel('https://church.example/events/123456')).toContain(
       'https://church.example/events/123456',
     );
+  });
+
+  it('groups a PIN three and three, and spells it for a screen reader', () => {
+    expect(pinDisplay('416931')).toEqual({ text: '416 931', spoken: '4 1 6 9 3 1' });
   });
 });
