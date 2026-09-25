@@ -4,6 +4,7 @@ import { type Href, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { SHARE_COPY } from '@/screens/share-copy';
 import { SEED_COLOR, useTheme } from '@/theme/provider';
+import { AppearancePicker } from './appearance-picker';
 import { GlassSurface } from './glass-surface';
 import { Icon } from './icon';
 
@@ -38,11 +39,7 @@ export function HeaderMenu({ shareHref }: { shareHref?: Href }) {
               onPress={() => router.push(shareHref)}
             />
           ) : null}
-          <Button
-            label={SHARE_COPY.menuAppearance}
-            systemImage="circle.lefthalf.filled"
-            onPress={() => router.push('/appearance')}
-          />
+          <AppearancePicker style="menu" />
         </Menu>
       </Host>
     </GlassSurface>
