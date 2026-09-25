@@ -1,6 +1,7 @@
+import { drawQr, type QrDrawing } from '@hallspeak/client-core/qr';
 import { Download } from 'lucide-react';
-import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
-import { memo, type RefObject, useRef } from 'react';
+import { useMemo } from 'react';
+import logoMark from '@/assets/logo-mark.svg';
 import { CopyButton } from '@/components/copy-button';
 import { MICRO_LABEL } from '@/components/micro-label';
 import { Pin } from '@/components/pin';
@@ -13,30 +14,54 @@ const QR_SIZE = 144;
 /** Big enough to print a poster from, small enough to email. */
 const QR_DOWNLOAD_SIZE = 1024;
 
+/** The quiet zone the QR specification asks for, in modules, baked into the PNG for print. */
+const QR_DOWNLOAD_MARGIN = 4;
+
 /**
- * Never displayed; it exists so the download has a raster to read, with the quiet zone baked
- * in for print. Memoised because qrcode.react redraws from an effect with no dependency
- * array, so every re-render of the host page would repaint 1024px of QR nobody sees.
+ * A PNG is what drops into a slide or a print shop's upload form without anyone converting
+ * anything. It is drawn from the same path as the visible code, black on white.
  */
-const DownloadCanvas = memo(function DownloadCanvas({
-  url,
-  canvasRef,
-}: {
-  url: string;
-  canvasRef: RefObject<HTMLCanvasElement | null>;
-}) {
-  return (
-    <QRCodeCanvas
-      ref={canvasRef}
-      value={url}
-      size={QR_DOWNLOAD_SIZE}
-      marginSize={4}
-      bgColor="#ffffff"
-      fgColor="#000000"
-      className="hidden"
-    />
-  );
-});
+async function downloadQr({ size, path, logo }: QrDrawing, fileName: string) {
+  const mark = new Image();
+  mark.src = logoMark;
+  await mark.decode();
+
+  const canvas = document.createElement('canvas');
+  canvas.width = QR_DOWNLOAD_SIZE;
+  canvas.height = QR_DOWNLOAD_SIZE;
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return;
+  }
+
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, QR_DOWNLOAD_SIZE, QR_DOWNLOAD_SIZE);
+  const scale = QR_DOWNLOAD_SIZE / (size + 2 * QR_DOWNLOAD_MARGIN);
+  context.scale(scale, scale);
+  context.translate(QR_DOWNLOAD_MARGIN, QR_DOWNLOAD_MARGIN);
+  context.fillStyle = '#000000';
+  context.fill(new Path2D(path), 'evenodd');
+  if (logo) {
+    const fit = logo.size / Math.max(mark.naturalWidth, mark.naturalHeight);
+    const width = mark.naturalWidth * fit;
+    const height = mark.naturalHeight * fit;
+    context.drawImage(
+      mark,
+      logo.offset + (logo.size - width) / 2,
+      logo.offset + (logo.size - height) / 2,
+      width,
+      height,
+    );
+  }
+
+  const link = document.createElement('a');
+  link.href = canvas.toDataURL('image/png');
+  link.download = fileName;
+  // Firefox ignores a download click on an anchor that is not in the document.
+  document.body.append(link);
+  link.click();
+  link.remove();
+}
 
 /**
  * Everything is derived from `pin`, so a regenerate that refetches the event redraws the
@@ -50,25 +75,8 @@ export function EventShareCard({
   pin: string;
   labelAs?: 'h2' | 'h3';
 }) {
-  const downloadRef = useRef<HTMLCanvasElement>(null);
   const listenerUrl = listenerEventUrl(window.location.origin, pin);
-
-  // The visible code is an SVG; the download comes off the hidden canvas because a PNG is what
-  // drops into a slide or a print shop's upload form without anyone converting anything.
-  const download = () => {
-    const canvas = downloadRef.current;
-    if (!canvas) {
-      return;
-    }
-
-    const link = document.createElement('a');
-    link.href = canvas.toDataURL('image/png');
-    link.download = `hallspeak-${pin}.png`;
-    // Firefox ignores a download click on an anchor that is not in the document.
-    document.body.append(link);
-    link.click();
-    link.remove();
-  };
+  const qr = useMemo(() => drawQr(listenerUrl, { logo: true }), [listenerUrl]);
 
   return (
     <div className="text-center">
@@ -80,18 +88,20 @@ export function EventShareCard({
       {/* The plate inverts in dark mode so the code stays dark-on-light in both: scanners are
           unreliable on an inverted QR. */}
       <div className="mx-auto flex size-42 items-center justify-center rounded-md bg-background p-3 text-foreground dark:bg-foreground dark:text-background">
-        <QRCodeSVG
-          role="img"
-          title={`QR code linking to ${listenerUrl}`}
-          value={listenerUrl}
-          size={QR_SIZE}
-          marginSize={0}
-          bgColor="transparent"
-          fgColor="currentColor"
-        />
+        <svg role="img" width={QR_SIZE} height={QR_SIZE} viewBox={`0 0 ${qr.size} ${qr.size}`}>
+          <title>{`QR code linking to ${listenerUrl}`}</title>
+          <path d={qr.path} fillRule="evenodd" fill="currentColor" />
+          {qr.logo ? (
+            <image
+              href={logoMark}
+              x={qr.logo.offset}
+              y={qr.logo.offset}
+              width={qr.logo.size}
+              height={qr.logo.size}
+            />
+          ) : null}
+        </svg>
       </div>
-
-      <DownloadCanvas url={listenerUrl} canvasRef={downloadRef} />
 
       <div className="mt-4 flex gap-2">
         <CopyButton
@@ -102,7 +112,7 @@ export function EventShareCard({
         />
         <Button
           variant="outline"
-          onClick={download}
+          onClick={() => downloadQr(qr, `hallspeak-${pin}.png`)}
           aria-label="Download the QR code as a PNG"
           size="icon-action"
         >
