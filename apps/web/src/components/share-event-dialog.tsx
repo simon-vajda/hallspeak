@@ -1,6 +1,6 @@
 import type { RefObject } from 'react';
 import { EventShareCard } from '@/components/event-share-card';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 export type ShareEvent = { pin: string; eventName: string };
 
@@ -21,9 +21,8 @@ export function ShareEventDialog({
         finalFocus={returnFocus}
         className="w-[calc(100%-var(--spacing-gutter)*2)] max-w-90 p-panel sm:max-w-90"
       >
-        <DialogTitle className="pr-8 text-section">Share event</DialogTitle>
-        <DialogDescription className="mb-5 pr-8 break-words">{share.eventName}</DialogDescription>
-        <EventShareCard pin={share.pin} labelAs="h3" />
+        <DialogTitle className="mb-5 pr-8 text-section">Share event</DialogTitle>
+        <EventShareCard pin={share.pin} eventName={share.eventName} labelAs="h3" />
       </DialogContent>
     </Dialog>
   );

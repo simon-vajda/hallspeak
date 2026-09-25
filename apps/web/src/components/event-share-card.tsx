@@ -70,9 +70,12 @@ async function downloadQr({ size, path, logo }: QrDrawing, fileName: string) {
  */
 export function EventShareCard({
   pin,
+  eventName,
   labelAs: Label = 'h2',
 }: {
   pin: string;
+  /** Leads the card in place of the PIN, which drops to a muted line beneath it. */
+  eventName?: string;
   labelAs?: 'h2' | 'h3';
 }) {
   const listenerUrl = listenerEventUrl(window.location.origin, pin);
@@ -80,10 +83,21 @@ export function EventShareCard({
 
   return (
     <div className="text-center">
-      <Label className={MICRO_LABEL}>Listener PIN</Label>
-      <p className="mt-1.5 mb-3.5 text-stat-lg">
-        <Pin pin={pin} />
-      </p>
+      {eventName ? (
+        <>
+          <Label className="text-title break-words">{eventName}</Label>
+          <p className="mt-1 mb-4 text-note text-muted-foreground">
+            PIN <Pin pin={pin} />
+          </p>
+        </>
+      ) : (
+        <>
+          <Label className={MICRO_LABEL}>Listener PIN</Label>
+          <p className="mt-1.5 mb-3.5 text-stat-lg">
+            <Pin pin={pin} />
+          </p>
+        </>
+      )}
 
       {/* The plate inverts in dark mode so the code stays dark-on-light in both: scanners are
           unreliable on an inverted QR. */}
