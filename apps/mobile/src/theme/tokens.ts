@@ -182,6 +182,9 @@ export const spacing = {
   pill: 48,
   /** A full-width or floating action: the thumb line, the scanner's action, a tonal button. */
   control: 56,
+  /** The widest a screen's content runs, so a tablet or a landscape phone keeps a phone's
+   * reading width instead of stretching lines and controls across the display. */
+  column: 600,
 } as const;
 
 /**

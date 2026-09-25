@@ -30,6 +30,7 @@ import { BAD_ROUTE_MESSAGE, eventErrorMessage } from '@/screens/event-view';
 import { useEventSocket, useServerGate } from '@/socket/provider';
 import { currentChannelStatus } from '@/socket/status';
 import { useColors, useSurfaces } from '@/theme/provider';
+import { column } from '@/theme/shape';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 
@@ -260,6 +261,7 @@ export default function ChannelScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   stage: {
+    ...column,
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -274,15 +276,18 @@ const styles = StyleSheet.create({
   note: { maxWidth: 300, textAlign: 'center' },
   thumbLine: {
     position: 'absolute',
-    left: spacing.gutter,
-    right: spacing.gutter,
+    left: 0,
+    right: 0,
     bottom: IOS ? 34 : 20,
+    paddingHorizontal: spacing.gutter,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 12,
   },
   reportSurface: {
     flex: 1,
+    maxWidth: spacing.column,
     borderRadius: radius.full,
     height: spacing.control,
     ...(IOS ? {} : { borderWidth: 0 }),

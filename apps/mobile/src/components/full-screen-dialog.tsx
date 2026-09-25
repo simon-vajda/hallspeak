@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/theme/provider';
+import { column } from '@/theme/shape';
 import { spacing, withAlpha } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 import { Icon } from './icon';
@@ -55,5 +56,11 @@ const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', height: 64, paddingHorizontal: 4, gap: 4 },
   close: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1 },
-  body: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: spacing.overlay, gap: 16 },
+  body: {
+    ...column,
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.overlay,
+    gap: 16,
+  },
 });
