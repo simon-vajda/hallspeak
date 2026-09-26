@@ -39,10 +39,10 @@ In short:
 3. Forward the audio ports on your router and point your reverse proxy at port 3000.
 4. Run `docker compose up -d` and open your HTTPS address to create the admin account.
 
-The [hosting guide](docs/hosting.md) covers each step, proxy configurations for Caddy,
-nginx and Nginx Proxy Manager, upgrades, and a troubleshooting table. Read it before
-your first event: a wrong public address produces a server where every page loads and
-nobody hears anything.
+The [operator guide](https://hallspeak.app/getting-started/installation/) covers each
+step, proxy configurations for Caddy, nginx and Nginx Proxy Manager, upgrades, and a
+troubleshooting table. Read it before your first event: a wrong public address produces a
+server where every page loads and nobody hears anything.
 
 ## Status
 

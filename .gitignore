@@ -29,6 +29,7 @@ out/
 
 # Caches
 .cache/
+.astro/
 .turbo/
 .eslintcache
 *.tgz
@@ -67,13 +68,12 @@ temp/
 
 # Project-specific
 # Plans, design handoffs and scratch material stay local; the compounded
-# learnings under docs/solutions, the operator's hosting guide and the release
-# versioning contract are shared knowledge and belong in git.
+# learnings under docs/solutions and the release versioning contract are shared
+# knowledge and belong in git.
 # The directory itself must be re-included — git never descends into an
 # excluded directory, so `docs` + a negation for a child would not work.
 docs/*
 !docs/solutions/
-!docs/hosting.md
 !docs/versioning.md
 
 # Agent skills are shared procedure and belong in git; the settings file beside
