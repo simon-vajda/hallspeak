@@ -1,0 +1,36 @@
+@import "@fontsource-variable/space-grotesk";
+
+:root {
+  --sl-font: "Space Grotesk Variable", system-ui, sans-serif;
+
+  --sl-color-accent-low: #10283a;
+  --sl-color-accent: #0a9e98;
+  --sl-color-accent-high: #0bc3bc;
+
+  --sl-color-white: #e8f2f3;
+  --sl-color-gray-1: #d8e6e8;
+  --sl-color-gray-2: #c4d6da;
+  --sl-color-gray-3: #93aeb8;
+  --sl-color-gray-4: #5e7a89;
+  --sl-color-gray-5: #274158;
+  --sl-color-gray-6: #1b3348;
+  --sl-color-black: #101e2c;
+}
+
+/* The brand teal is about 2.1:1 on the light background, so light-mode accent text and
+   the primary button use a darker teal that clears WCAG AA against both. */
+:root[data-theme="light"] {
+  --sl-color-accent-low: #d3f1ef;
+  --sl-color-accent: #00756f;
+  --sl-color-accent-high: #005551;
+
+  --sl-color-white: #1b3149;
+  --sl-color-gray-1: #22384f;
+  --sl-color-gray-2: #33495e;
+  --sl-color-gray-3: #4f6474;
+  --sl-color-gray-4: #7f919d;
+  --sl-color-gray-5: #d6e4e6;
+  --sl-color-gray-6: #e7eff0;
+  --sl-color-gray-7: #ffffff;
+  --sl-color-black: #f7fafa;
+}

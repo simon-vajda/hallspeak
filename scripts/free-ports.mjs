@@ -2,8 +2,8 @@
 import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
-// The dev ports: the server (PORT, default 3000) and Vite's fixed 5173.
-const ports = [Number(process.env.PORT) || 3000, 5173];
+// The dev ports: the server (PORT, default 3000), Vite's fixed 5173 and Astro's 4321.
+const ports = [Number(process.env.PORT) || 3000, 5173, 4321];
 
 /** PIDs listening on a TCP port, excluding this process. Empty when nothing holds it. */
 function listenersOn(port) {
