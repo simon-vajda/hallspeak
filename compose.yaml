@@ -2,7 +2,8 @@
 #
 # Copy .env.example to .env and fill it in; every setting lives there, including the
 # version this runs and where your data is kept. This file needs no edits unless you
-# change MEDIA_MAX_WORKERS or MEDIA_RTC_PORT_BASE. Guide: docs/hosting.md.
+# change MEDIA_MAX_WORKERS or MEDIA_RTC_PORT_BASE.
+# Guide: https://hallspeak.app/getting-started/installation/
 
 services:
   hallspeak:

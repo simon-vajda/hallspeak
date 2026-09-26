@@ -34,11 +34,12 @@ Settings storage: mobile appearance is device-local (see mobile file); storage f
 - `apps/server` — Hono + `@hono/zod-openapi`, Socket.IO, SQLite/Drizzle, mediasoup.
 - `apps/web` — Vite 8 + React 19 SPA, TanStack Router.
 - `apps/mobile` — Expo SDK 57 + React Native 0.86 listener.
+- `apps/website` — the `hallspeak.app` Astro Starlight site: homepage, privacy policy and the operator guide. No TypeScript source and no `typecheck` script (`@astrojs/check` would make TypeScript 5 reachable); `astro build` is its check. Deployed to GitHub Pages by `.github/workflows/website.yml`.
 - `docs/solutions` — solutions to past problems, filed by category with YAML frontmatter (`module`, `tags`, `problem_type`); read the entries covering an area before working in it.
 
 ## Commands
 
-- `pnpm dev` — contract gen watcher, server on 3000 (`tsx watch`), Vite on 5173 proxying `/api`. Does **not** start Metro: run `pnpm -F @hallspeak/mobile start`.
+- `pnpm dev` — contract gen watcher, server on 3000 (`tsx watch`), Vite on 5173 proxying `/api`, the website on 4321. Does **not** start Metro: run `pnpm -F @hallspeak/mobile start`.
 - `pnpm gen` — regenerate `packages/contract/openapi.json` and `src/generated/api.d.ts`. Run after any schema or route change; CI fails on drift.
 - `pnpm typecheck` — runs `pnpm gen` first, so a clean `git status` afterwards *is* the drift check.
 - `pnpm check` / `pnpm check:fix` — Biome, plus `version:check`.
@@ -121,7 +122,7 @@ Applies to the server and both clients.
 
 ## Working in this repo
 
-- `docs/` is local-only scratch (plans, design handoffs, `docs/superpowers`) and gitignored on purpose; never stage it or "fix" its absence. Tracked exceptions: `docs/solutions`, `docs/hosting.md`, `docs/versioning.md`. `.claude/skills` is tracked; `.claude/settings.local.json` is not.
+- `docs/` is local-only scratch (plans, design handoffs, `docs/superpowers`) and gitignored on purpose; never stage it or "fix" its absence. Tracked exceptions: `docs/solutions`, `docs/versioning.md`. `.claude/skills` is tracked; `.claude/settings.local.json` is not.
 - Source comments must not depend on gitignored plan, requirement, decision, brainstorm or design identifiers. State the rationale self-contained or link tracked documentation.
 - Directories name the role; filenames name the entity plus a role suffix (`.service.ts`, `.mapper.ts`, `.routes.ts`, `.middleware.ts`, `.handlers.ts`). A stem already unique and role-descriptive takes none. Tests are colocated as `<module>.test.ts`. File a module by what it is, not by where its only consumer lives.
 - Helper-only test suites on web and mobile: never render a component; keep screen logic in a pure module beside the screen.
