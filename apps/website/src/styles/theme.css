@@ -34,3 +34,21 @@
   --sl-color-gray-7: #ffffff;
   --sl-color-black: #f7fafa;
 }
+
+.site-title {
+  gap: 0.625rem;
+  color: var(--sl-color-white);
+  letter-spacing: -0.03em;
+}
+
+/* The mark is portrait, so Starlight's width-based hero sizing would make it very tall. */
+.hero > img {
+  width: auto;
+  height: 12rem;
+}
+
+@media (min-width: 50rem) {
+  .hero > img {
+    height: 16rem;
+  }
+}

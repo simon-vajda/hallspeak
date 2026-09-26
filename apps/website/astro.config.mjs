@@ -9,12 +9,7 @@ export default defineConfig({
       title: 'Hallspeak',
       description:
         'Self-hosted simultaneous interpretation for live, in-person events. Listeners hear the interpreter on their own phones.',
-      logo: {
-        light: './src/assets/logo-light.svg',
-        dark: './src/assets/logo-dark.svg',
-        alt: 'Hallspeak',
-        replacesTitle: true,
-      },
+      logo: { src: './src/assets/logo-mark.svg' },
       favicon: '/favicon.svg',
       head: [
         {
