@@ -3,9 +3,11 @@ import {
   buildChannelPath,
   buildEventPath,
   destinationHref,
+  eventListenerUrl,
   readChannelParams,
   readEventParams,
   readSpeakerLinkParams,
+  shareEventHref,
   speakerLinkHref,
   speakerStudioUrl,
 } from './route';
@@ -149,5 +151,50 @@ describe('destinationHref', () => {
     expect(String(destinationHref({ host: 'a.example', pin: '481209', slug: null }, null))).toBe(
       '/events/a.example/481209',
     );
+  });
+});
+
+describe('share event sheet', () => {
+  it('addresses the sheet by the event alone, under names the event route does not use', () => {
+    expect(String(shareEventHref({ host: 'a.example:8443', pin: '481209' }))).toBe(
+      '/share-event?server=a.example%3A8443&eventPin=481209',
+    );
+  });
+
+  it('round-trips its own href', () => {
+    for (const host of ['a.example', 'tolmacs.varosmajor.hu', 'example.com:8443']) {
+      const query = new URLSearchParams(
+        String(shareEventHref({ host, pin: '481209' })).split('?')[1],
+      );
+
+      expect(
+        readEventParams(query.get('server') ?? undefined, query.get('eventPin') ?? undefined),
+      ).toEqual({
+        host,
+        pin: '481209',
+      });
+    }
+  });
+
+  it('refuses a malformed host or PIN', () => {
+    expect(readEventParams('user@a.example', '481209')).toBeNull();
+    expect(readEventParams('a.example/evil', '481209')).toBeNull();
+    expect(readEventParams('a.example', '48120')).toBeNull();
+    expect(readEventParams(undefined, undefined)).toBeNull();
+  });
+});
+
+describe('eventListenerUrl', () => {
+  it('points at the event page over https, port kept', () => {
+    expect(eventListenerUrl('h.example:8443', '123456')).toBe(
+      'https://h.example:8443/events/123456',
+    );
+  });
+
+  it('carries neither a channel segment nor a query', () => {
+    const url = new URL(eventListenerUrl('h.example', '123456'));
+
+    expect(url.pathname).toBe('/events/123456');
+    expect(url.search).toBe('');
   });
 });

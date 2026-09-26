@@ -10,13 +10,14 @@ import { ActionButton } from '@/components/action-button';
 import { ConnectionLine } from '@/components/connection-line';
 import { ErrorState } from '@/components/error-state';
 import { GlassSurface } from '@/components/glass-surface';
+import { HeaderMenu } from '@/components/header-menu';
 import { Icon } from '@/components/icon';
 import { ListenTarget } from '@/components/listen-target';
 import { LiveBadge } from '@/components/live-badge';
 import { Placeholder, PlaceholderLine } from '@/components/placeholder';
 import { ScreenHeader } from '@/components/screen-header';
 import { rememberEvent } from '@/history/store';
-import { eventHref, readChannelParams, reportSheetHref } from '@/links/route';
+import { eventHref, readChannelParams, reportSheetHref, shareEventHref } from '@/links/route';
 import { useListener } from '@/media/use-listener';
 import {
   channelCopy,
@@ -29,6 +30,7 @@ import { BAD_ROUTE_MESSAGE, eventErrorMessage } from '@/screens/event-view';
 import { useEventSocket, useServerGate } from '@/socket/provider';
 import { currentChannelStatus } from '@/socket/status';
 import { useColors, useSurfaces } from '@/theme/provider';
+import { column } from '@/theme/shape';
 import { radius, spacing } from '@/theme/tokens';
 import { type } from '@/theme/typography';
 
@@ -146,7 +148,13 @@ export default function ChannelScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader backHref={eventHref(host, pin)} title={view?.event.name} />
+      <ScreenHeader
+        backHref={eventHref(host, pin)}
+        title={view?.event.name}
+        menu={
+          <HeaderMenu shareHref={view === undefined ? undefined : shareEventHref({ host, pin })} />
+        }
+      />
       {/* The stage takes the height the screen has: the target sits in the middle of it,
           and the report action stays at the thumb line however tall the phone is. */}
       <ScrollView contentContainerStyle={styles.stage} contentInsetAdjustmentBehavior="never">
@@ -253,6 +261,7 @@ export default function ChannelScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   stage: {
+    ...column,
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -267,15 +276,18 @@ const styles = StyleSheet.create({
   note: { maxWidth: 300, textAlign: 'center' },
   thumbLine: {
     position: 'absolute',
-    left: spacing.gutter,
-    right: spacing.gutter,
+    left: 0,
+    right: 0,
     bottom: IOS ? 34 : 20,
+    paddingHorizontal: spacing.gutter,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 12,
   },
   reportSurface: {
     flex: 1,
+    maxWidth: spacing.column,
     borderRadius: radius.full,
     height: spacing.control,
     ...(IOS ? {} : { borderWidth: 0 }),

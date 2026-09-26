@@ -31,6 +31,7 @@ export type TypeStep =
   | 'stat'
   | 'statLg'
   | 'title'
+  | 'titleLg'
   | 'subtitle'
   | 'section'
   | 'pin'
@@ -76,6 +77,8 @@ export const type: Record<TypeStep, Step> = {
   statLg: display(36, 36, -1.62),
 
   title: display(22, 27.5, -0.66),
+  // The name a sheet is about, set under that sheet's own `title` and read above it.
+  titleLg: display(28, 33.6, -0.98),
   subtitle: display(19, 23.75, -0.475),
 
   section: { fontSize: 17, lineHeight: 23.8, letterSpacing: -0.51, fontWeight: '600' },

@@ -182,6 +182,9 @@ export const spacing = {
   pill: 48,
   /** A full-width or floating action: the thumb line, the scanner's action, a tonal button. */
   control: 56,
+  /** The widest a screen's content runs, so a tablet or a landscape phone keeps a phone's
+   * reading width instead of stretching lines and controls across the display. */
+  column: 600,
 } as const;
 
 /**
@@ -247,3 +250,6 @@ export const surfaces: Record<ColorScheme, Record<SurfaceLevel, string>> = {
   light: lightSurfaces,
   dark: darkSurfaces,
 };
+
+/** Material 3's scrim: black at 32% behind a dialog, the same in both schemes. */
+export const scrim = withAlpha('#000000', 0.32);

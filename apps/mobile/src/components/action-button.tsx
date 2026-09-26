@@ -20,11 +20,14 @@ export function ActionButton({
   label,
   icon,
   variant = 'filled',
+  compact = false,
   onPress,
 }: {
   label: string;
   icon: IconName;
   variant?: 'filled' | 'tonal';
+  /** For an action inside a sheet, where a full-height control would crowd the content above it. */
+  compact?: boolean;
   onPress: () => void;
 }) {
   const colors = useColors();
@@ -39,7 +42,7 @@ export function ActionButton({
       )}
       style={({ pressed }) => [
         styles.button,
-        filled ? styles.prominent : styles.tonal,
+        compact ? styles.compact : filled ? styles.prominent : styles.tonal,
         {
           backgroundColor: filled ? colors.primary : colors.secondary,
           // The ripple already reports the press on Android, and a control that also shrinks
@@ -51,12 +54,12 @@ export function ActionButton({
       <View style={styles.content}>
         <Icon
           name={icon}
-          size={filled ? 23 : 20}
+          size={filled && !compact ? 23 : 20}
           color={filled ? colors.primaryForeground : colors.foreground}
         />
         <Text
           style={[
-            type.section,
+            compact ? type.bodyStrong : type.section,
             styles.label,
             { color: filled ? colors.primaryForeground : colors.foreground },
           ]}
@@ -79,6 +82,7 @@ const styles = StyleSheet.create({
   // The design gives the screen's one primary action four points over its neighbour.
   prominent: { minHeight: 60 },
   tonal: { minHeight: spacing.control },
+  compact: { minHeight: spacing.pill },
   content: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 11 },
   label: { includeFontPadding: false },
 });

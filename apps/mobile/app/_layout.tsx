@@ -9,8 +9,10 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { registerGlobals } from 'react-native-webrtc';
+import { DIALOG_OPTIONS, FULL_SCREEN_DIALOG_OPTIONS } from '@/components/dialog-options';
 import { SHEET_OPTIONS } from '@/components/sheet-options';
 import { ThemeProvider, useTheme } from '@/theme/provider';
 
@@ -29,6 +31,13 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: shouldRetryApiQuery } },
 });
 
+// Full height only on iOS: held up to be scanned, a half-height detent shrank the code and a drag
+// between detents could shrink it mid-scan.
+const SHARE_OPTIONS =
+  Platform.OS === 'android'
+    ? FULL_SCREEN_DIALOG_OPTIONS
+    : { ...SHEET_OPTIONS, sheetAllowedDetents: [1] };
+
 export const unstable_settings = { initialRouteName: 'index' };
 
 function Navigator() {
@@ -45,8 +54,9 @@ function Navigator() {
         }}
       >
         <Stack.Screen name="link" options={SHEET_OPTIONS} />
-        <Stack.Screen name="appearance" options={SHEET_OPTIONS} />
+        <Stack.Screen name="appearance" options={DIALOG_OPTIONS} />
         <Stack.Screen name="speaker-link" options={SHEET_OPTIONS} />
+        <Stack.Screen name="share-event" options={SHARE_OPTIONS} />
       </Stack>
     </>
   );

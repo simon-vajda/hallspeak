@@ -67,10 +67,11 @@ Settings storage: mobile appearance is device-local (see mobile file); storage f
 - Route paths are declared without `/api`; the prefix lives in the document's `servers` entry and the server mount.
 
 **`packages/client-core`**
-- Consumed as source like the contract, with subpath exports (`./socket`, `./channel`, `./media`, `./server`, `./query-retry`).
+- Consumed as source like the contract, with subpath exports (`./socket`, `./channel`, `./media`, `./server`, `./query-retry`, `./qr`).
 - Boundary is **no platform**: no DOM library, React Native, `expo-*`, mediasoup-client, or bare `window`/`document`/`navigator`/`localStorage`. Enforced by `test/boundary.test.ts`, which lives under its own tsconfig (`"types": ["node"]`), so `typecheck` is two invocations.
 - React is a **peer** dependency. `react` and `@types/react` must stay at one version across web and mobile, or Metro resolves a second React and the first hook throws invalid-hook-call. `dependenciesMeta.injected` is rejected: it is a build step.
 - Mobile runs the React Compiler and web does not, so hooks here are auto-memoized on one platform only. Accepted.
+- `./qr` owns the QR look for both apps: `drawQr` returns one `evenodd` path in module units (styled eyes and modules) plus the centred logo gap, raising error correction to `H` when a logo is asked for. Each app only renders it and fits the logo mark into `logo`. Check a new style or a larger gap with a real decoder (ZXing), not jsQR, which fails dot modules that phones read.
 - Platform-coupled media code (mediasoup shells, capture, audio-session hooks) stays in the app that owns it.
 
 ## Socket protocol
