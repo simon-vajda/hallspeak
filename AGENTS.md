@@ -34,7 +34,7 @@ Settings storage: mobile appearance is device-local (see mobile file); storage f
 - `apps/server` — Hono + `@hono/zod-openapi`, Socket.IO, SQLite/Drizzle, mediasoup.
 - `apps/web` — Vite 8 + React 19 SPA, TanStack Router.
 - `apps/mobile` — Expo SDK 57 + React Native 0.86 listener.
-- `apps/website` — the `hallspeak.app` Astro Starlight site: homepage, privacy policy and the operator guide. No TypeScript source and no `typecheck` script (`@astrojs/check` would make TypeScript 5 reachable); `astro build` is its check. Deployed to GitHub Pages by `.github/workflows/website.yml`.
+- `apps/website` — the `hallspeak.app` Astro Starlight site: homepage, privacy policy and the operator guide. No `typecheck` script (`@astrojs/check` would make TypeScript 5 reachable); Astro transpiles its one `.ts` file, `content.config.ts`, without type-checking it. `astro build`, with its link validator, is its check. Deployed to GitHub Pages by `.github/workflows/website.yml`.
 - `docs/solutions` — solutions to past problems, filed by category with YAML frontmatter (`module`, `tags`, `problem_type`); read the entries covering an area before working in it.
 
 ## Commands

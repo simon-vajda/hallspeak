@@ -1,5 +1,6 @@
 import starlight from '@astrojs/starlight';
 import { defineConfig } from 'astro/config';
+import starlightLinksValidator from 'starlight-links-validator';
 
 export default defineConfig({
   site: 'https://hallspeak.app',
@@ -30,6 +31,7 @@ export default defineConfig({
         { icon: 'github', label: 'GitHub', href: 'https://github.com/simon-vajda/hallspeak' },
       ],
       customCss: ['./src/styles/theme.css'],
+      plugins: [starlightLinksValidator()],
       sidebar: [
         {
           label: 'Getting started',

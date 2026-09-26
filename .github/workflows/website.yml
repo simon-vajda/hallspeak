@@ -5,12 +5,18 @@ on:
     branches: [main]
     paths:
       - apps/website/**
+      - package.json
       - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .nvmrc
       - .github/workflows/website.yml
   pull_request:
     paths:
       - apps/website/**
+      - package.json
       - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .nvmrc
       - .github/workflows/website.yml
   workflow_dispatch:
 
@@ -31,7 +37,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --filter @hallspeak/website...
       - run: pnpm -F @hallspeak/website build
-      - if: github.event_name != 'pull_request'
+      - if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5
         with:
           path: apps/website/dist
@@ -39,7 +45,7 @@ jobs:
   deploy:
     name: Deploy
     needs: build
-    if: github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     # One deployment at a time; a newer one waits rather than cancelling a deploy mid-flight.
     concurrency:
