@@ -116,9 +116,15 @@ emergency.
   and retags that commit's `sha-*` image as `X.Y.Z`, `X.Y` and `latest`. Nothing is rebuilt or
   retested, so the release is the digest `main` verified. A failed or missing build refuses the
   promotion, and rerunning the job retries it.
-- Publishing a mobile draft produces the release only. It never takes the repository-wide Latest
-  designation from the server track, and publishes no binary; EAS and store credentials are
-  separate work.
+- Publishing a mobile draft checks the tag against the manifest, builds that commit on EAS for
+  iOS and Android, and submits the builds to TestFlight and Play's closed testing track. It
+  spends one iOS and one Android build of the free EAS plan's monthly allowance, and the run
+  fails if a build or submission does. It never takes the repository-wide Latest designation
+  from the server track. Releasing to the App Store or Play production stays a manual step in
+  each store console.
+- Running the `Mobile release` workflow by hand with a published mobile tag rebuilds and
+  resubmits that tag at the same cost. It refuses a draft or a non-mobile tag. Tags up to
+  `mobile-v0.7.0` predate the EAS configuration and cannot be built.
 - A weekly cleanup of `sha-*` images keeps the newest 20, every released version, `latest`,
   `edge`, and the image behind each of the newest server releases, draft or published. A manual
   run is a dry run unless told otherwise.
@@ -142,5 +148,6 @@ emergency.
 
 - Server `0.4.0` is the initial canonical server version; adopting it forced no release.
 - Server `1.0` is published and tested before the first public mobile store release. Internal
-  mobile builds may target server `0.x`.
+  mobile builds may target server `0.x`; TestFlight and Play closed-testing builds count as
+  internal.
 - Shared workspace packages stay internal source and never receive release versions.

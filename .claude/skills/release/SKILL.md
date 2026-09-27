@@ -17,7 +17,9 @@ A release reaches GitHub in three stages, and this skill owns only the first:
    `env.example` attached).
 3. **The maintainer publishes the draft** under Releases after editing its description.
    Publishing creates the tag and, for server, promotes the image `main` already built to
-   `X.Y.Z`, `X.Y` and `latest`.
+   `X.Y.Z`, `X.Y` and `latest`. For mobile, it builds the tag on EAS and submits it to
+   TestFlight and Play's closed testing track, spending one iOS and one Android build of the
+   free plan's monthly allowance.
 
 | Track | Canonical manifest | Command | Tag | Paths that count |
 | --- | --- | --- | --- | --- |
@@ -106,20 +108,24 @@ gh pr create --base main --title "chore(release): server v0.11.0" --body "..."
 
 The body says what merging does (the `Server release` build runs, then a
 `server-v0.11.0` draft appears under Releases, replacing any older unpublished server
-draft) and what publishing does (creates the tag and promotes the image; for mobile, notes
-only).
+draft) and what publishing does (creates the tag and promotes the image; for mobile, creates
+the tag, spends two EAS cloud builds and delivers the version to TestFlight and Play closed
+testers).
 
 **5. Stop and report.**
 
 Give the PR URL. Tell the user that once `Verify` and `Docker image` pass and the PR is
 merged, they edit the draft's description under Releases and publish it, and that a server
-publish waits for the commit's image build before promoting it. Do not merge, watch, or
-publish.
+publish waits for the commit's image build before promoting it, and that a mobile publish
+starts the `Mobile release` workflow, whose builds and submissions take up to a few hours on
+the free EAS queue. Do not merge, watch, or publish.
 
 ## Guard rails
 
 - Never push to `main`, never create or push a tag, never publish, edit or delete a
   release. Publishing is the maintainer's step on GitHub.
+- Never run the `Mobile release` workflow or an `eas build`. Each spends builds from a
+  monthly allowance and ships to testers; that is the maintainer's decision.
 - Never `git push --force`, never `--no-verify`.
 - Never edit a version by hand. `apps/server/src/version.ts`, `apps/web/src/version.ts`,
   `apps/mobile/src/version.ts`, `app.config.ts`, `.env.example` and the OpenAPI `info.version`

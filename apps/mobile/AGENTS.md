@@ -11,6 +11,16 @@ Rules local to the Expo listener. Repo-wide rules, the socket protocol, media re
 - Bundle id and Android package `app.hallspeak.mobile` are immutable once a store has seen them.
 - `@config-plugins/react-native-webrtc` declares `RECORD_AUDIO` and `SYSTEM_ALERT_WINDOW`; both are blocked in `app.json`. Its iOS microphone usage string cannot be removed without a config plugin of our own (not written).
 - No `dev` script, deliberately: root `pnpm dev` would otherwise start Metro. Use `pnpm -F @hallspeak/mobile start`.
+
+## EAS builds and submission
+
+- `eas.json` profiles `development`, `preview` and `production` all extend `base`, which pins Node to an exact 24.x and pnpm to the root `packageManager` version (the SDK 57 images ship Node 22, which the root `engines` rejects) and sets `MEDIASOUP_WORKER_BIN` so the server's mediasoup postinstall skips its worker download: EAS installs the whole workspace from the git root. Move those pins with `.nvmrc` and `packageManager`.
+- `cli.appVersionSource` is `remote`: EAS owns iOS build numbers and Android version codes and increments them on every production build, local ones included. Never add `buildNumber` or `versionCode` to `app.json`; `version` still comes from `package.json` through `app.config.ts`.
+- The `eas-build-post-install` hook (`scripts/write-build-env.mjs`) writes `EXPO_PUBLIC_COMMIT` to `.env.local` from `EAS_BUILD_GIT_COMMIT_HASH`, because EAS runs none of the scripts that set it for local runs. `src/version.ts` is unchanged.
+- Signing credentials, the App Store Connect API key and the Play service account key live only in EAS. GitHub holds only `EXPO_TOKEN`, used by `.github/workflows/mobile-release.yml` alone. CI passes `--freeze-credentials`, so credentials are created or changed only from a maintainer's machine. `credentials.json`, `credentials/` and `google-service-account*.json` are gitignored; never commit a key.
+- The `production` submit profile sends Android to Play's `alpha` (closed testing) track as a `draft` release, which is all a Play app still in draft state accepts; switch `releaseStatus` to `completed` once the store listing is complete. iOS goes to TestFlight by `ascAppId`. Promoting to the App Store or Play production is manual.
+- No `.easignore`: EAS then archives what git tracks, which already excludes `ios/`, `android/`, `docs/` and secrets. An `.easignore` would replace that at the git root and have to mirror every ignore rule.
+- The setup runbook and the local build fallback are in `README.md`.
 - `tsconfig.json` extends `["../../tsconfig.base.json", "expo/tsconfig.base"]` **in that order** (later wins; the repo base supplies strictness). **No comments in that file** — `expo start` rewrites it.
 
 ## Contract and shared code

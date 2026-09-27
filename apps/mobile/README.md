@@ -39,14 +39,109 @@ pnpm -F @hallspeak/mobile start            # Metro, once a dev client is install
 ```
 
 `ios/` and `android/` are generated and gitignored. `pnpm -F @hallspeak/mobile prebuild`
-regenerates both from `app.json`; never hand-edit them, and never add an `app.config.ts` —
-TypeScript 7.0.2, which every package here pins, breaks the Expo CLI's compilation of it.
+regenerates both from `app.json`; never hand-edit them. `app.config.ts` only derives `version`
+from `package.json` and must stay that thin: TypeScript 7.0.2, which every package here pins,
+breaks the Expo CLI's compilation of anything more.
 
 ### There is no `dev` script, on purpose
 
 The repo root's `dev` is `pnpm -r --parallel dev`, and pnpm skips a package that has no such
 script. Without that omission, Metro would start every time someone works on the server or the
 web app. Start it explicitly with the command above.
+
+## Store builds
+
+Store builds run on EAS. `eas.json` defines three build profiles — `development` (a dev
+client), `preview` (an internally distributed release build) and `production` (store
+signed) — and one `production` submit profile that sends iOS to TestFlight and Android to
+Play's closed testing track. EAS assigns iOS build numbers and Android version codes and
+raises them on every production build; the version testers see is `package.json`'s. An
+EAS-made build shows the same `vX.Y.Z · <commit>` label as a local dev build.
+
+### What a mobile release does
+
+Publishing a `Mobile vX.Y.Z` draft under Releases runs the `Mobile release` workflow. It
+checks out the tag, builds iOS and Android on EAS, and submits both. The run waits for the
+builds and submissions and fails if either does. Each release spends one iOS and one Android
+build of the free plan's monthly allowance (15 each), and so does every rerun.
+
+To rebuild a release without publishing a new one, run `Mobile release` from the Actions tab
+with the published tag. Tags up to `mobile-v0.7.0` predate the EAS configuration and cannot
+be built.
+
+The workflow stops at the testing tracks. Releasing to the App Store or Play production is a
+manual step in each store console.
+
+### One-time setup
+
+Do these in order, from `apps/mobile` on the Mac. Each step needs the ones above it.
+
+1. **Link the EAS project.** `eas login`, then `eas init`. It cannot write into
+   `app.config.ts`, so copy the `owner` it prints into `app.json`'s `expo.owner` and the
+   project id into `expo.extra.eas.projectId`, and commit both.
+2. **Create signing credentials with the first builds.** Run
+   `eas build --platform ios --profile production` and
+   `eas build --platform android --profile production` interactively. Sign in to Apple when
+   asked and let EAS generate the distribution certificate, the provisioning profile and the
+   Android upload keystore. CI can never create these: it runs with `--freeze-credentials`.
+3. **Back up the Android upload keystore.** `eas credentials -p android`, choose the
+   production profile, then download the keystore. Put the `.jks` file and its keystore
+   password, key alias and key password in the password manager, then delete the local copy.
+   Losing it costs a multi-day upload-key reset with Google.
+4. **Set up App Store Connect submission.** In App Store Connect, under Users and Access →
+   Integrations, create an App Store Connect API key with the App Manager role. Add it with
+   `eas credentials -p ios` → production → App Store Connect API key, for EAS Submit. Put the
+   app's numeric Apple ID (App Store Connect → the app → App Information) into `eas.json` as
+   `submit.production.ios.ascAppId` and commit it. Create a TestFlight internal testing group,
+   then submit the build from step 2 with
+   `eas submit --platform ios --profile production --latest`.
+5. **Set up Play submission.** Create the app in Play Console with package
+   `app.hallspeak.mobile`. Create a Google Cloud service account, enable the Google Play
+   Android Developer API for its project, download a JSON key, and invite the account's email
+   under Play Console → Users and permissions with release permissions for this app. Save
+   the key as `google-service-account.json` here (gitignored) or outside the repository,
+   upload it with `eas credentials -p android` → Google Service Account, and delete the local
+   copy once EAS shows it.
+6. **Submit the first Android build by hand.** Run
+   `eas submit --platform android --profile production --latest`. If the API rejects a
+   brand-new app, download the `.aab` from the build's page on expo.dev and upload it in Play
+   Console under Testing → Closed testing instead. Add the testers' Google Group to the closed
+   track.
+7. **Give GitHub the Expo token.** Create a personal access token on expo.dev under Account
+   settings → Access tokens and add it as the `EXPO_TOKEN` repository secret. It can start
+   builds and read project credentials, so revoke and replace it on any suspicion.
+
+GitHub holds nothing else: signing credentials and store keys live only in EAS.
+
+### Building and submitting by hand
+
+A local build spends no cloud build, so it is the fallback when the allowance is used up or
+EAS's queue is slow. It still needs `eas login`: EAS supplies the credentials and the next
+build number.
+
+```sh
+git switch --detach mobile-v0.8.0            # the published tag, from a clean tree
+cd apps/mobile
+eas build --platform ios --profile production --local --output ~/hallspeak-0.8.0.ipa
+eas submit --platform ios --profile production --path ~/hallspeak-0.8.0.ipa
+eas build --platform android --profile production --local --output ~/hallspeak-0.8.0.aab
+eas submit --platform android --profile production --path ~/hallspeak-0.8.0.aab
+```
+
+iOS needs Xcode, CocoaPods and fastlane; Android needs the Android SDK and Java 17. A local
+build uses the Mac's own Node and pnpm and ignores the versions `eas.json` pins, so match
+`.nvmrc` and the root `packageManager` first.
+
+### Running the tracks
+
+- **Play drafts.** While the Play app is itself a draft, Play accepts only draft releases, so
+  each submission lands as a draft on the closed track. Roll it out to testers in Play
+  Console under Testing → Closed testing. Once the store listing is complete and the app has
+  left draft state, change `releaseStatus` in `eas.json` from `draft` to `completed`.
+- **A timed-out run.** The job gives up after 330 minutes, but EAS keeps building. Check the
+  builds and submissions on expo.dev before rerunning: a rerun spends two more builds.
+- **Play production.** A personal Play account reaches production only after 12 testers
+  have been opted in to a closed test for 14 days.
 
 ## Checks
 
