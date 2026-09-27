@@ -9,7 +9,8 @@
     "ios": "EXPO_PUBLIC_COMMIT=$(git rev-parse --short=7 HEAD 2>/dev/null) expo run:ios",
     "android": "EXPO_PUBLIC_COMMIT=$(git rev-parse --short=7 HEAD 2>/dev/null) expo run:android",
     "typecheck": "tsc --noEmit",
-    "test": "jest --no-watchman"
+    "test": "jest --no-watchman",
+    "eas-build-post-install": "node scripts/write-build-env.mjs"
   },
   "dependencies": {
     "@config-plugins/react-native-webrtc": "15.0.2",
