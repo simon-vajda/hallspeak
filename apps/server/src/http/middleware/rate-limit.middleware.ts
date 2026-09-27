@@ -2,16 +2,12 @@ import type { Context, MiddlewareHandler } from 'hono';
 import { env } from '../../env';
 import { logger } from '../../lib/log';
 import { TokenBucketLimiter } from '../../lib/rate-limit';
+import { isTrustedProxy, normalizeAddress, remoteAddress } from '../proxy';
 
 const log = logger('proxy');
 
 /** The whole server shares one budget behind the per-IP one, so it needs one key. */
 const SHARED_KEY = '*';
-
-/** So a configured `127.0.0.1` still matches a connection arriving as `::ffff:127.0.0.1`. */
-function normalizeAddress(address: string): string {
-  return address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address;
-}
 
 /**
  * The rightmost X-Forwarded-For entry, and only from an address the operator listed: that
@@ -22,13 +18,10 @@ export function clientIp(
   c: Context,
   trustedProxies: readonly string[] = env.TRUSTED_PROXY_IPS,
 ): string {
-  const incoming = (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)
-    ?.incoming;
-  const remote = incoming?.socket?.remoteAddress;
-  const from = remote ? normalizeAddress(remote) : undefined;
+  const from = remoteAddress(c);
   const appended = c.req.header('x-forwarded-for')?.split(',').at(-1)?.trim();
 
-  if (from !== undefined && trustedProxies.includes(from)) {
+  if (isTrustedProxy(from, trustedProxies)) {
     if (appended) {
       return normalizeAddress(appended);
     }

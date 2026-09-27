@@ -21,6 +21,17 @@ export default defineConfig({
           tag: 'link',
           attrs: { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
         },
+        {
+          tag: 'meta',
+          attrs: { property: 'og:image', content: 'https://hallspeak.app/og-image.png' },
+        },
+        { tag: 'meta', attrs: { property: 'og:image:width', content: '1280' } },
+        { tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
+        { tag: 'meta', attrs: { property: 'og:image:alt', content: 'Hallspeak' } },
+        {
+          tag: 'meta',
+          attrs: { name: 'twitter:image', content: 'https://hallspeak.app/og-image.png' },
+        },
       ],
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/simon-vajda/hallspeak' },
