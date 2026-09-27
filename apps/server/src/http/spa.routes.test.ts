@@ -20,6 +20,7 @@ const INDEX = `<!doctype html>
 </html>`;
 
 const SPEAKER_CODE = 'speaker-secret';
+const TRUSTED_PROXY = '192.0.2.1';
 const from = (ip: string) => ({ incoming: { socket: { remoteAddress: ip } } });
 
 let app: typeof import('../app')['app'];
@@ -27,6 +28,7 @@ let db: Db;
 let cleanupApi: () => void;
 let webRoot: string;
 let originalWebRoot: string | undefined;
+let originalTrustedProxies: string | undefined;
 let createSpaRoutes: typeof import('./spa.routes')['createSpaRoutes'];
 
 beforeAll(async () => {
@@ -37,6 +39,8 @@ beforeAll(async () => {
 
   originalWebRoot = process.env.WEB_ROOT;
   process.env.WEB_ROOT = webRoot;
+  originalTrustedProxies = process.env.TRUSTED_PROXY_IPS;
+  process.env.TRUSTED_PROXY_IPS = TRUSTED_PROXY;
 
   const testApi = await createTestApi();
   ({ db, cleanup: cleanupApi } = testApi);
@@ -90,6 +94,11 @@ afterAll(() => {
   } else {
     process.env.WEB_ROOT = originalWebRoot;
   }
+  if (originalTrustedProxies === undefined) {
+    delete process.env.TRUSTED_PROXY_IPS;
+  } else {
+    process.env.TRUSTED_PROXY_IPS = originalTrustedProxies;
+  }
 });
 
 describe('SPA build handling', () => {
@@ -142,6 +151,23 @@ describe('static files and default shell', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
     expect(await response.text()).toBe('console.log("asset");');
+  });
+
+  it('renders an absolute og:image from the request origin', async () => {
+    const response = await app.request('http://hallspeak.example/somewhere');
+
+    expect(await response.text()).toContain(
+      '<meta property="og:image" content="http://hallspeak.example/og-image.png" />',
+    );
+  });
+
+  it('believes forwarded scheme and host only from a trusted proxy', async () => {
+    const headers = { 'x-forwarded-proto': 'https', 'x-forwarded-host': 'listen.example' };
+    const trusted = await app.request('http://internal:3000/', { headers }, from(TRUSTED_PROXY));
+    const untrusted = await app.request('http://internal:3000/', { headers }, from('10.9.9.9'));
+
+    expect(await trusted.text()).toContain('content="https://listen.example/og-image.png"');
+    expect(await untrusted.text()).toContain('content="http://internal:3000/og-image.png"');
   });
 
   it('keeps unmatched API requests outside the SPA', async () => {

@@ -12,10 +12,15 @@ import { html } from 'hono/html';
 import { findEnabledChannelBySlug } from '../core/channels.service';
 import { findEnabledEventByPin } from '../core/events.service';
 import { db } from '../db';
+import { env } from '../env';
 import { createPublicRateLimit } from './middleware/rate-limit.middleware';
+import { publicOrigin } from './proxy';
 
 const INDEX_META_START = '<!-- hallspeak:metadata:start -->';
 const INDEX_META_END = '<!-- hallspeak:metadata:end -->';
+// Crawlers require an absolute og:image, and a self-hosted server only learns its
+// public origin from each request.
+const OG_IMAGE_PATH = '/og-image.png';
 
 interface PageMetadata {
   title: string;
@@ -59,7 +64,7 @@ const RATE_LIMITED: PageResponse = {
 const EVENT_PATH = /^\/events\/([^/]+)\/?$/;
 const CHANNEL_PATH = /^\/events\/([^/]+)\/([^/]+)\/?$/;
 
-/** Splits once at boot, then only rebuilds the four escaped metadata tags per request. */
+/** Splits once at boot, then only rebuilds the escaped metadata tags per request. */
 function createIndexRenderer(template: string) {
   const start = template.indexOf(INDEX_META_START);
   const end = template.indexOf(INDEX_META_END);
@@ -76,11 +81,12 @@ function createIndexRenderer(template: string) {
   const before = template.slice(0, start);
   const after = template.slice(end + INDEX_META_END.length);
 
-  return async (metadata: PageMetadata): Promise<string> => {
+  return async (metadata: PageMetadata, origin: string): Promise<string> => {
     const tags = await html`<title>${metadata.title}</title>
     <meta name="description" content="${metadata.description}" />
     <meta property="og:title" content="${metadata.title}" />
-    <meta property="og:description" content="${metadata.description}" />`;
+    <meta property="og:description" content="${metadata.description}" />
+    <meta property="og:image" content="${origin}${OG_IMAGE_PATH}" />`;
 
     return `${before}${INDEX_META_START}\n    ${tags}\n    ${INDEX_META_END}${after}`;
   };
@@ -159,7 +165,7 @@ export function createSpaRoutes(webRoot: string): Hono | undefined {
 
   const respond = async (c: Context, page: PageResponse) => {
     c.header('Cache-Control', 'no-cache');
-    return c.html(await render(page.metadata), page.status);
+    return c.html(await render(page.metadata, publicOrigin(c, env.TRUSTED_PROXY_IPS)), page.status);
   };
 
   // A middleware wrapping serveStatic, not its onFound hook: serveStatic builds the
@@ -187,6 +193,8 @@ export function createSpaRoutes(webRoot: string): Hono | undefined {
   );
 
   // index.html is the one bundled file serveStatic must never answer directly.
+  // serveStatic answers `/` with index.html itself, so the root needs its own route too.
+  app.get('/', (c) => respond(c, { metadata: DEFAULT_METADATA, status: 200 }));
   app.get('/index.html', (c) => respond(c, { metadata: DEFAULT_METADATA, status: 200 }));
   app.use('*', serveStatic({ root: webRoot }));
   app.get('*', (c) =>
