@@ -1,0 +1,87 @@
+name: Mobile release
+
+# Publishing a mobile draft builds that tag on EAS and submits iOS to TestFlight and Android
+# to Play's closed track. Builds start only here, never on a merge, because the free EAS
+# plan's monthly build allowance is spent per build. The job waits for the builds and their
+# submissions, since waiting is the only way a failed build turns this run red; the
+# repository is public, so the wait costs no Actions minutes.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published mobile release tag to rebuild, for example mobile-v0.8.0
+        required: true
+        type: string
+
+concurrency:
+  group: mobile-release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  build:
+    # The release event cannot be filtered by tag in `on:`, so a server release skips here.
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'mobile-v')
+    runs-on: ubuntu-latest
+    # Two builds run one after another behind the free plan's queue; a timeout fails this run
+    # while EAS carries on, so check the EAS dashboard before rerunning.
+    timeout-minutes: 330
+
+    steps:
+      # A dispatched tag must be a published mobile release, so no unreleased commit builds.
+      - name: Check the tag is a published mobile release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          case "$TAG" in
+            mobile-v*) ;;
+            *) echo "::error::$TAG is not a mobile release tag."; exit 1 ;;
+          esac
+          draft="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" || {
+            echo "::error::$TAG is not a release."
+            exit 1
+          }
+          if [ "$draft" != "false" ]; then
+            echo "::error::$TAG is still a draft; publish it instead."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ env.TAG }}
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      # eas-cli evaluates the app config and its config plugins from node_modules; the
+      # builder does its own full install.
+      - run: pnpm install --frozen-lockfile --filter @hallspeak/mobile...
+
+      # Assigned first: inside `echo "$(…)"` the step's exit status is echo's, so a tag the
+      # manifest refuses would pass this step.
+      - name: Check the tag matches the mobile manifest
+        run: |
+          version="$(node scripts/versioning.mjs release-tag mobile "$TAG")"
+          echo "Building mobile $version"
+
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build and submit
+        working-directory: apps/mobile
+        run: >-
+          eas build --platform all --profile production --non-interactive
+          --freeze-credentials --auto-submit
