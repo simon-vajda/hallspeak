@@ -15,6 +15,9 @@
         "tinted": "./assets/images/ios-icon-tinted.png"
       },
       "supportsTablet": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
         "UIBackgroundModes": ["audio"]
       },
