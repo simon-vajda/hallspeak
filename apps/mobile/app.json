@@ -82,6 +82,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "cea6fa2e-038d-4aca-a1a8-39034fc64073"
+      }
+    },
+    "owner": "simon.vajda"
   }
 }
