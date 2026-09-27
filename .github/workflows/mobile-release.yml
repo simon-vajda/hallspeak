@@ -46,8 +46,9 @@ jobs:
             mobile-v*) ;;
             *) echo "::error::$TAG is not a mobile release tag."; exit 1 ;;
           esac
+          # A read-only token cannot see drafts, so a draft fails here too.
           draft="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" || {
-            echo "::error::$TAG is not a release."
+            echo "::error::$TAG is not a published release."
             exit 1
           }
           if [ "$draft" != "false" ]; then
