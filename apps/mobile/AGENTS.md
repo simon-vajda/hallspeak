@@ -11,6 +11,7 @@ Rules local to the Expo listener. Repo-wide rules, the socket protocol, media re
 - Bundle id and Android package `app.hallspeak.mobile` are immutable once a store has seen them.
 - `@config-plugins/react-native-webrtc` declares `RECORD_AUDIO` and `SYSTEM_ALERT_WINDOW`; both are blocked in `app.json`. Its iOS microphone usage string cannot be removed without a config plugin of our own (not written).
 - No `dev` script, deliberately: root `pnpm dev` would otherwise start Metro. Use `pnpm -F @hallspeak/mobile start`.
+- `tsconfig.json` extends `["../../tsconfig.base.json", "expo/tsconfig.base"]` **in that order** (later wins; the repo base supplies strictness). **No comments in that file** — `expo start` rewrites it.
 
 ## EAS builds and submission
 
@@ -21,7 +22,6 @@ Rules local to the Expo listener. Repo-wide rules, the socket protocol, media re
 - The `production` submit profile sends Android to Play's `alpha` (closed testing) track as a `draft` release, which is all a Play app still in draft state accepts; switch `releaseStatus` to `completed` once the store listing is complete. iOS goes to TestFlight by `ascAppId`. Promoting to the App Store or Play production is manual.
 - No `.easignore`: EAS then archives what git tracks, which already excludes `ios/`, `android/`, `docs/` and secrets. An `.easignore` would replace that at the git root and have to mirror every ignore rule.
 - The setup runbook and the local build fallback are in `README.md`.
-- `tsconfig.json` extends `["../../tsconfig.base.json", "expo/tsconfig.base"]` **in that order** (later wins; the repo base supplies strictness). **No comments in that file** — `expo start` rewrites it.
 
 ## Contract and shared code
 
