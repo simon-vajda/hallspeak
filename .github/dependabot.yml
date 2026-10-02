@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # 1.5.x ships broken declarations that degrade every schema type to `any`.
+      - dependency-name: "@hono/zod-openapi"
+        versions: [">=1.5.0"]
+      # tools/openapi-codegen holds TypeScript 5 on purpose; every other package pins 7.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
