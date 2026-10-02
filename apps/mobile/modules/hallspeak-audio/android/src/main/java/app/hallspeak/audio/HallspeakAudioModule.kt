@@ -15,6 +15,7 @@ import android.os.Looper
 import android.database.ContentObserver
 import android.provider.Settings
 import expo.modules.kotlin.exception.Exceptions
+import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -87,13 +88,17 @@ class HallspeakAudioModule : Module() {
       }
     }
 
+    // Everything that writes the service's shared state or publishes it runs on the main
+    // thread, where the service's own onCreate and onStartCommand publish too. On Expo's
+    // background queue a publish could interleave with the service's first one and leave the
+    // session reporting paused over audio that is playing, with nothing left to correct it.
     AsyncFunction("activate") {
       setSession(true)
-    }
+    }.runOnQueue(Queues.MAIN)
 
     AsyncFunction("deactivate") {
       setSession(false)
-    }
+    }.runOnQueue(Queues.MAIN)
 
     Function("isActive") {
       active
@@ -107,13 +112,13 @@ class HallspeakAudioModule : Module() {
       ListeningService.title = info["title"] as? String ?: ""
       ListeningService.subtitle = info["artist"] as? String ?: ""
       ListeningService.active?.publish()
-    }
+    }.runOnQueue(Queues.MAIN)
 
     AsyncFunction("clearNowPlaying") {
       ListeningService.title = ""
       ListeningService.subtitle = ""
       ListeningService.playing = false
-    }
+    }.runOnQueue(Queues.MAIN)
 
     // Written to the shared state whether or not a service exists yet: activation is
     // asynchronous, so this routinely arrives first, and a service that then published its
@@ -128,7 +133,7 @@ class HallspeakAudioModule : Module() {
 
       ListeningService.playing = next
       ListeningService.active?.publish()
-    }
+    }.runOnQueue(Queues.MAIN)
 
     Function("systemVolume") {
       systemVolume()
