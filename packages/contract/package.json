@@ -23,12 +23,12 @@
   },
   "dependencies": {
     "@hono/zod-openapi": "1.4.0",
-    "zod": "4.4.3"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@hallspeak/openapi-codegen": "workspace:*",
-    "@types/node": "26.2.0",
-    "tsx": "4.23.11",
+    "@types/node": "26.6.3",
+    "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vitest": "5.0.2"
   }
