@@ -22,7 +22,7 @@
     "clsx": "2.1.1",
     "input-otp": "1.5.0",
     "lucide-react": "1.49.0",
-    "mediasoup-client": "3.24.1",
+    "mediasoup-client": "3.24.3",
     "openapi-fetch": "0.17.0",
     "openapi-react-query": "0.5.4",
     "react": "19.2.3",
