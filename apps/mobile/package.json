@@ -47,7 +47,8 @@
     "socket.io-client": "4.8.4"
   },
   "devDependencies": {
-    "@jest/globals": "29.7.0",
+    "@jest/globals": "30.5.2",
+    "@types/node": "26.2.0",
     "@types/react": "19.2.18",
     "babel-preset-expo": "~57.0.13",
     "jest": "30.5.2",

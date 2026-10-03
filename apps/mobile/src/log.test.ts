@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
