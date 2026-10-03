@@ -28,7 +28,7 @@ Rules local to the web app. Repo-wide rules, the socket protocol, media recovery
   - `dropdown-menu.tsx`: panel `p-2` around `rounded-sm` rows (12px + 8px padding nests inside the 20px `rounded-lg` panel), rows `min-h-touch lg:min-h-action px-3 gap-2.5`, separator `-mx-2 my-2`; imports `cn` from `@/lib/utils`; the CLI generated `from "cn"` and added an unrelated `cn` npm package — revert that dependency if it reappears.
   - `chart.tsx`: imports `cn` from `@/lib/utils` (the CLI generated `from "cn"` and added the unrelated `cn` npm package again — revert that dependency if it reappears). It brings `recharts`; the generic `--chart-1..5` palette is unused, a `ChartConfig` names a role token instead. `biome.json` turns `noDangerouslySetInnerHtml` off for this directory because `ChartStyle` emits its colour variables as a `<style>` tag.
   - `skeleton.tsx`: `motion-reduce:animate-none`, so every skeleton holds still under reduced motion; imports `cn` from `@/lib/utils` (the CLI generated `from "cn"` and added the unrelated `cn` npm package — revert that dependency if it reappears).
-  - `card.tsx` and `label.tsx` were deleted (no importers).
+  - `card.tsx` has no importers; `label.tsx` backs `field.tsx`.
   - The `rounded-[min(var(--radius-md),Npx)]` clamps on button `xs`/`sm` and the small select trigger are shadcn's own; leave them.
 - Prefer call-site classes for one-off styling.
 
@@ -68,7 +68,7 @@ Procedure for a new value: `docs/solutions/conventions/design-values-onto-the-sc
 - An unexpected close during active playback keeps only a 30-second deadline-backed hold; deliberate end, expiry or link loss clears it at once.
 - `ConnectionLine` renders the one status for combined Socket.IO and mediasoup health (`LinkState`). Socket lifecycle: a retryable disconnect shows `Connection lost`, `reconnect_attempt` advances to `Reconnecting…`, `connect` clears. A `connect_error` is retryable only while `socket.active`; a handshake refusal and `io server disconnect` are terminal. No public connection toast.
 - `LinkState` kind `idle` (connected socket, `mediaWanted` false) renders empty; `isLinkUp` counts it as up, and broadcast copy gates on `isLinkUp`, not on the line's vocabulary. The line reserves `min-h-12` in every state.
-- The nine-bar waveform is real, graded from WebRTC stats by `lib/media/stats.ts`.
+- The nine-bar waveform is real, graded from WebRTC stats by `@hallspeak/client-core/media` (`packages/client-core/src/media/stats.ts`).
 - `PlayTargetRing` mute settle: pauses each CSS pulse at its phase and overlays a shrink/fade; unmuting reverses it; speaker rings keep their behaviour.
 
 ## Browser audio (`src/lib/audio`)
