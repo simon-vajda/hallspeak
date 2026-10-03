@@ -22,7 +22,7 @@
     "test": "node --test scripts/versioning.test.mjs && pnpm -r test"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.7",
-    "tsx": "4.23.11"
+    "@biomejs/biome": "2.5.14",
+    "tsx": "4.23.15"
   }
 }
