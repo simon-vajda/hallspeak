@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import HallspeakAudio from '../../modules/hallspeak-audio';
 import { logError } from '../log';
@@ -32,6 +32,7 @@ export function useNowPlaying(
   const { active, playing } = controls;
   const title = controls.nowPlaying?.title ?? '';
   const artist = controls.nowPlaying?.artist ?? '';
+  const latestPlaying = useRef(playing);
 
   useEffect(() => {
     if (!active) {
@@ -57,8 +58,14 @@ export function useNowPlaying(
     };
 
     // Asked before the first activation, never awaited by it: the answer decides whether the
-    // controls can be drawn, and the audio must not wait on a dialog to be held.
-    void requestNotificationPermission();
+    // controls can be drawn, and the audio must not wait on a dialog to be held. Android drops
+    // every update posted while the dialog is open, so a grant republishes the current state;
+    // otherwise the notification keeps the paused state it was started with over live audio.
+    void requestNotificationPermission().then((granted) => {
+      if (granted && HallspeakAudio.isActive()) {
+        void HallspeakAudio.setPlaybackState(latestPlaying.current).catch(report);
+      }
+    });
     attempt();
 
     return () => {
@@ -72,6 +79,7 @@ export function useNowPlaying(
       return;
     }
 
+    latestPlaying.current = playing;
     void HallspeakAudio.setPlaybackState(playing).catch(report);
   }, [active, playing]);
 
@@ -104,17 +112,26 @@ let notificationPermissionAsked = false;
  * Asked for, never depended on. A guest who declines still hears the interpreter; what they
  * lose is the lock-screen control, so a refusal must not stop the session from being held.
  */
-async function requestNotificationPermission(): Promise<void> {
+async function requestNotificationPermission(): Promise<boolean> {
   if (
     notificationPermissionAsked ||
     Platform.OS !== 'android' ||
     Number(Platform.Version) < NOTIFICATION_PERMISSION_SDK
   ) {
-    return;
+    return false;
   }
 
   notificationPermissionAsked = true;
-  await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS).catch(report);
+
+  try {
+    const result = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+    );
+    return result === PermissionsAndroid.RESULTS.GRANTED;
+  } catch (cause) {
+    report(cause);
+    return false;
+  }
 }
 
 function report(cause: unknown): void {
