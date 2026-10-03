@@ -33,7 +33,7 @@
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "lucide-react-native": "^1.49.0",
-    "mediasoup-client": "3.24.1",
+    "mediasoup-client": "3.24.3",
     "openapi-fetch": "0.17.0",
     "react": "19.2.3",
     "react-native": "0.86.3",
