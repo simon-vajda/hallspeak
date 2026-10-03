@@ -36,12 +36,17 @@ Run these in order. Stop and report at the first failure; do not work around one
 
 ```bash
 git fetch --tags origin
-gh api repos/{owner}/{repo}/releases --paginate \
+SERVER_TAG=$(gh api repos/{owner}/{repo}/releases --paginate \
   --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name | select(startswith("server-v"))' \
-  | sort -V | tail -n 1                       # newest published tag; repeat with mobile-v
-git log --format='%h %s' server-v0.10.0..origin/main -- apps/server apps/web packages compose.yaml .env.example Dockerfile
-git log --format='%h %s' mobile-v0.3.0..origin/main -- apps/mobile packages
+  | sort -V | tail -n 1)
+MOBILE_TAG=$(gh api repos/{owner}/{repo}/releases --paginate \
+  --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name | select(startswith("mobile-v"))' \
+  | sort -V | tail -n 1)
+git log --format='%h %s' "$SERVER_TAG"..origin/main -- apps/server apps/web packages compose.yaml .env.example Dockerfile
+git log --format='%h %s' "$MOBILE_TAG"..origin/main -- apps/mobile packages
 ```
+
+Run this block as one shell command: the tag variables do not survive into a separate call.
 
 Take the newest tag from published releases, not from `git tag`: the highest tag is not
 always the newest release. For each track, show that tag, the current manifest version on

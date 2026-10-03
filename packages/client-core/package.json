@@ -19,16 +19,16 @@
   "dependencies": {
     "@hallspeak/contract": "workspace:*",
     "qrcode": "1.5.4",
-    "socket.io-client": "4.8.3"
+    "socket.io-client": "4.8.4"
   },
   "peerDependencies": {
     "react": "19.2.3"
   },
   "devDependencies": {
-    "@types/node": "26.2.0",
+    "@types/node": "26.6.3",
     "@types/react": "19.2.18",
     "react": "19.2.3",
     "typescript": "7.0.2",
-    "vitest": "4.1.11"
+    "vitest": "5.0.3"
   }
 }

@@ -1,0 +1,38 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # 1.5.x ships broken declarations that degrade every schema type to `any`.
+      - dependency-name: "@hono/zod-openapi"
+        versions: [">=1.5.0"]
+      # tools/openapi-codegen holds TypeScript 5 on purpose; every other package pins 7.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # Expo SDK pins these to exact versions; move them with `npx expo install --fix` during an SDK upgrade.
+      # react and its types are included because web and mobile must share one React version.
+      - dependency-name: react
+      - dependency-name: react-dom
+      - dependency-name: "@types/react"
+      - dependency-name: "@types/react-dom"
+      - dependency-name: react-native
+      - dependency-name: react-native-gesture-handler
+      - dependency-name: react-native-reanimated
+      - dependency-name: react-native-safe-area-context
+      - dependency-name: react-native-screens
+      - dependency-name: react-native-svg
+      - dependency-name: react-native-worklets
+      # A new major of these is a new Expo SDK.
+      - dependency-name: expo
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@expo/*"
+        update-types: ["version-update:semver-major"]
