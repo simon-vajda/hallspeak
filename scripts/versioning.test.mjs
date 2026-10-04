@@ -7,6 +7,7 @@ import {
   checkRepository,
   compareVersions,
   STABLE_SEMVER,
+  TRACKS,
   validateReleaseTag,
   writeVersionFiles,
 } from './versioning-lib.mjs';
@@ -126,5 +127,29 @@ describe('release tags', () => {
     assert.equal(validateReleaseTag('server', 'server-v1.5.2', '1.5.2'), '1.5.2');
     assert.throws(() => validateReleaseTag('server', 'mobile-v1.5.2', '1.5.2'));
     assert.throws(() => validateReleaseTag('mobile', 'mobile-v1.2.1', '1.2.0'));
+  });
+});
+
+describe('track paths', () => {
+  it('lists the paths whose changes ship in each track', () => {
+    assert.deepEqual(TRACKS.server.paths, [
+      'apps/server',
+      'apps/web',
+      'packages',
+      'tools/openapi-codegen',
+      'compose.yaml',
+      '.env.example',
+      'Dockerfile',
+      'package.json',
+      'pnpm-lock.yaml',
+      'pnpm-workspace.yaml',
+    ]);
+    assert.deepEqual(TRACKS.mobile.paths, [
+      'apps/mobile',
+      'packages',
+      'package.json',
+      'pnpm-lock.yaml',
+      'pnpm-workspace.yaml',
+    ]);
   });
 });

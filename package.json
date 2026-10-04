@@ -19,7 +19,7 @@
     "typecheck": "pnpm gen && pnpm -r typecheck",
     "check": "biome check . && node scripts/versioning.mjs check",
     "check:fix": "biome check --write .",
-    "test": "node --test scripts/versioning.test.mjs && pnpm -r test"
+    "test": "node --test scripts/versioning.test.mjs scripts/release-notes.test.mjs && pnpm -r test"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",

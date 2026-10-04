@@ -18,6 +18,7 @@ concurrency:
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   draft:
@@ -28,6 +29,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          # The notes script walks history from the previous release's tag.
+          fetch-depth: 0
 
       - name: Create or supersede drafts
         env:
@@ -66,7 +69,7 @@ jobs:
             fi
 
             # A bump replaces any older unpublished draft of the same track, so notes are
-            # generated once, from the last published release, rather than stacked.
+            # written once, from the last published release, rather than stacked.
             while IFS=$'\t' read -r id stale; do
               [ -n "$id" ] || continue
               gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$id" >/dev/null
@@ -77,10 +80,16 @@ jobs:
             # published version is not always the highest tag.
             previous="$(awk -F '\t' -v prefix="$prefix" '$3 == "released" && $4 == "false" && index($2, prefix) == 1 { print $2 }' <<<"$releases" | sort -V | tail -n 1)"
 
-            args=(--draft --target "$HEAD_SHA" --generate-notes)
+            # Notes list only the PRs that touched this track's paths. A failure here stops
+            # the job before this track's draft exists, so the next build drafts it whole.
+            notes="$RUNNER_TEMP/$track-notes.md"
+            range=(--to "$HEAD_SHA" --tag "$tag")
             if [ -n "$previous" ]; then
-              args+=(--notes-start-tag "$previous")
+              range+=(--from "$previous")
             fi
+            node scripts/release-notes.mjs "$track" "${range[@]}" > "$notes"
+
+            args=(--draft --target "$HEAD_SHA" --notes-file "$notes")
 
             if [ "$track" = server ]; then
               # GitHub rewrites an asset name that starts with a period, so the file goes up

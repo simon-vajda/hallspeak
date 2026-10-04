@@ -106,10 +106,14 @@ emergency.
 - A version reaches `main` only through a bump pull request. Every push to `main` builds and
   verifies the server image once and publishes it as `edge` and `sha-<7 chars>`.
 - When that build succeeds, each track whose manifest version has no release yet gets a draft
-  release targeting the built commit, titled `Server vX.Y.Z` or `Mobile vX.Y.Z`, with notes
-  generated since the track's newest published release. A newer bump deletes an older
-  unpublished draft of the same track; a push that leaves the version alone leaves the draft,
-  and any edits to it, untouched. Server drafts carry that commit's `compose.yaml` and
+  release targeting the built commit, titled `Server vX.Y.Z` or `Mobile vX.Y.Z`. Its notes,
+  from `scripts/release-notes.mjs`, list the PRs merged since the track's newest published
+  release that changed one of the track's paths (the `TRACKS` table in
+  `scripts/versioning-lib.mjs`); a PR touching both tracks appears in both, one touching
+  neither in neither. The `release-notes` skill adds a summary to the draft before it is
+  published. A newer bump deletes an older unpublished draft of the same track, discarding
+  any polished body with it; a push that leaves the version alone leaves the draft, and any
+  edits to it, untouched. Server drafts carry that commit's `compose.yaml` and
   `.env.example`, the latter as `env.example` because GitHub renames assets starting with a
   period.
 - Publishing a server draft waits for its commit's build, checks the tag against the manifest,
