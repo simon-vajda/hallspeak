@@ -3,16 +3,29 @@ import path from 'node:path';
 
 export const STABLE_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
+// The root install inputs resolve every dependency both builds ship, so a lockfile-only
+// refresh counts toward each track.
+const INSTALL_INPUTS = ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml'];
+
 export const TRACKS = {
   server: {
     manifest: 'apps/server/package.json',
     tagPrefix: 'server-v',
-    paths: ['apps/server', 'apps/web', 'packages', 'compose.yaml', '.env.example', 'Dockerfile'],
+    paths: [
+      'apps/server',
+      'apps/web',
+      'packages',
+      'tools/openapi-codegen',
+      'compose.yaml',
+      '.env.example',
+      'Dockerfile',
+      ...INSTALL_INPUTS,
+    ],
   },
   mobile: {
     manifest: 'apps/mobile/package.json',
     tagPrefix: 'mobile-v',
-    paths: ['apps/mobile', 'packages'],
+    paths: ['apps/mobile', 'packages', ...INSTALL_INPUTS],
   },
 };
 

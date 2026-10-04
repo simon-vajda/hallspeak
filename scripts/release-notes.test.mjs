@@ -108,6 +108,7 @@ async function repository() {
   await commit(cwd, 'apps/web/index.ts', 'feat: web');
   await commit(cwd, '.github/dependabot.yml', 'ci: dependabot');
   await commit(cwd, 'packages/client-core/index.ts', 'feat: shared');
+  await commit(cwd, 'pnpm-lock.yaml', 'build: lockfile');
   const to = await commit(cwd, 'apps/mobile/index.ts', 'feat: mobile');
   return { cwd, base, to };
 }
@@ -123,9 +124,11 @@ describe('track selection', () => {
     assert.deepEqual(await select(cwd, 'server', '--from', base, '--to', to), [
       'feat: web',
       'feat: shared',
+      'build: lockfile',
     ]);
     assert.deepEqual(await select(cwd, 'mobile', '--from', base, '--to', to), [
       'feat: shared',
+      'build: lockfile',
       'feat: mobile',
     ]);
   });
@@ -135,6 +138,10 @@ describe('track selection', () => {
     await writeFile(path.join(cwd, 'apps/mobile/later.ts'), 'later\n');
     await git(cwd, 'add', '--', 'apps/mobile/later.ts');
     await git(cwd, 'commit', '-q', '-m', 'feat: after the release');
-    assert.deepEqual(await select(cwd, 'mobile', '--to', to), ['feat: shared', 'feat: mobile']);
+    assert.deepEqual(await select(cwd, 'mobile', '--to', to), [
+      'feat: shared',
+      'build: lockfile',
+      'feat: mobile',
+    ]);
   });
 });

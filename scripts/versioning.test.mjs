@@ -136,10 +136,20 @@ describe('track paths', () => {
       'apps/server',
       'apps/web',
       'packages',
+      'tools/openapi-codegen',
       'compose.yaml',
       '.env.example',
       'Dockerfile',
+      'package.json',
+      'pnpm-lock.yaml',
+      'pnpm-workspace.yaml',
     ]);
-    assert.deepEqual(TRACKS.mobile.paths, ['apps/mobile', 'packages']);
+    assert.deepEqual(TRACKS.mobile.paths, [
+      'apps/mobile',
+      'packages',
+      'package.json',
+      'pnpm-lock.yaml',
+      'pnpm-workspace.yaml',
+    ]);
   });
 });
