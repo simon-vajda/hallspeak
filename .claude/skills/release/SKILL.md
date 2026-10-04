@@ -13,16 +13,20 @@ A release reaches GitHub in three stages, and this skill owns only the first:
 
 1. **This skill** bumps the version on a release branch and opens a pull request.
 2. **Merging the PR** builds that commit's image on `main`, and the successful build
-   creates a draft GitHub Release with generated notes (and, for server, `compose.yaml` and
-   `env.example` attached).
-3. **The maintainer publishes the draft** under Releases after editing its description.
-   Publishing creates the tag and, for server, promotes the image `main` already built to
-   `X.Y.Z`, `X.Y` and `latest`.
+   creates a draft GitHub Release whose notes list the PRs that touched that track's paths
+   since its newest published release (and, for server, attaches `compose.yaml` and
+   `env.example`).
+3. **The maintainer publishes the draft** under Releases, after the `release-notes` skill
+   has added a summary to it. Publishing creates the tag and, for server, promotes the image
+   `main` already built to `X.Y.Z`, `X.Y` and `latest`.
 
-| Track | Canonical manifest | Command | Tag | Paths that count |
-| --- | --- | --- | --- | --- |
-| server (includes the bundled web app) | `apps/server/package.json` | `pnpm version:server` | `server-vX.Y.Z` | `apps/server` `apps/web` `packages` `compose.yaml` `.env.example` `Dockerfile` |
-| mobile | `apps/mobile/package.json` | `pnpm version:mobile` | `mobile-vX.Y.Z` | `apps/mobile` `packages` |
+| Track | Canonical manifest | Command | Tag |
+| --- | --- | --- | --- |
+| server (includes the bundled web app) | `apps/server/package.json` | `pnpm version:server` | `server-vX.Y.Z` |
+| mobile | `apps/mobile/package.json` | `pnpm version:mobile` | `mobile-vX.Y.Z` |
+
+The paths that count toward each track are the `paths` of its entry in `TRACKS`
+(`scripts/versioning-lib.mjs`); `scripts/release-notes.mjs` selects changes by them.
 
 Choosing the number: patch for a compatible fix, minor for a backward-compatible feature,
 major for a break. Any web change is a **server** bump. A shared-package change bumps each
@@ -42,16 +46,16 @@ SERVER_TAG=$(gh api repos/{owner}/{repo}/releases --paginate \
 MOBILE_TAG=$(gh api repos/{owner}/{repo}/releases --paginate \
   --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name | select(startswith("mobile-v"))' \
   | sort -V | tail -n 1)
-git log --format='%h %s' "$SERVER_TAG"..origin/main -- apps/server apps/web packages compose.yaml .env.example Dockerfile
-git log --format='%h %s' "$MOBILE_TAG"..origin/main -- apps/mobile packages
+node scripts/release-notes.mjs server --json --from "$SERVER_TAG" --to origin/main
+node scripts/release-notes.mjs mobile --json --from "$MOBILE_TAG" --to origin/main
 ```
 
 Run this block as one shell command: the tag variables do not survive into a separate call.
 
 Take the newest tag from published releases, not from `git tag`: the highest tag is not
 always the newest release. For each track, show that tag, the current manifest version on
-`origin/main`, and the commit subjects since, grouped by conventional type (`feat`, `fix`,
-then the rest). A track whose manifest already differs from its newest published tag has a
+`origin/main`, and the PRs since, grouped by conventional type (`feat`, `fix`, then the
+rest). A track whose manifest already differs from its newest published tag has a
 bump waiting for its draft to be published; say so.
 
 Ask which track and which version. Never guess a version number, even when the commits make
@@ -112,14 +116,15 @@ only).
 **5. Stop and report.**
 
 Give the PR URL. Tell the user that once `Verify` and `Docker image` pass and the PR is
-merged, they edit the draft's description under Releases and publish it, and that a server
-publish waits for the commit's image build before promoting it. Do not merge, watch, or
+merged, they run the `release-notes` skill on the new draft and then publish it under
+Releases, and that a server publish waits for the commit's image build before promoting it. Do not merge, watch, or
 publish.
 
 ## Guard rails
 
 - Never push to `main`, never create or push a tag, never publish, edit or delete a
-  release. Publishing is the maintainer's step on GitHub.
+  release. Publishing is the maintainer's step on GitHub, and writing a draft's body belongs
+  to the `release-notes` skill.
 - Never `git push --force`, never `--no-verify`.
 - Never edit a version by hand. `apps/server/src/version.ts`, `apps/web/src/version.ts`,
   `apps/mobile/src/version.ts`, `app.config.ts`, `.env.example` and the OpenAPI `info.version`
