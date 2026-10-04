@@ -1,6 +1,6 @@
 const FIELD = '\x1f';
 
-export const LOG_FORMAT = ['%H', '%an', '%s'].join('%x1f');
+export const LOG_FORMAT = ['%H', '%an', '%s'].join(FIELD);
 
 export function parseLog(output) {
   return output
