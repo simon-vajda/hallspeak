@@ -92,7 +92,7 @@ for (const commit of commits) {
 }
 
 if (values.json) {
-  const result = { track, from: values.from ?? null, to: values.to, entries };
+  const result = { track, from: values.from || null, to: values.to, entries };
   console.log(JSON.stringify(result, null, 2));
 } else {
   let repo = process.env.GITHUB_REPOSITORY;
