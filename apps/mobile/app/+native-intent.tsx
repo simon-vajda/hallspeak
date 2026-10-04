@@ -4,12 +4,13 @@ import { destinationHref } from '@/links/route';
 /** The shared app-link host wraps a self-hosted event or channel URL. */
 export function redirectSystemPath({ path }: { path: string; initial: boolean }): string {
   try {
-    // Keep existing app paths and the development client's launch scheme working.
+    // Keep existing app paths and the development client's launch scheme working; the
+    // development variant registers its own scheme so it can install beside the store app.
     if (path.startsWith('/') && !path.startsWith('//') && !path.startsWith('/?')) {
       return path;
     }
     const incoming = new URL(path, 'https://open.hallspeak.app');
-    if (incoming.protocol === 'hallspeak:') {
+    if (incoming.protocol === 'hallspeak:' || incoming.protocol === 'hallspeak-dev:') {
       return path;
     }
     if (incoming.origin !== 'https://open.hallspeak.app' || incoming.pathname !== '/') {
