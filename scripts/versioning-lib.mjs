@@ -4,8 +4,16 @@ import path from 'node:path';
 export const STABLE_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 export const TRACKS = {
-  server: { manifest: 'apps/server/package.json', tagPrefix: 'server-v' },
-  mobile: { manifest: 'apps/mobile/package.json', tagPrefix: 'mobile-v' },
+  server: {
+    manifest: 'apps/server/package.json',
+    tagPrefix: 'server-v',
+    paths: ['apps/server', 'apps/web', 'packages', 'compose.yaml', '.env.example', 'Dockerfile'],
+  },
+  mobile: {
+    manifest: 'apps/mobile/package.json',
+    tagPrefix: 'mobile-v',
+    paths: ['apps/mobile', 'packages'],
+  },
 };
 
 const PRIVATE_MANIFESTS = [
