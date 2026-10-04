@@ -38,9 +38,14 @@ pnpm -F @hallspeak/mobile android
 pnpm -F @hallspeak/mobile start            # Metro, once a dev client is installed
 ```
 
+These scripts build the **development variant**: `Hallspeak Dev`, bundle id
+`app.hallspeak.mobile.dev`, scheme `hallspeak-dev`. It installs beside a TestFlight or Play
+build of the store app instead of replacing it, and keeps its own event history. Shared
+`open.hallspeak.app` links open the store app only.
+
 `ios/` and `android/` are generated and gitignored. `pnpm -F @hallspeak/mobile prebuild`
-regenerates both from `app.json`; never hand-edit them, and never add an `app.config.ts` —
-TypeScript 7.0.2, which every package here pins, breaks the Expo CLI's compilation of it.
+regenerates both from `app.json` and `app.config.ts`; never hand-edit them. A checkout last
+prebuilt with the store bundle id needs one `prebuild` before `ios` or `android`.
 
 ### There is no `dev` script, on purpose
 

@@ -78,6 +78,7 @@ describe('redirectSystemPath', () => {
     '/',
     '/events/church.example/481209',
     'hallspeak://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081',
+    'hallspeak-dev://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081',
   ])('preserves existing app path %s', (path) => {
     expect(redirectSystemPath({ path, initial: true })).toBe(path);
   });
