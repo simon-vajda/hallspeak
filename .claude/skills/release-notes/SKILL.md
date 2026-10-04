@@ -49,9 +49,12 @@ draft was built from).
 **2. List the PRs.**
 
 ```bash
-node scripts/release-notes.mjs "$TRACK" --json --to <target_commitish> --tag <tag> \
-  ${PREVIOUS:+--from "$PREVIOUS"}
+node scripts/release-notes.mjs <track> --json --to <target_commitish> --tag <tag> \
+  --from <previous>
 ```
+
+Fill the placeholders from step 1's output. Pass `--from` whenever step 1 printed a
+previous tag; leave it out only when it printed `previous: none`.
 
 Use these entries, not the draft's markdown: they are the same list with commit SHAs and PR
 numbers as data. Every entry must appear in the final body.
@@ -79,8 +82,8 @@ does not actually use still stays in the list; leave it out of the summary inste
 **4. Server only: find what an operator must do.**
 
 ```bash
-git diff "$PREVIOUS" <target_commitish> -- .env.example compose.yaml
-git diff "$PREVIOUS" <target_commitish> -- apps/server/src/version.ts | grep MIN_MOBILE_VERSION \
+git diff <previous> <target_commitish> -- .env.example compose.yaml
+git diff <previous> <target_commitish> -- apps/server/src/version.ts | grep MIN_MOBILE_VERSION \
   || echo "MIN_MOBILE_VERSION unchanged"
 ```
 
