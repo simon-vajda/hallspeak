@@ -1,7 +1,7 @@
 packages:
-  - "apps/*"
-  - "packages/*"
-  - "tools/*"
+  - 'apps/*'
+  - 'packages/*'
+  - 'tools/*'
 # esbuild is tsx's bundler; its install script links the platform binary.
 # better-sqlite3 has no install script, but its binding.gyp makes pnpm infer an
 # implicit `node-gyp rebuild`. Declining it is correct, not a compromise: the npm

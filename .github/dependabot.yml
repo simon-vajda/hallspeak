@@ -11,17 +11,17 @@ updates:
           - patch
     ignore:
       # 1.5.x ships broken declarations that degrade every schema type to `any`.
-      - dependency-name: "@hono/zod-openapi"
-        versions: [">=1.5.0"]
+      - dependency-name: '@hono/zod-openapi'
+        versions: ['>=1.5.0']
       # tools/openapi-codegen holds TypeScript 5 on purpose; every other package pins 7.
       - dependency-name: typescript
-        update-types: ["version-update:semver-major"]
+        update-types: ['version-update:semver-major']
       # Expo SDK pins these to exact versions; move them with `npx expo install --fix` during an SDK upgrade.
       # react and its types are included because web and mobile must share one React version.
       - dependency-name: react
       - dependency-name: react-dom
-      - dependency-name: "@types/react"
-      - dependency-name: "@types/react-dom"
+      - dependency-name: '@types/react'
+      - dependency-name: '@types/react-dom'
       - dependency-name: react-native
       - dependency-name: react-native-gesture-handler
       - dependency-name: react-native-reanimated
@@ -31,17 +31,17 @@ updates:
       - dependency-name: react-native-worklets
       # A new major of these is a new Expo SDK.
       - dependency-name: expo
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "expo-*"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@expo/*"
-        update-types: ["version-update:semver-major"]
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'expo-*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@expo/*'
+        update-types: ['version-update:semver-major']
       - dependency-name: babel-preset-expo
-        update-types: ["version-update:semver-major"]
+        update-types: ['version-update:semver-major']
       - dependency-name: jest-expo
-        update-types: ["version-update:semver-major"]
+        update-types: ['version-update:semver-major']
       # A native major that must be paired with a matching config plugin; CI does not build native code.
       - dependency-name: react-native-webrtc
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@config-plugins/react-native-webrtc"
-        update-types: ["version-update:semver-major"]
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@config-plugins/react-native-webrtc'
+        update-types: ['version-update:semver-major']
