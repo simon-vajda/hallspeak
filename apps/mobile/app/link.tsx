@@ -31,8 +31,8 @@ export default function LinkEntrySheet() {
   return (
     <SheetChrome title="Enter the link" onDone={() => router.back()}>
       <Text style={[type.note, { color: colors.mutedForeground }]}>
-        Paste the link from your venue. It is checked on this phone; nothing is sent until it is a
-        Hallspeak event.
+        Paste the event or channel link from your venue. It is checked on this phone; nothing is
+        sent until it is a Hallspeak link.
       </Text>
 
       <LinkField
@@ -46,7 +46,7 @@ export default function LinkEntrySheet() {
 
       {refusal ? <RefusalBanner message={refusal} /> : null}
 
-      <ActionButton label="Open event" icon="forward" onPress={submit} />
+      <ActionButton label="Open link" icon="forward" onPress={submit} />
     </SheetChrome>
   );
 }

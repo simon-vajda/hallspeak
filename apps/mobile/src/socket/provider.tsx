@@ -147,32 +147,33 @@ export function EventSocketProvider({
 
   const gate = useMemo<ServerGate>(() => ({ check }), [check]);
 
-  // The navigator stays mounted through every verdict. Rendering the failure in this
-  // component's place would take the stack with it, leaving the guest on a screen with no
-  // header and no way back; each screen renders the gate's message inside its own chrome.
+  // The navigator stays mounted, at one position in the tree, through every verdict. Rendering
+  // the failure in this component's place would take the stack with it, leaving the guest on a
+  // screen with no header and no way back; each screen renders the gate's message inside its
+  // own chrome. Wrapping the stack only once the gate is ready would remount it, and a remount
+  // drops the nested route a link navigated to, leaving its parent screen without params.
   return (
     <ServerGateContext.Provider value={gate}>
-      {check.state === 'ready' ? (
-        <CompatibleEventSocketProvider host={host} pin={pin}>
-          {children}
-        </CompatibleEventSocketProvider>
-      ) : (
-        children
-      )}
+      <EventConnectionProvider host={host} pin={pin} compatible={check.state === 'ready'}>
+        {children}
+      </EventConnectionProvider>
     </ServerGateContext.Provider>
   );
 }
 
-function CompatibleEventSocketProvider({
+function EventConnectionProvider({
   host,
   pin,
+  compatible,
   children,
 }: {
   host: string;
   pin: string;
+  /** Nothing is requested and no socket opens until the server's version is accepted. */
+  compatible: boolean;
   children: ReactNode;
 }) {
-  const { data } = useQuery(eventQueryOptions(host, pin));
+  const { data } = useQuery({ ...eventQueryOptions(host, pin), enabled: compatible });
 
   // Bound to this event's host and independently versioned mobile artifact.
   const connect = useCallback(
@@ -192,7 +193,7 @@ function CompatibleEventSocketProvider({
   // `auth` only after the GET returned 200, never in parallel with it: in parallel every
   // mistyped PIN would open a socket and two error sources would race.
   const { status, error, hasConnected, channelStatuses, socket, joinChannel, leaveChannel } =
-    useSocket(data ? { pin } : null, connect);
+    useSocket(compatible && data ? { pin } : null, connect);
 
   useAppStateReconnect(socket);
 
