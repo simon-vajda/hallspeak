@@ -14,8 +14,7 @@ import { Icon } from './icon';
 import { pressOpacity, ripple } from './press';
 
 /**
- * The star is the pin control, reachable by tap. A long press works too, but a gesture is
- * not an affordance — and neither a long press nor a swipe is reachable under VoiceOver or
+ * The star is the pin control, reachable by tap. A swipe is not reachable under VoiceOver or
  * TalkBack, which is why Remove is also an accessibility action on the row.
  */
 export function HistoryRow({
@@ -53,7 +52,6 @@ export function HistoryRow({
         }
       }}
       onPress={onOpen}
-      onLongPress={onTogglePin}
       android_ripple={ripple(withAlpha(colors.foreground, 0.1))}
       style={({ pressed }) => [
         styles.row,
