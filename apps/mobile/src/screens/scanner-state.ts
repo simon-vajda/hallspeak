@@ -80,7 +80,7 @@ const REFUSALS: Record<LinkRefusalReason, string> = {
   'not-a-url': "That is not a link. A Hallspeak link starts with 'https://'.",
   'insecure-scheme': 'Hallspeak links are always https.',
   'unknown-host': 'That link does not name a server this app can reach.',
-  'wrong-path': 'That is not a Hallspeak event link.',
+  'wrong-path': 'That is not a Hallspeak event or channel link.',
   'bad-pin': 'An event PIN is six digits.',
   'bad-slug': 'That link names a channel in a form Hallspeak does not use.',
 };
