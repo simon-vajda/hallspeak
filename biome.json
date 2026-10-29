@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.7/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -9,6 +9,7 @@
     "includes": [
       "**",
       "!**/dist",
+      "!pnpm-lock.yaml",
       "!packages/contract/openapi.json",
       "!packages/contract/src/generated",
       "!apps/web/src/routeTree.gen.ts",
@@ -103,6 +104,16 @@
   "css": {
     "parser": {
       "tailwindDirectives": true
+    }
+  },
+  "yaml": {
+    "formatter": {
+      "quoteStyle": "single"
+    }
+  },
+  "markdown": {
+    "formatter": {
+      "enabled": false
     }
   }
 }

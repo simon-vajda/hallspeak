@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+// biome-ignore lint/correctness/useReactNativePlatformComponents: PermissionsAndroid is an API, not a component; React Native exports it on every platform and its call is gated on Platform.OS.
 import { PermissionsAndroid, Platform } from 'react-native';
 import HallspeakAudio from '../../modules/hallspeak-audio';
 import { logError } from '../log';

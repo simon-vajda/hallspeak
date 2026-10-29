@@ -4,7 +4,7 @@ name: GHCR cleanup
 # released version, `latest`, `edge`, and the image behind every server release.
 on:
   schedule:
-    - cron: "17 4 * * 1"
+    - cron: '17 4 * * 1'
   workflow_dispatch:
     inputs:
       dry-run:
