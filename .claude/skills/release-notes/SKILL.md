@@ -125,6 +125,20 @@ their words, with no internal names, PR numbers or marketing tone. Omit changes 
 not notice. If nothing in the release is user-facing, say so in one sentence. Keep the
 technical notes short; they point at what matters, the list below carries the rest.
 
+Wording:
+
+- Say each thing once, plainly. One short sentence per change; a release with one change
+  gets one sentence, not a paragraph.
+- Include only what matters to the reader: what changed, and anything they must do. Leave
+  out how it was built, why it was easy, and anything already true in the previous release.
+- No framing or filler: no "This release…", "What changes is…", "Under the hood…",
+  "seamlessly", "now you can…" build-ups, no restating the heading, no closing summary.
+- Concrete over abstract: name the screen, setting or symptom, not "improvements" or
+  "enhancements".
+- Normal sentences, not telegraphic fragments. Concise is not caveman.
+- Technical notes: at most a few bullets, each one fact a contributor needs. Omit the
+  section when there is nothing beyond the PR list.
+
 Keep each list line exactly as the script renders it, in the script's order within its
 group. Omit an empty group's heading. Omit the compare link when there is no previous
 release.
@@ -138,11 +152,14 @@ decline, stop: the draft stays as it is.
 ```bash
 STATE=$(gh api repos/{owner}/{repo}/releases/<id> --jq .draft)
 [ "$STATE" = true ] || { echo "release <id> is no longer a draft"; exit 1; }
-gh api --method PATCH repos/{owner}/{repo}/releases/<id> -F body=@<body file>
+gh api --method PATCH repos/{owner}/{repo}/releases/<id> -F body=@<body file> \
+  -f tag_name=<tag> -f target_commitish=<target_commitish> --jq .tag_name
 ```
 
 Write the body to a file outside the repository first. A draft has no tag to address, so the
-release is written by id. If the release is no longer a draft, or no longer exists, stop and
+release is written by id. Always resend `tag_name` and `target_commitish` from step 1: a
+PATCH that omits them turns a draft whose tag does not exist yet into an `untagged-…` draft.
+Check that the printed tag is the draft's tag. If the release is no longer a draft, or no longer exists, stop and
 report: it was published or superseded since step 1.
 
 **8. Report.** Say the draft is updated and that publishing it under Releases is the
