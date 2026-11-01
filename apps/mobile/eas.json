@@ -14,7 +14,11 @@
     "development": {
       "extends": "base",
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "MEDIASOUP_WORKER_BIN": "/dev/null",
+        "APP_VARIANT": "development"
+      }
     },
     "preview": {
       "extends": "base",
