@@ -125,6 +125,20 @@ their words, with no internal names, PR numbers or marketing tone. Omit changes 
 not notice. If nothing in the release is user-facing, say so in one sentence. Keep the
 technical notes short; they point at what matters, the list below carries the rest.
 
+Wording:
+
+- Say each thing once, plainly. One short sentence per change; a release with one change
+  gets one sentence, not a paragraph.
+- Include only what matters to the reader: what changed, and anything they must do. Leave
+  out how it was built, why it was easy, and anything already true in the previous release.
+- No framing or filler: no "This release…", "What changes is…", "Under the hood…",
+  "seamlessly", "now you can…" build-ups, no restating the heading, no closing summary.
+- Concrete over abstract: name the screen, setting or symptom, not "improvements" or
+  "enhancements".
+- Normal sentences, not telegraphic fragments. Concise is not caveman.
+- Technical notes: at most a few bullets, each one fact a contributor needs. Omit the
+  section when there is nothing beyond the PR list.
+
 Keep each list line exactly as the script renders it, in the script's order within its
 group. Omit an empty group's heading. Omit the compare link when there is no previous
 release.
