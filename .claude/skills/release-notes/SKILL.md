@@ -152,11 +152,14 @@ decline, stop: the draft stays as it is.
 ```bash
 STATE=$(gh api repos/{owner}/{repo}/releases/<id> --jq .draft)
 [ "$STATE" = true ] || { echo "release <id> is no longer a draft"; exit 1; }
-gh api --method PATCH repos/{owner}/{repo}/releases/<id> -F body=@<body file>
+gh api --method PATCH repos/{owner}/{repo}/releases/<id> -F body=@<body file> \
+  -f tag_name=<tag> -f target_commitish=<target_commitish> --jq .tag_name
 ```
 
 Write the body to a file outside the repository first. A draft has no tag to address, so the
-release is written by id. If the release is no longer a draft, or no longer exists, stop and
+release is written by id. Always resend `tag_name` and `target_commitish` from step 1: a
+PATCH that omits them turns a draft whose tag does not exist yet into an `untagged-…` draft.
+Check that the printed tag is the draft's tag. If the release is no longer a draft, or no longer exists, stop and
 report: it was published or superseded since step 1.
 
 **8. Report.** Say the draft is updated and that publishing it under Releases is the
